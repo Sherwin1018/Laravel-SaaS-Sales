@@ -25,8 +25,22 @@
     @endif
 
     <div class="card">
-        <h3>Team Members</h3>
-        <table>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h3 style="margin: 0;">Team Members</h3>
+            <div style="position: relative; width: 100%; max-width: 400px;">
+                <input
+                    type="text"
+                    id="teamSearchInput"
+                    placeholder="Search team by name, email, role..."
+                    maxlength="40"
+                    style="width: 100%; padding: 10px 40px 10px 15px; border: 1px solid #D1D5DB; border-radius: 6px; font-size: 14px; outline: none; transition: border-color 0.2s;"
+                    onfocus="this.style.borderColor='#3B82F6';"
+                    onblur="this.style.borderColor='#D1D5DB';"
+                >
+                <i class="fas fa-search" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); color: #9CA3AF;"></i>
+            </div>
+        </div>
+        <table id="teamTable">
             <thead>
                 <tr>
                     <th>Name</th>
@@ -64,7 +78,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr>
+                    <tr class="empty-state">
                         <td colspan="5" style="text-align: center;">No team members found.</td>
                     </tr>
                 @endforelse
@@ -75,4 +89,55 @@
             {{ $users->links('pagination::bootstrap-4') }}
         </div>
     </div>
+
+    <script>
+        // Live search for team members table
+        document.addEventListener('DOMContentLoaded', function () {
+            const searchInput = document.getElementById('teamSearchInput');
+            const table = document.getElementById('teamTable');
+            const tbody = table.querySelector('tbody');
+            const initialRows = Array.from(tbody.querySelectorAll('tr')).filter((row) => {
+                return !row.classList.contains('empty-state');
+            });
+
+            let searchTimeout;
+
+            function filterRows(searchTerm) {
+                const term = (searchTerm || '').toLowerCase().trim();
+
+                // Remove any previous "no results" row
+                const existingNoResults = tbody.querySelector('tr.no-results');
+                if (existingNoResults) existingNoResults.remove();
+
+                if (!term) {
+                    initialRows.forEach((row) => (row.style.display = ''));
+                    return;
+                }
+
+                let visibleCount = 0;
+                initialRows.forEach((row) => {
+                    const text = row.textContent.toLowerCase();
+                    const match = text.includes(term);
+                    row.style.display = match ? '' : 'none';
+                    if (match) visibleCount += 1;
+                });
+
+                if (visibleCount === 0) {
+                    const noResultsRow = document.createElement('tr');
+                    noResultsRow.className = 'no-results';
+                    noResultsRow.innerHTML =
+                        '<td colspan="5" style="text-align: center; padding: 20px; color: #6B7280;">No team members found matching \"' +
+                        searchTerm +
+                        '\"</td>';
+                    tbody.appendChild(noResultsRow);
+                }
+            }
+
+            searchInput.addEventListener('input', function (e) {
+                clearTimeout(searchTimeout);
+                const searchTerm = e.target.value;
+                searchTimeout = setTimeout(() => filterRows(searchTerm), 250);
+            });
+        });
+    </script>
 @endsection

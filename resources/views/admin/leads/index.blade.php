@@ -14,8 +14,23 @@
     @endif
 
     <div class="card">
-        <h3>Leads List</h3>
-        <table>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h3 style="margin: 0;">Leads List</h3>
+            <div style="position: relative; width: 100%; max-width: 400px;">
+                <input 
+                    type="text" 
+                    id="searchInput" 
+                    placeholder="Search leads by name, email, tenant, status..." 
+                    value="{{ request('search') }}"
+                    maxlength="40"
+                    style="width: 100%; padding: 10px 40px 10px 15px; border: 1px solid #D1D5DB; border-radius: 6px; font-size: 14px; outline: none; transition: border-color 0.2s;"
+                    onfocus="this.style.borderColor='#3B82F6';"
+                    onblur="this.style.borderColor='#D1D5DB';"
+                >
+                <i class="fas fa-search" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); color: #9CA3AF;"></i>
+            </div>
+        </div>
+        <table id="leadsTable">
             <thead>
                 <tr>
                     <th>Name</th>
@@ -74,4 +89,61 @@
             {{ $leads->links('pagination::bootstrap-4') }}
         </div>
     </div>
+
+    <script>
+        // Live search functionality - filters table as you type
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('searchInput');
+            const table = document.getElementById('leadsTable');
+            const tbody = table.querySelector('tbody');
+            const rows = tbody.querySelectorAll('tr');
+            let searchTimeout;
+
+            // Function to filter rows
+            function filterRows(searchTerm) {
+                const term = searchTerm.toLowerCase().trim();
+                
+                rows.forEach(row => {
+                    const text = row.textContent.toLowerCase();
+                    if (text.includes(term)) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+
+                // Show "No results" message if all rows are hidden
+                const visibleRows = Array.from(rows).filter(row => row.style.display !== 'none');
+                let noResultsRow = tbody.querySelector('tr.no-results');
+                
+                if (term && visibleRows.length === 0) {
+                    if (!noResultsRow) {
+                        noResultsRow = document.createElement('tr');
+                        noResultsRow.className = 'no-results';
+                        noResultsRow.innerHTML = '<td colspan="6" style="text-align: center; padding: 20px; color: #6B7280;">No leads found matching "' + searchTerm + '"</td>';
+                        tbody.appendChild(noResultsRow);
+                    }
+                } else {
+                    if (noResultsRow) {
+                        noResultsRow.remove();
+                    }
+                }
+            }
+
+            // Debounced search - waits 300ms after user stops typing
+            searchInput.addEventListener('input', function(e) {
+                clearTimeout(searchTimeout);
+                const searchTerm = e.target.value;
+                
+                searchTimeout = setTimeout(() => {
+                    filterRows(searchTerm);
+                }, 300);
+            });
+
+            // Initial filter if there's a search term in URL
+            if (searchInput.value) {
+                filterRows(searchInput.value);
+            }
+        });
+    </script>
 @endsection
