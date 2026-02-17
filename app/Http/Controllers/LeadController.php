@@ -10,10 +10,38 @@ class LeadController extends Controller
     /**
      * Display all leads for Super Admin (across all tenants).
      */
-    public function adminIndex()
+    public function adminIndex(Request $request)
     {
-        // Fetch all leads with their tenant, paginated
-        $leads = Lead::withoutGlobalScope('tenant')->with('tenant')->latest()->paginate(15);
+        $query = Lead::withoutGlobalScope('tenant')->with('tenant');
+
+        // Search functionality
+        if ($request->has('search') && $request->search) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhere('phone', 'like', "%{$search}%")
+                  ->orWhere('status', 'like', "%{$search}%")
+                  ->orWhereHas('tenant', function($tenantQuery) use ($search) {
+                      $tenantQuery->where('company_name', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        $leads = $query->latest()->paginate(15);
+
+        // Append search parameter to pagination links
+        if ($request->has('search')) {
+            $leads->appends(['search' => $request->search]);
+        }
+
+        // If AJAX request, return JSON for live search
+        if ($request->ajax()) {
+            return response()->json([
+                'html' => view('admin.leads.partials.table', compact('leads'))->render(),
+                'pagination' => $leads->links('pagination::bootstrap-4')->toHtml()
+            ]);
+        }
 
         return view('admin.leads.index', compact('leads'));
     }
