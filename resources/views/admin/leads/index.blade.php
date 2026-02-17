@@ -22,6 +22,7 @@
                     id="searchInput" 
                     placeholder="Search leads by name, email, tenant, status..." 
                     value="{{ request('search') }}"
+                    maxlength="40"
                     style="width: 100%; padding: 10px 40px 10px 15px; border: 1px solid #D1D5DB; border-radius: 6px; font-size: 14px; outline: none; transition: border-color 0.2s;"
                     onfocus="this.style.borderColor='#3B82F6';"
                     onblur="this.style.borderColor='#D1D5DB';"
