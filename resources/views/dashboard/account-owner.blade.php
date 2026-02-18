@@ -5,22 +5,49 @@
 @section('content')
     <div class="top-header">
         <h1>Welcome, {{ auth()->user()->name }}</h1>
-        <p>This is your Account Owner Dashboard.</p>
+        <p>Business Performance Snapshot</p>
     </div>
 
-    <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-        <h3>Quick Stats</h3>
-        <p>Manage your team, leads, and subscription here.</p>
-        <!-- Static placeholders -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 20px;">
-            <div style="background: #eff6ff; padding: 15px; border-radius: 6px;">
-                <h4 style="margin: 0; color: #1e40af;">Total Leads</h4>
-                <p style="font-size: 24px; font-weight: bold; margin: 10px 0;">125</p>
-            </div>
-            <div style="background: #f0fdf4; padding: 15px; border-radius: 6px;">
-                <h4 style="margin: 0; color: #166534;">Active Users</h4>
-                <p style="font-size: 24px; font-weight: bold; margin: 10px 0;">5</p>
-            </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; margin-bottom: 20px;">
+        <div class="card">
+            <h3>Total Leads</h3>
+            <p style="font-size: 26px; font-weight: 700;">{{ $totalLeads }}</p>
         </div>
+        <div class="card">
+            <h3>Leads This Month</h3>
+            <p style="font-size: 26px; font-weight: 700;">{{ $leadsThisMonth }}</p>
+        </div>
+        <div class="card">
+            <h3>Conversion Rate</h3>
+            <p style="font-size: 26px; font-weight: 700;">{{ $conversionRate }}%</p>
+        </div>
+        <div class="card">
+            <h3>Paid Revenue</h3>
+            <p style="font-size: 26px; font-weight: 700;">${{ number_format($revenueTotal, 2) }}</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>Leads by Status</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Status</th>
+                    <th>Count</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($leadsByStatus as $status => $count)
+                    <tr>
+                        <td>{{ ucwords(str_replace('_', ' ', $status)) }}</td>
+                        <td>{{ $count }}</td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="2">No lead data found.</td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
     </div>
 @endsection

@@ -4,46 +4,61 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Lead extends Model
 {
     use HasFactory;
 
-    // ✅ Mass-assignable fields
+    public const PIPELINE_STATUSES = [
+        'new' => 'New',
+        'contacted' => 'Contacted',
+        'proposal_sent' => 'Proposal Sent',
+        'closed_won' => 'Closed Won',
+        'closed_lost' => 'Closed Lost',
+    ];
+
     protected $fillable = [
         'tenant_id',
+        'assigned_to',
         'name',
         'email',
         'phone',
         'status',
-        'score'
+        'score',
     ];
 
-    // 🔹 Optional: Global Scope for Tenant Isolation
-    protected static function booted()
+    protected static function booted(): void
     {
         static::addGlobalScope('tenant', function ($query) {
-            // Skip tenant filtering when running artisan commands like migrate or seed
             if (app()->runningInConsole()) {
                 return;
             }
 
-            // Only filter if a user is logged in
             if (auth()->check() && auth()->user()) {
                 $query->where('tenant_id', auth()->user()->tenant_id);
             }
         });
     }
 
-    // 🔹 Relationship: each lead belongs to a tenant
-    public function tenant()
+    public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
     }
 
-    // 🔹 Relationship: a lead can have multiple activities
-    public function activities()
+    public function assignedAgent(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    public function activities(): HasMany
     {
         return $this->hasMany(LeadActivity::class);
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
     }
 }

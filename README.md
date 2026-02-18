@@ -1,59 +1,161 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+﻿# SaaS Sales and Marketing Funnel System
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+## Project Brief
+This project builds a multi-tenant SaaS Sales and Marketing Funnel System where multiple client businesses operate independently in one platform.
 
-## About Laravel
+The platform combines funnel creation, CRM, automation, payments, and analytics to support end-to-end digital sales operations.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+Primary goal: deliver a scalable, secure, and commercially viable SaaS product with clear monetization and role-based operations.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Project Objective
+Deliver a platform that:
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- Supports secure multi-tenant architecture.
+- Enables sales funnel creation and management.
+- Captures, tracks, and scores leads in CRM.
+- Automates follow-up flows (email, SMS, workflows).
+- Processes one-time and subscription payments.
+- Provides client + super-admin analytics.
+- Supports billing tiers, limits, and subscription controls.
 
-## Learning Laravel
+## Current Progress Checklist
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+### Step 1 (Weeks 1-2): Foundation + Business Functionality
+- [x] Multi-tenant architecture (tenant isolation in core entities)
+- [x] Role-based access (Super Admin, Account Owner, Marketing Manager, Sales Agent, Finance)
+- [x] Basic CRM lead management (create, edit, list, delete)
+- [x] Lead activity logging
+- [x] Lead assignment (`assigned_to`) to sales agents
+- [x] Sales-agent restricted lead visibility (assigned leads only)
+- [x] Pipeline statuses (`new`, `contacted`, `proposal_sent`, `closed_won`, `closed_lost`)
+- [x] Pipeline section on leads page
+- [x] Lead scoring support (`+5`, `+10`, `+20` event actions)
+- [x] Basic email activity logging in lead activities
+- [x] Account Owner analytics (total leads, leads this month, conversion rate, leads by status)
+- [x] Super Admin analytics expansion (total tenants, active tenants, users, leads)
+- [x] Payment tracking module (payments table, billing page, owner/finance access)
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### Step 2 (Week 3): Funnel Builder MVP
+- [ ] Drag-and-drop funnel/page builder
+- [ ] Landing pages and opt-in forms
+- [ ] Sales pages
+- [ ] Checkout page builder integration
+- [ ] Lead form capture and tagging
 
-## Laravel Sponsors
+### Step 3 (Week 4): Automation Engine
+- [ ] Email sequences
+- [ ] SMS integration
+- [ ] Time-delay actions
+- [ ] Conditional workflows
+- [ ] Event-based automation triggers
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### Step 4 (Week 5): Checkout + Subscriptions
+- [ ] One-time payments flow
+- [ ] Subscription products
+- [ ] Coupon/discount handling
+- [ ] Failed payment recovery
+- [ ] Payment gateway integration
 
-### Premium Partners
+### Step 5 (Week 6): Advanced Analytics + SaaS Controls
+- [ ] Client analytics (conversion, revenue per funnel, abandoned cart)
+- [ ] SaaS owner analytics (MRR, churn, ARPU, usage metrics)
+- [ ] Tiered pricing plans
+- [ ] Usage limits
+- [ ] Trial management
+- [ ] Subscription billing controls
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+## Modules and Scope
 
-## Contributing
+### 1. Multi-Tenant Permission System
+- [x] Super Admin
+- [x] Account Owner
+- [x] Marketing Manager
+- [x] Sales Agent
+- [x] Finance
+- [ ] Customer role and portal
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+### 2. Funnel Builder System
+- [ ] Drag-and-drop builder
+- [ ] Landing, opt-in, and sales pages
+- [ ] Checkout pages
+- [ ] Upsell/downsell logic
 
-## Code of Conduct
+### 3. Lead Flow and CRM
+- [x] Lead database
+- [ ] Tagging and custom fields
+- [x] Lead scoring (basic)
+- [x] Activity tracking
+- [x] Sales pipeline view (basic Kanban-style section)
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+### 4. Automation Engine
+- [ ] Email sequences
+- [ ] SMS workflows
+- [ ] Conditional logic
+- [ ] Trigger-based automation
 
-## Security Vulnerabilities
+### 5. Checkout and Payment System
+- [x] Basic payment tracking records
+- [ ] One-time checkout workflow
+- [ ] Subscription checkout workflow
+- [ ] Coupons
+- [ ] Failed payment recovery
+- [ ] Payment gateway integration
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+### 6. Analytics and Reporting Dashboard
+- [x] Account Owner core lead metrics
+- [x] Super Admin core platform metrics
+- [ ] Funnel conversion analytics
+- [ ] Revenue per funnel
+- [ ] Abandoned cart rate
+- [ ] MRR, churn, ARPU, usage analytics
 
-## License
+### 7. SaaS Business Controls
+- [ ] Tiered pricing
+- [ ] Usage limits
+- [ ] Trial rules
+- [ ] Subscription lifecycle controls
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## Team Roles
+
+### Development
+Responsible for architecture, database, module logic, security, and billing integration.
+
+### UI/UX
+Responsible for builder interface, dashboards, and usability in tenant/admin views.
+
+### QA and Documentation Support
+Responsible for validation, workflow verification, and project documentation.
+
+## Collaboration Process
+Build sequence:
+
+1. Multi-tenant architecture and role permissions.
+2. CRM foundation and user structures.
+3. Funnel builder and lead capture.
+4. Automation and communication integrations.
+5. Checkout/subscriptions/payments.
+6. Analytics and SaaS business controls.
+
+All modules must remain interconnected: CRM, funnel tracking, automation, and payments should function as one flow.
+
+## Expected Outcome
+At completion, the platform should provide:
+
+- A scalable SaaS funnel system.
+- Structured lead management and automation.
+- Integrated payment and subscription handling.
+- Clear performance reporting for client tenants and platform owners.
+
+## Quality Standards
+- Clarity: Interfaces are understandable for non-technical users.
+- Accuracy: Workflows match real sales/marketing operations.
+- Consistency: Naming and logic align across all modules.
+- Security: Tenant data remains isolated and protected.
+- Usefulness: Features directly support growth and automation.
+
+## Recommended Immediate Next Tasks
+- [ ] Add lead tags and custom fields.
+- [ ] Start funnel builder MVP (Week 3 scope).
+- [ ] Add automated email sequence infrastructure.
+- [ ] Integrate payment gateway for real transactions.
+- [ ] Add feature tests for assignment, scoring, pipeline, and payments.

@@ -11,9 +11,24 @@ use Illuminate\Support\Facades\DB;
 
 class TenantController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $tenants = Tenant::latest()->paginate(5); 
+        $query = Tenant::latest();
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('company_name', 'like', "%{$search}%")
+                  ->orWhere('subscription_plan', 'like', "%{$search}%")
+                  ->orWhere('status', 'like', "%{$search}%");
+            });
+        }
+
+        $tenants = $query->paginate(15); 
+
+        if ($request->ajax()) {
+            return view('admin.tenants._rows', compact('tenants'))->render();
+        }
 
         return view('admin.tenants.index', compact('tenants'));
     }

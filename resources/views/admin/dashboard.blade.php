@@ -20,6 +20,10 @@
             <h3>Total Tenants</h3>
             <p>{{ $tenantCount }}</p>
         </div>
+        <div class="card" onclick="window.location='{{ route('admin.tenants.index') }}'" style="cursor: pointer;">
+            <h3>Active Tenants</h3>
+            <p>{{ $activeTenantCount }}</p>
+        </div>
         <div class="card">
             <h3>Active Subscriptions (MRR)</h3>
             <p>${{ number_format($mrr) }}</p>
@@ -77,10 +81,10 @@
             </tr>
         </thead>
         <tbody>
-            <tr><td>Emails Sent</td><td>2,560</td></tr>
-            <tr><td>SMS Sent</td><td>1,200</td></tr>
-            <tr><td>Funnels Created</td><td>45</td></tr>
-            <tr><td>API Usage</td><td>3,400</td></tr>
+            <tr><td>Total Tenants</td><td>{{ $tenantCount }}</td></tr>
+            <tr><td>Active Tenants</td><td>{{ $activeTenantCount }}</td></tr>
+            <tr><td>Total Users</td><td>{{ $userCount }}</td></tr>
+            <tr><td>Total Leads</td><td>{{ $leadCount }}</td></tr>
         </tbody>
     </table>
 @endsection

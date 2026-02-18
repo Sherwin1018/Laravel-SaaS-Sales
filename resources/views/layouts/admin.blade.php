@@ -88,7 +88,9 @@
 
             {{-- Billing (Owner, Finance) --}}
             @if(auth()->user()->hasRole('account-owner') || auth()->user()->hasRole('finance'))
-                <a href="#"><i class="fas fa-file-invoice-dollar"></i> <span>Billing</span></a>
+                <a href="{{ route('payments.index') }}" class="{{ request()->routeIs('payments.*') ? 'active' : '' }}">
+                    <i class="fas fa-file-invoice-dollar"></i> <span>Billing</span>
+                </a>
             @endif
             
             {{-- Analytics (Owner, Marketing, Finance) --}}

@@ -13,10 +13,26 @@ class UserController extends Controller
     /**
      * Display a list of ALL users for Super Admin.
      */
-    public function adminIndex()
+    public function adminIndex(Request $request)
     {
-        // Fetch all users with their tenant and roles, paginated
-        $users = User::with(['tenant', 'roles'])->latest()->paginate(10);
+        $query = User::with(['tenant', 'roles']);
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhereHas('tenant', function($tq) use ($search) {
+                      $tq->where('company_name', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        $users = $query->latest()->paginate(15);
+
+        if ($request->ajax()) {
+            return view('admin.users._rows', compact('users'))->render();
+        }
 
         return view('admin.users.index', compact('users'));
     }
@@ -24,16 +40,24 @@ class UserController extends Controller
     /**
      * Display a list of users for the current tenant.
      */
-    public function index()
+    public function index(Request $request)
     {
         $tenantId = auth()->user()->tenant_id;
+        $query = User::where('tenant_id', $tenantId)->with('roles');
 
-        // Get users belonging to this tenant, exclude current user if desired? 
-        // Or show all. Usually list all team members.
-        $users = User::where('tenant_id', $tenantId)
-                    ->with('roles')
-                    ->latest()
-                    ->paginate(10);
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        $users = $query->latest()->paginate(10);
+
+        if ($request->ajax()) {
+            return view('users._rows', compact('users'))->render();
+        }
 
         return view('users.index', compact('users'));
     }

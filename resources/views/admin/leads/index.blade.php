@@ -3,8 +3,14 @@
 @section('title', 'All Leads')
 
 @section('content')
-    <div class="top-header">
-        <h1>All Leads</h1>
+    <div class="actions" style="display: flex; justify-content: space-between; align-items: center;">
+        <div></div> <!-- Placeholder for layout consistency -->
+        
+        <!-- Live Search Input -->
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="Search leads..." 
+                   style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; width: 300px;">
+        </div>
     </div>
 
     @if(session('success'))
@@ -21,57 +27,51 @@
                     <th>Name</th>
                     <th>Email</th>
                     <th>Tenant</th>
+                    <th>Assigned To</th>
                     <th>Status</th>
                     <th>Score</th>
-                    <th>Actions</th>
                 </tr>
             </thead>
-            <tbody>
-                @forelse($leads as $lead)
-                    <tr>
-                        <td>{{ $lead->name }}</td>
-                        <td>{{ $lead->email }}</td>
-                        <td>
-                            @if($lead->tenant)
-                                <span style="background-color: #F3F4F6; color: #374151; padding: 2px 6px; border-radius: 4px; font-size: 12px;">
-                                    {{ $lead->tenant->company_name }}
-                                </span>
-                            @else
-                                <span style="color: #9CA3AF; font-size: 12px;">N/A</span>
-                            @endif
-                        </td>
-                        <td>
-                            <span style="padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; 
-                                @if($lead->status == 'new') background-color: #DBEAFE; color: #1E40AF;
-                                @elseif($lead->status == 'contacted') background-color: #FEF3C7; color: #92400E;
-                                @elseif($lead->status == 'qualified') background-color: #D1FAE5; color: #065F46;
-                                @elseif($lead->status == 'lost') background-color: #FEE2E2; color: #991B1B;
-                                @endif">
-                                {{ ucfirst($lead->status) }}
-                            </span>
-                        </td>
-                        <td>{{ $lead->score }}</td>
-                        <td style="display: flex; gap: 10px;">
-                             <!-- Super Admin can delete, but maybe not edit heavily? keeping delete for now -->
-                             <form action="{{ route('leads.destroy', $lead->id) }}" method="POST" onsubmit="return confirm('Are you sure?');">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" style="background: none; border: none; color: #DC2626; cursor: pointer; padding: 0;">
-                                    <i class="fas fa-trash"></i> Delete
-                                </button>
-                            </form>
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="6" style="text-align: center;">No leads found.</td>
-                    </tr>
-                @endforelse
+            <tbody id="tableBody">
+                @include('admin.leads._rows', ['leads' => $leads])
             </tbody>
         </table>
 
-         <div style="margin-top: 20px;">
+         <div style="margin-top: 20px;" id="paginationLinks">
             {{ $leads->links('pagination::bootstrap-4') }}
         </div>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('searchInput');
+            const tableBody = document.getElementById('tableBody');
+            const paginationLinks = document.getElementById('paginationLinks');
+
+            let timeout = null;
+
+            searchInput.addEventListener('keyup', function() {
+                clearTimeout(timeout);
+                const query = searchInput.value;
+                if (query.length > 0 && query.length < 2) return;
+
+                timeout = setTimeout(() => {
+                    fetch(`{{ route('admin.leads.index') }}?search=${encodeURIComponent(query)}`, {
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    })
+                    .then(response => response.text())
+                    .then(html => {
+                        tableBody.innerHTML = html;
+                        if (query.length > 0) {
+                            paginationLinks.style.display = 'none';
+                        } else {
+                            paginationLinks.style.display = 'block';
+                            if (query === '') window.location.reload();
+                        }
+                    })
+                    .catch(error => console.error('Search error:', error));
+                }, 300);
+            });
+        });
+    </script>
 @endsection
