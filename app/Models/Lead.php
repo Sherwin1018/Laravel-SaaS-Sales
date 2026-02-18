@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Lead extends Model
@@ -21,6 +22,8 @@ class Lead extends Model
 
     protected $fillable = [
         'tenant_id',
+        'source_funnel_id',
+        'source_funnel_page_id',
         'assigned_to',
         'name',
         'email',
@@ -45,6 +48,21 @@ class Lead extends Model
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
+    }
+
+    public function sourceFunnel(): BelongsTo
+    {
+        return $this->belongsTo(Funnel::class, 'source_funnel_id');
+    }
+
+    public function sourceFunnelPage(): BelongsTo
+    {
+        return $this->belongsTo(FunnelPage::class, 'source_funnel_page_id');
+    }
+
+    public function tags(): BelongsToMany
+    {
+        return $this->belongsToMany(Tag::class, 'lead_tag');
     }
 
     public function assignedAgent(): BelongsTo

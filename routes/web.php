@@ -3,6 +3,9 @@
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\FunnelController;
+use App\Http\Controllers\FunnelPageController;
+use App\Http\Controllers\LeadCaptureController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\TenantController;
@@ -12,6 +15,10 @@ use Illuminate\Support\Facades\Route;
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
+// Public funnel page view and lead capture (no auth)
+Route::get('/f/{funnelSlug}/{pageSlug}', [LeadCaptureController::class, 'showPage'])->name('funnels.public.page');
+Route::post('/capture', [LeadCaptureController::class, 'store'])->name('leads.capture');
 
 Route::middleware(['auth', 'role:super-admin'])->group(function () {
     Route::get('/admin/dashboard', [AdminController::class, 'index'])->name('admin.dashboard');
@@ -61,5 +68,18 @@ Route::middleware(['auth', 'role:sales-agent,marketing-manager,account-owner,fin
     Route::middleware(['role:account-owner,finance'])->group(function () {
         Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');
         Route::post('/payments', [PaymentController::class, 'store'])->name('payments.store');
+    });
+
+    // Funnel builder (Account Owner, Marketing Manager)
+    Route::middleware(['role:account-owner,marketing-manager'])->group(function () {
+        Route::resource('funnels', FunnelController::class)->except(['show']);
+        Route::get('/funnels/{funnel}', [FunnelController::class, 'show'])->name('funnels.show');
+        Route::get('/funnels/{funnel}/pages/create', [FunnelPageController::class, 'create'])->name('funnels.pages.create');
+        Route::post('/funnels/{funnel}/pages', [FunnelPageController::class, 'store'])->name('funnels.pages.store');
+        Route::get('/funnels/{funnel}/pages/{page}/edit', [FunnelPageController::class, 'edit'])->name('funnels.pages.edit');
+        Route::put('/funnels/{funnel}/pages/{page}', [FunnelPageController::class, 'update'])->name('funnels.pages.update');
+        Route::delete('/funnels/{funnel}/pages/{page}', [FunnelPageController::class, 'destroy'])->name('funnels.pages.destroy');
+        Route::post('/funnels/{funnel}/pages/reorder', [FunnelPageController::class, 'reorder'])->name('funnels.pages.reorder');
+        Route::post('/funnels/{funnel}/duplicate', [FunnelController::class, 'duplicate'])->name('funnels.duplicate');
     });
 });

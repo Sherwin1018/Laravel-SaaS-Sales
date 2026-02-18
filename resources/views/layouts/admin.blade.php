@@ -86,7 +86,7 @@
 
             {{-- Funnels & Automation (Owner, Marketing) --}}
             @if(auth()->user()->hasRole('account-owner') || auth()->user()->hasRole('marketing-manager'))
-                <a href="#"><i class="fas fa-filter"></i> <span>Funnels</span></a>
+                <a href="{{ route('funnels.index') }}" class="{{ request()->routeIs('funnels.*') ? 'active' : '' }}"><i class="fas fa-filter"></i> <span>Funnels</span></a>
                 <a href="#"><i class="fas fa-clipboard-list"></i> <span>Automation</span></a>
             @endif
 

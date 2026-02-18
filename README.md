@@ -1,4 +1,4 @@
-﻿# SaaS Sales and Marketing Funnel System
+# SaaS Sales and Marketing Funnel System
 
 ## Project Brief
 This project builds a multi-tenant SaaS Sales and Marketing Funnel System where multiple client businesses operate independently in one platform.
@@ -36,11 +36,11 @@ Deliver a platform that:
 - [x] Payment tracking module (payments table, billing page, owner/finance access)
 
 ### Step 2 (Week 3): Funnel Builder MVP
-- [ ] Drag-and-drop funnel/page builder
-- [ ] Landing pages and opt-in forms
-- [ ] Sales pages
-- [ ] Checkout page builder integration
-- [ ] Lead form capture and tagging
+- [x] Drag-and-drop funnel/page builder
+- [x] Landing pages and opt-in forms
+- [x] Sales pages
+- [x] Checkout page builder integration
+- [x] Lead form capture and tagging
 
 ### Step 3 (Week 4): Automation Engine
 - [ ] Email sequences
@@ -76,13 +76,13 @@ Deliver a platform that:
 
 ### 2. Funnel Builder System
 - [ ] Drag-and-drop builder
-- [ ] Landing, opt-in, and sales pages
-- [ ] Checkout pages
+- [x] Landing, opt-in, and sales pages
+- [x] Checkout pages
 - [ ] Upsell/downsell logic
 
 ### 3. Lead Flow and CRM
 - [x] Lead database
-- [ ] Tagging and custom fields
+- [x] Tagging and custom fields (tags table, lead_tag pivot, capture with tag_ids)
 - [x] Lead scoring (basic)
 - [x] Activity tracking
 - [x] Sales pipeline view (basic Kanban-style section)
@@ -154,8 +154,8 @@ At completion, the platform should provide:
 - Usefulness: Features directly support growth and automation.
 
 ## Recommended Immediate Next Tasks
-- [ ] Add lead tags and custom fields.
-- [ ] Start funnel builder MVP (Week 3 scope).
+- [x] Add lead tags and custom fields.
+- [x] Start funnel builder MVP (Week 3 scope).
 - [ ] Add automated email sequence infrastructure.
 - [ ] Integrate payment gateway for real transactions.
 - [ ] Add feature tests for assignment, scoring, pipeline, and payments.

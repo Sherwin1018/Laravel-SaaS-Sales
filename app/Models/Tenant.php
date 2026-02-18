@@ -22,4 +22,13 @@ class Tenant extends Model
         return $this->hasMany(Lead::class);
     }
 
+    public function funnels()
+    {
+        return $this->hasMany(Funnel::class);
+    }
+
+    public function tags()
+    {
+        return $this->hasMany(Tag::class);
+    }
 }

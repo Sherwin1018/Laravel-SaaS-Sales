@@ -13,7 +13,7 @@
         <p>Manage billing, invoices, and subscription details.</p>
         
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 20px;">
-            <div style="background: #fff beb; padding: 15px; border-radius: 6px;">
+            <div style="background: #fff7ed; padding: 15px; border-radius: 6px;">
                 <h4 style="margin: 0; color: #b45309;">Outstanding Invoices</h4>
                 <p style="font-size: 24px; font-weight: bold; margin: 10px 0;">$1,250.00</p>
             </div>
