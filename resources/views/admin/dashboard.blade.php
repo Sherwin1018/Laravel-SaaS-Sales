@@ -16,21 +16,21 @@
 
     <!-- KPI Cards -->
     <div class="kpi-cards">
-        <div class="card">
+        <div class="card" onclick="window.location='{{ route('admin.tenants.index') }}'" style="cursor: pointer;">
             <h3>Total Tenants</h3>
-            <p>12</p>
+            <p>{{ $tenantCount }}</p>
         </div>
         <div class="card">
             <h3>Active Subscriptions (MRR)</h3>
-            <p>$25,600</p>
+            <p>${{ number_format($mrr) }}</p>
         </div>
-        <div class="card">
+        <div class="card" onclick="window.location='{{ route('admin.users.index') }}'" style="cursor: pointer;">
             <h3>Total Users</h3>
-            <p>180</p>
+            <p>{{ $userCount }}</p>
         </div>
-        <div class="card">
-            <h3>Churn Rate</h3>
-            <p>5%</p>
+        <div class="card" onclick="window.location='{{ route('admin.leads.index') }}'" style="cursor: pointer;">
+            <h3>Total Leads</h3>
+            <p>{{ $leadCount }}</p>
         </div>
     </div>
 

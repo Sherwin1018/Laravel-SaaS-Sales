@@ -4,6 +4,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\TenantController;
+use App\Http\Controllers\AdminController;
 
 // Login & Logout routes
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
@@ -15,9 +16,7 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 // Admin Dashboard — Super Admin Only
 Route::middleware(['auth', 'role:super-admin'])->group(function () {
 
-    Route::get('/admin/dashboard', function () {
-        return view('admin.dashboard');
-    })->name('admin.dashboard');
+    Route::get('/admin/dashboard', [AdminController::class, 'index'])->name('admin.dashboard');
 
     // ✅ TENANTS ROUTES
     Route::get('/admin/tenants', [TenantController::class, 'index'])
@@ -37,6 +36,14 @@ Route::middleware(['auth', 'role:super-admin'])->group(function () {
 
     Route::delete('/admin/tenants/{tenant}', [TenantController::class, 'destroy'])
         ->name('admin.tenants.destroy');
+
+    // ✅ USERS (Super Admin View)
+    Route::get('/admin/users', [UserController::class, 'adminIndex'])
+        ->name('admin.users.index');
+
+    // ✅ LEADS (Super Admin View)
+    Route::get('/admin/leads', [LeadController::class, 'adminIndex'])
+        ->name('admin.leads.index');
 });
 
 

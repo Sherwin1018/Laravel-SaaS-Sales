@@ -11,6 +11,17 @@ use Illuminate\Validation\Rule;
 class UserController extends Controller
 {
     /**
+     * Display a list of ALL users for Super Admin.
+     */
+    public function adminIndex()
+    {
+        // Fetch all users with their tenant and roles, paginated
+        $users = User::with(['tenant', 'roles'])->latest()->paginate(10);
+
+        return view('admin.users.index', compact('users'));
+    }
+
+    /**
      * Display a list of users for the current tenant.
      */
     public function index()

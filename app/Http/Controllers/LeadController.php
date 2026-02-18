@@ -8,6 +8,17 @@ use App\Models\Lead;
 class LeadController extends Controller
 {
     /**
+     * Display all leads for Super Admin (across all tenants).
+     */
+    public function adminIndex()
+    {
+        // Fetch all leads with their tenant, paginated
+        $leads = Lead::withoutGlobalScope('tenant')->with('tenant')->latest()->paginate(15);
+
+        return view('admin.leads.index', compact('leads'));
+    }
+
+    /**
      * Display all leads for the logged-in user's tenant
      */
     public function index()
