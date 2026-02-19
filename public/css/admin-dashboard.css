@@ -129,7 +129,7 @@ body {
 .account-info {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
     gap: 8px;
 }
 
@@ -158,6 +158,8 @@ body {
     flex-direction: column;
     overflow: hidden;
     margin-bottom: 2px;
+    min-width: 0;
+    flex: 1;
 }
 
 .account-details strong {
@@ -193,7 +195,7 @@ body {
     font-size: 16px;
     padding: 4px 6px;
     border-radius: 4px;
-    margin-left: 8px;
+    margin-left: auto;
     align-self: flex-start;
     transition: background 0.2s;
 }
