@@ -40,7 +40,7 @@
                     <span style="color: red; font-size: 12px;">{{ $message }}</span>
                 @enderror
                 <p style="margin-top: 6px; color: #475569; font-size: 12px; font-weight: 600;">
-                    Enter an 11-digit Philippine number starting with 09.
+                    Enter an 11-digit Philippine number starting with 09 (numbers only).
                 </p>
             </div>
 
@@ -80,4 +80,19 @@
             </div>
         </form>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var phone = document.getElementById('phone');
+            if (phone) {
+                phone.addEventListener('input', function() {
+                    this.value = this.value.replace(/\D/g, '');
+                });
+                phone.addEventListener('keypress', function(e) {
+                    if (!/[\d]/.test(e.key) && !e.ctrlKey && !e.metaKey && e.key !== 'Backspace' && e.key !== 'Tab') e.preventDefault();
+                });
+            }
+
+        });
+    </script>
 @endsection

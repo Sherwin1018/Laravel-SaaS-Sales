@@ -28,17 +28,13 @@
         <td>{{ $user->created_at->format('Y-m-d') }}</td>
         <td>
             @if($user->hasRole('account-owner'))
-                <form action="{{ route('admin.users.status', $user->id) }}" method="POST"
-                    onsubmit="if('{{ $user->status }}' === 'active'){ const reason = prompt('Reason for suspending Account:'); if(!reason){ return false; } this.querySelector('input[name=suspension_reason]').value = reason; } return true;">
-                    @csrf
-                    @method('PATCH')
-                    <input type="hidden" name="suspension_reason" value="">
-                    <button type="submit"
-                        style="background: none; border: none; color: {{ $user->status === 'active' ? '#B91C1C' : '#047857' }}; cursor: pointer; padding: 0; font-weight: 700;">
-                        <i class="fas {{ $user->status === 'active' ? 'fa-user-slash' : 'fa-user-check' }}"></i>
-                        {{ $user->status === 'active' ? 'Suspend' : 'Activate' }}
-                    </button>
-                </form>
+                <button type="button" class="open-status-modal"
+                    data-user-id="{{ $user->id }}"
+                    data-user-status="{{ $user->status }}"
+                    style="padding: 6px 12px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; font-size: 13px; {{ $user->status === 'active' ? 'background-color: #FEE2E2; color: #B91C1C;' : 'background-color: #D1FAE5; color: #047857;' }}">
+                    <i class="fas {{ $user->status === 'active' ? 'fa-user-slash' : 'fa-user-check' }}"></i>
+                    {{ $user->status === 'active' ? 'Suspend' : 'Activate' }}
+                </button>
             @else
                 <span style="color: #64748B; font-size: 12px; font-weight: 700;">N/A</span>
             @endif

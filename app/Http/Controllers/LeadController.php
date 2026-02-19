@@ -57,15 +57,52 @@ class LeadController extends Controller
         }
 
         $leads = $query->latest()->paginate(10);
-        $pipelineLeads = $this->buildPipelineLeads(clone $query, $pipelineSearch);
+        
+        // Create separate query for pipeline (independent of main list search/pagination)
+        $pipelineQuery = Lead::where('tenant_id', $user->tenant_id)->with('assignedAgent');
+        if ($user->hasRole('sales-agent')) {
+            $pipelineQuery->where('assigned_to', $user->id);
+        }
+        $pipelineLeads = $this->buildPipelineLeads($pipelineQuery, $pipelineSearch);
         $assignableAgents = $this->getAssignableAgents($user->tenant_id);
 
+        // For Assign Lead dropdown: all leads (up to 500) so page 2+ leads appear
+        $leadsForDropdown = (clone $query)->latest()->take(500)->get();
+
+        // AJAX: pipeline-only (View Lead Pipeline modal search – searches all data, shows up to 12 per stage)
+        if ($request->ajax() && $request->has('pipeline_only')) {
+            $pipeSearch = trim((string) $request->get('pipeline_search', ''));
+            $pipeQuery = Lead::where('tenant_id', $user->tenant_id)->with('assignedAgent');
+            if ($user->hasRole('sales-agent')) {
+                $pipeQuery->where('assigned_to', $user->id);
+            }
+            $pipeLeads = $this->buildPipelineLeads($pipeQuery, $pipeSearch);
+            $pipeHtml = view('leads._pipeline_grid', [
+                'pipelineStatuses' => Lead::PIPELINE_STATUSES,
+                'pipelineLeads' => $pipeLeads,
+            ])->render();
+            $totals = [];
+            foreach (array_keys(Lead::PIPELINE_STATUSES) as $status) {
+                $totals[$status] = $pipeLeads[$status]['total'];
+            }
+            return response()->json(['pipelineHtml' => $pipeHtml, 'totals' => $totals]);
+        }
+
         if ($request->ajax()) {
-            return view('leads._rows', compact('leads'))->render();
+            $rowsHtml = view('leads._rows', compact('leads'))->render();
+            $leadOptions = $leadsForDropdown->map(function ($lead) {
+                return [
+                    'id' => $lead->id,
+                    'name' => $lead->name,
+                    'assigned' => $lead->assignedAgent->name ?? 'Unassigned',
+                ];
+            })->values()->all();
+            return response()->json(['rows' => $rowsHtml, 'leads' => $leadOptions]);
         }
 
         return view('leads.index', [
             'leads' => $leads,
+            'leadsForDropdown' => $leadsForDropdown,
             'pipelineStatuses' => Lead::PIPELINE_STATUSES,
             'pipelineLeads' => $pipelineLeads,
             'assignableAgents' => $assignableAgents,
@@ -327,15 +364,38 @@ class LeadController extends Controller
 
     private function buildPipelineLeads($baseQuery, string $pipelineSearch = ''): array
     {
+        $queryForCounts = clone $baseQuery;
         if ($pipelineSearch !== '') {
-            $baseQuery->where('name', 'like', "%{$pipelineSearch}%");
+            $search = trim($pipelineSearch);
+            $queryForCounts->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhereHas('assignedAgent', function ($aq) use ($search) {
+                        $aq->where('name', 'like', "%{$search}%");
+                    });
+            });
+            $baseQuery->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhereHas('assignedAgent', function ($aq) use ($search) {
+                        $aq->where('name', 'like', "%{$search}%");
+                    });
+            });
         }
 
+        // Get total counts for each status (before limiting to 12)
+        $totalCounts = [];
+        foreach (array_keys(Lead::PIPELINE_STATUSES) as $status) {
+            $totalCounts[$status] = (clone $queryForCounts)->where('status', $status)->count();
+        }
+
+        // Get leads and limit to 12 per stage for display (search checks all data)
         $leads = $baseQuery->orderByDesc('updated_at')->get();
         $grouped = [];
 
         foreach (array_keys(Lead::PIPELINE_STATUSES) as $status) {
-            $grouped[$status] = $leads->where('status', $status)->take(12)->values();
+            $grouped[$status] = [
+                'leads' => $leads->where('status', $status)->take(12)->values(),
+                'total' => $totalCounts[$status] ?? 0,
+            ];
         }
 
         return $grouped;

@@ -463,6 +463,74 @@ table tr:hover {
 /* RESPONSIVE */
 /* ============================= */
 
+/* ============================= */
+/* PAGINATION (Bootstrap-4 markup) */
+/* ============================= */
+
+.pagination {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.pagination .page-item {
+    list-style: none;
+    margin: 0;
+}
+
+.pagination .page-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    height: 36px;
+    padding: 0 10px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1E40AF;
+    text-decoration: none;
+    background: #fff;
+    border: 1px solid #DBEAFE;
+    border-radius: 6px;
+    transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.pagination .page-link:hover {
+    background: #DBEAFE;
+    border-color: #93C5FD;
+    color: #1E40AF;
+}
+
+.pagination .page-item.active .page-link {
+    background: #2563EB;
+    border-color: #2563EB;
+    color: #fff;
+    cursor: default;
+}
+
+.pagination .page-item.active .page-link:hover {
+    background: #2563EB;
+    border-color: #2563EB;
+    color: #fff;
+}
+
+.pagination .page-item.disabled .page-link {
+    background: #F1F5F9;
+    border-color: #E2E8F0;
+    color: #94A3B8;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* ============================= */
+/* RESPONSIVE */
+/* ============================= */
+
 @media (max-width: 768px) {
     .sidebar {
         position: absolute;

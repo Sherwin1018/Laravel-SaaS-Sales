@@ -10,6 +10,7 @@ class Tenant extends Model
         'company_name',
         'subscription_plan',
         'status',
+        'logo_path',
     ];
 
     public function users()

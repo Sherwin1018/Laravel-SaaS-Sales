@@ -117,7 +117,7 @@
                     </button>
 
                     <div id="accountDropdown" class="account-dropdown">
-                        <a href="#" class="dropdown-link">Manage Profile</a>
+                        <a href="{{ route('profile.show') }}" class="dropdown-link">Manage Profile</a>
 
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf

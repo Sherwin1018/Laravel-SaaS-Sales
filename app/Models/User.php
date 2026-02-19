@@ -53,6 +53,10 @@ class User extends Authenticatable
         'role',
         'status',
         'suspension_reason',
+        'phone',
+        'secondary_phone',
+        'profile_photo_path',
+        'last_login_at',
     ];
 
     /**
@@ -73,5 +77,6 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed', // Laravel hashes automatically
+        'last_login_at' => 'datetime',
     ];
 }

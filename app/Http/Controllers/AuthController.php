@@ -39,6 +39,9 @@ class AuthController extends Controller
                 return redirect()->route('login')->with('error', $message);
             }
 
+            $user->last_login_at = now();
+            $user->save();
+
             // Redirect based on role
             if ($user->hasRole('super-admin')) {
                 return redirect()->intended('/admin/dashboard')->with('success', 'Login Successfully');
