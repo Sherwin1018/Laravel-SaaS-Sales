@@ -36,10 +36,10 @@ Deliver a platform that:
 - [x] Payment tracking module (payments table, billing page, owner/finance access)
 
 ### Step 2 (Week 3): Funnel Builder MVP
-- [ ] Drag-and-drop funnel/page builder
-- [ ] Landing pages and opt-in forms
-- [ ] Sales pages
-- [ ] Checkout page builder integration
+- [x] Drag-and-drop funnel/page builder
+- [x] Landing pages and opt-in forms
+- [x] Sales pages
+- [x] Checkout page builder integration
 - [ ] Lead form capture and tagging
 
 ### Step 3 (Week 4): Automation Engine
@@ -139,10 +139,10 @@ Deliver a platform that:
 - [x] Customer role and portal
 
 ### 2. Funnel Builder System
-- [ ] Drag-and-drop builder
-- [ ] Landing, opt-in, and sales pages
-- [ ] Checkout pages
-- [ ] Upsell/downsell logic
+- [x] Drag-and-drop builder
+- [x] Landing, opt-in, and sales pages
+- [x] Checkout pages
+- [x] Upsell/downsell logic
 
 ### 3. Lead Flow and CRM
 - [x] Lead database
