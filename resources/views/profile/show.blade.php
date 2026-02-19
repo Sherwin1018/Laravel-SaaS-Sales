@@ -337,18 +337,30 @@
                 @method('PUT')
                 <div style="margin-bottom: 16px;">
                     <label for="old_password" style="display: block; margin-bottom: 6px; font-weight: 600;">Old Password</label>
-                    <input type="password" id="old_password" name="old_password" required
-                        style="width: 100%; padding: 10px; border: 1px solid #E2E8F0; border-radius: 6px;">
+                    <div style="position: relative;">
+                        <input type="password" id="old_password" name="old_password" required
+                            style="width: 100%; padding: 10px; padding-right: 40px; border: 1px solid #E2E8F0; border-radius: 6px;">
+                        <i class="fas fa-eye toggle-password" id="toggleOldPassword"
+                            style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #64748B;"></i>
+                    </div>
                 </div>
                 <div style="margin-bottom: 16px;">
                     <label for="new_password" style="display: block; margin-bottom: 6px; font-weight: 600;">New Password</label>
-                    <input type="password" id="new_password" name="new_password" required
-                        style="width: 100%; padding: 10px; border: 1px solid #E2E8F0; border-radius: 6px;">
+                    <div style="position: relative;">
+                        <input type="password" id="new_password" name="new_password" required
+                            style="width: 100%; padding: 10px; padding-right: 40px; border: 1px solid #E2E8F0; border-radius: 6px;">
+                        <i class="fas fa-eye toggle-password" id="toggleNewPassword"
+                            style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #64748B;"></i>
+                    </div>
                 </div>
                 <div style="margin-bottom: 16px;">
                     <label for="new_password_confirmation" style="display: block; margin-bottom: 6px; font-weight: 600;">Confirm New Password</label>
-                    <input type="password" id="new_password_confirmation" name="new_password_confirmation" required
-                        style="width: 100%; padding: 10px; border: 1px solid #E2E8F0; border-radius: 6px;">
+                    <div style="position: relative;">
+                        <input type="password" id="new_password_confirmation" name="new_password_confirmation" required
+                            style="width: 100%; padding: 10px; padding-right: 40px; border: 1px solid #E2E8F0; border-radius: 6px;">
+                        <i class="fas fa-eye toggle-password" id="toggleNewPasswordConfirmation"
+                            style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #64748B;"></i>
+                    </div>
                 </div>
                 <p style="margin-bottom: 16px; color: #475569; font-size: 12px; font-weight: 600;">
                     12-14 chars, uppercase, lowercase, number, and special character.
@@ -404,6 +416,28 @@
                 if (e.target === passwordModal) closePasswordModalFunc();
             });
         }
+
+        function bindPasswordToggle(toggleId, inputId) {
+            var toggle = document.getElementById(toggleId);
+            var input = document.getElementById(inputId);
+            if (!toggle || !input) return;
+
+            toggle.addEventListener('click', function () {
+                var type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+                input.setAttribute('type', type);
+                if (type === 'text') {
+                    toggle.classList.remove('fa-eye');
+                    toggle.classList.add('fa-eye-slash');
+                } else {
+                    toggle.classList.remove('fa-eye-slash');
+                    toggle.classList.add('fa-eye');
+                }
+            });
+        }
+
+        bindPasswordToggle('toggleOldPassword', 'old_password');
+        bindPasswordToggle('toggleNewPassword', 'new_password');
+        bindPasswordToggle('toggleNewPasswordConfirmation', 'new_password_confirmation');
 
         // Phone fields - numbers only
         var phone = document.getElementById('phone');

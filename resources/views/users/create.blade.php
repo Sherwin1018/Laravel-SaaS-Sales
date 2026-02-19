@@ -49,7 +49,7 @@
                 <div style="position: relative;">
                     <input type="password" name="password" id="password" required 
                         style="width: 100%; padding: 10px; padding-right: 40px; border: 1px solid #DBEAFE; border-radius: 6px;">
-                    <i class="fas fa-eye" id="togglePassword" 
+                    <i class="fas fa-eye toggle-password" id="togglePassword" 
                         style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #6B7280;"></i>
                 </div>
                 @error('password')
@@ -60,21 +60,51 @@
                 </p>
 
                 <script>
-                    const togglePassword = document.querySelector('#togglePassword');
-                    const password = document.querySelector('#password');
-                
-                    togglePassword.addEventListener('click', function () {
-                        const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
-                        password.setAttribute('type', type);
-                        this.classList.toggle('fa-eye-slash');
+                    document.addEventListener('DOMContentLoaded', function () {
+                        const togglePassword = document.querySelector('#togglePassword');
+                        const password = document.querySelector('#password');
+                        const toggleConfirmPassword = document.querySelector('#toggleConfirmPassword');
+                        const confirmPassword = document.querySelector('#password_confirmation');
+
+                        if (togglePassword && password) {
+                            togglePassword.addEventListener('click', function () {
+                                const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
+                                password.setAttribute('type', type);
+                                if (type === 'text') {
+                                    this.classList.remove('fa-eye');
+                                    this.classList.add('fa-eye-slash');
+                                } else {
+                                    this.classList.remove('fa-eye-slash');
+                                    this.classList.add('fa-eye');
+                                }
+                            });
+                        }
+
+                        if (toggleConfirmPassword && confirmPassword) {
+                            toggleConfirmPassword.addEventListener('click', function () {
+                                const type = confirmPassword.getAttribute('type') === 'password' ? 'text' : 'password';
+                                confirmPassword.setAttribute('type', type);
+                                if (type === 'text') {
+                                    this.classList.remove('fa-eye');
+                                    this.classList.add('fa-eye-slash');
+                                } else {
+                                    this.classList.remove('fa-eye-slash');
+                                    this.classList.add('fa-eye');
+                                }
+                            });
+                        }
                     });
                 </script>
             </div>
 
             <div style="margin-bottom: 20px;">
                 <label for="password_confirmation" style="display: block; margin-bottom: 8px; font-weight: bold;">Confirm Password</label>
-                <input type="password" name="password_confirmation" id="password_confirmation" required 
-                    style="width: 100%; padding: 10px; border: 1px solid #DBEAFE; border-radius: 6px;">
+                <div style="position: relative;">
+                    <input type="password" name="password_confirmation" id="password_confirmation" required 
+                        style="width: 100%; padding: 10px; padding-right: 40px; border: 1px solid #DBEAFE; border-radius: 6px;">
+                    <i class="fas fa-eye toggle-password" id="toggleConfirmPassword" 
+                        style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #6B7280;"></i>
+                </div>
             </div>
 
             <div style="display: flex; gap: 10px;">
