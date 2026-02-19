@@ -71,11 +71,11 @@
 
                 <div style="display: flex; gap: 10px;">
                     <button type="submit"
-                        style="padding: 10px 20px; background-color: #2563EB; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                        style="padding: 10px 20px; background-color: #2563EB; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
                         Update Lead
                     </button>
                     <a href="{{ route('leads.index') }}"
-                        style="padding: 10px 20px; background-color: #1E40AF; color: white; text-decoration: none; border-radius: 6px;">
+                        style="padding: 10px 20px; background-color: #1E40AF; color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">
                         Cancel
                     </a>
                 </div>
@@ -108,7 +108,7 @@
                     style="width: 100%; padding: 10px; border: 1px solid #DBEAFE; border-radius: 6px; margin-bottom: 10px;"
                     placeholder="Enter activity details..."></textarea>
                 <button type="submit"
-                    style="padding: 8px 16px; background-color: #10B981; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                    style="padding: 8px 16px; background-color: #10B981; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
                     Add Note
                 </button>
             </form>
@@ -122,7 +122,7 @@
                     <textarea name="message" rows="2" required placeholder="Message summary"
                         style="width: 100%; padding: 10px; border: 1px solid #DBEAFE; border-radius: 6px; margin-bottom: 10px;"></textarea>
                     <button type="submit"
-                        style="padding: 8px 16px; background-color: #0EA5E9; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                        style="padding: 8px 16px; background-color: #0EA5E9; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
                         Log Email
                     </button>
                 </form>
@@ -133,21 +133,21 @@
                 <form action="{{ route('leads.score-event', $lead->id) }}" method="POST">
                     @csrf
                     <input type="hidden" name="event" value="email_opened">
-                    <button type="submit" style="padding: 6px 10px; border: 1px solid #BFDBFE; background: #EFF6FF; border-radius: 6px; cursor: pointer;">
+                    <button type="submit" style="padding: 6px 10px; border: 1px solid #BFDBFE; background: #EFF6FF; border-radius: 6px; cursor: pointer; font-weight: 600;">
                         +5 Email Opened
                     </button>
                 </form>
                 <form action="{{ route('leads.score-event', $lead->id) }}" method="POST">
                     @csrf
                     <input type="hidden" name="event" value="link_clicked">
-                    <button type="submit" style="padding: 6px 10px; border: 1px solid #FDE68A; background: #FFFBEB; border-radius: 6px; cursor: pointer;">
+                    <button type="submit" style="padding: 6px 10px; border: 1px solid #FDE68A; background: #FFFBEB; border-radius: 6px; cursor: pointer; font-weight: 600;">
                         +10 Link Clicked
                     </button>
                 </form>
                 <form action="{{ route('leads.score-event', $lead->id) }}" method="POST">
                     @csrf
                     <input type="hidden" name="event" value="form_submitted">
-                    <button type="submit" style="padding: 6px 10px; border: 1px solid #BBF7D0; background: #F0FDF4; border-radius: 6px; cursor: pointer;">
+                    <button type="submit" style="padding: 6px 10px; border: 1px solid #BBF7D0; background: #F0FDF4; border-radius: 6px; cursor: pointer; font-weight: 600;">
                         +20 Form Submitted
                     </button>
                 </form>

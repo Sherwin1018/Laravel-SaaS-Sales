@@ -22,6 +22,7 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/profile/avatar', [ProfileController::class, 'deleteAvatar'])->name('profile.avatar.delete');
     Route::post('/profile/company-logo', [ProfileController::class, 'updateCompanyLogo'])->name('profile.company-logo.update');
     Route::delete('/profile/company-logo', [ProfileController::class, 'deleteCompanyLogo'])->name('profile.company-logo.delete');
+    Route::put('/profile/theme', [ProfileController::class, 'updateTheme'])->name('profile.theme.update');
 });
 
 Route::middleware(['auth', 'role:super-admin'])->group(function () {

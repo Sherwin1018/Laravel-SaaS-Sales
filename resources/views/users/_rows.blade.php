@@ -15,7 +15,7 @@
                 <form action="{{ route('users.destroy', $user->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to remove this user?');">
                     @csrf
                     @method('DELETE')
-                    <button type="submit" style="background: none; border: none; color: #DC2626; cursor: pointer; padding: 0;">
+                    <button type="submit" style="background: none; border: none; color: #DC2626; cursor: pointer; padding: 0; font-weight: 600;">
                         <i class="fas fa-trash"></i> Remove
                     </button>
                 </form>

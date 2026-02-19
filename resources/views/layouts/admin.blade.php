@@ -5,6 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'Super Admin Dashboard')</title>
     <link rel="stylesheet" href="{{ asset('css/admin-dashboard.css') }}">
+    @php
+        $authUser = auth()->user();
+        $tenant = $authUser?->tenant;
+        $themePrimary = $tenant->theme_primary_color ?? '#2563EB';
+        $themeAccent = $tenant->theme_accent_color ?? '#0EA5E9';
+        $themeSidebarBg = $tenant->theme_sidebar_bg ?? '#FFFFFF';
+        $themeSidebarText = $tenant->theme_sidebar_text ?? '#1E40AF';
+        $themeBodyBg = '#EFF6FF';
+        $themePrimaryDark = '#1E40AF';
+    @endphp
+    <style>
+        :root {
+            --theme-primary: {{ $themePrimary }};
+            --theme-primary-dark: {{ $themePrimaryDark }};
+            --theme-accent: {{ $themeAccent }};
+            --theme-sidebar-bg: {{ $themeSidebarBg }};
+            --theme-sidebar-text: {{ $themeSidebarText }};
+            --theme-body-bg: {{ $themeBodyBg }};
+        }
+    </style>
     <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Chart.js -->

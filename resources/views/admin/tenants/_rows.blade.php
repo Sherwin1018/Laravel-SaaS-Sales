@@ -20,7 +20,7 @@
             <form action="{{ route('admin.tenants.destroy', $tenant->id) }}" method="POST" onsubmit="return confirm('Are you sure?');">
                 @csrf
                 @method('DELETE')
-                <button type="submit" style="background: none; border: none; color: #DC2626; cursor: pointer; padding: 0;">
+                <button type="submit" style="background: none; border: none; color: #DC2626; cursor: pointer; padding: 0; font-weight: 600;">
                     <i class="fas fa-trash"></i> Delete
                 </button>
             </form>

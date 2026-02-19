@@ -11,10 +11,10 @@
         @if(auth()->user()->hasRole('account-owner') || auth()->user()->hasRole('marketing-manager'))
             <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                 <a href="{{ route('leads.create') }}" class="btn-create"><i class="fas fa-plus"></i> Add New Lead</a>
-                <button type="button" id="togglePipelineBtn" class="btn-create" style="background-color: #0EA5E9; color: #fff; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                <button type="button" id="togglePipelineBtn" class="btn-create" style="background-color: var(--theme-accent, #0EA5E9); color: #fff; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: 600;">
                     <i class="fas fa-columns"></i> View Lead Pipeline
                 </button>
-                <button type="button" id="toggleAssignBtn" class="btn-create" style="background-color: #14B8A6; color: #fff; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                <button type="button" id="toggleAssignBtn" class="btn-create" style="background-color: var(--theme-primary, #2563EB); color: #fff; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: 600;">
                     <i class="fas fa-user-check"></i> Assign Lead
                 </button>
             </div>
@@ -124,7 +124,7 @@
                         </select>
                     </div>
                     <button type="submit"
-                        style="padding: 8px 16px; background-color: #0EA5E9; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                        style="padding: 8px 16px; background-color: var(--theme-primary, #2563EB); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
                         Save Assignment
                     </button>
                 </form>

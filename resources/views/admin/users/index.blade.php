@@ -67,7 +67,7 @@
                 <p id="statusModalConfirmText" style="display: none; margin-bottom: 16px; color: #475569;"></p>
                 <div style="display: flex; gap: 8px;">
                     <button type="submit" id="statusModalSubmit" style="padding: 8px 16px; background-color: #B91C1C; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Suspend</button>
-                    <button type="button" id="statusModalCancel" style="padding: 8px 16px; background-color: #E2E8F0; color: #475569; border: none; border-radius: 6px; cursor: pointer;">Cancel</button>
+                    <button type="button" id="statusModalCancel" style="padding: 8px 16px; background-color: #E2E8F0; color: #475569; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Cancel</button>
                 </div>
             </form>
         </div>

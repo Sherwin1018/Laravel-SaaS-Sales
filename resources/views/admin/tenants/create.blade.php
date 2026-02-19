@@ -112,11 +112,11 @@
 
             <div style="display: flex; gap: 10px;">
                 <button type="submit" 
-                    style="padding: 10px 20px; background-color: #2563EB; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                    style="padding: 10px 20px; background-color: #2563EB; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
                     Create Tenant
                 </button>
                 <a href="{{ route('admin.tenants.index') }}" 
-                    style="padding: 10px 20px; background-color: #1E40AF; color: white; text-decoration: none; border-radius: 6px;">
+                    style="padding: 10px 20px; background-color: #1E40AF; color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">
                     Cancel
                 </a>
             </div>

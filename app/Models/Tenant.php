@@ -8,9 +8,13 @@ class Tenant extends Model
 {
     protected $fillable = [
         'company_name',
+        'logo_path',
         'subscription_plan',
         'status',
-        'logo_path',
+        'theme_primary_color',
+        'theme_accent_color',
+        'theme_sidebar_bg',
+        'theme_sidebar_text',
     ];
 
     public function users()

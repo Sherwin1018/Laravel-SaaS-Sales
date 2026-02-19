@@ -39,9 +39,9 @@
         <h3>Your Leads</h3>
         <p>View and manage your assigned leads.</p>
         
-        <div style="margin-top: 20px; display: flex; gap: 20px;">
-            <a href="{{ route('leads.index') }}" style="background: #2563eb; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px;">View All Leads</a>
-            <a href="{{ route('leads.create') }}" style="background: #10b981; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px;">Add New Lead</a>
+        <div style="margin-top: 20px; display: flex; gap: 20px; flex-wrap: wrap;">
+            <a href="{{ route('leads.index') }}" style="background: var(--theme-primary, #2563EB); color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: 600;">View All Leads</a>
+            <a href="{{ route('leads.create') }}" style="background: var(--theme-accent, #0EA5E9); color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: 600;">Add New Lead</a>
         </div>
     </div>
 @endsection

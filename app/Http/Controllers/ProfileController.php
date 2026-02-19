@@ -144,4 +144,24 @@ class ProfileController extends Controller
 
         return redirect()->route('profile.show')->with('success', 'Deleted Successfully');
     }
+
+    public function updateTheme(Request $request)
+    {
+        $user = auth()->user()->load('tenant');
+
+        if (!$user->hasRole('account-owner') || !$user->tenant) {
+            return redirect()->route('profile.show')->with('error', 'Edited Failed');
+        }
+
+        $validated = $request->validate([
+            'theme_primary_color' => ['required', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'theme_accent_color' => ['required', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'theme_sidebar_bg' => ['required', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'theme_sidebar_text' => ['required', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+        ]);
+
+        $user->tenant->update($validated);
+
+        return redirect()->route('profile.show')->with('success', 'Edited Successfully');
+    }
 }
