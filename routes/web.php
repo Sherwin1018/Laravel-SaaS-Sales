@@ -83,6 +83,7 @@ Route::middleware(['auth', 'role:sales-agent,marketing-manager,account-owner,fin
         Route::put('/funnels/{funnel}/steps/{step}', [FunnelController::class, 'updateStep'])->name('funnels.steps.update');
         Route::delete('/funnels/{funnel}/steps/{step}', [FunnelController::class, 'destroyStep'])->name('funnels.steps.destroy');
         Route::post('/funnels/{funnel}/steps/reorder', [FunnelController::class, 'reorderSteps'])->name('funnels.steps.reorder');
+
     });
 
     Route::middleware(['role:account-owner,finance'])->group(function () {

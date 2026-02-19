@@ -17,9 +17,24 @@ class FunnelStep extends Model
         'thank_you' => 'Thank You Page',
     ];
 
+    public const LAYOUTS = [
+        'centered' => 'Centered',
+        'split_left' => 'Split (Image Left)',
+        'split_right' => 'Split (Image Right)',
+    ];
+
+    public const TEMPLATES = [
+        'simple' => 'Simple (Title + Content)',
+        'hero_features' => 'Hero + Features',
+        'lead_capture' => 'Lead Capture',
+        'sales_long' => 'Sales Page (Long)',
+        'thank_you_next' => 'Thank You + Next Steps',
+    ];
+
     protected $fillable = [
         'funnel_id',
         'title',
+        'subtitle',
         'slug',
         'type',
         'content',
@@ -27,11 +42,18 @@ class FunnelStep extends Model
         'price',
         'position',
         'is_active',
+        'hero_image_url',
+        'layout_style',
+        'template',
+        'template_data',
+        'background_color',
+        'button_color',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
         'price' => 'decimal:2',
+        'template_data' => 'array',
     ];
 
     public function funnel(): BelongsTo

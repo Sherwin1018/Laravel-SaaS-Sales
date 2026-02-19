@@ -7,6 +7,7 @@ use App\Models\FunnelStep;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Storage;
 
 class FunnelController extends Controller
 {
@@ -76,8 +77,10 @@ class FunnelController extends Controller
         $this->ensureTenantFunnelAccess($funnel);
 
         return view('funnels.edit', [
-            'funnel' => $funnel->load('steps'),
+            'funnel' => $funnel->load(['steps']),
             'stepTypes' => FunnelStep::TYPES,
+            'stepLayouts' => FunnelStep::LAYOUTS,
+            'stepTemplates' => FunnelStep::TEMPLATES,
         ]);
     }
 
@@ -117,6 +120,7 @@ class FunnelController extends Controller
 
         $validated = $request->validate([
             'title' => 'required|string|max:120',
+            'subtitle' => 'nullable|string|max:160',
             'slug' => [
                 'required',
                 'string',
@@ -125,19 +129,37 @@ class FunnelController extends Controller
                 Rule::unique('funnel_steps', 'slug')->where(fn ($q) => $q->where('funnel_id', $funnel->id)),
             ],
             'type' => ['required', Rule::in(array_keys(FunnelStep::TYPES))],
+            'template' => ['nullable', Rule::in(array_keys(FunnelStep::TEMPLATES))],
+            'template_data' => 'nullable|array',
             'content' => 'nullable|string|max:6000',
+            'hero_image' => 'nullable|image|max:2048',
+            'layout_style' => ['nullable', Rule::in(array_keys(FunnelStep::LAYOUTS))],
+            'background_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'button_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'cta_label' => 'nullable|string|max:120',
             'price' => 'nullable|numeric|min:0.01',
         ]);
 
         try {
             $position = (int) $funnel->steps()->max('position') + 1;
+            $heroUrl = null;
+            if ($request->hasFile('hero_image')) {
+                $path = $request->file('hero_image')->store('funnel-heroes', 'public');
+                $heroUrl = Storage::url($path);
+            }
 
             $funnel->steps()->create([
                 'title' => $validated['title'],
+                'subtitle' => $validated['subtitle'] ?? null,
                 'slug' => $validated['slug'],
                 'type' => $validated['type'],
+                'template' => $validated['template'] ?? 'simple',
+                'template_data' => $validated['template_data'] ?? null,
                 'content' => $validated['content'] ?? null,
+                'hero_image_url' => $heroUrl,
+                'layout_style' => $validated['layout_style'] ?? 'centered',
+                'background_color' => $validated['background_color'] ?? null,
+                'button_color' => $validated['button_color'] ?? null,
                 'cta_label' => $validated['cta_label'] ?? null,
                 'price' => $validated['price'] ?? null,
                 'position' => $position,
@@ -159,6 +181,7 @@ class FunnelController extends Controller
 
         $validated = $request->validate([
             'title' => 'required|string|max:120',
+            'subtitle' => 'nullable|string|max:160',
             'slug' => [
                 'required',
                 'string',
@@ -169,18 +192,37 @@ class FunnelController extends Controller
                     ->ignore($step->id),
             ],
             'type' => ['required', Rule::in(array_keys(FunnelStep::TYPES))],
+            'template' => ['nullable', Rule::in(array_keys(FunnelStep::TEMPLATES))],
+            'template_data' => 'nullable|array',
             'content' => 'nullable|string|max:6000',
+            'hero_image' => 'nullable|image|max:2048',
+            'layout_style' => ['nullable', Rule::in(array_keys(FunnelStep::LAYOUTS))],
+            'background_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'button_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'cta_label' => 'nullable|string|max:120',
             'price' => 'nullable|numeric|min:0.01',
             'is_active' => 'nullable|boolean',
         ]);
 
         try {
+            $heroUrl = $step->hero_image_url;
+            if ($request->hasFile('hero_image')) {
+                $path = $request->file('hero_image')->store('funnel-heroes', 'public');
+                $heroUrl = Storage::url($path);
+            }
+
             $step->update([
                 'title' => $validated['title'],
+                'subtitle' => $validated['subtitle'] ?? null,
                 'slug' => $validated['slug'],
                 'type' => $validated['type'],
+                'template' => $validated['template'] ?? ($step->template ?: 'simple'),
+                'template_data' => $validated['template_data'] ?? null,
                 'content' => $validated['content'] ?? null,
+                'hero_image_url' => $heroUrl,
+                'layout_style' => $validated['layout_style'] ?? 'centered',
+                'background_color' => $validated['background_color'] ?? null,
+                'button_color' => $validated['button_color'] ?? null,
                 'cta_label' => $validated['cta_label'] ?? null,
                 'price' => $validated['price'] ?? null,
                 'is_active' => (bool) ($validated['is_active'] ?? false),
@@ -229,6 +271,7 @@ class FunnelController extends Controller
 
         return redirect()->back()->with('success', 'Edited Successfully');
     }
+
 
     private function ensureTenantFunnelAccess(Funnel $funnel): void
     {
