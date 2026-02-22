@@ -34,7 +34,7 @@
 
     <div class="kpi-cards">
         <div class="card">
-            <h3>Leads Generated (All)</h3>
+            <h3>Leads Generated</h3>
             <p>{{ (int) $sourceBreakdownChart->sum('total') }}</p>
         </div>
         <div class="card">
@@ -42,7 +42,7 @@
             <p>{{ $mqlCount }}</p>
         </div>
         <div class="card">
-            <h3>Quality Proxy (Avg Score)</h3>
+            <h3>Quality Proxy</h3>
             <p>{{ number_format($avgLeadScore, 1) }}</p>
         </div>
         <div class="card">
@@ -63,7 +63,7 @@
     </div>
 
     <div class="card">
-        <h3>Needs Action Now (Source Breakdown)</h3>
+        <h3>Needs Action Now</h3>
         <table>
             <thead>
                 <tr>

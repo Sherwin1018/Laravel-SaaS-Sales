@@ -53,7 +53,7 @@
             <canvas id="salesPipelineChart"></canvas>
         </div>
         <div class="chart">
-            <h3>Needs Action Now (Overdue Follow-ups)</h3>
+            <h3>Needs Action Now</h3>
             <table>
                 <thead>
                     <tr>

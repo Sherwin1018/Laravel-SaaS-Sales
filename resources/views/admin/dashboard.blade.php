@@ -71,7 +71,7 @@
     </div>
 
     <div class="card">
-        <h3>Needs Action Now (Trial/Inactive Tenants)</h3>
+        <h3>Needs Action Now</h3>
         <table>
             <thead>
                 <tr>

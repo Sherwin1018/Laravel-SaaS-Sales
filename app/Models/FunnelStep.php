@@ -48,12 +48,14 @@ class FunnelStep extends Model
         'template_data',
         'background_color',
         'button_color',
+        'layout_json',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
         'price' => 'decimal:2',
         'template_data' => 'array',
+        'layout_json' => 'array',
     ];
 
     public function funnel(): BelongsTo

@@ -1,887 +1,356 @@
-    @extends('layouts.admin')
-
+@extends('layouts.admin')
 @section('title', 'Funnel Builder')
+@section('styles')
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Manrope:wght@400;600;700;800&family=Montserrat:wght@400;600;700;800&family=Nunito:wght@400;600;700;800&family=Open+Sans:wght@400;600;700;800&family=Playfair+Display:wght@400;600;700&family=Poppins:wght@400;600;700;800&family=Raleway:wght@400;600;700;800&family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
+@endsection
 
 @section('content')
-    <style>
-        /* Small animations for builder layout toggles */
-        #builderTopGrid {
-            transition: grid-template-columns 320ms ease;
-            grid-template-columns: 1fr 1fr;
-        }
-        #builderTopGrid.is-fullwidth {
-            grid-template-columns: 0fr 1fr;
-        }
-        #funnelSettingsCard {
-            transition: max-height 240ms ease, opacity 180ms ease, transform 240ms ease, margin 240ms ease, padding 240ms ease, border-width 240ms ease;
-            max-height: 900px;
-            opacity: 1;
-            transform: translateY(0);
-        }
-        #funnelSettingsCard.is-collapsed {
-            max-height: 0 !important;
-            opacity: 0 !important;
-            transform: translateY(-10px) !important;
-            overflow: hidden !important;
-            pointer-events: none !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            border-width: 0 !important;
-        }
-        #addNewStepCard {
-            transition: transform 220ms ease, box-shadow 220ms ease;
-        }
-        #builderTopGrid.is-fullwidth #addNewStepCard {
-            transform: translateY(-2px);
-            box-shadow: 0 14px 32px rgba(15, 23, 42, 0.10);
-        }
+<style>
+.fb-top{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;background:#0f172a;color:#fff;padding:12px;border-radius:12px}
+.fb-actions{display:flex;gap:8px;flex-wrap:wrap}
+.fb-btn{padding:8px 12px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;color:#0f172a;font-weight:700;text-decoration:none;cursor:pointer}
+.fb-btn.primary{background:#2563eb;color:#fff;border-color:#1d4ed8}.fb-btn.success{background:#16a34a;color:#fff;border-color:#15803d}.fb-btn.danger{background:#dc2626;color:#fff;border-color:#b91c1c}
+.fb-grid{margin-top:12px;display:grid;grid-template-columns:260px 1fr 330px;gap:12px}
+.fb-card{background:#fff;border:1px solid #dbeafe;border-radius:12px;padding:10px}
+.fb-h{font-size:16px;font-weight:900;color:#1e40af;margin:2px 0 10px}
+.fb-lib button{display:block;width:100%;text-align:left;margin-bottom:7px;padding:9px;border:1px solid #dbeafe;border-radius:8px;background:#f8fafc;font-weight:700;cursor:grab}
+.fb-lib i{width:18px;margin-right:6px;color:#1d4ed8}
+#canvas{min-height:60vh;border:2px dashed #93c5fd;border-radius:12px;padding:10px;background:linear-gradient(180deg,#f8fafc,#e0f2fe);overflow:auto}
+.sec{border:1px dashed #64748b;border-radius:10px;padding:8px;margin-bottom:9px;background:#fff}
+.row{display:flex;flex-wrap:wrap;gap:8px;border:1px dashed #cbd5e1;border-radius:8px;padding:6px}
+.col{flex:1 1 240px;min-height:58px;border:1px dashed #bfdbfe;border-radius:7px;padding:6px;background:#f8fafc}
+.el{border:1px solid #e2e8f0;border-radius:7px;padding:7px;background:#fff;margin-bottom:6px}
+.sel{outline:2px solid #2563eb;outline-offset:2px}
+.settings label{font-size:12px;font-weight:800;color:#1e3a8a;display:block;margin:0 0 4px}
+.settings input,.settings select,.settings textarea{width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:8px}
+.settings .meta{font-size:12px;color:#475569;font-weight:700;margin-bottom:8px}
+.px-wrap{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.px-wrap input[type="number"]{margin-bottom:0}
+.px-unit{font-size:12px;font-weight:800;color:#334155;min-width:18px}
+.rt-box{border:1px solid #cbd5e1;border-radius:8px;background:#fff;margin-bottom:8px}
+.rt-tools{display:flex;gap:6px;padding:6px;border-bottom:1px solid #e2e8f0}
+.rt-tools button{padding:5px 8px;border:1px solid #cbd5e1;border-radius:6px;background:#f8fafc;font-weight:800;cursor:pointer}
+.rt-editor{min-height:90px;padding:8px;outline:none}
+@media(max-width:1080px){.fb-grid{grid-template-columns:1fr}}
+</style>
 
-        /* Make form labels clearer/darker inside builder cards */
-        #builderTopGrid label {
-            color: #0F172A;
-        }
-
-        /* Consistent select styling */
-        .funnel-select {
-            padding: 8px 10px;
-            border: 1px solid #DBEAFE;
-            border-radius: 6px;
-            height: 40px;
-            background-color: #ffffff;
-            display: block;
-            margin: 0;
-        }
-
-        /* Consistent file input height (align with selects) */
-        .funnel-file {
-            height: 40px;
-            padding: 7px 10px;
-            border: 1px solid #DBEAFE;
-            border-radius: 6px;
-            background: #ffffff;
-            width: 100%;
-            display: block;
-            margin: 0;
-            line-height: 24px;
-            vertical-align: middle;
-        }
-    </style>
-
-    <div class="top-header">
-        <h1>Builder: {{ $funnel->name }}</h1>
+<div class="fb-top">
+    <div><strong>{{ $funnel->name }}</strong> <span style="font-size:12px;opacity:.9;">({{ ucfirst($funnel->status) }})</span></div>
+    <div class="fb-actions">
+        <button id="saveBtn" class="fb-btn primary" type="button"><i class="fas fa-save"></i> Save</button>
+        <button id="previewBtn" class="fb-btn" type="button"><i class="fas fa-eye"></i> Preview</button>
         @if($funnel->status === 'published')
-            <a class="btn-create" href="{{ route('funnels.portal.step', ['funnelSlug' => $funnel->slug]) }}" target="_blank">
-                <i class="fas fa-up-right-from-square"></i> Open Public Funnel
-            </a>
+            <form method="POST" action="{{ route('funnels.unpublish', $funnel) }}">@csrf<button class="fb-btn danger" type="submit"><i class="fas fa-ban"></i> Unpublish</button></form>
+        @else
+            <form method="POST" action="{{ route('funnels.publish', $funnel) }}">@csrf<button class="fb-btn success" type="submit"><i class="fas fa-upload"></i> Publish</button></form>
         @endif
+        <a href="{{ route('funnels.index') }}" class="fb-btn"><i class="fas fa-door-open"></i> Exit Builder</a>
+    </div>
+</div>
+
+<div class="fb-grid">
+    <div class="fb-card fb-lib">
+        <h3 class="fb-h">Components</h3>
+        <button draggable="true" data-c="section"><i class="fas fa-square"></i>Section</button>
+        <button draggable="true" data-c="row"><i class="fas fa-grip-lines"></i>Row</button>
+        <button draggable="true" data-c="column"><i class="fas fa-columns"></i>Column</button>
+        <button draggable="true" data-c="heading"><i class="fas fa-heading"></i>Heading</button>
+        <button draggable="true" data-c="text"><i class="fas fa-font"></i>Text</button>
+        <button draggable="true" data-c="image"><i class="fas fa-image"></i>Image</button>
+        <button draggable="true" data-c="button"><i class="fas fa-square-plus"></i>Button</button>
+        <button draggable="true" data-c="form"><i class="fas fa-file-lines"></i>Form</button>
+        <button draggable="true" data-c="video"><i class="fas fa-video"></i>Video</button>
+        <button draggable="true" data-c="countdown"><i class="fas fa-hourglass-half"></i>Countdown</button>
+        <button draggable="true" data-c="spacer"><i class="fas fa-arrows-up-down"></i>Spacer</button>
     </div>
 
-    <div id="builderTopGrid" style="display:grid; gap: 16px;">
-        <div id="funnelSettingsCard" class="card">
-            <h3>Funnel Settings</h3>
-            <form method="POST" action="{{ route('funnels.update', $funnel) }}">
-                @csrf
-                @method('PUT')
-                <div style="margin-bottom:12px;">
-                    <label style="display:block; margin-bottom:6px; font-weight:700;">Name</label>
-                    <input type="text" name="name" value="{{ old('name', $funnel->name) }}" required
-                        style="width:100%; padding:10px; border:1px solid #DBEAFE; border-radius:6px;">
-                </div>
-                <div style="margin-bottom:12px;">
-                    <label style="display:block; margin-bottom:6px; font-weight:700;">Description</label>
-                    <textarea name="description" rows="3"
-                        style="width:100%; padding:10px; border:1px solid #DBEAFE; border-radius:6px;">{{ old('description', $funnel->description) }}</textarea>
-                </div>
-                <div style="margin-bottom:12px;">
-                    <label style="display:block; margin-bottom:6px; font-weight:700;">Status</label>
-                    <select name="status" class="funnel-select" style="width:100%;">
-                        <option value="draft" {{ old('status', $funnel->status) === 'draft' ? 'selected' : '' }}>Draft</option>
-                        <option value="published" {{ old('status', $funnel->status) === 'published' ? 'selected' : '' }}>Published</option>
-                    </select>
-                </div>
-                <button type="submit" class="btn-create">Save Funnel</button>
-            </form>
+    <div class="fb-card">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
+            <label for="stepSel" style="font-weight:800;">Step</label>
+            <select id="stepSel"></select>
+            <span id="saveMsg" style="font-size:12px;color:#475569;font-weight:700;">Not saved yet</span>
         </div>
-
-        <div id="addNewStepCard" class="card">
-            <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
-                <h3 style="margin:0;">Add New Step</h3>
-                <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                    <button type="button"
-                        onclick="openNewStepPreviewModal()"
-                        style="padding:8px 12px; border:1px solid #CBD5E1; border-radius:6px; cursor:pointer; font-weight:700; background:#FFFFFF; color:#0F172A;">
-                        <i class="fas fa-eye"></i> Preview
-                    </button>
-                    <button id="btnAddStepFullWidth" type="button" class="btn-create" style="padding:8px 12px; font-weight:700;">
-                        Full width
-                    </button>
-                    <button id="btnAddStepSplitView" type="button"
-                        style="display:none; padding:8px 12px; border:none; border-radius:6px; cursor:pointer; font-weight:700; background:#334155; color:#fff;">
-                        Back to split view
-                    </button>
-                </div>
-            </div>
-            <form id="newStepForm" method="POST" action="{{ route('funnels.steps.store', $funnel) }}" enctype="multipart/form-data">
-                @csrf
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                    <div>
-                        <label style="display:block; margin-bottom:6px; font-weight:700;">Title</label>
-                        <input type="text" name="title" required style="width:100%; padding:10px; border:1px solid #DBEAFE; border-radius:6px;">
-                    </div>
-                    <div>
-                        <label style="display:block; margin-bottom:6px; font-weight:700;">Slug</label>
-                        <input type="text" name="slug" required placeholder="step-slug" style="width:100%; padding:10px; border:1px solid #DBEAFE; border-radius:6px;">
-                    </div>
-                </div>
-                <div style="margin-top:10px;">
-                    <label style="display:block; margin-bottom:6px; font-weight:700;">Subtitle (optional)</label>
-                    <input type="text" name="subtitle" maxlength="160" placeholder="One short line under the title"
-                        style="width:100%; padding:10px; border:1px solid #DBEAFE; border-radius:6px;">
-                </div>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;">
-                    <div>
-                        <label style="display:block; margin-bottom:6px; font-weight:700;">Type</label>
-                        <select name="type" required class="funnel-select" style="width:100%;">
-                            @foreach($stepTypes as $value => $label)
-                                <option value="{{ $value }}">{{ $label }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div>
-                        <label style="display:block; margin-bottom:6px; font-weight:700;">Price (checkout/upsell/downsell)</label>
-                        <input type="number" name="price" step="0.01" min="0.01" placeholder="Optional"
-                            style="width:100%; padding:10px; border:1px solid #DBEAFE; border-radius:6px;">
-                    </div>
-                </div>
-                <div style="margin-top:10px;">
-                    <label style="display:block; margin-bottom:6px; font-weight:700;">Template</label>
-                    <select name="template" data-template-select="new" class="funnel-select"
-                        style="width:100%;">
-                        @foreach($stepTemplates as $value => $label)
-                            <option value="{{ $value }}">{{ $label }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;">
-                    <div>
-                        <label style="display:block; margin-bottom:6px; font-weight:700;">Hero image (optional)</label>
-                        <input type="file" name="hero_image" accept="image/*" class="funnel-file">
-                    </div>
-                    <div>
-                        <label style="display:block; margin-bottom:6px; font-weight:700;">Layout</label>
-                        <select name="layout_style" class="funnel-select" style="width:100%;">
-                            @foreach($stepLayouts as $value => $label)
-                                <option value="{{ $value }}">{{ $label }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                </div>
-                <div style="margin-top:10px; padding:10px; border:1px solid #DBEAFE; border-radius:8px; background:#F8FAFC;">
-                    <div style="font-weight:800; color:#0F172A; margin-bottom:8px;">Design (optional)</div>
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                        <div>
-                            <label style="display:block; margin-bottom:6px; font-weight:700;">Background color</label>
-                            <div style="display:flex; gap:8px; align-items:center;">
-                                <input type="color" value="#ffffff" data-color-proxy="newStepBg"
-                                    style="width:44px; height:40px; padding:0; border:1px solid #DBEAFE; border-radius:6px; background:#fff;">
-                                <input type="text" name="background_color" placeholder="#RRGGBB (blank = default)" maxlength="7"
-                                    style="flex:1; padding:10px; border:1px solid #DBEAFE; border-radius:6px;">
-                            </div>
-                        </div>
-                        <div>
-                            <label style="display:block; margin-bottom:6px; font-weight:700;">Button color</label>
-                            <div style="display:flex; gap:8px; align-items:center;">
-                                <input type="color" value="#2563eb" data-color-proxy="newStepBtn"
-                                    style="width:44px; height:40px; padding:0; border:1px solid #DBEAFE; border-radius:6px; background:#fff;">
-                                <input type="text" name="button_color" placeholder="#RRGGBB (blank = theme)" maxlength="7"
-                                    style="flex:1; padding:10px; border:1px solid #DBEAFE; border-radius:6px;">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div style="margin-top:10px;">
-                    <label style="display:block; margin-bottom:6px; font-weight:700;">CTA Label</label>
-                    <input type="text" name="cta_label" placeholder="Optional button text"
-                        style="width:100%; padding:10px; border:1px solid #DBEAFE; border-radius:6px;">
-                </div>
-                <div style="margin-top:10px;">
-                    <label style="display:block; margin-bottom:6px; font-weight:700;">Content</label>
-                    <textarea name="content" rows="4" style="width:100%; padding:10px; border:1px solid #DBEAFE; border-radius:6px;"></textarea>
-                </div>
-
-                {{-- Template sections for Add New Step --}}
-                <div data-template-sections="new" style="margin-top:10px;">
-                    <div data-template-show="hero_features,sales_long" style="display:none; padding:10px; border:1px solid #DBEAFE; border-radius:10px; background:#F8FAFC;">
-                        <div style="font-weight:900; color:#0F172A; margin-bottom:8px;">Features (3)</div>
-                        @for($i=0;$i<3;$i++)
-                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:8px;">
-                                <input type="text" name="template_data[features][{{ $i }}][title]" placeholder="Feature {{ $i+1 }} title"
-                                    style="padding:10px; border:1px solid #DBEAFE; border-radius:8px;">
-                                <input type="text" name="template_data[features][{{ $i }}][body]" placeholder="Feature {{ $i+1 }} description"
-                                    style="padding:10px; border:1px solid #DBEAFE; border-radius:8px;">
-                            </div>
-                        @endfor
-                    </div>
-
-                    <div data-template-show="lead_capture" style="display:none; padding:10px; border:1px solid #DBEAFE; border-radius:10px; background:#F8FAFC;">
-                        <div style="font-weight:900; color:#0F172A; margin-bottom:8px;">Lead capture bullets</div>
-                        @for($i=0;$i<3;$i++)
-                            <input type="text" name="template_data[bullets][{{ $i }}]" placeholder="Bullet {{ $i+1 }}"
-                                style="width:100%; padding:10px; border:1px solid #DBEAFE; border-radius:8px; margin-bottom:8px;">
-                        @endfor
-                        <input type="text" name="template_data[form_title]" placeholder="Form title (optional)"
-                            style="width:100%; padding:10px; border:1px solid #DBEAFE; border-radius:8px;">
-                    </div>
-
-                    <div data-template-show="sales_long" style="display:none; padding:10px; border:1px solid #DBEAFE; border-radius:10px; background:#F8FAFC; margin-top:10px;">
-                        <div style="font-weight:900; color:#0F172A; margin-bottom:8px;">FAQ (3)</div>
-                        @for($i=0;$i<3;$i++)
-                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:8px;">
-                                <input type="text" name="template_data[faq][{{ $i }}][q]" placeholder="Question {{ $i+1 }}"
-                                    style="padding:10px; border:1px solid #DBEAFE; border-radius:8px;">
-                                <input type="text" name="template_data[faq][{{ $i }}][a]" placeholder="Answer {{ $i+1 }}"
-                                    style="padding:10px; border:1px solid #DBEAFE; border-radius:8px;">
-                            </div>
-                        @endfor
-                        <div style="font-weight:900; color:#0F172A; margin:10px 0 8px;">Testimonials (2)</div>
-                        @for($i=0;$i<2;$i++)
-                            <div style="display:grid; grid-template-columns:1fr 220px; gap:10px; margin-bottom:8px;">
-                                <input type="text" name="template_data[testimonials][{{ $i }}][quote]" placeholder="Quote {{ $i+1 }}"
-                                    style="padding:10px; border:1px solid #DBEAFE; border-radius:8px;">
-                                <input type="text" name="template_data[testimonials][{{ $i }}][name]" placeholder="Name {{ $i+1 }}"
-                                    style="padding:10px; border:1px solid #DBEAFE; border-radius:8px;">
-                            </div>
-                        @endfor
-                    </div>
-
-                    <div data-template-show="thank_you_next" style="display:none; padding:10px; border:1px solid #DBEAFE; border-radius:10px; background:#F8FAFC;">
-                        <div style="font-weight:900; color:#0F172A; margin-bottom:8px;">Next steps (3)</div>
-                        @for($i=0;$i<3;$i++)
-                            <input type="text" name="template_data[next_steps][{{ $i }}]" placeholder="Next step {{ $i+1 }}"
-                                style="width:100%; padding:10px; border:1px solid #DBEAFE; border-radius:8px; margin-bottom:8px;">
-                        @endfor
-                    </div>
-                </div>
-                <button type="submit" class="btn-create" style="margin-top:10px;">Add Step</button>
-            </form>
-        </div>
+        <div id="canvas"></div>
     </div>
 
-    <div class="card" style="margin-top:16px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-            <h3>Step Order (Drag and Drop)</h3>
-            <form id="reorderForm" method="POST" action="{{ route('funnels.steps.reorder', $funnel) }}">
-                @csrf
-                <button type="submit" class="btn-create">Save Order</button>
-            </form>
-        </div>
-        <p style="font-size:12px; color:#475569; font-weight:700; margin-bottom:12px;">
-            Drag cards by handle to reorder. Flow logic uses this sequence. Upsell decline routes to immediate next downsell if present.
-        </p>
-
-        <div id="stepList" style="display:grid; gap:12px;">
-            @forelse($funnel->steps as $step)
-                <div class="step-card" draggable="true" data-step-id="{{ $step->id }}"
-                    style="border:1px solid #DBEAFE; border-radius:8px; padding:12px; background:#fff;">
-                    <div style="display:flex; justify-content:space-between; gap:12px;">
-                        <div style="min-width:0;">
-                            <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
-                                <span class="drag-handle" title="Drag" style="cursor:grab; color:#64748B;"><i class="fas fa-grip-vertical"></i></span>
-                                <strong>{{ $step->title }}</strong>
-                                <span style="font-size:11px; padding:2px 8px; border-radius:999px; background:#EFF6FF; color:#1E40AF; font-weight:700;">{{ $stepTypes[$step->type] ?? $step->type }}</span>
-                                @if(!$step->is_active)
-                                    <span style="font-size:11px; padding:2px 8px; border-radius:999px; background:#FEF2F2; color:#B91C1C; font-weight:700;">Inactive</span>
-                                @endif
-                            </div>
-                            <div style="font-size:12px; color:#64748B; font-weight:700; margin-bottom:8px;">
-                                Slug: {{ $step->slug }} | Position: {{ $step->position }} | Price: {{ $step->price ? number_format((float) $step->price, 2) : 'N/A' }}
-                            </div>
-                            <div style="font-size:13px; color:#334155;">{{ $step->content ?: 'No content yet.' }}</div>
-                        </div>
-                        <div style="display:flex; flex-direction:column; gap:8px;">
-                            <button type="button"
-                                onclick="openStepPreviewModal({{ $step->id }})"
-                                style="background:none;border:none;color:#2563EB;cursor:pointer;font-weight:700;text-align:left;padding:0;">
-                                <i class="fas fa-eye"></i> Preview
-                            </button>
-                            <button type="button" onclick="toggleStepForm({{ $step->id }})"
-                                style="background:none;border:none;color:#1E40AF;cursor:pointer;font-weight:700;text-align:left;">
-                                <i class="fas fa-pen"></i> Edit
-                            </button>
-                        </div>
-                    </div>
-
-                    <form id="stepForm{{ $step->id }}" method="POST" action="{{ route('funnels.steps.update', [$funnel, $step]) }}"
-                        enctype="multipart/form-data"
-                        style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed #DBEAFE;">
-                        @csrf
-                        @method('PUT')
-                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                            <input type="text" name="title" value="{{ $step->title }}" required style="padding:8px;border:1px solid #DBEAFE;border-radius:6px;">
-                            <input type="text" name="slug" value="{{ $step->slug }}" required style="padding:8px;border:1px solid #DBEAFE;border-radius:6px;">
-                        </div>
-                        <input type="text" name="subtitle" value="{{ $step->subtitle }}" maxlength="160" placeholder="Subtitle (optional)"
-                            style="margin-top:8px; width:100%; padding:8px; border:1px solid #DBEAFE; border-radius:6px;">
-                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:8px;">
-                            <select name="type" required class="funnel-select">
-                                @foreach($stepTypes as $value => $label)
-                                    <option value="{{ $value }}" {{ $step->type === $value ? 'selected' : '' }}>{{ $label }}</option>
-                                @endforeach
-                            </select>
-                            <input type="number" name="price" value="{{ $step->price }}" step="0.01" min="0.01" placeholder="Optional" style="padding:8px;border:1px solid #DBEAFE;border-radius:6px;">
-                        </div>
-                        <div style="margin-top:8px;">
-                            <div style="font-size:12px; font-weight:800; color:#334155; margin-bottom:6px;">Template</div>
-                            <select name="template" data-template-select="{{ $step->id }}"
-                                class="funnel-select" style="width:100%;">
-                                @foreach($stepTemplates as $value => $label)
-                                    <option value="{{ $value }}" {{ ($step->template ?: 'simple') === $value ? 'selected' : '' }}>{{ $label }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:8px;">
-                            <div>
-                                <label style="display:block; margin-bottom:4px; font-size:12px; font-weight:700; color:#334155;">Hero image</label>
-                                <input type="file" name="hero_image" accept="image/*" class="funnel-file">
-                                <input type="hidden" name="hero_image_url" value="{{ $step->hero_image_url }}">
-                            </div>
-                            <div>
-                                <label style="display:block; margin-bottom:4px; font-size:12px; font-weight:700; color:#334155;">Layout</label>
-                                <select name="layout_style" class="funnel-select" style="width:100%;">
-                                    @foreach($stepLayouts as $value => $label)
-                                        <option value="{{ $value }}" {{ ($step->layout_style ?: 'centered') === $value ? 'selected' : '' }}>{{ $label }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                        </div>
-                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:8px;">
-                            <div>
-                                <div style="font-size:12px; font-weight:800; color:#334155; margin-bottom:6px;">Background</div>
-                                <div style="display:flex; gap:8px; align-items:center;">
-                                    <input type="color" value="{{ $step->background_color ?: '#ffffff' }}" data-color-proxy="bg{{ $step->id }}"
-                                        style="width:44px; height:38px; padding:0; border:1px solid #DBEAFE; border-radius:6px; background:#fff;">
-                                    <input type="text" name="background_color" value="{{ $step->background_color }}" placeholder="#RRGGBB (blank = default)" maxlength="7"
-                                        style="flex:1; padding:8px; border:1px solid #DBEAFE; border-radius:6px;">
-                                </div>
-                            </div>
-                            <div>
-                                <div style="font-size:12px; font-weight:800; color:#334155; margin-bottom:6px;">Button</div>
-                                <div style="display:flex; gap:8px; align-items:center;">
-                                    <input type="color" value="{{ $step->button_color ?: '#2563eb' }}" data-color-proxy="btn{{ $step->id }}"
-                                        style="width:44px; height:38px; padding:0; border:1px solid #DBEAFE; border-radius:6px; background:#fff;">
-                                    <input type="text" name="button_color" value="{{ $step->button_color }}" placeholder="#RRGGBB (blank = theme)" maxlength="7"
-                                        style="flex:1; padding:8px; border:1px solid #DBEAFE; border-radius:6px;">
-                                </div>
-                            </div>
-                        </div>
-                        <input type="text" name="cta_label" value="{{ $step->cta_label }}" placeholder="CTA Label"
-                            style="margin-top:8px; width:100%; padding:8px; border:1px solid #DBEAFE; border-radius:6px;">
-                        <textarea name="content" rows="3" style="margin-top:8px; width:100%; padding:8px; border:1px solid #DBEAFE; border-radius:6px;">{{ $step->content }}</textarea>
-
-                        {{-- Template sections for Edit Step --}}
-                        @php $td = $step->template_data ?? []; @endphp
-                        <div data-template-sections="{{ $step->id }}" style="margin-top:10px;">
-                            <div data-template-show="hero_features,sales_long"
-                                 style="display:none; padding:10px; border:1px solid #DBEAFE; border-radius:10px; background:#F8FAFC;">
-                                <div style="font-weight:900; color:#0F172A; margin-bottom:8px;">Features (3)</div>
-                                @for($i=0;$i<3;$i++)
-                                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:8px;">
-                                        <input type="text" name="template_data[features][{{ $i }}][title]" value="{{ $td['features'][$i]['title'] ?? '' }}" placeholder="Feature {{ $i+1 }} title"
-                                            style="padding:10px; border:1px solid #DBEAFE; border-radius:8px;">
-                                        <input type="text" name="template_data[features][{{ $i }}][body]" value="{{ $td['features'][$i]['body'] ?? '' }}" placeholder="Feature {{ $i+1 }} description"
-                                            style="padding:10px; border:1px solid #DBEAFE; border-radius:8px;">
-                                    </div>
-                                @endfor
-                            </div>
-
-                            <div data-template-show="lead_capture"
-                                 style="display:none; padding:10px; border:1px solid #DBEAFE; border-radius:10px; background:#F8FAFC;">
-                                <div style="font-weight:900; color:#0F172A; margin-bottom:8px;">Lead capture bullets</div>
-                                @for($i=0;$i<3;$i++)
-                                    <input type="text" name="template_data[bullets][{{ $i }}]" value="{{ $td['bullets'][$i] ?? '' }}" placeholder="Bullet {{ $i+1 }}"
-                                        style="width:100%; padding:10px; border:1px solid #DBEAFE; border-radius:8px; margin-bottom:8px;">
-                                @endfor
-                                <input type="text" name="template_data[form_title]" value="{{ $td['form_title'] ?? '' }}" placeholder="Form title (optional)"
-                                    style="width:100%; padding:10px; border:1px solid #DBEAFE; border-radius:8px;">
-                            </div>
-
-                            <div data-template-show="sales_long"
-                                 style="display:none; padding:10px; border:1px solid #DBEAFE; border-radius:10px; background:#F8FAFC; margin-top:10px;">
-                                <div style="font-weight:900; color:#0F172A; margin-bottom:8px;">FAQ (3)</div>
-                                @for($i=0;$i<3;$i++)
-                                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:8px;">
-                                        <input type="text" name="template_data[faq][{{ $i }}][q]" value="{{ $td['faq'][$i]['q'] ?? '' }}" placeholder="Question {{ $i+1 }}"
-                                            style="padding:10px; border:1px solid #DBEAFE; border-radius:8px;">
-                                        <input type="text" name="template_data[faq][{{ $i }}][a]" value="{{ $td['faq'][$i]['a'] ?? '' }}" placeholder="Answer {{ $i+1 }}"
-                                            style="padding:10px; border:1px solid #DBEAFE; border-radius:8px;">
-                                    </div>
-                                @endfor
-                                <div style="font-weight:900; color:#0F172A; margin:10px 0 8px;">Testimonials (2)</div>
-                                @for($i=0;$i<2;$i++)
-                                    <div style="display:grid; grid-template-columns:1fr 220px; gap:10px; margin-bottom:8px;">
-                                        <input type="text" name="template_data[testimonials][{{ $i }}][quote]" value="{{ $td['testimonials'][$i]['quote'] ?? '' }}" placeholder="Quote {{ $i+1 }}"
-                                            style="padding:10px; border:1px solid #DBEAFE; border-radius:8px;">
-                                        <input type="text" name="template_data[testimonials][{{ $i }}][name]" value="{{ $td['testimonials'][$i]['name'] ?? '' }}" placeholder="Name {{ $i+1 }}"
-                                            style="padding:10px; border:1px solid #DBEAFE; border-radius:8px;">
-                                    </div>
-                                @endfor
-                            </div>
-
-                            <div data-template-show="thank_you_next"
-                                 style="display:none; padding:10px; border:1px solid #DBEAFE; border-radius:10px; background:#F8FAFC;">
-                                <div style="font-weight:900; color:#0F172A; margin-bottom:8px;">Next steps (3)</div>
-                                @for($i=0;$i<3;$i++)
-                                    <input type="text" name="template_data[next_steps][{{ $i }}]" value="{{ $td['next_steps'][$i] ?? '' }}" placeholder="Next step {{ $i+1 }}"
-                                        style="width:100%; padding:10px; border:1px solid #DBEAFE; border-radius:8px; margin-bottom:8px;">
-                                @endfor
-                            </div>
-                        </div>
-                        <label style="display:inline-flex; align-items:center; gap:8px; margin-top:8px; font-size:12px; font-weight:700; color:#475569;">
-                            <input type="checkbox" name="is_active" value="1" {{ $step->is_active ? 'checked' : '' }}> Active step
-                        </label>
-                        <div style="display:flex; gap:10px; margin-top:8px;">
-                            <button type="submit" class="btn-create">Save Step</button>
-                        </div>
-                    </form>
-
-                    <form method="POST" action="{{ route('funnels.steps.destroy', [$funnel, $step]) }}"
-                        onsubmit="return confirm('Delete this step?')" style="display:none; margin-top:8px;" id="stepDeleteForm{{ $step->id }}">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit" style="padding:10px 14px; border:none; border-radius:6px; background:#DC2626; color:#fff; cursor:pointer; font-weight:700;">Delete</button>
-                    </form>
-                </div>
-            @empty
-                <div style="color:#64748B; font-weight:700;">No steps yet. Add one above.</div>
-            @endforelse
-        </div>
+    <div class="fb-card settings">
+        <h3 id="settingsTitle" class="fb-h" style="margin-bottom:4px;">Settings Panel</h3>
+        <div id="settings"><p class="meta">Select a component to edit.</p></div>
     </div>
+</div>
+@endsection
 
-    {{-- Fullscreen step preview modal (shows unsaved edits) --}}
-    <div id="stepPreviewOverlay"
-         style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.92); z-index:9999; align-items:stretch; justify-content:stretch; opacity:0; transition:opacity 200ms ease;">
-        <div class="preview-shell" style="background:#020617; border-radius:0; width:100%; height:100%; overflow:auto; padding:16px 18px 20px; box-shadow:none; position:relative; transform:translateY(16px); opacity:0; transition:transform 220ms ease, opacity 220ms ease;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <div style="color:#e5e7eb; font-weight:700; font-size:14px;">
-                    Step preview (unsaved changes)
-                </div>
-                <button type="button" onclick="closeStepPreviewModal()"
-                        style="background:transparent; border:none; color:#e5e7eb; font-size:20px; cursor:pointer; padding:4px 8px;">
-                    &times;
-                </button>
-            </div>
-            <div id="stepPreviewModalBody" style="background:#020617; border-radius:18px; padding:20px 20px 24px; border:1px solid rgba(148,163,184,0.35);">
-                {{-- Filled by JS --}}
-            </div>
-        </div>
-    </div>
+@section('scripts')
+@php
+    $builderSteps = $funnel->steps->sortBy('position')->values()->map(function ($step) {
+        return [
+            'id' => $step->id,
+            'title' => $step->title,
+            'type' => $step->type,
+            'layout_json' => $step->layout_json,
+        ];
+    })->all();
+@endphp
+<script>
+(function(){
+const saveUrl="{{ route('funnels.builder.layout.save',$funnel) }}";
+const uploadUrl="{{ route('funnels.builder.image.upload',$funnel) }}";
+const previewTpl="{{ route('funnels.preview',['funnel'=>$funnel,'step'=>'__STEP__']) }}";
+const csrf="{{ csrf_token() }}";
+const steps=@json($builderSteps);
+const state={sid:{{ (int)($defaultStepId??0) }}||((steps[0]&&steps[0].id)||null),layout:null,sel:null};
+const fonts=[
+    {value:"Inter, sans-serif",label:"Inter"},
+    {value:"Poppins, sans-serif",label:"Poppins"},
+    {value:"Roboto, sans-serif",label:"Roboto"},
+    {value:"Open Sans, sans-serif",label:"Open Sans"},
+    {value:"Montserrat, sans-serif",label:"Montserrat"},
+    {value:"Nunito, sans-serif",label:"Nunito"},
+    {value:"Raleway, sans-serif",label:"Raleway"},
+    {value:"Manrope, sans-serif",label:"Manrope"},
+    {value:"Playfair Display, serif",label:"Playfair Display"},
+    {value:"Georgia, serif",label:"Georgia"},
+    {value:"Times New Roman, serif",label:"Times New Roman"},
+    {value:"Arial, sans-serif",label:"Arial"},
+];
 
-    <script>
-        // Top grid: expand "Add New Step" to full width (hide Funnel Settings)
-        (function () {
-            var grid = document.getElementById('builderTopGrid');
-            var funnelCard = document.getElementById('funnelSettingsCard');
-            var btnFull = document.getElementById('btnAddStepFullWidth');
-            var btnSplit = document.getElementById('btnAddStepSplitView');
-            if (!grid || !funnelCard || !btnFull || !btnSplit) return;
+const stepSel=document.getElementById("stepSel"),canvas=document.getElementById("canvas"),settings=document.getElementById("settings"),saveMsg=document.getElementById("saveMsg"),settingsTitle=document.getElementById("settingsTitle");
+if(!steps.length){canvas.textContent="No steps found.";return;}
 
-            function setFullWidth(on) {
-                if (on) {
-                    grid.classList.add('is-fullwidth');
-                    funnelCard.classList.add('is-collapsed');
-                    btnFull.style.display = 'none';
-                    btnSplit.style.display = 'inline-flex';
+steps.forEach(s=>{const o=document.createElement("option");o.value=s.id;o.textContent=s.title+" ("+s.type+")";stepSel.appendChild(o);});
+stepSel.value=state.sid;
 
-                    // keep focus on the Add Step form for better UX
-                    try { btnSplit.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (e) {}
-                } else {
-                    grid.classList.remove('is-fullwidth');
-                    funnelCard.classList.remove('is-collapsed');
-                    btnFull.style.display = 'inline-flex';
-                    btnSplit.style.display = 'none';
-                }
-            }
+const uid=p=>p+"_"+Math.random().toString(36).slice(2,10),clone=o=>JSON.parse(JSON.stringify(o));
+const defaults=()=>({sections:[{id:uid("sec"),style:{padding:"20px",backgroundColor:"#ffffff"},rows:[{id:uid("row"),style:{gap:"8px"},columns:[{id:uid("col"),style:{},elements:[{id:uid("el"),type:"heading",content:"Welcome to Our Offer",style:{fontSize:"32px",color:"#0f172a"},settings:{}}]}]}]}]});
+const cur=()=>steps.find(s=>+s.id===+state.sid);
+const sec=id=>(state.layout.sections||[]).find(x=>x.id===id);
+const row=(s,r)=>(sec(s)?.rows||[]).find(x=>x.id===r);
+const col=(s,r,c)=>(row(s,r)?.columns||[]).find(x=>x.id===c);
+const el=(s,r,c,e)=>(col(s,r,c)?.elements||[]).find(x=>x.id===e);
 
-            btnFull.addEventListener('click', function () { setFullWidth(true); });
-            btnSplit.addEventListener('click', function () { setFullWidth(false); });
-        })();
+function pxIfNumber(v){const t=(v||"").trim();return /^\d+(\.\d+)?$/.test(t)?t+"px":t;}
+function pxToNumber(v){const t=(v||"").toString().trim();const m=t.match(/^(-?\d+(\.\d+)?)px$/i);if(m)return m[1];if(/^-?\d+(\.\d+)?$/.test(t))return t;return "";}
+function styleApply(node,s){if(!s)return;Object.keys(s).forEach(k=>{if(s[k]!==""&&s[k]!=null)node.style[k]=s[k];});}
+function onRichTextKeys(node,onUpdate){
+    node.addEventListener("keydown",e=>{
+        if(!(e.ctrlKey||e.metaKey))return;
+        const key=(e.key||"").toLowerCase();
+        if(key==="b"){e.preventDefault();document.execCommand("bold");onUpdate();return;}
+        if(key==="i"){e.preventDefault();document.execCommand("italic");onUpdate();return;}
+        if(key==="u"){e.preventDefault();document.execCommand("underline");onUpdate();return;}
+    });
+}
 
-        function toggleStepForm(stepId) {
-            var el = document.getElementById('stepForm' + stepId);
-            var deleteEl = document.getElementById('stepDeleteForm' + stepId);
-            if (!el) return;
-            var show = el.style.display === 'none';
-            el.style.display = show ? 'block' : 'none';
-            if (deleteEl) deleteEl.style.display = show ? 'block' : 'none';
-        }
+function loadStep(id){
+    state.sid=+id;
+    const s=cur();
+    state.layout=(s&&s.layout_json&&Array.isArray(s.layout_json.sections)&&s.layout_json.sections.length)?clone(s.layout_json):defaults();
+    state.sel=null;
+    saveMsg.textContent="Loaded "+s.title;
+    render();
+}
 
-        (function () {
-            var list = document.getElementById('stepList');
-            var reorderForm = document.getElementById('reorderForm');
-            if (!list || !reorderForm) return;
+function selectedTarget(){const x=state.sel;if(!x)return null;if(x.k==="sec")return sec(x.s);if(x.k==="row")return row(x.s,x.r);if(x.k==="col")return col(x.s,x.r,x.c);if(x.k==="el")return el(x.s,x.r,x.c,x.e);return null;}
+function selectedType(){const x=state.sel,t=selectedTarget();if(!x||!t)return "None";if(x.k==="el")return (t.type||"element");if(x.k==="sec")return "section";if(x.k==="row")return "row";if(x.k==="col")return "column";return "None";}
+function titleCase(v){return (v||"").replace(/[_-]/g," ").replace(/\b\w/g,m=>m.toUpperCase());}
 
-            var dragged = null;
-            list.querySelectorAll('.step-card').forEach(function (card) {
-                card.addEventListener('dragstart', function () {
-                    dragged = card;
-                    card.style.opacity = '0.5';
-                });
-                card.addEventListener('dragend', function () {
-                    card.style.opacity = '1';
-                    dragged = null;
-                });
-                card.addEventListener('dragover', function (e) {
-                    e.preventDefault();
-                });
-                card.addEventListener('drop', function (e) {
-                    e.preventDefault();
-                    if (!dragged || dragged === card) return;
-                    var rect = card.getBoundingClientRect();
-                    var before = (e.clientY - rect.top) < (rect.height / 2);
-                    list.insertBefore(dragged, before ? card : card.nextSibling);
-                });
+function addComponent(type){
+    const p=state.sel||{},s=sec(p.s)||state.layout.sections[0],r=row(p.s,p.r)||(s?.rows||[])[0],c=col(p.s,p.r,p.c)||(r?.columns||[])[0];
+    if(type==="section"){state.layout.sections.push({id:uid("sec"),style:{padding:"20px",backgroundColor:"#fff"},rows:[{id:uid("row"),style:{gap:"8px"},columns:[{id:uid("col"),style:{},elements:[]}]}]});return;}
+    if(type==="row"){if(s)(s.rows=s.rows||[]).push({id:uid("row"),style:{gap:"8px"},columns:[{id:uid("col"),style:{},elements:[]}]});return;}
+    if(type==="column"){if(r)(r.columns=r.columns||[]).push({id:uid("col"),style:{},elements:[]});return;}
+    if(!c)return;
+    const d={heading:{content:"Heading",style:{fontSize:"32px"},settings:{}},text:{content:"Text",style:{fontSize:"16px"},settings:{}},image:{content:"",style:{width:"100%"},settings:{src:"",alt:"Image"}},button:{content:"Click Me",style:{backgroundColor:"#2563eb",color:"#fff",borderRadius:"999px",padding:"10px 18px",textAlign:"center"},settings:{link:"#"}},form:{content:"Submit",style:{},settings:{}},video:{content:"",style:{},settings:{src:""}},countdown:{content:"Countdown",style:{},settings:{targetDate:""}},spacer:{content:"",style:{height:"24px"},settings:{}}}[type]||{content:"Text",style:{},settings:{}};
+    c.elements.push({id:uid("el"),type:type,content:d.content,style:clone(d.style),settings:clone(d.settings)});
+}
+
+function removeSelected(){
+    const x=state.sel;if(!x)return;
+    if(x.k==="el"){const c=col(x.s,x.r,x.c);if(!c)return;c.elements=(c.elements||[]).filter(i=>i.id!==x.e);}
+    else if(x.k==="col"){const r=row(x.s,x.r);if(!r)return;r.columns=(r.columns||[]).filter(i=>i.id!==x.c);}
+    else if(x.k==="row"){const s=sec(x.s);if(!s)return;s.rows=(s.rows||[]).filter(i=>i.id!==x.r);}
+    else if(x.k==="sec"){state.layout.sections=(state.layout.sections||[]).filter(i=>i.id!==x.s);}
+    state.sel=null;render();
+}
+
+function renderElement(item,ctx){
+    const w=document.createElement("div");w.className="el";styleApply(w,item.style||{});
+    if(state.sel&&state.sel.k==="el"&&state.sel.e===item.id)w.classList.add("sel");
+    w.onclick=e=>{e.stopPropagation();state.sel={k:"el",s:ctx.s,r:ctx.r,c:ctx.c,e:item.id};render();};
+    if(item.type==="heading"||item.type==="text"){const n=document.createElement(item.type==="heading"?"h2":"p");n.contentEditable="true";n.style.margin="0";n.innerHTML=item.content||"";styleApply(n,item.style||{});n.oninput=()=>{item.content=n.innerHTML||"";};onRichTextKeys(n,()=>{item.content=n.innerHTML||"";});w.appendChild(n);}
+    else if(item.type==="button"){const b=document.createElement("button");b.type="button";b.contentEditable="true";b.innerHTML=item.content||"Button";b.style.border="none";b.style.padding="10px 18px";b.style.borderRadius="999px";b.style.background=(item.style&&item.style.backgroundColor)||"#2563eb";b.style.color=(item.style&&item.style.color)||"#fff";b.oninput=()=>{item.content=b.innerHTML||"";};onRichTextKeys(b,()=>{item.content=b.innerHTML||"";});w.appendChild(b);}
+    else if(item.type==="image"){w.innerHTML=(item.settings&&item.settings.src)?'<img src="'+item.settings.src+'" alt="'+(item.settings.alt||"Image")+'" style="max-width:100%;height:auto;display:block;">':'<div style="padding:12px;border:1px dashed #94a3b8;border-radius:8px;">Image placeholder</div>';}
+    else if(item.type==="form"){w.innerHTML='<input disabled placeholder="Name"><input disabled placeholder="Email"><button class="fb-btn primary" disabled>'+(item.content||"Submit")+'</button>';}
+    else if(item.type==="video"){w.innerHTML=(item.settings&&item.settings.src)?'<div style="padding:10px;background:#0f172a;color:#fff;border-radius:8px;">Video: '+item.settings.src+'</div>':'<div style="padding:12px;border:1px dashed #94a3b8;border-radius:8px;">Video URL placeholder</div>';}
+    else if(item.type==="countdown"){w.innerHTML='<div style="display:inline-flex;padding:8px 12px;border:1px solid #cbd5e1;border-radius:999px;font-weight:800;">Countdown Timer</div>';}
+    else if(item.type==="spacer"){const h=((item.style&&item.style.height)||"24px");const isSel=!!(state.sel&&state.sel.k==="el"&&state.sel.e===item.id);const bg=isSel?'repeating-linear-gradient(90deg,#f1f5f9,#f1f5f9 8px,#e2e8f0 8px,#e2e8f0 16px)':'transparent';w.innerHTML='<div style="height:'+h+';background:'+bg+'"></div>';}
+    return w;
+}
+
+function renderCanvas(){
+    canvas.innerHTML="";
+    (state.layout.sections||[]).forEach(s=>{
+        const sn=document.createElement("section");sn.className="sec";styleApply(sn,s.style||{});
+        if(state.sel&&state.sel.k==="sec"&&state.sel.s===s.id)sn.classList.add("sel");
+        sn.onclick=e=>{e.stopPropagation();state.sel={k:"sec",s:s.id};render();};
+        (s.rows||[]).forEach(r=>{
+            const rn=document.createElement("div");rn.className="row";styleApply(rn,r.style||{});
+            if(state.sel&&state.sel.k==="row"&&state.sel.r===r.id)rn.classList.add("sel");
+            rn.onclick=e=>{e.stopPropagation();state.sel={k:"row",s:s.id,r:r.id};render();};
+            (r.columns||[]).forEach(c=>{
+                const cn=document.createElement("div");cn.className="col";styleApply(cn,c.style||{});
+                if(state.sel&&state.sel.k==="col"&&state.sel.c===c.id)cn.classList.add("sel");
+                cn.onclick=e=>{e.stopPropagation();state.sel={k:"col",s:s.id,r:r.id,c:c.id};render();};
+                cn.ondragover=e=>e.preventDefault();
+                cn.ondrop=e=>{e.preventDefault();const t=e.dataTransfer.getData("c");if(!t)return;state.sel={k:"col",s:s.id,r:r.id,c:c.id};addComponent(t);render();};
+                (c.elements||[]).forEach(it=>cn.appendChild(renderElement(it,{s:s.id,r:r.id,c:c.id})));
+                rn.appendChild(cn);
             });
+            sn.appendChild(rn);
+        });
+        canvas.appendChild(sn);
+    });
+    if(!(state.layout.sections||[]).length)canvas.innerHTML='<p style="font-size:13px;color:#475569;">Drag a Section to start.</p>';
+    canvas.ondragover=e=>e.preventDefault();
+    canvas.ondrop=e=>{e.preventDefault();const t=e.dataTransfer.getData("c");if(t){addComponent(t);render();}};
+}
 
-            reorderForm.addEventListener('submit', function () {
-                reorderForm.querySelectorAll('input[name="order[]"]').forEach(function (node) { node.remove(); });
-                list.querySelectorAll('.step-card').forEach(function (card) {
-                    var input = document.createElement('input');
-                    input.type = 'hidden';
-                    input.name = 'order[]';
-                    input.value = card.getAttribute('data-step-id');
-                    reorderForm.appendChild(input);
-                });
-            });
-        })();
+function bind(id,val,cb,opts){
+    const n=document.getElementById(id);if(!n)return;
+    n.value=val||"";
+    const fire=()=>{let v=n.value;if(opts&&opts.px)v=pxIfNumber(v);cb(v);renderCanvas();};
+    n.addEventListener("input",fire);
+    n.addEventListener("change",fire);
+    n.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();fire();}});
+}
 
-        // Add-step color pickers (proxy -> text input)
-        (function () {
-            var addForm = document.querySelector('form[action="{{ route('funnels.steps.store', $funnel) }}"]');
-            if (!addForm) return;
-            var bgProxy = addForm.querySelector('input[type="color"][data-color-proxy="newStepBg"]');
-            var btnProxy = addForm.querySelector('input[type="color"][data-color-proxy="newStepBtn"]');
-            var bgText = addForm.querySelector('input[name="background_color"]');
-            var btnText = addForm.querySelector('input[name="button_color"]');
+function fontSelectHtml(id){
+    return '<label>Font family</label><select id="'+id+'">'+
+        fonts.map(f=>'<option value="'+f.value.replace(/"/g,'&quot;')+'">'+f.label+'</option>').join('')+
+    '</select>';
+}
 
-            function wire(proxy, text) {
-                if (!proxy || !text) return;
-                proxy.addEventListener('input', function () { text.value = proxy.value || ''; });
-                text.addEventListener('input', function () {
-                    var v = (text.value || '').trim();
-                    if (/^#[0-9A-Fa-f]{6}$/.test(v)) proxy.value = v;
-                });
-            }
-            wire(bgProxy, bgText);
-            wire(btnProxy, btnText);
-        })();
+function bindRichEditor(id,val,cb){
+    const n=document.getElementById(id);if(!n)return;
+    n.innerHTML=val||"";
+    const sync=()=>{cb(n.innerHTML||"");renderCanvas();};
+    n.addEventListener("input",sync);
+    n.addEventListener("keydown",e=>{
+        if(!(e.ctrlKey||e.metaKey))return;
+        const k=(e.key||"").toLowerCase();
+        if(k==="b"){e.preventDefault();document.execCommand("bold");sync();}
+        if(k==="i"){e.preventDefault();document.execCommand("italic");sync();}
+        if(k==="u"){e.preventDefault();document.execCommand("underline");sync();}
+    });
+}
 
-        // Template sections show/hide based on template select
-        (function () {
-            function applyTemplate(scopeId, templateVal) {
-                var wrap = document.querySelector('[data-template-sections="' + scopeId + '"]');
-                if (!wrap) return;
-                wrap.querySelectorAll('[data-template-show]').forEach(function (sec) {
-                    var list = (sec.getAttribute('data-template-show') || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
-                    sec.style.display = list.includes(templateVal) ? 'block' : 'none';
-                });
-            }
+function bindPx(id,val,cb){
+    const n=document.getElementById(id);if(!n)return;
+    n.value=pxToNumber(val);
+    const fire=()=>{const raw=(n.value||"").trim();cb(raw===""?"":raw+"px");renderCanvas();};
+    n.addEventListener("input",fire);
+    n.addEventListener("change",fire);
+    n.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();fire();}});
+}
 
-            document.querySelectorAll('[data-template-select]').forEach(function (sel) {
-                var scopeId = sel.getAttribute('data-template-select');
-                var fn = function () { applyTemplate(scopeId, sel.value || 'simple'); };
-                sel.addEventListener('change', fn);
-                fn();
-            });
-        })();
+function uploadImage(file,done){
+    const fd=new FormData();fd.append("image",file);
+    fetch(uploadUrl,{method:"POST",headers:{"X-CSRF-TOKEN":csrf,"Accept":"application/json"},body:fd})
+        .then(r=>r.json()).then(p=>{if(p&&p.url)done(p.url);}).catch(()=>alert("Image upload failed."));
+}
 
-        // Shared: fill preview modal body based on a form's current values
-        function fillStepPreviewFromForm(form, body) {
-            if (!form || !body) return;
+function renderSettings(){
+    settingsTitle.textContent="Settings Panel";
+    const t=selectedTarget();
+    if(!state.sel||!t){settings.innerHTML='<p class="meta">Select a component to edit.</p>';return;}
+    settingsTitle.textContent=titleCase(selectedType())+" Settings";
+    const sty=()=>{t.style=t.style||{};return t.style;};
+    const remove='<button id="removeSel" class="fb-btn danger" type="button"><i class="fas fa-trash"></i> Remove Selected</button>';
 
-            function get(name) {
-                var el = form.querySelector('[name="' + name + '"]');
-                return el ? el.value || '' : '';
-            }
-
-            var type = get('type') || 'landing';
-            var title = get('title') || 'Untitled step';
-            var subtitle = get('subtitle') || '';
-            var content = get('content') || 'No content yet.';
-            var cta = get('cta_label') || 'Continue';
-            var price = get('price') || '';
-            var layout = get('layout_style') || 'centered';
-            var heroUrl = get('hero_image_url') || '';
-            var template = get('template') || 'simple';
-
-            // If user picked a local file, show it immediately in preview
-            var heroFileEl = form.querySelector('input[type="file"][name="hero_image"]');
-            if (heroFileEl && heroFileEl.files && heroFileEl.files[0]) {
-                try {
-                    heroUrl = URL.createObjectURL(heroFileEl.files[0]);
-                } catch (e) {
-                    // ignore file preview errors
-                }
-            }
-
-            // Read colors from text input OR color picker so modal sees what you see
-            var bgTextEl = form.querySelector('input[name="background_color"]');
-            var bgPickerEl = form.querySelector('input[type="color"][data-color-proxy^="bg"]');
-            var rawBg = (bgTextEl && bgTextEl.value.trim()) || (bgPickerEl && bgPickerEl.value.trim()) || '';
-
-            var btnTextEl = form.querySelector('input[name="button_color"]');
-            var btnPickerEl = form.querySelector('input[type="color"][data-color-proxy^="btn"]');
-            var rawBtn = (btnTextEl && btnTextEl.value.trim()) || (btnPickerEl && btnPickerEl.value.trim()) || '';
-
-            var btnColor = rawBtn && /^#[0-9A-Fa-f]{6}$/.test(rawBtn) ? rawBtn : 'var(--theme-primary, #2563EB)';
-            var bgColor = rawBg && /^#[0-9A-Fa-f]{6}$/.test(rawBg) ? rawBg : '#ffffff';
-
-            var actionHtml = '';
-            if (type === 'opt_in') {
-                actionHtml = '' +
-                    '<form onsubmit="return false;" style="margin-top:6px;">' +
-                    '  <label>Name</label>' +
-                    '  <input type="text" placeholder="Name">' +
-                    '  <label>Email</label>' +
-                    '  <input type="email" placeholder="Email">' +
-                    '  <label>Phone (PH 09XXXXXXXXX)</label>' +
-                    '  <input type="text" placeholder="09XXXXXXXXX">' +
-                    '  <button type="button" class="btn-main">' + cta + '</button>' +
-                    '</form>';
-            } else if (type === 'checkout') {
-                var priceText = price ? parseFloat(price || 0).toFixed(2) : '0.00';
-                actionHtml = '' +
-                    '<p class="price">PHP ' + priceText + '</p>' +
-                    '<button type="button" class="btn-main">' + cta + '</button>';
-            } else if (type === 'upsell' || type === 'downsell') {
-                var upsellPrice = price ? parseFloat(price || 0).toFixed(2) : '0.00';
-                actionHtml = '' +
-                    '<p class="price">Additional Offer: PHP ' + upsellPrice + '</p>' +
-                    '<div class="row">' +
-                    '  <button type="button" class="btn-main">' + cta + '</button>' +
-                    '  <button type="button" class="btn-secondary">No Thanks</button>' +
-                    '</div>';
-            } else if (type === 'thank_you') {
-                actionHtml = '' +
-                    '<p style="font-weight:700; color:#22c55e; margin:0 0 10px;">Flow completed successfully.</p>' +
-                    '<button type="button" class="btn-secondary">Back to start</button>';
-            } else {
-                actionHtml = '<button type="button" class="btn-main">' + cta + '</button>';
-            }
-
-            var heroImgHtml = heroUrl
-                ? '<img src="' + heroUrl + '" alt="Hero" style="width:100%; max-height:320px; object-fit:cover; border-radius:18px; border:1px solid rgba(148,163,184,0.6); margin-bottom:18px;">'
-                : '';
-
-            function getAll(selector) {
-                return Array.prototype.slice.call(form.querySelectorAll(selector));
-            }
-
-            function templateExtrasHtml() {
-                var html = '';
-
-                if (template === 'hero_features' || template === 'sales_long') {
-                    var feats = getAll('input[name^="template_data[features]"][name$="[title]"]').map(function (tEl) {
-                        var idx = (tEl.name.match(/\[(\d+)\]\[title\]$/) || [])[1];
-                        var bodyEl = idx !== undefined ? form.querySelector('input[name="template_data[features][' + idx + '][body]"]') : null;
-                        return { title: (tEl.value || '').trim(), body: (bodyEl ? bodyEl.value : '').trim() };
-                    }).filter(function (f) { return f.title || f.body; });
-
-                    if (feats.length) {
-                        html += '<div class="section"><div class="section-title">Features</div><div class="features">' +
-                            feats.map(function (f) {
-                                return '<div class="feature"><h4>' + (f.title || '') + '</h4><p>' + (f.body || '') + '</p></div>';
-                            }).join('') +
-                            '</div></div>';
-                    }
-                }
-
-                if (template === 'lead_capture') {
-                    var bullets = getAll('input[name^="template_data[bullets]"]').map(function (el) { return (el.value || '').trim(); }).filter(Boolean);
-                    var formTitleEl = form.querySelector('input[name="template_data[form_title]"]');
-                    var formTitle = formTitleEl ? (formTitleEl.value || '').trim() : '';
-                    if (bullets.length) {
-                        html += '<div class="section"><div class="section-title">' + (formTitle || 'What you’ll get') + '</div><ul class="bullets">' +
-                            bullets.map(function (b) { return '<li>' + b + '</li>'; }).join('') +
-                            '</ul></div>';
-                    }
-                }
-
-                if (template === 'thank_you_next') {
-                    var steps = getAll('input[name^="template_data[next_steps]"]').map(function (el) { return (el.value || '').trim(); }).filter(Boolean);
-                    if (steps.length) {
-                        html += '<div class="section"><div class="section-title">Next steps</div><ol class="next-steps">' +
-                            steps.map(function (s) { return '<li>' + s + '</li>'; }).join('') +
-                            '</ol></div>';
-                    }
-                }
-
-                if (template === 'sales_long') {
-                    var faqQ = getAll('input[name^="template_data[faq]"][name$="[q]"]').map(function (qEl) {
-                        var idx = (qEl.name.match(/\[(\d+)\]\[q\]$/) || [])[1];
-                        var aEl = idx !== undefined ? form.querySelector('input[name="template_data[faq][' + idx + '][a]"]') : null;
-                        return { q: (qEl.value || '').trim(), a: (aEl ? aEl.value : '').trim() };
-                    }).filter(function (x) { return x.q; });
-
-                    if (faqQ.length) {
-                        html += '<div class="section faq"><div class="section-title">FAQ</div>' +
-                            faqQ.map(function (it) {
-                                return '<details><summary>' + it.q + '</summary><div class="ans">' + (it.a || '') + '</div></details>';
-                            }).join('') +
-                            '</div>';
-                    }
-
-                    var quotes = getAll('input[name^="template_data[testimonials]"][name$="[quote]"]').map(function (qEl) {
-                        var idx = (qEl.name.match(/\[(\d+)\]\[quote\]$/) || [])[1];
-                        var nEl = idx !== undefined ? form.querySelector('input[name="template_data[testimonials][' + idx + '][name]"]') : null;
-                        return { quote: (qEl.value || '').trim(), name: (nEl ? nEl.value : '').trim() };
-                    }).filter(function (t) { return t.quote; });
-
-                    if (quotes.length) {
-                        html += '<div class="section"><div class="section-title">Testimonials</div><div class="testimonials">' +
-                            quotes.map(function (t) {
-                                return '<div class="quote"><p>“' + t.quote + '”</p><div class="by">' + (t.name || 'Customer') + '</div></div>';
-                            }).join('') +
-                            '</div></div>';
-                    }
-                }
-
-                return html;
-            }
-
-            var inner;
-            if (layout === 'split_left' || layout === 'split_right') {
-                var dir = layout === 'split_right' ? 'row-reverse' : 'row';
-                inner = '' +
-                    '<div class="wrap">' +
-                    '  <div class="card" style="background:' + bgColor + ';">' +
-                    '    <div class="layout-split" style="flex-direction:' + dir + ';">' +
-                    (heroUrl ? (
-                        '      <div class="col-image">' +
-                        '        <img src="' + heroUrl + '" alt="Hero">' +
-                        '      </div>'
-                    ) : '') +
-                    '      <div class="col-text">' +
-                    '        <h2>' + title + '</h2>' +
-                    (subtitle ? '<h3 class="subtitle">' + subtitle + '</h3>' : '') +
-                    '        <div class="content">' + content + '</div>' +
-                    templateExtrasHtml() +
-                    '        <div>' + actionHtml + '</div>' +
-                    '      </div>' +
-                    '    </div>' +
-                    '  </div>' +
-                    '</div>';
-            } else {
-                inner = '' +
-                    '<div class="wrap">' +
-                    '  <div class="card" style="background:' + bgColor + ';">' +
-                    (heroImgHtml || '') +
-                    '    <h2>' + title + '</h2>' +
-                    (subtitle ? '<h3 class="subtitle">' + subtitle + '</h3>' : '') +
-                    '    <div class="content">' + content + '</div>' +
-                    templateExtrasHtml() +
-                    '    <div>' + actionHtml + '</div>' +
-                    '  </div>' +
-                    '</div>';
-            }
-
-            body.innerHTML =
-                '<style>' +
-                '  * { box-sizing:border-box; }' +
-                '  .wrap { width:min(1040px, 100%); margin:0 auto; }' +
-                '  .card { border-radius:18px; border:1px solid #1d4ed8; padding:24px; box-shadow:0 18px 45px rgba(15,23,42,0.4); }' +
-                '  h2 { margin:0 0 6px; font-size:26px; color:#0f172a; }' +
-                '  .subtitle { margin:0 0 14px; font-size:16px; color:#64748b; font-weight:600; }' +
-                '  .content { margin-bottom:18px; color:#334155; font-size:14px; line-height:1.6; white-space:pre-wrap; }' +
-                '  .price { font-size:32px; font-weight:800; color:#047857; margin:0 0 12px; }' +
-                '  .row { display:flex; gap:10px; flex-wrap:wrap; }' +
-                '  input { width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1; margin-bottom:8px; }' +
-                '  label { display:block; font-size:13px; font-weight:700; color:#e5e7eb; margin:4px 0; }' +
-                '  .btn-main, .btn-secondary { display:inline-flex; align-items:center; justify-content:center; padding:10px 20px; border-radius:999px; border:none; font-weight:700; cursor:default; }' +
-                '  .btn-main { background:' + btnColor + '; color:#fff; box-shadow:0 10px 25px rgba(37,99,235,0.55); }' +
-                '  .btn-secondary { background:#0f172a; color:#e5e7eb; border:1px solid rgba(148,163,184,0.6); }' +
-                '  .layout-split { display:flex; flex-wrap:wrap; gap:24px; align-items:flex-start; }' +
-                '  .layout-split .col-text { flex:1 1 260px; min-width:0; }' +
-                '  .layout-split .col-image { flex:0 0 320px; max-width:360px; }' +
-                '  .layout-split .col-image img { width:100%; max-height:320px; object-fit:cover; border-radius:18px; border:1px solid rgba(148,163,184,0.6); }' +
-                '  .section { margin-top: 18px; }' +
-                '  .section-title { font-weight: 900; font-size: 18px; color:#0f172a; margin: 0 0 10px; }' +
-                '  .features { display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }' +
-                '  .feature { background:#fff; border:1px solid rgba(219,234,254,0.95); border-radius: 14px; padding: 14px; }' +
-                '  .feature h4 { margin: 0 0 6px; font-size: 14px; font-weight: 900; color:#0f172a; }' +
-                '  .feature p { margin: 0; color:#475569; font-size: 13px; line-height:1.5; }' +
-                '  .bullets { margin: 0; padding-left: 18px; color:#334155; }' +
-                '  .bullets li { margin: 6px 0; }' +
-                '  .faq details { background:#fff; border:1px solid rgba(219,234,254,0.95); border-radius: 14px; padding: 12px 14px; }' +
-                '  .faq details + details { margin-top: 10px; }' +
-                '  .faq summary { cursor:pointer; font-weight:900; color:#0f172a; }' +
-                '  .faq .ans { margin-top: 8px; color:#475569; white-space: pre-wrap; }' +
-                '  .testimonials { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }' +
-                '  .quote { background:#fff; border:1px solid rgba(219,234,254,0.95); border-radius: 14px; padding: 14px; }' +
-                '  .quote p { margin: 0 0 10px; color:#334155; line-height:1.6; }' +
-                '  .quote .by { font-size: 12px; font-weight: 900; color:#0f172a; }' +
-                '  .next-steps { margin: 0; padding-left: 18px; color:#334155; }' +
-                '  @media (max-width: 900px) { .features { grid-template-columns: 1fr; } .testimonials { grid-template-columns: 1fr; } }' +
-                '</style>' +
-                inner;
+    if(state.sel.k==="sec"){
+        settings.innerHTML='<label>Background color</label><input id="bg" type="color"><label>Background image Upload</label><input id="bgUp" type="file" accept="image/*"><label>Margin</label><div class="px-wrap"><input id="m" type="number" step="1"><span class="px-unit">px</span></div><label>Padding</label><div class="px-wrap"><input id="p" type="number" step="1"><span class="px-unit">px</span></div>'+remove;
+        bind("bg",(t.style&&t.style.backgroundColor)||"#ffffff",v=>sty().backgroundColor=v);
+        bindPx("m",(t.style&&t.style.margin)||"",v=>sty().margin=v);
+        bindPx("p",(t.style&&t.style.padding)||"20px",v=>sty().padding=v);
+        const bgUp=document.getElementById("bgUp");if(bgUp)bgUp.onchange=()=>{if(bgUp.files&&bgUp.files[0])uploadImage(bgUp.files[0],url=>{sty().backgroundImage='url('+url+')';sty().backgroundSize='cover';sty().backgroundPosition='center';renderCanvas();});};
+    } else if(state.sel.k==="el"&&t.type==="button"){
+        settings.innerHTML='<div class="rt-box"><div class="rt-tools"><button id="rtBold" type="button"><b>B</b></button><button id="rtItalic" type="button"><i>I</i></button><button id="rtUnderline" type="button"><u>U</u></button></div><div id="contentRt" class="rt-editor" contenteditable="true"></div></div><label>Link</label><input id="link"><label>Background color</label><input id="bbg" type="color"><label>Border radius</label><div class="px-wrap"><input id="rad" type="number" step="1"><span class="px-unit">px</span></div><label>Padding</label><input id="p" placeholder="10px 18px">'+fontSelectHtml('ff')+'<label>Text alignment</label><select id="a"><option>left</option><option>center</option><option>right</option></select>'+remove;
+        bindRichEditor("contentRt",t.content,v=>t.content=v);
+        const rt=document.getElementById("contentRt");
+        const b=document.getElementById("rtBold"),i=document.getElementById("rtItalic"),u=document.getElementById("rtUnderline");
+        if(b)b.onclick=()=>{rt&&rt.focus();document.execCommand("bold");t.content=rt.innerHTML||"";renderCanvas();};
+        if(i)i.onclick=()=>{rt&&rt.focus();document.execCommand("italic");t.content=rt.innerHTML||"";renderCanvas();};
+        if(u)u.onclick=()=>{rt&&rt.focus();document.execCommand("underline");t.content=rt.innerHTML||"";renderCanvas();};
+        bind("link",(t.settings&&t.settings.link)||"",v=>{t.settings=t.settings||{};t.settings.link=v;});
+        bind("bbg",(t.style&&t.style.backgroundColor)||"#2563eb",v=>sty().backgroundColor=v);bindPx("rad",(t.style&&t.style.borderRadius)||"999px",v=>sty().borderRadius=v);bind("p",(t.style&&t.style.padding)||"10px 18px",v=>sty().padding=v,{px:true});bind("ff",(t.style&&t.style.fontFamily)||"Inter, sans-serif",v=>sty().fontFamily=v);bind("a",(t.style&&t.style.textAlign)||"center",v=>sty().textAlign=v);
+    } else if(state.sel.k==="el"&&t.type==="image"){
+        settings.innerHTML='<label>Upload image</label><input id="up" type="file" accept="image/*"><label>Image URL</label><input id="src"><label>Alt</label><input id="alt"><label>Width</label><input id="w" placeholder="100%"><label>Border</label><input id="b"><label>Shadow</label><input id="sh">'+remove;
+        bind("src",(t.settings&&t.settings.src)||"",v=>{t.settings=t.settings||{};t.settings.src=v;});
+        bind("alt",(t.settings&&t.settings.alt)||"",v=>{t.settings=t.settings||{};t.settings.alt=v;});
+        bind("w",(t.style&&t.style.width)||"100%",v=>sty().width=v,{px:true});bind("b",(t.style&&t.style.border)||"",v=>sty().border=v);bind("sh",(t.style&&t.style.boxShadow)||"",v=>sty().boxShadow=v);
+        const up=document.getElementById("up");if(up)up.onchange=()=>{if(up.files&&up.files[0])uploadImage(up.files[0],url=>{t.settings=t.settings||{};t.settings.src=url;renderCanvas();});};
+    } else if(state.sel.k==="el"&&t.type==="video"){
+        settings.innerHTML='<label>Upload video</label><input id="upv" type="file" accept="video/*"><label>Video URL</label><input id="src"><label>Width</label><input id="w" placeholder="100%"><label>Border</label><input id="b"><label>Shadow</label><input id="sh">'+remove;
+        bind("src",(t.settings&&t.settings.src)||"",v=>{t.settings=t.settings||{};t.settings.src=v;});
+        bind("w",(t.style&&t.style.width)||"100%",v=>sty().width=v,{px:true});bind("b",(t.style&&t.style.border)||"",v=>sty().border=v);bind("sh",(t.style&&t.style.boxShadow)||"",v=>sty().boxShadow=v);
+        const upv=document.getElementById("upv");if(upv)upv.onchange=()=>{if(upv.files&&upv.files[0])uploadImage(upv.files[0],url=>{t.settings=t.settings||{};t.settings.src=url;renderCanvas();});};
+    } else if(state.sel.k==="el"){
+        const rich=(t.type==="text"||t.type==="heading");
+        settings.innerHTML=(rich?'<div class="rt-box"><div class="rt-tools"><button id="rtBold" type="button"><b>B</b></button><button id="rtItalic" type="button"><i>I</i></button><button id="rtUnderline" type="button"><u>U</u></button></div><div id="contentRt" class="rt-editor" contenteditable="true"></div></div>':'<label>Content</label><textarea id="content" rows="4"></textarea>')+'<label>Color</label><input id="co" type="color"><label>Font size</label><div class="px-wrap"><input id="fs" type="number" step="1"><span class="px-unit">px</span></div>'+fontSelectHtml('ff')+'<label>Padding</label><div class="px-wrap"><input id="p" type="number" step="1"><span class="px-unit">px</span></div><label>Text align</label><select id="a"><option value="">Default</option><option>left</option><option>center</option><option>right</option></select>'+remove;
+        if(rich){
+            bindRichEditor("contentRt",t.content,v=>t.content=v);
+            const rt=document.getElementById("contentRt");
+            const b=document.getElementById("rtBold"),i=document.getElementById("rtItalic"),u=document.getElementById("rtUnderline");
+            if(b)b.onclick=()=>{rt&&rt.focus();document.execCommand("bold");t.content=rt.innerHTML||"";renderCanvas();};
+            if(i)i.onclick=()=>{rt&&rt.focus();document.execCommand("italic");t.content=rt.innerHTML||"";renderCanvas();};
+            if(u)u.onclick=()=>{rt&&rt.focus();document.execCommand("underline");t.content=rt.innerHTML||"";renderCanvas();};
+        } else {
+            bind("content",t.content,v=>t.content=v);
         }
+        bind("co",(t.style&&t.style.color)||"#334155",v=>sty().color=v);bindPx("fs",(t.style&&t.style.fontSize)||"",v=>sty().fontSize=v);bind("ff",(t.style&&t.style.fontFamily)||"Inter, sans-serif",v=>sty().fontFamily=v);bindPx("p",(t.style&&t.style.padding)||"",v=>sty().padding=v);bind("a",(t.style&&t.style.textAlign)||"",v=>sty().textAlign=v);
+    } else {
+        settings.innerHTML='<label>Background color</label><input id="bg" type="color"><label>Padding</label><div class="px-wrap"><input id="p" type="number" step="1"><span class="px-unit">px</span></div><label>Gap</label><div class="px-wrap"><input id="g" type="number" step="1"><span class="px-unit">px</span></div>'+remove;
+        bind("bg",(t.style&&t.style.backgroundColor)||"#ffffff",v=>sty().backgroundColor=v);bindPx("p",(t.style&&t.style.padding)||"",v=>sty().padding=v);bindPx("g",(t.style&&t.style.gap)||"",v=>sty().gap=v);
+    }
+    const btn=document.getElementById("removeSel");if(btn)btn.onclick=removeSelected;
+}
 
-        // Existing step preview (uses step form)
-        function openStepPreviewModal(stepId) {
-            var form = document.getElementById('stepForm' + stepId);
-            var overlay = document.getElementById('stepPreviewOverlay');
-            var body = document.getElementById('stepPreviewModalBody');
-            if (!overlay || !body) return;
+function render(){renderCanvas();renderSettings();}
 
-            if (!form) {
-                alert('Open the step editor first to preview.');
-                return;
-            }
+document.querySelectorAll(".fb-lib button").forEach(b=>{
+    b.ondragstart=e=>e.dataTransfer.setData("c",b.dataset.c||"");
+    b.onclick=()=>{addComponent(b.dataset.c||"");render();};
+});
 
-            fillStepPreviewFromForm(form, body);
-            overlay.style.display = 'flex';
-            // smooth fade + slide
-            requestAnimationFrame(function () {
-                overlay.style.opacity = '1';
-                var shell = overlay.querySelector('.preview-shell');
-                if (shell) {
-                    shell.style.transform = 'translateY(0)';
-                    shell.style.opacity = '1';
-                }
-            });
+stepSel.onchange=()=>loadStep(stepSel.value);
+document.getElementById("saveBtn").onclick=()=>{const s=cur();if(!s)return;saveMsg.textContent="Saving...";fetch(saveUrl,{method:"POST",headers:{"Content-Type":"application/json","X-CSRF-TOKEN":csrf,"Accept":"application/json"},body:JSON.stringify({step_id:s.id,layout_json:state.layout})}).then(r=>{if(!r.ok)throw 1;return r.json();}).then(p=>{s.layout_json=p.layout_json||clone(state.layout);saveMsg.textContent="Saved "+new Date().toLocaleTimeString();}).catch(()=>{saveMsg.textContent="Save failed";alert("Save failed.");});};
+document.getElementById("previewBtn").onclick=()=>{const s=cur();if(s)window.open(previewTpl.replace("__STEP__",String(s.id)),"_blank");};
+document.addEventListener("keydown",e=>{
+    const key=String(e.key||"").toLowerCase();
+    const ae=document.activeElement;
+    const isTextField=!!(ae && (ae.tagName==="INPUT" || ae.tagName==="TEXTAREA" || ae.isContentEditable));
+
+    if((e.ctrlKey||e.metaKey)&&key==="s"){e.preventDefault();document.getElementById("saveBtn").click();return;}
+
+    if((e.ctrlKey||e.metaKey)&&(key==="b"||key==="i"||key==="u")){
+        if(ae && ae.isContentEditable){
+            e.preventDefault();
+            if(key==="b")document.execCommand("bold");
+            if(key==="i")document.execCommand("italic");
+            if(key==="u")document.execCommand("underline");
+            return;
         }
+    }
 
-        // Add New Step preview (uses the top create form)
-        function openNewStepPreviewModal() {
-            var form = document.getElementById('newStepForm');
-            var overlay = document.getElementById('stepPreviewOverlay');
-            var body = document.getElementById('stepPreviewModalBody');
-            if (!overlay || !body || !form) return;
+    if((key==="delete"||key==="backspace") && state.sel && !isTextField){
+        e.preventDefault();
+        removeSelected();
+    }
+});
 
-            fillStepPreviewFromForm(form, body);
-            overlay.style.display = 'flex';
-            requestAnimationFrame(function () {
-                overlay.style.opacity = '1';
-                var shell = overlay.querySelector('.preview-shell');
-                if (shell) {
-                    shell.style.transform = 'translateY(0)';
-                    shell.style.opacity = '1';
-                }
-            });
-        }
-
-        function closeStepPreviewModal() {
-            var overlay = document.getElementById('stepPreviewOverlay');
-            if (!overlay) return;
-
-            overlay.style.opacity = '0';
-            var shell = overlay.querySelector('.preview-shell');
-            if (shell) {
-                shell.style.transform = 'translateY(16px)';
-                shell.style.opacity = '0';
-            }
-            setTimeout(function () {
-                overlay.style.display = 'none';
-            }, 230);
-        }
-    </script>
+loadStep(state.sid);
+})();
+</script>
 @endsection

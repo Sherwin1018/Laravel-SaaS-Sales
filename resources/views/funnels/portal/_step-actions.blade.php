@@ -1,4 +1,16 @@
-@if($step->type === 'opt_in')
+@php $isPreview = $isPreview ?? false; @endphp
+
+@if($isPreview)
+    <div style="padding: 14px; border: 1px solid #cbd5e1; border-radius: 12px; background: #f8fafc; color: #334155;">
+        <strong style="display:block; margin-bottom:6px;">Preview mode</strong>
+        <span style="font-size: 13px;">Form submissions and payments are disabled while previewing from the builder.</span>
+        <div style="margin-top: 10px;">
+            <button type="button" class="btn" disabled style="opacity:0.6; cursor:not-allowed;">
+                {{ $step->cta_label ?: 'Action Preview' }}
+            </button>
+        </div>
+    </div>
+@elseif($step->type === 'opt_in')
     <form method="POST" action="{{ route('funnels.portal.optin', ['funnelSlug' => $funnel->slug, 'stepSlug' => $step->slug]) }}">
         @csrf
         <label>Name</label>
@@ -44,4 +56,3 @@
         <a class="btn secondary" href="{{ route('funnels.portal.step', ['funnelSlug' => $funnel->slug]) }}">Back to Start</a>
     @endif
 @endif
-

@@ -71,7 +71,12 @@ Route::middleware(['auth', 'role:sales-agent,marketing-manager,account-owner,fin
         Route::get('/funnels/create', [FunnelController::class, 'create'])->name('funnels.create');
         Route::post('/funnels', [FunnelController::class, 'store'])->name('funnels.store');
         Route::get('/funnels/{funnel}/edit', [FunnelController::class, 'edit'])->name('funnels.edit');
+        Route::get('/funnels/{funnel}/preview/{step?}', [FunnelController::class, 'preview'])->name('funnels.preview');
         Route::put('/funnels/{funnel}', [FunnelController::class, 'update'])->name('funnels.update');
+        Route::post('/funnels/{funnel}/builder/layout', [FunnelController::class, 'saveLayout'])->name('funnels.builder.layout.save');
+        Route::post('/funnels/{funnel}/builder/upload-image', [FunnelController::class, 'uploadBuilderImage'])->name('funnels.builder.image.upload');
+        Route::post('/funnels/{funnel}/publish', [FunnelController::class, 'publish'])->name('funnels.publish');
+        Route::post('/funnels/{funnel}/unpublish', [FunnelController::class, 'unpublish'])->name('funnels.unpublish');
         Route::delete('/funnels/{funnel}', [FunnelController::class, 'destroy'])->name('funnels.destroy');
         Route::post('/funnels/{funnel}/steps', [FunnelController::class, 'storeStep'])->name('funnels.steps.store');
         Route::put('/funnels/{funnel}/steps/{step}', [FunnelController::class, 'updateStep'])->name('funnels.steps.update');
@@ -91,6 +96,7 @@ Route::middleware(['auth', 'role:customer'])->group(function () {
 });
 
 Route::get('/f/{funnelSlug}/{stepSlug?}', [FunnelPortalController::class, 'show'])->name('funnels.portal.step');
+Route::get('/funnel/{funnelSlug}/{stepSlug?}', [FunnelPortalController::class, 'show'])->name('funnels.portal.step.alias');
 Route::post('/f/{funnelSlug}/{stepSlug}/opt-in', [FunnelPortalController::class, 'optIn'])->name('funnels.portal.optin');
 Route::post('/f/{funnelSlug}/{stepSlug}/checkout', [FunnelPortalController::class, 'checkout'])->name('funnels.portal.checkout');
 Route::post('/f/{funnelSlug}/{stepSlug}/offer', [FunnelPortalController::class, 'offer'])->name('funnels.portal.offer');

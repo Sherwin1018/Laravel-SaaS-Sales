@@ -199,9 +199,22 @@ Build sequence:
 4. Automation and communication integrations.
 5. Checkout/subscriptions/payments.
 6. Analytics and SaaS business controls.
-
+--------
 All modules must remain interconnected: CRM, funnel tracking, automation, and payments should function as one flow.
 
+### Interconnection Verification (2026-02-19)
+- Status: Partially followed.
+- CRM <-> Funnel: Implemented. Published funnel opt-in creates/updates leads in CRM (`FunnelPortalController@optIn`).
+- Funnel <-> Payments: Implemented (initial). Checkout/offer steps create payment records linked to funnel lead (`FunnelPortalController@checkout`, `@offer`).
+- CRM <-> Payments: Implemented (initial). Payments can be linked to leads (`payments.lead_id`) and viewed in billing.
+- Automation <-> CRM/Funnel/Payments: Not yet implemented as workflow engine. Current automation is limited to manual/basic lead activity logging and score events.
+
+### Comments and Suggestions
+- Add event-driven automation triggers for key points: `lead_created`, `lead_status_changed`, `payment_paid`, `payment_failed`.
+- Add workflow actions (email sequence, delay, condition) so automation is part of the same end-to-end flow.
+- Add webhook/outbox integration (e.g., n8n) to connect CRM/funnel/payment events reliably.
+- Add integration/feature tests to validate the full flow: funnel opt-in -> lead creation -> checkout payment -> automation trigger.
+--------
 ## Expected Outcome
 At completion, the platform should provide:
 
@@ -218,8 +231,8 @@ At completion, the platform should provide:
 - Usefulness: Features directly support growth and automation.
 
 ## Recommended Immediate Next Tasks
-- [ ] Add lead tags and custom fields.
-- [ ] Start funnel builder MVP (Week 3 scope).
-- [ ] Add automated email sequence infrastructure.
-- [ ] Integrate payment gateway for real transactions.
-- [ ] Add feature tests for assignment, scoring, pipeline, and payments.
+- [ ] Add lead tags and custom fields. (Not done)
+- [x] Start funnel builder MVP (Week 3 scope). (Initial)
+- [ ] Add automated email sequence infrastructure. (Not done)
+- [ ] Integrate payment gateway for real transactions. (Not done)
+- [ ] Add feature tests for assignment, scoring, pipeline, and payments. (Not done)
