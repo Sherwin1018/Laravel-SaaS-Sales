@@ -37,12 +37,25 @@ class FunnelPortalController extends Controller
         [$funnel, $steps, $step] = $this->resolveStepContext($funnelSlug, $stepSlug, 'opt_in');
 
         $validated = $request->validate([
-            'name' => 'required|string|max:150',
+            'first_name' => 'nullable|string|max:150',
+            'last_name' => 'nullable|string|max:150',
+            'name' => 'nullable|string|max:150',
             'email' => 'required|email|max:150',
-            'phone' => ['required', 'regex:/^09\d{9}$/'],
+            'phone_number' => 'nullable|string|max:20',
+            'phone' => 'nullable|string|max:20',
         ], [
-            'phone.regex' => 'Phone number must be a valid Philippine mobile number (09XXXXXXXXX).',
+            'email.required' => 'Email is required.',
+            'email.email' => 'Please enter a valid email.',
         ]);
+
+        $name = trim(
+            ($validated['name'] ?? '')
+            ?: trim(($validated['first_name'] ?? '') . ' ' . ($validated['last_name'] ?? ''))
+        );
+        $phone = $validated['phone_number'] ?? $validated['phone'] ?? '';
+        if ($phone !== '' && !preg_match('/^09\d{9}$/', $phone)) {
+            return redirect()->back()->withErrors(['phone_number' => 'Phone must be a valid Philippine mobile number (09XXXXXXXXX).'])->withInput();
+        }
 
         $lead = Lead::firstOrNew([
             'tenant_id' => $funnel->tenant_id,
@@ -60,8 +73,8 @@ class FunnelPortalController extends Controller
             $lead->score = 0;
         }
 
-        $lead->name = $validated['name'];
-        $lead->phone = $validated['phone'];
+        $lead->name = $name !== '' ? $name : $lead->name;
+        $lead->phone = $phone !== '' ? $phone : ($lead->phone ?? '');
         $lead->save();
 
         session()->put($this->leadSessionKey($funnel->id), $lead->id);

@@ -133,9 +133,22 @@ class FunnelController extends Controller
             $rawLayout = ['sections' => []];
         }
 
+        // Decode again from raw body so we never lose form/video data (Laravel input can alter nested JSON)
+        $content = $request->getContent();
+        if (is_string($content) && $content !== '') {
+            $body = json_decode($content, true);
+            if (is_array($body) && isset($body['layout_json'])) {
+                $fromBody = $body['layout_json'];
+                if (is_array($fromBody) && isset($fromBody['sections'])) {
+                    $rawLayout = $fromBody;
+                }
+            }
+        }
+
         $step = $funnel->steps()->where('id', $validated['step_id'])->firstOrFail();
         $layout = $this->sanitizeLayoutJson($rawLayout);
         $this->mergeElementSizeFromRaw($layout, $rawLayout);
+        $this->mergeFormElementFromRaw($layout, $rawLayout);
 
         $step->update(['layout_json' => $layout]);
 
@@ -178,6 +191,75 @@ class FunnelController extends Controller
                             $layout['sections'][$si]['rows'][$ri]['columns'][$ci]['elements'][$ei]['style'] =
                                 $layout['sections'][$si]['rows'][$ri]['columns'][$ci]['elements'][$ei]['style'] ?? [];
                             $layout['sections'][$si]['rows'][$ri]['columns'][$ci]['elements'][$ei]['style'][$key] = $v;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Copy form element style and input settings from raw request so they never get dropped on save.
+     * Match by element id so we find the right form even if indices differ.
+     */
+    private function mergeFormElementFromRaw(array &$layout, array $rawLayout): void
+    {
+        $rawFormData = [];
+        foreach ($rawLayout['sections'] ?? [] as $section) {
+            foreach ($section['rows'] ?? [] as $row) {
+                foreach ($row['columns'] ?? [] as $column) {
+                    foreach ($column['elements'] ?? [] as $el) {
+                        if ((string) ($el['type'] ?? '') !== 'form') {
+                            continue;
+                        }
+                        $id = trim((string) ($el['id'] ?? ''));
+                        if ($id === '') {
+                            continue;
+                        }
+                        $rawFormData[$id] = [
+                            'style' => is_array($el['style'] ?? null) ? $el['style'] : [],
+                            'settings' => is_array($el['settings'] ?? null) ? $el['settings'] : [],
+                        ];
+                    }
+                }
+            }
+        }
+        foreach ($layout['sections'] ?? [] as $si => $section) {
+            foreach (($section['rows'] ?? []) as $ri => $row) {
+                foreach (($row['columns'] ?? []) as $ci => $column) {
+                    foreach (($column['elements'] ?? []) as $ei => $element) {
+                        if ((string) ($element['type'] ?? '') !== 'form') {
+                            continue;
+                        }
+                        $id = trim((string) ($element['id'] ?? ''));
+                        if ($id === '' || ! isset($rawFormData[$id])) {
+                            continue;
+                        }
+                        $raw = $rawFormData[$id];
+                        $layout['sections'][$si]['rows'][$ri]['columns'][$ci]['elements'][$ei]['style'] =
+                            $layout['sections'][$si]['rows'][$ri]['columns'][$ci]['elements'][$ei]['style'] ?? [];
+                        $layout['sections'][$si]['rows'][$ri]['columns'][$ci]['elements'][$ei]['settings'] =
+                            $layout['sections'][$si]['rows'][$ri]['columns'][$ci]['elements'][$ei]['settings'] ?? [];
+                        $elStyle = &$layout['sections'][$si]['rows'][$ri]['columns'][$ci]['elements'][$ei]['style'];
+                        $elSettings = &$layout['sections'][$si]['rows'][$ri]['columns'][$ci]['elements'][$ei]['settings'];
+                        foreach (['width', 'padding', 'margin', 'gap'] as $key) {
+                            $v = isset($raw['style'][$key]) ? trim((string) $raw['style'][$key]) : '';
+                            if ($v !== '') {
+                                $elStyle[$key] = mb_substr($v, 0, 260);
+                            }
+                        }
+                        $rawFormWidth = isset($raw['settings']['width']) ? trim((string) $raw['settings']['width']) : '';
+                        if ($rawFormWidth !== '' && empty($elStyle['width'])) {
+                            $elStyle['width'] = mb_substr($rawFormWidth, 0, 60);
+                        }
+                        if ($rawFormWidth !== '') {
+                            $elSettings['width'] = mb_substr($rawFormWidth, 0, 60);
+                        }
+                        foreach (['inputWidth', 'inputPadding', 'inputFontSize'] as $key) {
+                            $v = isset($raw['settings'][$key]) ? trim((string) $raw['settings'][$key]) : '';
+                            if ($v !== '') {
+                                $elSettings[$key] = mb_substr($v, 0, 60);
+                            }
                         }
                     }
                 }
@@ -499,9 +581,31 @@ class FunnelController extends Controller
                                             : mb_substr(trim($rawContent), 0, 5000);
 
                                         $rawStyle = is_array($element['style'] ?? null) ? $element['style'] : [];
-                                        $style = $this->sanitizeStyle($rawStyle);
                                         $rawSettings = is_array($element['settings'] ?? null) ? $element['settings'] : [];
+                                        $style = $this->sanitizeStyle($rawStyle);
                                         $settings = $this->sanitizeSettings($rawSettings);
+
+                                        if ($type === 'form') {
+                                            foreach (['width', 'padding', 'margin', 'gap'] as $k) {
+                                                $v = isset($rawStyle[$k]) ? trim((string) $rawStyle[$k]) : '';
+                                                if ($v !== '') {
+                                                    $style[$k] = mb_substr($v, 0, 260);
+                                                }
+                                            }
+                                            if (empty($style['width'])) {
+                                                $rawFormWidth = isset($rawSettings['width']) ? trim((string) $rawSettings['width']) : '';
+                                                if ($rawFormWidth !== '') {
+                                                    $style['width'] = mb_substr($rawFormWidth, 0, 60);
+                                                }
+                                            }
+                                            foreach (['inputWidth', 'inputPadding', 'inputFontSize'] as $k) {
+                                                $v = isset($rawSettings[$k]) ? trim((string) $rawSettings[$k]) : '';
+                                                if ($v !== '') {
+                                                    $settings[$k] = mb_substr($v, 0, 60);
+                                                }
+                                            }
+                                        }
+
                                         if ($type === 'video' || $type === 'image') {
                                             foreach (['width', 'height', 'maxWidth', 'minWidth', 'maxHeight', 'minHeight'] as $sizeKey) {
                                                 $fromStyle = isset($rawStyle[$sizeKey]) && trim((string) $rawStyle[$sizeKey]) !== '';
@@ -653,22 +757,45 @@ class FunnelController extends Controller
             'platform',
             'width',
             'widthBehavior',
+            'fields',
+            'inputWidth',
+            'inputPadding',
+            'inputFontSize',
         ];
+
+        $allowedFieldTypes = ['first_name', 'last_name', 'email', 'phone_number', 'country', 'city', 'custom'];
 
         return collect($settings)
             ->only($allowedKeys)
-            ->map(function ($value, $key) {
-                if (!is_scalar($value) && $value !== null) {
+            ->map(function ($value, $key) use ($allowedFieldTypes) {
+                if ($key === 'fields') {
+                    if (! is_array($value)) {
+                        return [];
+                    }
+                    $out = [];
+                    foreach (array_slice($value, 0, 20) as $item) {
+                        if (! is_array($item)) {
+                            continue;
+                        }
+                        $t = (string) ($item['type'] ?? 'custom');
+                        $t = in_array($t, $allowedFieldTypes, true) ? $t : 'custom';
+                        $l = mb_substr(trim((string) ($item['label'] ?? '')), 0, 150);
+                        $out[] = ['type' => $t, 'label' => $l];
+                    }
+                    return $out;
+                }
+                if (! is_scalar($value) && $value !== null) {
                     return '';
                 }
                 $v = trim((string) $value);
-                if ($key === 'widthBehavior' && !in_array($v, ['fluid', 'fill'], true)) {
+                if ($key === 'widthBehavior' && ! in_array($v, ['fluid', 'fill'], true)) {
                     return 'fluid';
                 }
-                $max = in_array($key, ['src', 'link'], true) ? 2048 : (in_array($key, ['width'], true) ? 60 : 1024);
+                $max = in_array($key, ['src', 'link'], true) ? 2048 : (in_array($key, ['width', 'inputWidth', 'inputPadding', 'inputFontSize'], true) ? 60 : 1024);
+
                 return mb_substr($v, 0, $max);
             })
-            ->filter(fn ($value) => $value !== '')
+            ->filter(fn ($value) => $value !== '' || is_array($value))
             ->all();
     }
 

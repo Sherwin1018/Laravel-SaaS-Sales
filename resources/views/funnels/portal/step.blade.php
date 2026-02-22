@@ -49,6 +49,8 @@
         .btn.gray { background: #64748b; }
         .btn { overflow-wrap: break-word; word-break: break-word; }
         input, textarea { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; margin-bottom: 10px; }
+        .builder-form input { margin-bottom: 0; }
+        .builder-form .builder-form-field-wrap { margin-bottom: 10px; }
         label { font-weight: 700; font-size: 13px; margin-bottom: 6px; display: block; }
         .price { font-size: 34px; font-weight: 800; color: #047857; margin: 0 0 12px; }
         .row { display: flex; gap: 10px; flex-wrap: wrap; }
@@ -74,6 +76,21 @@
         $isPreview = $isPreview ?? false;
         $layout = is_array($step->layout_json ?? null) ? $step->layout_json : [];
         $hasBuilderLayout = !empty($layout['sections']) && is_array($layout['sections']);
+        $layoutHasForm = false;
+        if ($hasBuilderLayout) {
+            foreach ($layout['sections'] ?? [] as $section) {
+                foreach ($section['rows'] ?? [] as $row) {
+                    foreach ($row['columns'] ?? [] as $column) {
+                        foreach ($column['elements'] ?? [] as $element) {
+                            if (($element['type'] ?? '') === 'form') {
+                                $layoutHasForm = true;
+                                break 4;
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         $styleToString = function (array $style): string {
             $allowed = [
@@ -164,7 +181,7 @@
                                                 $btnInnerStyle = $style . ($type === 'button' && $widthBehavior === 'fill' ? (($style !== '' ? ';' : '') . ' width:100%;display:block;box-sizing:border-box;text-align:center;') : '');
                                             @endphp
 
-                                            <div class="builder-el" @if($type === 'image' || $type === 'video' || $type === 'button') style="{{ $type === 'button' ? $btnWrapStyle : $alignStyle }}" @endif>
+                                            <div class="builder-el" @if($type === 'image' || $type === 'video' || $type === 'button' || $type === 'form') style="{{ $type === 'button' ? $btnWrapStyle : $alignStyle }}" @endif>
                                                 @if($type === 'heading')
                                                     <h2 class="builder-heading" style="{{ $style }}">{!! $content !!}</h2>
                                                 @elseif($type === 'text')
@@ -221,13 +238,65 @@
                                                 @elseif($type === 'countdown')
                                                     {{-- Countdown component removed --}}
                                                 @elseif($type === 'form')
-                                                    <form onsubmit="return false;" style="{{ $style }}">
-                                                        <label>Name</label>
-                                                        <input type="text" placeholder="Your name">
-                                                        <label>Email</label>
-                                                        <input type="email" placeholder="you@email.com">
-                                                        <button type="button" class="btn">{{ $content !== '' ? $content : 'Submit' }}</button>
-                                                    </form>
+                                                    @php
+                                                        $formFields = is_array($element['settings']['fields'] ?? null) && count($element['settings']['fields']) > 0
+                                                            ? $element['settings']['fields']
+                                                            : [['type' => 'first_name', 'label' => 'First name'], ['type' => 'last_name', 'label' => 'Last name'], ['type' => 'email', 'label' => 'Email'], ['type' => 'phone_number', 'label' => 'Phone (09XXXXXXXXX)']];
+                                                        $formWidthFromStyle = trim((string) ($element['style']['width'] ?? ''));
+                                                        $formWidthFromSettings = trim((string) ($element['settings']['width'] ?? ''));
+                                                        $resolvedFormWidth = $formWidthFromStyle !== '' ? $formWidthFromStyle : $formWidthFromSettings;
+                                                        $formWrapStyle = $style . ($style !== '' ? ';' : '') . 'display:flex;flex-direction:column;' . ($resolvedFormWidth !== '' ? ';width:' . preg_replace('/[^#(),.%\-\sA-Za-z0-9]/', '', $resolvedFormWidth) . ';' : ';width:100%;');
+                                                        $inputWidth = trim((string) ($element['settings']['inputWidth'] ?? ''));
+                                                        $inputPadding = trim((string) ($element['settings']['inputPadding'] ?? ''));
+                                                        $inputFontSize = trim((string) ($element['settings']['inputFontSize'] ?? ''));
+                                                        if ($inputWidth === '') {
+                                                            $inputWidth = '100%';
+                                                        }
+                                                        $safe = function ($v) { return preg_replace('/[^#(),.%\-\sA-Za-z0-9]/', '', $v); };
+                                                        $inputStyleParts = array_filter([
+                                                            'width:' . $safe($inputWidth) . ' !important',
+                                                            $inputPadding !== '' ? 'padding:' . $safe($inputPadding) . ' !important' : null,
+                                                            $inputFontSize !== '' ? 'font-size:' . $safe($inputFontSize) . ' !important' : null,
+                                                        ]);
+                                                        $inputStyleValue = implode(';', $inputStyleParts) . ';box-sizing:border-box;';
+                                                    $formClass = 'builder-form';
+                                                    @endphp
+                                                    @if($step->type === 'opt_in')
+                                                        @if($isPreview)
+                                                            <div class="{{ $formClass }}" style="{{ $formWrapStyle }}">
+                                                                @foreach($formFields as $f)
+                                                                    <div class="builder-form-field-wrap"><label>{{ $f['label'] ?? $f['type'] ?? 'Field' }}</label>
+                                                                    <input type="text" disabled placeholder="Preview" style="{{ $inputStyleValue }}"></div>
+                                                                @endforeach
+                                                                <button type="button" class="btn" disabled style="opacity:0.7;align-self:flex-start;width:auto;">{{ $content !== '' ? $content : ($step->cta_label ?: 'Submit') }} (preview)</button>
+                                                            </div>
+                                                        @else
+                                                            <form class="{{ $formClass }}" method="POST" action="{{ route('funnels.portal.optin', ['funnelSlug' => $funnel->slug, 'stepSlug' => $step->slug]) }}" style="{{ $formWrapStyle }}">
+                                                                @csrf
+                                                                @foreach($formFields as $f)
+                                                                    @php
+                                                                        $ft = $f['type'] ?? 'custom';
+                                                                        $lbl = $f['label'] ?? $ft;
+                                                                        $nm = in_array($ft, ['first_name', 'last_name', 'email', 'phone_number', 'country', 'city'], true) ? $ft : 'custom_' . $loop->index;
+                                                                        $req = in_array($ft, ['email', 'phone_number'], true);
+                                                                        $inputType = $ft === 'email' ? 'email' : 'text';
+                                                                        $pat = $ft === 'phone_number' ? 'pattern="^09\d{9}$" maxlength="11" minlength="11" inputmode="numeric"' : '';
+                                                                    @endphp
+                                                                    <div class="builder-form-field-wrap"><label>{{ $lbl }}</label>
+                                                                    <input type="{{ $inputType }}" name="{{ $nm }}" {{ $req ? 'required' : '' }} {!! $pat !!} placeholder="{{ $lbl }}" style="{{ $inputStyleValue }}"></div>
+                                                                @endforeach
+                                                                <button type="submit" class="btn" style="align-self:flex-start;width:auto;">{{ $content !== '' ? $content : ($step->cta_label ?: 'Submit and Continue') }}</button>
+                                                            </form>
+                                                        @endif
+                                                    @else
+                                                        <form class="{{ $formClass }}" onsubmit="return false;" style="{{ $formWrapStyle }}">
+                                                            @foreach($formFields as $f)
+                                                                <div class="builder-form-field-wrap"><label>{{ $f['label'] ?? $f['type'] ?? 'Field' }}</label>
+                                                                <input type="text" placeholder="{{ $f['label'] ?? '' }}" style="{{ $inputStyleValue }}"></div>
+                                                            @endforeach
+                                                            <button type="button" class="btn" style="align-self:flex-start;width:auto;">{{ $content !== '' ? $content : 'Submit' }}</button>
+                                                        </form>
+                                                    @endif
                                                 @else
                                                     <p class="builder-text" style="{{ $style }}">{{ $content }}</p>
                                                 @endif
@@ -241,7 +310,7 @@
                 @endforeach
 
                 <div style="margin-top: 14px;">
-                    @include('funnels.portal._step-actions', ['funnel' => $funnel, 'step' => $step, 'nextStep' => $nextStep, 'isPreview' => $isPreview])
+                    @include('funnels.portal._step-actions', ['funnel' => $funnel, 'step' => $step, 'nextStep' => $nextStep, 'isPreview' => $isPreview, 'showOptInForm' => !$layoutHasForm])
                 </div>
             @else
                 <h2>{{ $step->title }}</h2>
@@ -249,7 +318,7 @@
                     <h3 class="subtitle">{{ $step->subtitle }}</h3>
                 @endif
                 <div class="content">{{ $step->content ?: 'No content configured for this step yet.' }}</div>
-                @include('funnels.portal._step-actions', ['funnel' => $funnel, 'step' => $step, 'nextStep' => $nextStep, 'isPreview' => $isPreview])
+                @include('funnels.portal._step-actions', ['funnel' => $funnel, 'step' => $step, 'nextStep' => $nextStep, 'isPreview' => $isPreview, 'showOptInForm' => true])
             @endif
         </div>
     </div>

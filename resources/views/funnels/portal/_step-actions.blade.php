@@ -1,47 +1,39 @@
 @php $isPreview = $isPreview ?? false; @endphp
 
-@if($isPreview)
-    <div style="padding: 14px; border: 1px solid #cbd5e1; border-radius: 12px; background: #f8fafc; color: #334155;">
-        <strong style="display:block; margin-bottom:6px;">Preview mode</strong>
-        <span style="font-size: 13px;">Form submissions and payments are disabled while previewing from the builder.</span>
-        <div style="margin-top: 10px;">
-            <button type="button" class="btn" disabled style="opacity:0.6; cursor:not-allowed;">
-                {{ $step->cta_label ?: 'Action Preview' }}
-            </button>
-        </div>
-    </div>
-@elseif($step->type === 'opt_in')
-    <form method="POST" action="{{ route('funnels.portal.optin', ['funnelSlug' => $funnel->slug, 'stepSlug' => $step->slug]) }}">
-        @csrf
-        <label>Name</label>
-        <input type="text" name="name" required>
-        <label>Email</label>
-        <input type="email" name="email" required>
-        <label>Phone (PH 09XXXXXXXXX)</label>
-        <input type="text" name="phone" required pattern="^09\d{9}$" maxlength="11" minlength="11" inputmode="numeric">
-        <button type="submit" class="btn">{{ $step->cta_label ?: 'Submit and Continue' }}</button>
-    </form>
+@if($step->type === 'opt_in')
+    {{-- No fixed form: opt-in form is only the Form component you add in the builder (same functionality, your layout). --}}
 @elseif($step->type === 'checkout')
     <p class="price">PHP {{ number_format((float) ($step->price ?? 0), 2) }}</p>
-    <form method="POST" action="{{ route('funnels.portal.checkout', ['funnelSlug' => $funnel->slug, 'stepSlug' => $step->slug]) }}">
-        @csrf
-        <input type="hidden" name="amount" value="{{ (float) ($step->price ?? 0) }}">
-        <button type="submit" class="btn">{{ $step->cta_label ?: 'Complete Checkout' }}</button>
-    </form>
+    @if($isPreview)
+        <button type="button" class="btn" disabled style="opacity:0.7; cursor:not-allowed;">{{ $step->cta_label ?: 'Complete Checkout' }} (preview)</button>
+    @else
+        <form method="POST" action="{{ route('funnels.portal.checkout', ['funnelSlug' => $funnel->slug, 'stepSlug' => $step->slug]) }}">
+            @csrf
+            <input type="hidden" name="amount" value="{{ (float) ($step->price ?? 0) }}">
+            <button type="submit" class="btn">{{ $step->cta_label ?: 'Complete Checkout' }}</button>
+        </form>
+    @endif
 @elseif(in_array($step->type, ['upsell', 'downsell'], true))
     <p class="price">Additional Offer: PHP {{ number_format((float) ($step->price ?? 0), 2) }}</p>
-    <div class="row">
-        <form method="POST" action="{{ route('funnels.portal.offer', ['funnelSlug' => $funnel->slug, 'stepSlug' => $step->slug]) }}">
-            @csrf
-            <input type="hidden" name="decision" value="accept">
-            <button type="submit" class="btn">{{ $step->cta_label ?: 'Yes, Add This Offer' }}</button>
-        </form>
-        <form method="POST" action="{{ route('funnels.portal.offer', ['funnelSlug' => $funnel->slug, 'stepSlug' => $step->slug]) }}">
-            @csrf
-            <input type="hidden" name="decision" value="decline">
-            <button type="submit" class="btn gray">No Thanks</button>
-        </form>
-    </div>
+    @if($isPreview)
+        <div class="row">
+            <button type="button" class="btn" disabled style="opacity:0.7; cursor:not-allowed;">Yes, Add This Offer (preview)</button>
+            <button type="button" class="btn gray" disabled style="opacity:0.7; cursor:not-allowed;">No Thanks (preview)</button>
+        </div>
+    @else
+        <div class="row">
+            <form method="POST" action="{{ route('funnels.portal.offer', ['funnelSlug' => $funnel->slug, 'stepSlug' => $step->slug]) }}">
+                @csrf
+                <input type="hidden" name="decision" value="accept">
+                <button type="submit" class="btn">{{ $step->cta_label ?: 'Yes, Add This Offer' }}</button>
+            </form>
+            <form method="POST" action="{{ route('funnels.portal.offer', ['funnelSlug' => $funnel->slug, 'stepSlug' => $step->slug]) }}">
+                @csrf
+                <input type="hidden" name="decision" value="decline">
+                <button type="submit" class="btn gray">No Thanks</button>
+            </form>
+        </div>
+    @endif
 @elseif($step->type === 'thank_you')
     <p style="font-weight: 700; color: #065f46;">Flow completed successfully.</p>
     <a class="btn secondary" href="{{ route('funnels.portal.step', ['funnelSlug' => $funnel->slug]) }}">
