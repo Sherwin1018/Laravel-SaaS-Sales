@@ -490,7 +490,7 @@ class FunnelController extends Controller
                                     ->map(function (array $element) {
                                         $type = (string) ($element['type'] ?? 'text');
                                         $type = in_array($type, [
-                                            'heading', 'text', 'image', 'button', 'form', 'video', 'countdown', 'spacer',
+                                            'heading', 'text', 'image', 'button', 'form', 'video', 'countdown', 'spacer', 'menu', 'carousel',
                                         ], true) ? $type : 'text';
 
                                         $rawContent = (string) ($element['content'] ?? '');
@@ -528,6 +528,7 @@ class FunnelController extends Controller
                                 return [
                                     'id' => $this->sanitizeId($column['id'] ?? null, 'col'),
                                     'style' => $this->sanitizeStyle($column['style'] ?? []),
+                                    'settings' => $this->sanitizeContainerSettings($column['settings'] ?? []),
                                     'elements' => $elements,
                                 ];
                             })
@@ -537,6 +538,7 @@ class FunnelController extends Controller
                         return [
                             'id' => $this->sanitizeId($row['id'] ?? null, 'row'),
                             'style' => $this->sanitizeStyle($row['style'] ?? []),
+                            'settings' => $this->sanitizeContainerSettings($row['settings'] ?? []),
                             'columns' => $columns,
                         ];
                     })
@@ -546,6 +548,7 @@ class FunnelController extends Controller
                 return [
                     'id' => $this->sanitizeId($section['id'] ?? null, 'sec'),
                     'style' => $this->sanitizeStyle($section['style'] ?? []),
+                    'settings' => $this->sanitizeSectionSettings($section['settings'] ?? []),
                     'rows' => $rows,
                 ];
             })
@@ -595,9 +598,15 @@ class FunnelController extends Controller
             'backgroundImage',
             'backgroundSize',
             'backgroundPosition',
+            'backgroundRepeat',
+            'backgroundAttachment',
             'justifyContent',
             'alignItems',
             'gap',
+            'lineHeight',
+            'letterSpacing',
+            'textDecorationColor',
+            'textDecoration',
         ];
 
         $safe = [];
@@ -643,33 +652,242 @@ class FunnelController extends Controller
             return [];
         }
 
-        $allowedKeys = [
-            'link',
-            'src',
-            'alt',
-            'placeholder',
-            'alignment',
-            'targetDate',
-            'platform',
-            'width',
-            'widthBehavior',
-        ];
+        $safe = [];
 
-        return collect($settings)
-            ->only($allowedKeys)
-            ->map(function ($value, $key) {
-                if (!is_scalar($value) && $value !== null) {
-                    return '';
-                }
-                $v = trim((string) $value);
-                if ($key === 'widthBehavior' && !in_array($v, ['fluid', 'fill'], true)) {
-                    return 'fluid';
-                }
-                $max = in_array($key, ['src', 'link'], true) ? 2048 : (in_array($key, ['width'], true) ? 60 : 1024);
-                return mb_substr($v, 0, $max);
+        $readString = function (string $key, int $max = 1024) use (&$settings): ?string {
+            if (!array_key_exists($key, $settings) || (!is_scalar($settings[$key]) && $settings[$key] !== null)) {
+                return null;
+            }
+            return mb_substr(trim((string) $settings[$key]), 0, $max);
+        };
+        $readEnum = function (string $key, array $allowed, ?string $default = null) use (&$settings): ?string {
+            if (!array_key_exists($key, $settings) || !is_scalar($settings[$key])) {
+                return null;
+            }
+            $v = trim((string) $settings[$key]);
+            if (in_array($v, $allowed, true)) {
+                return $v;
+            }
+            return $default;
+        };
+        $readBool = function (string $key) use (&$settings): ?bool {
+            if (!array_key_exists($key, $settings)) {
+                return null;
+            }
+            return filter_var($settings[$key], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? false;
+        };
+        $readInt = function (string $key, int $min, int $max) use (&$settings): ?int {
+            if (!array_key_exists($key, $settings)) {
+                return null;
+            }
+            if (!is_scalar($settings[$key])) {
+                return null;
+            }
+            $n = (int) $settings[$key];
+            if ($n < $min) {
+                $n = $min;
+            }
+            if ($n > $max) {
+                $n = $max;
+            }
+            return $n;
+        };
+        $readColor = function (string $key, bool $allowEmpty = false) use (&$settings): ?string {
+            if (!array_key_exists($key, $settings) || !is_scalar($settings[$key])) {
+                return null;
+            }
+            $v = trim((string) $settings[$key]);
+            if ($v === '' && $allowEmpty) {
+                return '';
+            }
+            if (preg_match('/^#[0-9A-Fa-f]{6}$/', $v)) {
+                return $v;
+            }
+            return null;
+        };
+
+        foreach (['link' => 2048, 'src' => 2048, 'alt' => 1024, 'placeholder' => 1024, 'targetDate' => 120, 'platform' => 120, 'width' => 60] as $k => $maxLen) {
+            $v = $readString($k, $maxLen);
+            if ($v !== null && $v !== '') {
+                $safe[$k] = $v;
+            }
+        }
+
+        foreach ([
+            'alignment' => ['left', 'center', 'right'],
+            'widthBehavior' => ['fluid', 'fill'],
+            'imageSourceType' => ['direct', 'upload'],
+            'videoSourceType' => ['direct', 'upload'],
+            'menuAlign' => ['left', 'center', 'right'],
+            'vAlign' => ['top', 'center', 'bottom'],
+        ] as $k => $allowed) {
+            $v = $readEnum($k, $allowed);
+            if ($v !== null) {
+                $safe[$k] = $v;
+            }
+        }
+
+        foreach (['autoplay', 'controls', 'showArrows', 'imageRadiusLinked', 'videoRadiusLinked'] as $k) {
+            $v = $readBool($k);
+            if ($v !== null) {
+                $safe[$k] = $v;
+            }
+        }
+
+        foreach (['itemGap' => [0, 300], 'activeIndex' => [0, 500], 'activeSlide' => [0, 500], 'carouselActiveRow' => [0, 500], 'carouselActiveCol' => [0, 500]] as $k => $range) {
+            $v = $readInt($k, $range[0], $range[1]);
+            if ($v !== null) {
+                $safe[$k] = $v;
+            }
+        }
+
+        foreach (['textColor', 'activeColor', 'controlsColor', 'arrowColor', 'bodyBgColor'] as $k) {
+            $v = $readColor($k);
+            if ($v !== null) {
+                $safe[$k] = $v;
+            }
+        }
+        $underline = $readColor('underlineColor', true);
+        if ($underline !== null) {
+            $safe['underlineColor'] = $underline;
+        }
+
+        if (isset($settings['items']) && is_array($settings['items'])) {
+            $safe['items'] = collect($settings['items'])
+                ->filter(fn ($item) => is_array($item))
+                ->take(50)
+                ->map(function (array $item) {
+                    return [
+                        'label' => mb_substr(trim((string) ($item['label'] ?? '')), 0, 200),
+                        'url' => mb_substr(trim((string) ($item['url'] ?? '')), 0, 2048),
+                        'newWindow' => (bool) filter_var($item['newWindow'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                        'hasSubmenu' => (bool) filter_var($item['hasSubmenu'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                    ];
+                })
+                ->values()
+                ->all();
+        }
+
+        if (isset($settings['slides']) && is_array($settings['slides'])) {
+            $safe['slides'] = $this->sanitizeCarouselSlides($settings['slides']);
+        }
+
+        if (isset($settings['menuCollapsed']) && is_array($settings['menuCollapsed'])) {
+            $safe['menuCollapsed'] = collect($settings['menuCollapsed'])
+                ->take(100)
+                ->mapWithKeys(function ($v, $k) {
+                    $idx = (string) ((int) $k);
+                    return [$idx => (bool) filter_var($v, FILTER_VALIDATE_BOOLEAN)];
+                })
+                ->all();
+        }
+
+        return $safe;
+    }
+
+    private function sanitizeCarouselSlides(array $slides): array
+    {
+        return collect($slides)
+            ->filter(fn ($slide) => is_array($slide))
+            ->take(50)
+            ->map(function (array $slide, int $slideIndex) {
+                $rows = collect($slide['rows'] ?? [])
+                    ->filter(fn ($row) => is_array($row))
+                    ->take(30)
+                    ->map(function (array $row) {
+                        $columns = collect($row['columns'] ?? [])
+                            ->filter(fn ($col) => is_array($col))
+                            ->take(4)
+                            ->map(function (array $col) {
+                                $elements = collect($col['elements'] ?? [])
+                                    ->filter(fn ($el) => is_array($el))
+                                    ->take(60)
+                                    ->map(function (array $element) {
+                                        $type = (string) ($element['type'] ?? 'text');
+                                        $type = in_array($type, [
+                                            'heading', 'text', 'image', 'button', 'form', 'video', 'countdown', 'spacer', 'menu',
+                                        ], true) ? $type : 'text';
+
+                                        $rawContent = (string) ($element['content'] ?? '');
+                                        $content = in_array($type, ['heading', 'text', 'button'], true)
+                                            ? $this->sanitizeRichText($rawContent)
+                                            : mb_substr(trim($rawContent), 0, 6000);
+
+                                        return [
+                                            'id' => $this->sanitizeId($element['id'] ?? null, 'el'),
+                                            'type' => $type,
+                                            'content' => $content,
+                                            'style' => $this->sanitizeStyle($element['style'] ?? []),
+                                            'settings' => $this->sanitizeSettings($element['settings'] ?? []),
+                                        ];
+                                    })
+                                    ->values()
+                                    ->all();
+
+                                return [
+                                    'id' => $this->sanitizeId($col['id'] ?? null, 'col'),
+                                    'style' => $this->sanitizeStyle($col['style'] ?? []),
+                                    'elements' => $elements,
+                                ];
+                            })
+                            ->values()
+                            ->all();
+
+                        return [
+                            'id' => $this->sanitizeId($row['id'] ?? null, 'row'),
+                            'style' => $this->sanitizeStyle($row['style'] ?? []),
+                            'columns' => $columns,
+                        ];
+                    })
+                    ->values()
+                    ->all();
+
+                return [
+                    'label' => mb_substr(trim((string) ($slide['label'] ?? ('Slide #' . ($slideIndex + 1)))), 0, 200),
+                    'rows' => $rows,
+                ];
             })
-            ->filter(fn ($value) => $value !== '')
+            ->values()
             ->all();
+    }
+
+    private function sanitizeContainerSettings(mixed $settings): array
+    {
+        if (!is_array($settings)) {
+            return [];
+        }
+
+        $safe = [];
+        $cw = trim((string) ($settings['contentWidth'] ?? ''));
+        if (in_array($cw, ['full', 'wide', 'medium', 'small', 'xsmall'], true)) {
+            $safe['contentWidth'] = $cw;
+        }
+
+        $borderStyle = trim((string) ($settings['rowBorderStyle'] ?? ''));
+        if (in_array($borderStyle, ['none', 'solid', 'dashed', 'dotted', 'double'], true)) {
+            $safe['rowBorderStyle'] = $borderStyle;
+        }
+
+        if (array_key_exists('rowRadiusPerCorner', $settings)) {
+            $safe['rowRadiusPerCorner'] = (bool) filter_var($settings['rowRadiusPerCorner'], FILTER_VALIDATE_BOOLEAN);
+        }
+
+        return $safe;
+    }
+
+    private function sanitizeSectionSettings(mixed $settings): array
+    {
+        if (!is_array($settings)) {
+            return [];
+        }
+
+        $safe = [];
+        $cw = trim((string) ($settings['contentWidth'] ?? ''));
+        if (in_array($cw, ['full', 'wide', 'medium', 'small', 'xsmall'], true)) {
+            $safe['contentWidth'] = $cw;
+        }
+
+        return $safe;
     }
 
     private function sanitizeRichText(string $html): string
