@@ -10,11 +10,51 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TenantController;
 use App\Http\Controllers\UserController;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
-Route::post('/login', [AuthController::class, 'login'])->name('login.post');
-Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+Route::get('/', function () {
+    if (!Auth::check()) {
+        return redirect()->route('login');
+    }
+
+    $user = Auth::user();
+
+    if ($user->hasRole('super-admin')) {
+        return redirect()->route('admin.dashboard');
+    }
+
+    if ($user->hasRole('account-owner')) {
+        return redirect()->route('dashboard.owner');
+    }
+
+    if ($user->hasRole('marketing-manager')) {
+        return redirect()->route('dashboard.marketing');
+    }
+
+    if ($user->hasRole('sales-agent')) {
+        return redirect()->route('dashboard.sales');
+    }
+
+    if ($user->hasRole('finance')) {
+        return redirect()->route('dashboard.finance');
+    }
+
+    if ($user->hasRole('customer')) {
+        return redirect()->route('dashboard.customer');
+    }
+
+    Auth::logout();
+    request()->session()->invalidate();
+    request()->session()->regenerateToken();
+    return redirect()->route('login')->with('error', 'Login Failed. Your role does not have access.');
+});
+
+Route::middleware('guest')->group(function () {
+    Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
+    Route::post('/login', [AuthController::class, 'login'])->name('login.post');
+});
+Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');

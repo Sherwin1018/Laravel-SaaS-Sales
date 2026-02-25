@@ -65,7 +65,7 @@
         .builder-menu { width: 100%; }
         .builder-menu-list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; }
         .builder-menu-link { text-decoration: none; text-underline-offset: 3px; font: inherit; }
-        .builder-carousel-wrap { position: relative; min-height: 180px; border-radius: 10px; overflow: hidden; color: #fff; background: linear-gradient(135deg, #0ea5e9, #0284c7); }
+        .builder-carousel-wrap { position: relative; min-height: 180px; border-radius: 10px; overflow: hidden; color: #fff; background: linear-gradient(135deg, #0ea5e9, #0284c7); border: 1px solid #000; }
         .builder-carousel-track { display: flex; width: 100%; transition: transform .35s ease; }
         .builder-carousel-slide { width: 100%; flex: 0 0 100%; padding: 16px; box-sizing: border-box; display: flex; flex-direction: column; }
         .builder-carousel-title { font-size: 22px; font-weight: 700; text-align: center; line-height: 1.2; margin-bottom: 8px; }
@@ -197,9 +197,6 @@
                                                 $settings = is_array($element['settings'] ?? null) ? $element['settings'] : [];
                                                 $link = trim((string) ($settings['link'] ?? '#'));
                                                 $src = trim((string) ($settings['src'] ?? ''));
-                                                if ($src === '' && $type === 'video' && ($content !== '' && (str_starts_with(trim($content), 'http') || str_starts_with(trim($content), '/')))) {
-                                                    $src = trim($content);
-                                                }
                                                 $alt = trim((string) ($settings['alt'] ?? 'Image'));
                                                 $alignment = $settings['alignment'] ?? 'left';
                                                 $alignStyle = 'display:flex;justify-content:' . ($alignment === 'right' ? 'flex-end' : ($alignment === 'center' ? 'center' : 'flex-start')) . ';';
@@ -306,9 +303,36 @@
                                                     </nav>
                                                 @elseif($type === 'carousel')
                                                     @php
+                                                        $hasRenderableCarouselElement = function (array $carouselElement): bool {
+                                                            $carouselType = (string) ($carouselElement['type'] ?? 'text');
+                                                            $carouselSettings = is_array($carouselElement['settings'] ?? null) ? $carouselElement['settings'] : [];
+                                                            if ($carouselType === 'image' || $carouselType === 'video') {
+                                                                return trim((string) ($carouselSettings['src'] ?? '')) !== '';
+                                                            }
+                                                            if ($carouselType === 'heading' || $carouselType === 'text' || $carouselType === 'button') {
+                                                                return trim(strip_tags((string) ($carouselElement['content'] ?? ''))) !== '';
+                                                            }
+                                                            return true;
+                                                        };
                                                         $slides = is_array($settings['slides'] ?? null) ? $settings['slides'] : [];
                                                         if (count($slides) === 0) {
                                                             $slides = [['label' => 'Slide #1']];
+                                                        }
+                                                        $isCarouselEmpty = true;
+                                                        foreach ($slides as $slideCheck) {
+                                                            $checkRows = is_array($slideCheck['rows'] ?? null) ? $slideCheck['rows'] : [];
+                                                            foreach ($checkRows as $checkRow) {
+                                                                $checkCols = is_array($checkRow['columns'] ?? null) ? $checkRow['columns'] : [];
+                                                                foreach ($checkCols as $checkCol) {
+                                                                    $checkEls = is_array($checkCol['elements'] ?? null) ? $checkCol['elements'] : [];
+                                                                    foreach ($checkEls as $checkEl) {
+                                                                        if ($hasRenderableCarouselElement(is_array($checkEl) ? $checkEl : [])) {
+                                                                            $isCarouselEmpty = false;
+                                                                            break 4;
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
                                                         }
                                                         $activeSlide = max(0, min(count($slides) - 1, (int) ($settings['activeSlide'] ?? 0)));
                                                         $vAlign = $settings['vAlign'] ?? 'center';
@@ -319,68 +343,90 @@
                                                         $bodyBgColor = trim((string) ($settings['bodyBgColor'] ?? ''));
                                                         $carouselId = 'car_' . md5((string) ($element['id'] ?? uniqid('', true)));
                                                     @endphp
-                                                    <div class="builder-carousel-wrap" data-carousel id="{{ $carouselId }}" data-active="{{ $activeSlide }}" style="{{ $style }}">
+                                                    <div class="builder-carousel-wrap" data-carousel id="{{ $carouselId }}" data-active="{{ $activeSlide }}" style="{{ $style }} background:#ffffff !important; background-image:none !important; color:#0f172a;">
                                                         <div class="builder-carousel-track" data-carousel-track>
                                                             @foreach($slides as $si => $slide)
                                                                 @php
                                                                     $slideTitle = trim((string) ($slide['label'] ?? ('Slide #' . ($si + 1))));
+                                                                    $showSlideTitle = $slideTitle !== '' && !preg_match('/^Slide\s*#\s*\d+$/i', $slideTitle);
                                                                     $slideRows = is_array($slide['rows'] ?? null) ? $slide['rows'] : [];
+                                                                    $isSlideEmpty = true;
+                                                                    foreach ($slideRows as $slideRowCheck) {
+                                                                        $slideColsCheck = is_array($slideRowCheck['columns'] ?? null) ? $slideRowCheck['columns'] : [];
+                                                                        foreach ($slideColsCheck as $slideColCheck) {
+                                                                            $slideElsCheck = is_array($slideColCheck['elements'] ?? null) ? $slideColCheck['elements'] : [];
+                                                                            foreach ($slideElsCheck as $slideElCheck) {
+                                                                                if ($hasRenderableCarouselElement(is_array($slideElCheck) ? $slideElCheck : [])) {
+                                                                                    $isSlideEmpty = false;
+                                                                                    break 3;
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    }
                                                                 @endphp
-                                                                <div class="builder-carousel-slide" style="align-items: {{ $aItems }}; @if($bodyBgColor !== '') background: {{ $bodyBgColor }}; @endif">
-                                                                    <div class="builder-carousel-title">{{ $slideTitle !== '' ? $slideTitle : ('Slide #' . ($si + 1)) }}</div>
-                                                                    @if(count($slideRows) > 0)
-                                                                        @foreach($slideRows as $srow)
-                                                                            @php
-                                                                                $srowStyle = $styleToString(is_array($srow['style'] ?? null) ? $srow['style'] : []);
-                                                                                $scols = is_array($srow['columns'] ?? null) ? $srow['columns'] : [];
-                                                                            @endphp
-                                                                            <div class="builder-carousel-content-row" style="{{ $srowStyle }}">
-                                                                                @foreach($scols as $scol)
-                                                                                    @php
-                                                                                        $scolStyle = $styleToString(is_array($scol['style'] ?? null) ? $scol['style'] : []);
-                                                                                        $sels = is_array($scol['elements'] ?? null) ? $scol['elements'] : [];
-                                                                                    @endphp
-                                                                                    <div class="builder-carousel-content-col" style="{{ $scolStyle }}">
-                                                                                        @foreach($sels as $sel)
-                                                                                            @php
-                                                                                                $st = (string) ($sel['type'] ?? 'text');
-                                                                                                $ssc = is_array($sel['settings'] ?? null) ? $sel['settings'] : [];
-                                                                                                $ss = $styleToString(is_array($sel['style'] ?? null) ? $sel['style'] : []);
-                                                                                                $scontent = (string) ($sel['content'] ?? '');
-                                                                                            @endphp
-                                                                                            @if($st === 'heading')
-                                                                                                <h3 class="builder-heading" style="{{ $ss }}">{{ strip_tags($scontent) }}</h3>
-                                                                                            @elseif($st === 'text')
-                                                                                                <p class="builder-text" style="{{ $ss }}">{{ $scontent }}</p>
-                                                                                            @elseif($st === 'image')
+                                                                <div class="builder-carousel-slide" style="align-items: {{ $aItems }}; background:#ffffff !important;">
+                                                                    @if($isSlideEmpty)
+                                                                        <div style="min-height:140px; width:100%; display:flex; align-items:center; justify-content:center;">
+                                                                            <span style="font-size:13px; font-weight:700; color:#64748b;">Carousel is Empty</span>
+                                                                        </div>
+                                                                    @else
+                                                                        @if($showSlideTitle)
+                                                                            <div class="builder-carousel-title">{{ $slideTitle }}</div>
+                                                                        @endif
+                                                                        @if(count($slideRows) > 0)
+                                                                            @foreach($slideRows as $srow)
+                                                                                @php
+                                                                                    $srowStyle = $styleToString(is_array($srow['style'] ?? null) ? $srow['style'] : []);
+                                                                                    $scols = is_array($srow['columns'] ?? null) ? $srow['columns'] : [];
+                                                                                @endphp
+                                                                                <div class="builder-carousel-content-row" style="{{ $srowStyle }}">
+                                                                                    @foreach($scols as $scol)
+                                                                                        @php
+                                                                                            $scolStyle = $styleToString(is_array($scol['style'] ?? null) ? $scol['style'] : []);
+                                                                                            $sels = is_array($scol['elements'] ?? null) ? $scol['elements'] : [];
+                                                                                        @endphp
+                                                                                        <div class="builder-carousel-content-col" style="{{ $scolStyle }}">
+                                                                                            @foreach($sels as $sel)
                                                                                                 @php
-                                                                                                    $img = trim((string) ($ssc['src'] ?? ''));
-                                                                                                    $alt = trim((string) ($ssc['alt'] ?? 'Image'));
+                                                                                                    $st = (string) ($sel['type'] ?? 'text');
+                                                                                                    $ssc = is_array($sel['settings'] ?? null) ? $sel['settings'] : [];
+                                                                                                    $ss = $styleToString(is_array($sel['style'] ?? null) ? $sel['style'] : []);
+                                                                                                    $scontent = (string) ($sel['content'] ?? '');
                                                                                                 @endphp
-                                                                                                @if($img !== '')
-                                                                                                    <img class="builder-img" src="{{ $img }}" alt="{{ $alt }}" style="{{ $ss }}">
+                                                                                                @if($st === 'heading')
+                                                                                                    <h3 class="builder-heading" style="{{ $ss }}">{{ strip_tags($scontent) }}</h3>
+                                                                                                @elseif($st === 'text')
+                                                                                                    <p class="builder-text" style="{{ $ss }}">{{ $scontent }}</p>
+                                                                                                @elseif($st === 'image')
+                                                                                                    @php
+                                                                                                        $img = trim((string) ($ssc['src'] ?? ''));
+                                                                                                        $alt = trim((string) ($ssc['alt'] ?? 'Image'));
+                                                                                                    @endphp
+                                                                                                    @if($img !== '')
+                                                                                                        <img class="builder-img" src="{{ $img }}" alt="{{ $alt }}" style="{{ $ss }}">
+                                                                                                    @endif
+                                                                                                @elseif($st === 'video')
+                                                                                                    @php
+                                                                                                        $videoSrc = trim((string) ($ssc['src'] ?? ''));
+                                                                                                    @endphp
+                                                                                                    @if($videoSrc !== '')
+                                                                                                        <div class="builder-video-wrap" style="{{ $ss }}">
+                                                                                                            <video src="{{ $videoSrc }}" controls playsinline preload="metadata"></video>
+                                                                                                            <a href="{{ $videoSrc }}" target="_blank" rel="noopener" class="video-fallback-link">Open video</a>
+                                                                                                        </div>
+                                                                                                    @endif
+                                                                                                @elseif($st === 'button')
+                                                                                                    @php
+                                                                                                        $href = trim((string) ($ssc['link'] ?? '#'));
+                                                                                                    @endphp
+                                                                                                    <a href="{{ $href !== '' ? $href : '#' }}" class="btn" style="{{ $ss }}">{{ strip_tags($scontent) !== '' ? strip_tags($scontent) : 'Click' }}</a>
                                                                                                 @endif
-                                                                                            @elseif($st === 'video')
-                                                                                                @php
-                                                                                                    $videoSrc = trim((string) ($ssc['src'] ?? ''));
-                                                                                                @endphp
-                                                                                                @if($videoSrc !== '')
-                                                                                                    <div class="builder-video-wrap" style="{{ $ss }}">
-                                                                                                        <video src="{{ $videoSrc }}" controls playsinline preload="metadata"></video>
-                                                                                                        <a href="{{ $videoSrc }}" target="_blank" rel="noopener" class="video-fallback-link">Open video</a>
-                                                                                                    </div>
-                                                                                                @endif
-                                                                                            @elseif($st === 'button')
-                                                                                                @php
-                                                                                                    $href = trim((string) ($ssc['link'] ?? '#'));
-                                                                                                @endphp
-                                                                                                <a href="{{ $href !== '' ? $href : '#' }}" class="btn" style="{{ $ss }}">{{ strip_tags($scontent) !== '' ? strip_tags($scontent) : 'Click' }}</a>
-                                                                                            @endif
-                                                                                        @endforeach
-                                                                                    </div>
-                                                                                @endforeach
-                                                                            </div>
-                                                                        @endforeach
+                                                                                            @endforeach
+                                                                                        </div>
+                                                                                    @endforeach
+                                                                                </div>
+                                                                            @endforeach
+                                                                        @endif
                                                                     @endif
                                                                 </div>
                                                             @endforeach
