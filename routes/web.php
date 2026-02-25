@@ -54,6 +54,28 @@ Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
     Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 });
+Route::get('/logout', function () {
+    if (!Auth::check()) {
+        return redirect()->route('login');
+    }
+
+    $token = csrf_token();
+    $action = route('logout');
+    $html = <<<HTML
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>
+<body>
+    <form id="logoutFallbackForm" method="POST" action="{$action}">
+        <input type="hidden" name="_token" value="{$token}">
+        <noscript><button type="submit">Continue logout</button></noscript>
+    </form>
+    <script>document.getElementById('logoutFallbackForm').submit();</script>
+</body>
+</html>
+HTML;
+    return response($html);
+})->middleware('auth');
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
 
 Route::middleware(['auth'])->group(function () {
