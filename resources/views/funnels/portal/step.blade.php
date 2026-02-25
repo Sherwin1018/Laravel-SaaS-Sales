@@ -65,15 +65,24 @@
         .builder-menu { width: 100%; }
         .builder-menu-list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; }
         .builder-menu-link { text-decoration: none; text-underline-offset: 3px; font: inherit; }
-        .builder-carousel-wrap { position: relative; min-height: 180px; border-radius: 10px; overflow: hidden; color: #fff; background: linear-gradient(135deg, #0ea5e9, #0284c7); border: 1px solid #000; }
-        .builder-carousel-track { display: flex; width: 100%; transition: transform .35s ease; }
-        .builder-carousel-slide { width: 100%; flex: 0 0 100%; padding: 16px; box-sizing: border-box; display: flex; flex-direction: column; }
+        .builder-carousel-wrap { position: relative; min-height: 180px; border-radius: 10px; overflow: hidden; color: #fff; background: linear-gradient(135deg, #0ea5e9, #0284c7); border: 0; }
+        .builder-carousel-track { display: flex; width: 100%; height: 100%; transition: transform .35s ease; }
+        .builder-carousel-slide { width: 100%; height: 100%; flex: 0 0 100%; padding: 0; box-sizing: border-box; display: flex; flex-direction: column; }
         .builder-carousel-title { font-size: 22px; font-weight: 700; text-align: center; line-height: 1.2; margin-bottom: 8px; }
         .builder-carousel-content-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
         .builder-carousel-content-col { min-width: 200px; flex: 1 1 0; }
-        .builder-carousel-arrow { position: absolute; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; border-radius: 999px; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 800; line-height: 1; box-shadow: 0 6px 14px rgba(2, 6, 23, 0.18); border: 0; cursor: pointer; z-index: 3; }
-        .builder-carousel-arrow.is-left { left: 12px; }
-        .builder-carousel-arrow.is-right { right: 12px; }
+        .builder-carousel-arrow { position: absolute; top: 50%; transform: translateY(-50%); width: 42px; height: 42px; border-radius: 999px; display: flex; align-items: center; justify-content: center; padding: 0; box-shadow: 0 10px 24px rgba(15, 23, 42, 0.26); border: 1px solid rgba(255,255,255,0.28); cursor: pointer; z-index: 3; transition: transform .16s ease, box-shadow .2s ease, opacity .2s ease; }
+        .builder-carousel-arrow i { font-size: 16px; line-height: 1; display: block; }
+        .builder-carousel-arrow:hover { transform: translateY(-50%) scale(1.05); box-shadow: 0 12px 28px rgba(15, 23, 42, 0.30); }
+        .builder-carousel-arrow:active { transform: translateY(-50%) scale(0.97); }
+        .builder-carousel-arrow:focus-visible { outline: 2px solid #dbeafe; outline-offset: 2px; }
+        .builder-carousel-arrow.is-left { left: 16px; }
+        .builder-carousel-arrow.is-right { right: 16px; }
+        @media (max-width: 640px) {
+            .builder-carousel-arrow { width: 36px; height: 36px; font-size: 20px; }
+            .builder-carousel-arrow.is-left { left: 10px; }
+            .builder-carousel-arrow.is-right { right: 10px; }
+        }
         .builder-video-wrap { position: relative; width: 100%; padding-top: 56.25%; min-height: 200px; border-radius: 10px; overflow: hidden; background: #0f172a; box-sizing: border-box; }
         .builder-video-wrap iframe, .builder-video-wrap video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; object-fit: contain; }
         .builder-video-wrap .video-fallback-link { position: absolute; top: 8px; right: 8px; z-index: 2; font-size: 11px; color: rgba(255,255,255,0.8); background: rgba(0,0,0,0.5); padding: 4px 8px; border-radius: 6px; text-decoration: none; }
@@ -138,6 +147,7 @@
                 'settings' => ['contentWidth' => 'full'],
                 'elements' => [$rootItem],
                 'rows' => [],
+                'isBareCarouselWrap' => strtolower((string) ($rootItem['type'] ?? '')) === 'carousel',
             ];
         }
         $hasBuilderLayout = count($renderSections) > 0;
@@ -215,11 +225,18 @@
                     @php
                         $sectionStyle = $styleToString(is_array($section['style'] ?? null) ? $section['style'] : []);
                         $sectionSettings = is_array($section['settings'] ?? null) ? $section['settings'] : [];
+                        $isBareCarouselWrap = (bool) ($section['isBareCarouselWrap'] ?? false);
                         $contentWidth = trim((string) ($sectionSettings['contentWidth'] ?? 'full'));
                         $widthMap = ['full' => '', 'wide' => '1200px', 'medium' => '992px', 'small' => '768px', 'xsmall' => '576px'];
                         $innerMax = $widthMap[$contentWidth] ?? '';
                         $sectionElements = is_array($section['elements'] ?? null) ? $section['elements'] : [];
                         $rows = is_array($section['rows'] ?? null) ? $section['rows'] : [];
+                        if (!$isBareCarouselWrap && count($rows) === 0 && count($sectionElements) === 1) {
+                            $onlyType = strtolower((string) (($sectionElements[0]['type'] ?? '')));
+                            if ($onlyType === 'carousel') {
+                                $isBareCarouselWrap = true;
+                            }
+                        }
                         if (count($sectionElements) > 0) {
                             array_unshift($rows, [
                                 'id' => 'sec_el_row_' . md5((string) ($section['id'] ?? uniqid('', true))),
@@ -233,9 +250,22 @@
                                 ]],
                             ]);
                         }
+                        $sectionInlineStyle = $sectionStyle;
+                        if ($isBareCarouselWrap) {
+                            $sectionInlineStyle .= ($sectionInlineStyle !== '' ? '; ' : '') . 'border:none;';
+                        }
+                        $sectionInnerStyle = [];
+                        if ($innerMax !== '' && !$isBareCarouselWrap) {
+                            $sectionInnerStyle[] = 'max-width: ' . $innerMax;
+                            $sectionInnerStyle[] = 'margin: 0 auto';
+                        }
+                        if ($isBareCarouselWrap) {
+                            $sectionInnerStyle[] = 'width:100%';
+                        }
+                        $sectionInnerStyleString = implode('; ', $sectionInnerStyle);
                     @endphp
-                    <section class="builder-section" style="{{ $sectionStyle }}">
-                        <div class="builder-section-inner" @if($innerMax !== '') style="max-width: {{ $innerMax }}; margin: 0 auto;" @endif>
+                    <section class="builder-section" style="{{ $sectionInlineStyle }}">
+                        <div class="builder-section-inner" @if($sectionInnerStyleString !== '') style="{{ $sectionInnerStyleString }}" @endif>
                         @foreach($rows as $row)
                             @php
                                 $rowStyle = $styleToString(is_array($row['style'] ?? null) ? $row['style'] : []);
@@ -280,7 +310,9 @@
                                                 $alignment = trim((string) ($settings['alignment'] ?? ''));
                                                 if (!in_array($alignment, ['left', 'center', 'right'], true)) {
                                                     $fallbackAlign = strtolower(trim((string) ($rawStyle['textAlign'] ?? '')));
-                                                    $alignment = in_array($fallbackAlign, ['left', 'center', 'right'], true) ? $fallbackAlign : 'center';
+                                                    $alignment = in_array($fallbackAlign, ['left', 'center', 'right'], true)
+                                                        ? $fallbackAlign
+                                                        : (($type === 'form') ? 'left' : 'center');
                                                 }
                                                 $alignStyle = 'display:flex;justify-content:' . ($alignment === 'right' ? 'flex-end' : ($alignment === 'center' ? 'center' : 'flex-start')) . ';';
                                                 $menuAlign = $settings['menuAlign'] ?? 'left';
@@ -395,6 +427,9 @@
                                                             if ($carouselType === 'heading' || $carouselType === 'text' || $carouselType === 'button') {
                                                                 return trim(strip_tags((string) ($carouselElement['content'] ?? ''))) !== '';
                                                             }
+                                                            if ($carouselType === 'spacer' || $carouselType === 'menu' || $carouselType === 'form' || $carouselType === 'carousel') {
+                                                                return true;
+                                                            }
                                                             return true;
                                                         };
                                                         $slides = is_array($settings['slides'] ?? null) ? $settings['slides'] : [];
@@ -403,6 +438,11 @@
                                                         }
                                                         $isCarouselEmpty = true;
                                                         foreach ($slides as $slideCheck) {
+                                                            $slideImgCheck = is_array($slideCheck['image'] ?? null) ? $slideCheck['image'] : [];
+                                                            if (trim((string) ($slideImgCheck['src'] ?? '')) !== '') {
+                                                                $isCarouselEmpty = false;
+                                                                break;
+                                                            }
                                                             $checkRows = is_array($slideCheck['rows'] ?? null) ? $slideCheck['rows'] : [];
                                                             foreach ($checkRows as $checkRow) {
                                                                 $checkCols = is_array($checkRow['columns'] ?? null) ? $checkRow['columns'] : [];
@@ -424,16 +464,42 @@
                                                         $controlsColor = trim((string) ($settings['controlsColor'] ?? '#64748b'));
                                                         $arrowColor = trim((string) ($settings['arrowColor'] ?? '#ffffff'));
                                                         $bodyBgColor = trim((string) ($settings['bodyBgColor'] ?? ''));
+                                                        $fixedWidth = (int) ($settings['fixedWidth'] ?? 500);
+                                                        $fixedHeight = (int) ($settings['fixedHeight'] ?? 500);
+                                                        $carouselAlign = trim((string) ($settings['alignment'] ?? 'left'));
+                                                        if (!in_array($carouselAlign, ['left', 'center', 'right'], true)) {
+                                                            $carouselAlign = 'left';
+                                                        }
+                                                        if ($fixedWidth < 50 || $fixedWidth > 2400) {
+                                                            $fixedWidth = 500;
+                                                        }
+                                                        if ($fixedHeight < 50 || $fixedHeight > 1600) {
+                                                            $fixedHeight = 500;
+                                                        }
+                                                        $carouselSizeStyle = '';
+                                                        $carouselSizeStyle .= 'display:block !important;box-sizing:border-box !important;';
+                                                        $carouselSizeStyle .= 'width:' . $fixedWidth . 'px !important;max-width:100% !important;';
+                                                        if ($carouselAlign === 'center') {
+                                                            $carouselSizeStyle .= 'margin-left:auto !important;margin-right:auto !important;';
+                                                        } elseif ($carouselAlign === 'right') {
+                                                            $carouselSizeStyle .= 'margin-left:auto !important;margin-right:0 !important;';
+                                                        } else {
+                                                            $carouselSizeStyle .= 'margin-left:0 !important;margin-right:auto !important;';
+                                                        }
+                                                        $carouselSizeStyle .= 'height:' . $fixedHeight . 'px !important;min-height:' . $fixedHeight . 'px !important;';
                                                         $carouselId = 'car_' . md5((string) ($element['id'] ?? uniqid('', true)));
                                                     @endphp
-                                                    <div class="builder-carousel-wrap" data-carousel id="{{ $carouselId }}" data-active="{{ $activeSlide }}" style="{{ $style }} background:#ffffff !important; background-image:none !important; color:#0f172a;">
+                                                    <div class="builder-carousel-wrap" data-carousel id="{{ $carouselId }}" data-active="{{ $activeSlide }}" style="{{ $carouselSizeStyle }} background:#ffffff !important; background-image:none !important; color:#0f172a;">
                                                         <div class="builder-carousel-track" data-carousel-track>
                                                             @foreach($slides as $si => $slide)
                                                                 @php
                                                                     $slideTitle = trim((string) ($slide['label'] ?? ('Slide #' . ($si + 1))));
                                                                     $showSlideTitle = $slideTitle !== '' && !preg_match('/^Slide\s*#\s*\d+$/i', $slideTitle);
+                                                                    $slideImage = is_array($slide['image'] ?? null) ? $slide['image'] : [];
+                                                                    $slideImageSrc = trim((string) ($slideImage['src'] ?? ''));
+                                                                    $slideImageAlt = trim((string) ($slideImage['alt'] ?? 'Image'));
                                                                     $slideRows = is_array($slide['rows'] ?? null) ? $slide['rows'] : [];
-                                                                    $isSlideEmpty = true;
+                                                                    $isSlideEmpty = $slideImageSrc === '';
                                                                     foreach ($slideRows as $slideRowCheck) {
                                                                         $slideColsCheck = is_array($slideRowCheck['columns'] ?? null) ? $slideRowCheck['columns'] : [];
                                                                         foreach ($slideColsCheck as $slideColCheck) {
@@ -447,7 +513,7 @@
                                                                         }
                                                                     }
                                                                 @endphp
-                                                                <div class="builder-carousel-slide" style="align-items: {{ $aItems }}; background:#ffffff !important;">
+                                                                <div class="builder-carousel-slide" style="justify-content: {{ $aItems }}; background:#ffffff !important;">
                                                                     @if($isSlideEmpty)
                                                                         <div style="min-height:140px; width:100%; display:flex; align-items:center; justify-content:center;">
                                                                             <span style="font-size:13px; font-weight:700; color:#64748b;">Carousel is Empty</span>
@@ -456,7 +522,11 @@
                                                                         @if($showSlideTitle)
                                                                             <div class="builder-carousel-title">{{ $slideTitle }}</div>
                                                                         @endif
-                                                                        @if(count($slideRows) > 0)
+                                                                        @if($slideImageSrc !== '')
+                                                                            <div style="width:100%;height:100%;display:flex;justify-content:center;align-items:center;">
+                                                                                <img class="builder-img" src="{{ $slideImageSrc }}" alt="{{ $slideImageAlt !== '' ? $slideImageAlt : 'Image' }}" style="width:100%;height:100%;object-fit:cover;display:block;border-radius:8px;">
+                                                                            </div>
+                                                                        @elseif(count($slideRows) > 0)
                                                                             @foreach($slideRows as $srow)
                                                                                 @php
                                                                                     $srowStyle = $styleToString(is_array($srow['style'] ?? null) ? $srow['style'] : []);
@@ -503,6 +573,49 @@
                                                                                                         $href = trim((string) ($ssc['link'] ?? '#'));
                                                                                                     @endphp
                                                                                                     <a href="{{ $href !== '' ? $href : '#' }}" class="btn" style="{{ $ss }}">{{ strip_tags($scontent) !== '' ? strip_tags($scontent) : 'Click' }}</a>
+                                                                                                @elseif($st === 'spacer')
+                                                                                                    <div style="{{ $ss !== '' ? $ss : 'height:24px' }}"></div>
+                                                                                                @elseif($st === 'menu')
+                                                                                                    @php
+                                                                                                        $menuItems = is_array($ssc['items'] ?? null) ? $ssc['items'] : [];
+                                                                                                        if (count($menuItems) === 0) {
+                                                                                                            $menuItems = [['label' => 'Menu item', 'url' => '#', 'newWindow' => false]];
+                                                                                                        }
+                                                                                                        $itemGap = (int) ($ssc['itemGap'] ?? 13);
+                                                                                                        $itemGap = max(0, min(64, $itemGap));
+                                                                                                        $activeIndex = (int) ($ssc['activeIndex'] ?? 0);
+                                                                                                        $menuAlign = $ssc['menuAlign'] ?? 'left';
+                                                                                                        $menuAlignStyle = 'display:flex;justify-content:' . ($menuAlign === 'right' ? 'flex-end' : ($menuAlign === 'center' ? 'center' : 'flex-start')) . ';';
+                                                                                                        $menuText = trim((string) ($ssc['textColor'] ?? '#374151'));
+                                                                                                        $menuActive = trim((string) ($ssc['activeColor'] ?? '#a89c76'));
+                                                                                                        $menuUnderline = trim((string) ($ssc['underlineColor'] ?? ''));
+                                                                                                    @endphp
+                                                                                                    <nav class="builder-menu" style="{{ $menuAlignStyle }}{{ $ss !== '' ? $ss : '' }}">
+                                                                                                        <ul class="builder-menu-list" style="gap: {{ $itemGap }}px;">
+                                                                                                            @foreach($menuItems as $i => $menuItem)
+                                                                                                                @php
+                                                                                                                    $menuLabel = trim((string) ($menuItem['label'] ?? 'Menu item ' . ($i + 1)));
+                                                                                                                    $menuHref = trim((string) ($menuItem['url'] ?? '#'));
+                                                                                                                    $menuNew = (bool) ($menuItem['newWindow'] ?? false);
+                                                                                                                    $linkColor = $i === $activeIndex ? $menuActive : $menuText;
+                                                                                                                    $decoStyle = $menuUnderline !== '' ? 'text-decoration:underline;text-decoration-color:' . $menuUnderline . ';' : 'text-decoration:none;';
+                                                                                                                @endphp
+                                                                                                                <li>
+                                                                                                                    <a class="builder-menu-link" href="{{ $menuHref !== '' ? $menuHref : '#' }}" @if($menuNew) target="_blank" rel="noopener" @endif style="color: {{ $linkColor }}; {{ $decoStyle }}">{{ $menuLabel !== '' ? $menuLabel : ('Menu item ' . ($i + 1)) }}</a>
+                                                                                                                </li>
+                                                                                                            @endforeach
+                                                                                                        </ul>
+                                                                                                    </nav>
+                                                                                                @elseif($st === 'form')
+                                                                                                    <form onsubmit="return false;" style="{{ $ss }}">
+                                                                                                        <label>Name</label>
+                                                                                                        <input type="text" placeholder="Your name">
+                                                                                                        <label>Email</label>
+                                                                                                        <input type="email" placeholder="you@email.com">
+                                                                                                        <button type="button" class="btn">{{ $scontent !== '' ? $scontent : 'Submit' }}</button>
+                                                                                                    </form>
+                                                                                                @elseif($st === 'carousel')
+                                                                                                    <div style="padding:12px;border:1px dashed #93c5fd;border-radius:8px;color:#1e40af;font-weight:700;">Nested Carousel</div>
                                                                                                 @endif
                                                                                             @endforeach
                                                                                         </div>
@@ -514,9 +627,9 @@
                                                                 </div>
                                                             @endforeach
                                                         </div>
-                                                        @if($showArrows)
-                                                            <button type="button" class="builder-carousel-arrow is-left" data-carousel-prev style="background: {{ $controlsColor }}; color: {{ $arrowColor }};">&lsaquo;</button>
-                                                            <button type="button" class="builder-carousel-arrow is-right" data-carousel-next style="background: {{ $controlsColor }}; color: {{ $arrowColor }};">&rsaquo;</button>
+                                                        @if($showArrows && !$isCarouselEmpty)
+                                                            <button type="button" class="builder-carousel-arrow is-left" data-carousel-prev style="background: {{ $controlsColor }}; color: {{ $arrowColor }};"><i class="fas fa-chevron-left" aria-hidden="true"></i></button>
+                                                            <button type="button" class="builder-carousel-arrow is-right" data-carousel-next style="background: {{ $controlsColor }}; color: {{ $arrowColor }};"><i class="fas fa-chevron-right" aria-hidden="true"></i></button>
                                                         @endif
                                                     </div>
                                                 @elseif($type === 'spacer')
@@ -524,13 +637,59 @@
                                                 @elseif($type === 'countdown')
                                                     {{-- Countdown component removed --}}
                                                 @elseif($type === 'form')
-                                                    <form onsubmit="return false;" style="{{ $style }}">
-                                                        <label>Name</label>
-                                                        <input type="text" placeholder="Your name">
-                                                        <label>Email</label>
-                                                        <input type="email" placeholder="you@email.com">
-                                                        <button type="button" class="btn">{{ $content !== '' ? $content : 'Submit' }}</button>
-                                                    </form>
+                                                    @php
+                                                        $formWidth = trim((string) ($settings['width'] ?? ($settings['formWidth'] ?? ($rawStyle['width'] ?? '100%'))));
+                                                        if ($formWidth === '' || !preg_match('/^[#(),.%\-\sA-Za-z0-9]+$/u', $formWidth)) {
+                                                            $formWidth = '100%';
+                                                        }
+                                                        $formInlineStyle = 'display:block;width:' . $formWidth . ';max-width:100%;box-sizing:border-box;overflow:auto;';
+                                                        if ($alignment === 'center') {
+                                                            $formInlineStyle .= 'margin-left:auto;margin-right:auto;';
+                                                        } elseif ($alignment === 'right') {
+                                                            $formInlineStyle .= 'margin-left:auto;margin-right:0;';
+                                                        } else {
+                                                            $formInlineStyle .= 'margin-left:0;margin-right:auto;';
+                                                        }
+                                                        $formFields = [
+                                                            ['type' => 'first_name', 'label' => 'First name'],
+                                                            ['type' => 'last_name', 'label' => 'Last name'],
+                                                            ['type' => 'email', 'label' => 'Email'],
+                                                            ['type' => 'phone_number', 'label' => 'Phone (09XXXXXXXXX)'],
+                                                            ['type' => 'province', 'label' => 'Province'],
+                                                            ['type' => 'city_municipality', 'label' => 'City / Municipality'],
+                                                            ['type' => 'barangay', 'label' => 'Barangay'],
+                                                            ['type' => 'street', 'label' => 'Street'],
+                                                        ];
+                                                    @endphp
+                                                    @if($step->type === 'opt_in' && !$isPreview)
+                                                        <form method="POST" action="{{ route('funnels.portal.optin', ['funnelSlug' => $funnel->slug, 'stepSlug' => $step->slug]) }}" style="{{ $formInlineStyle }}">
+                                                            @csrf
+                                                            @foreach($formFields as $f)
+                                                                @php
+                                                                    $ft = $f['type'] ?? 'custom';
+                                                                    $lbl = trim((string) ($f['label'] ?? '')) !== '' ? $f['label'] : $ft;
+                                                                    $nm = in_array($ft, ['first_name', 'last_name', 'email', 'phone_number', 'province', 'city_municipality', 'barangay', 'street'], true) ? $ft : 'custom_' . $loop->index;
+                                                                    $req = in_array($ft, ['email', 'phone_number', 'province', 'city_municipality', 'barangay', 'street'], true);
+                                                                    $inputType = $ft === 'email' ? 'email' : 'text';
+                                                                    $pat = $ft === 'phone_number' ? 'pattern="^09\d{9}$" maxlength="11" minlength="11" inputmode="numeric"' : '';
+                                                                @endphp
+                                                                <label style="display:block;margin-bottom:4px;">{{ $lbl }}</label>
+                                                                <input type="{{ $inputType }}" name="{{ $nm }}" {{ $req ? 'required' : '' }} {!! $pat !!} placeholder="{{ $lbl }}" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:8px;box-sizing:border-box;">
+                                                            @endforeach
+                                                            <button type="submit" class="btn" style="margin-top:2px;">{{ $content !== '' ? $content : 'Submit' }}</button>
+                                                        </form>
+                                                    @else
+                                                        <form onsubmit="return false;" style="{{ $formInlineStyle }}">
+                                                            @foreach($formFields as $f)
+                                                                @php
+                                                                    $lbl = trim((string) ($f['label'] ?? '')) !== '' ? $f['label'] : (($f['type'] ?? 'Field'));
+                                                                @endphp
+                                                                <label style="display:block;margin-bottom:4px;">{{ $lbl }}</label>
+                                                                <input type="text" placeholder="{{ $lbl }}" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:8px;box-sizing:border-box;" @if($isPreview) disabled @endif>
+                                                            @endforeach
+                                                            <button type="button" class="btn" style="margin-top:2px;" @if($isPreview) disabled @endif>{{ $content !== '' ? $content : 'Submit' }}</button>
+                                                        </form>
+                                                    @endif
                                                 @else
                                                     <p class="builder-text" style="{{ $style }}">{{ $content }}</p>
                                                 @endif

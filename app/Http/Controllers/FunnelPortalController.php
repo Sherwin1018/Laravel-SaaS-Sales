@@ -41,11 +41,19 @@ class FunnelPortalController extends Controller
             'last_name' => 'nullable|string|max:150',
             'name' => 'nullable|string|max:150',
             'email' => 'required|email|max:150',
-            'phone_number' => 'nullable|string|max:20',
+            'phone_number' => 'required_without:phone|string|max:20',
             'phone' => 'nullable|string|max:20',
+            'province' => 'required|string|max:150',
+            'city_municipality' => 'required|string|max:150',
+            'barangay' => 'required|string|max:150',
+            'street' => 'required|string|max:180',
         ], [
             'email.required' => 'Email is required.',
             'email.email' => 'Please enter a valid email.',
+            'province.required' => 'Province is required.',
+            'city_municipality.required' => 'City / Municipality is required.',
+            'barangay.required' => 'Barangay is required.',
+            'street.required' => 'Street is required.',
         ]);
 
         $name = trim(

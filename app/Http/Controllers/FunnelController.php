@@ -538,7 +538,7 @@ class FunnelController extends Controller
             $style = $this->sanitizeStyle($rawStyle);
             $rawSettings = is_array($element['settings'] ?? null) ? $element['settings'] : [];
             $settings = $this->sanitizeSettings($rawSettings);
-            if ($type === 'video' || $type === 'image') {
+            if ($type === 'video' || $type === 'image' || $type === 'form') {
                 foreach (['width', 'height', 'maxWidth', 'minWidth', 'maxHeight', 'minHeight'] as $sizeKey) {
                     $fromStyle = isset($rawStyle[$sizeKey]) && trim((string) $rawStyle[$sizeKey]) !== '';
                     $fromSettings = isset($rawSettings[$sizeKey]) && trim((string) $rawSettings[$sizeKey]) !== '';
@@ -546,6 +546,8 @@ class FunnelController extends Controller
                         $style[$sizeKey] = mb_substr(trim((string) $rawStyle[$sizeKey]), 0, 60);
                     } elseif ($fromSettings && $sizeKey === 'width') {
                         $style['width'] = mb_substr(trim((string) $rawSettings[$sizeKey]), 0, 60);
+                    } elseif ($type === 'form' && $sizeKey === 'width' && isset($rawSettings['formWidth']) && trim((string) $rawSettings['formWidth']) !== '') {
+                        $style['width'] = mb_substr(trim((string) $rawSettings['formWidth']), 0, 60);
                     }
                 }
             }
@@ -829,7 +831,7 @@ class FunnelController extends Controller
             }
         }
 
-        foreach (['itemGap' => [0, 300], 'activeIndex' => [0, 500], 'activeSlide' => [0, 500], 'carouselActiveRow' => [0, 500], 'carouselActiveCol' => [0, 500]] as $k => $range) {
+        foreach (['itemGap' => [0, 300], 'activeIndex' => [0, 500], 'activeSlide' => [0, 500], 'carouselActiveRow' => [0, 500], 'carouselActiveCol' => [0, 500], 'fixedWidth' => [50, 2400], 'fixedHeight' => [50, 1600]] as $k => $range) {
             $v = $readInt($k, $range[0], $range[1]);
             if ($v !== null) {
                 $safe[$k] = $v;
@@ -863,6 +865,38 @@ class FunnelController extends Controller
                 ->all();
         }
 
+        if (isset($settings['fields']) && is_array($settings['fields'])) {
+            $allowedFieldTypes = ['first_name', 'last_name', 'email', 'phone_number', 'province', 'city_municipality', 'barangay', 'street', 'custom'];
+            $safe['fields'] = collect($settings['fields'])
+                ->filter(fn ($field) => is_array($field))
+                ->take(30)
+                ->map(function (array $field) use ($allowedFieldTypes) {
+                    $type = trim((string) ($field['type'] ?? 'custom'));
+                    if (!in_array($type, $allowedFieldTypes, true)) {
+                        $type = 'custom';
+                    }
+                    $label = mb_substr(trim((string) ($field['label'] ?? '')), 0, 150);
+                    if ($label === '') {
+                        $label = match ($type) {
+                            'phone_number' => 'Phone (09XXXXXXXXX)',
+                            'city_municipality' => 'City / Municipality',
+                            default => ucwords(str_replace('_', ' ', $type)),
+                        };
+                    }
+                    return ['type' => $type, 'label' => $label];
+                })
+                ->values()
+                ->all();
+            if (count($safe['fields']) === 0) {
+                $safe['fields'] = [
+                    ['type' => 'first_name', 'label' => 'First name'],
+                    ['type' => 'last_name', 'label' => 'Last name'],
+                    ['type' => 'email', 'label' => 'Email'],
+                    ['type' => 'phone_number', 'label' => 'Phone (09XXXXXXXXX)'],
+                ];
+            }
+        }
+
         if (isset($settings['slides']) && is_array($settings['slides'])) {
             $safe['slides'] = $this->sanitizeCarouselSlides($settings['slides']);
         }
@@ -892,7 +926,7 @@ class FunnelController extends Controller
                     ->map(function (array $row) {
                         $columns = collect($row['columns'] ?? [])
                             ->filter(fn ($col) => is_array($col))
-                            ->take(4)
+                            ->take(24)
                             ->map(function (array $col) {
                                 $elements = collect($col['elements'] ?? [])
                                     ->filter(fn ($el) => is_array($el))
@@ -900,7 +934,7 @@ class FunnelController extends Controller
                                     ->map(function (array $element) {
                                         $type = (string) ($element['type'] ?? 'text');
                                         $type = in_array($type, [
-                                            'heading', 'text', 'image', 'button', 'form', 'video', 'countdown', 'spacer', 'menu',
+                                            'heading', 'text', 'image', 'button', 'form', 'video', 'countdown', 'spacer', 'menu', 'carousel',
                                         ], true) ? $type : 'text';
 
                                         $rawContent = (string) ($element['content'] ?? '');
@@ -937,8 +971,34 @@ class FunnelController extends Controller
                     ->values()
                     ->all();
 
+                $image = is_array($slide['image'] ?? null) ? $slide['image'] : [];
+                $imageSrc = mb_substr(trim((string) ($image['src'] ?? '')), 0, 4000);
+                $imageAlt = mb_substr(trim((string) ($image['alt'] ?? 'Image')), 0, 200);
+                if ($imageSrc === '') {
+                    foreach ($rows as $row) {
+                        foreach (($row['columns'] ?? []) as $column) {
+                            foreach (($column['elements'] ?? []) as $element) {
+                                if (($element['type'] ?? '') !== 'image') {
+                                    continue;
+                                }
+                                $settings = is_array($element['settings'] ?? null) ? $element['settings'] : [];
+                                $candidate = trim((string) ($settings['src'] ?? ''));
+                                if ($candidate !== '') {
+                                    $imageSrc = mb_substr($candidate, 0, 4000);
+                                    $imageAlt = mb_substr(trim((string) ($settings['alt'] ?? $imageAlt)), 0, 200);
+                                    break 3;
+                                }
+                            }
+                        }
+                    }
+                }
+
                 return [
                     'label' => mb_substr(trim((string) ($slide['label'] ?? ('Slide #' . ($slideIndex + 1)))), 0, 200),
+                    'image' => [
+                        'src' => $imageSrc,
+                        'alt' => $imageAlt !== '' ? $imageAlt : 'Image',
+                    ],
                     'rows' => $rows,
                 ];
             })

@@ -60,10 +60,13 @@
 .fb-lib-group-title{font-size:12px;font-weight:900;letter-spacing:.02em;text-transform:uppercase;color:#1e3a8a;margin:0 0 8px}
 #canvas{min-height:60vh;border:2px dashed #93c5fd;border-radius:12px;padding:10px;background:linear-gradient(180deg,#f8fafc,#e0f2fe);overflow-x:hidden;overflow-y:auto}
 .sec{border:1px dashed #64748b;border-radius:10px;padding:8px;margin-bottom:9px;background:#fff}
+.sec.sec--bare-carousel{border:0;background:transparent;padding:0}
 .row{display:flex;flex-wrap:wrap;gap:8px;border:1px dashed #cbd5e1;border-radius:8px;padding:6px}
 .row-inner{display:flex;flex-wrap:wrap;gap:8px}
 .col{flex:1 1 240px;min-height:58px;min-width:0;border:1px dashed #bfdbfe;border-radius:7px;padding:6px;background:#f8fafc}
 .el{border:1px solid #e2e8f0;border-radius:7px;padding:7px;background:#fff;margin-bottom:6px;min-width:0;overflow-wrap:break-word;word-break:break-word}
+.el.el--carousel{border:0 !important;background:transparent !important;padding:0 !important}
+.el.el--form{border:0 !important;background:transparent !important;padding:0 !important}
 .el h2,.el p,.el button{overflow-wrap:break-word;word-break:break-word;min-width:0;max-width:100%}
 #canvas .el.el--button{width:100%;box-sizing:border-box}
 #canvas .el.el--button>button{display:inline-flex;width:auto;align-items:center;justify-content:center}
@@ -134,13 +137,11 @@
 .carousel-icon-btn{width:34px;height:34px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#64748b;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .carousel-icon-btn.active{border-color:#3b82f6;background:#dbeafe;color:#1d4ed8}
 .carousel-icon-btn.danger{color:#ef4444}
-.carousel-align-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:10px}
-.carousel-align-btn{border:1px solid #cbd5e1;background:#f8fafc;border-radius:8px;padding:8px 6px;color:#64748b;cursor:pointer}
-.carousel-align-btn.active{border-color:#3b82f6;background:#dbeafe;color:#1d4ed8}
 .carousel-comp-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:10px}
 .carousel-comp-btn{border:1px solid #cbd5e1;background:#f8fafc;border-radius:8px;padding:8px 10px;color:#334155;font-weight:700;cursor:pointer}
 .carousel-comp-btn:hover{background:#eef2ff}
 .carousel-comp-btn[draggable="true"]{cursor:grab}
+.carousel-group-title{font-size:11px;font-weight:900;color:#475569;letter-spacing:.02em;text-transform:uppercase;margin:6px 0}
 .rt-box{border:1px solid #cbd5e1;border-radius:8px;background:#fff;margin-bottom:8px}
 .rt-tools{display:flex;gap:6px;padding:6px;border-bottom:1px solid #e2e8f0}
 .rt-tools button{padding:5px 8px;border:1px solid #cbd5e1;border-radius:6px;background:#f8fafc;font-weight:800;cursor:pointer}
@@ -334,7 +335,8 @@ function syncSectionsFromRoot(){
             return;
         }
         if(kind==="el"){
-            const wrap={id:"sec_wrap_el_"+String(it.id||idx),style:{},settings:{contentWidth:"full"},elements:[it],rows:[],__rootWrap:true,__rootKind:"el",__rootRef:it};
+            const isCarouselEl=String((it&&it.type)||"")==="carousel";
+            const wrap={id:"sec_wrap_el_"+String(it.id||idx),style:{},settings:{contentWidth:"full"},elements:[it],rows:[],__rootWrap:true,__rootKind:"el",__rootRef:it,__bareCarouselWrap:isCarouselEl};
             out.push(wrap);
             return;
         }
@@ -408,6 +410,7 @@ function selectedCarouselParent(){
     const cs=state.carouselSel;
     if(!cs||!cs.parent)return null;
     const p=cs.parent;
+    if(p.scope==="section")return secEl(p.s,p.e);
     return el(p.s,p.r,p.c,p.e);
 }
 function selectedCarouselTarget(){
@@ -485,51 +488,57 @@ function clearSelectedMediaContent(){
     render();
     return true;
 }
-function defaultCarouselSlide(label){return {id:uid("sld"),label:label||"Slide #1",rows:[]};}
+function defaultCarouselSlide(label){return {id:uid("sld"),label:label||"Slide #1",image:{src:"",alt:"Image"}};}
 function ensureCarouselSlides(settings){
     settings=settings||{};
     if(!Array.isArray(settings.slides)||!settings.slides.length)settings.slides=[defaultCarouselSlide("Slide #1")];
     settings.slides=settings.slides.map((sl,idx)=>{
         var s=(sl&&typeof sl==="object")?sl:{};
         s.id=s.id||uid("sld");
-        if(!Array.isArray(s.rows))s.rows=[];
-        s.rows=s.rows.map(r=>{
-            var rowObj=(r&&typeof r==="object")?r:{};
-            rowObj.id=rowObj.id||uid("row");
-            rowObj.style=(rowObj.style&&typeof rowObj.style==="object")?rowObj.style:{gap:"8px"};
-            if(!Array.isArray(rowObj.columns))rowObj.columns=[];
-            rowObj.columns=rowObj.columns.map(c=>{
-                var colObj=(c&&typeof c==="object")?c:{};
-                colObj.id=colObj.id||uid("col");
-                colObj.style=(colObj.style&&typeof colObj.style==="object")?colObj.style:{};
-                colObj.elements=Array.isArray(colObj.elements)?colObj.elements:[];
-                return colObj;
-            });
-            return rowObj;
-        });
+        var imgSrc="",imgAlt="Image";
+        if(s.image&&typeof s.image==="object"){
+            imgSrc=String(s.image.src||"").trim();
+            imgAlt=String(s.image.alt||"Image").trim()||"Image";
+        }
+        if(imgSrc===""){
+            var rows=Array.isArray(s.rows)?s.rows:[];
+            outer: for(var ri=0;ri<rows.length;ri++){
+                var cols=Array.isArray(rows[ri]&&rows[ri].columns)?rows[ri].columns:[];
+                for(var ci=0;ci<cols.length;ci++){
+                    var els=Array.isArray(cols[ci]&&cols[ci].elements)?cols[ci].elements:[];
+                    for(var ei=0;ei<els.length;ei++){
+                        var e=els[ei]||{};
+                        if(String(e.type||"")==="image"){
+                            var st=e.settings||{};
+                            var src=String(st.src||"").trim();
+                            if(src!==""){
+                                imgSrc=src;
+                                imgAlt=String(st.alt||"Image").trim()||"Image";
+                                break outer;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        s.image={src:imgSrc,alt:imgAlt};
+        delete s.rows;
         s.label=String(s.label||("Slide #"+(idx+1)));
         return s;
     });
     return settings.slides;
 }
 function carouselElementDefaults(type){
-    const d={
-        heading:{content:"Heading",style:{fontSize:"32px"},settings:{}},
-        text:{content:"Text",style:{fontSize:"16px"},settings:{}},
-        image:{content:"",style:{width:"100%"},settings:{src:"",alt:"Image",alignment:"left"}},
-        video:{content:"",style:{},settings:{src:"",alignment:"left"}},
-        button:{content:"Click Me",style:{backgroundColor:"#2563eb",color:"#fff",borderRadius:"999px",padding:"10px 18px",textAlign:"center"},settings:{link:"#"}}
-    }[type];
-    if(!d)return null;
-    return {id:uid("el"),type:type,content:d.content,style:clone(d.style),settings:clone(d.settings)};
+    if(type==="section"||type==="row"||type==="column")return null;
+    return createDefaultElement(type);
 }
 function carouselAllowsDropType(type){
-    return ["heading","text","image","video","button","row","column"].indexOf(type)>=0;
+    return ["section","heading","text","image","video","button","spacer","menu","form","row","column"].indexOf(type)>=0;
 }
 function normalizeCarouselDropType(type){
     var t=String(type||"").toLowerCase();
     if(t==="col")return "column";
-    if(t==="section"||t==="menu"||t==="carousel"||t==="form"||t==="spacer"||t==="countdown")return "";
+    if(t==="countdown"||t==="carousel")return "";
     return t;
 }
 function renderCarouselPreviewItem(item,onDelete,onSelect,isSelected){
@@ -619,6 +628,53 @@ function renderCarouselPreviewItem(item,onDelete,onSelect,isSelected){
         b.style.color=((item&&item.style&&item.style.color)||"#fff");
         b.oninput=()=>{item.content=b.innerHTML||"";};
         wrap.appendChild(b);
+    }else if(type==="spacer"){
+        var sp=document.createElement("div");
+        sp.style.height=((item&&item.style&&item.style.height)||"24px");
+        sp.style.background="repeating-linear-gradient(90deg,#f1f5f9,#f1f5f9 8px,#e2e8f0 8px,#e2e8f0 16px)";
+        sp.style.borderRadius="6px";
+        wrap.appendChild(sp);
+    }else if(type==="menu"){
+        var ms=(item&&item.settings)||{};
+        var menuItems=Array.isArray(ms.items)&&ms.items.length?ms.items:[{label:"Menu item",url:"#",newWindow:false,hasSubmenu:false}];
+        var menuUl=document.createElement("ul");
+        menuUl.style.listStyle="none";
+        menuUl.style.margin="0";
+        menuUl.style.padding="0";
+        menuUl.style.display="flex";
+        menuUl.style.flexWrap="wrap";
+        menuUl.style.gap=String(Number(ms.itemGap)||13)+"px";
+        menuItems.forEach((mi,idx)=>{
+            var li=document.createElement("li");
+            var a=document.createElement("a");
+            a.href="#";
+            a.textContent=(mi&&mi.label)||("Menu item "+(idx+1));
+            a.style.textDecoration="none";
+            a.style.textUnderlineOffset="3px";
+            li.appendChild(a);
+            menuUl.appendChild(li);
+        });
+        wrap.appendChild(menuUl);
+    }else if(type==="form"){
+        var fm=document.createElement("div");
+        var formFields=[["First name","First name"],["Last name","Last name"],["Email","Email"],["Phone (09XXXXXXXXX)","09XXXXXXXXX"],["Province","Province"],["City / Municipality","City / Municipality"],["Barangay","Barangay"],["Street","Street"]];
+        var html="";
+        formFields.forEach(function(ff){
+            html+='<label style="display:block;margin-bottom:4px;">'+ff[0]+'</label>';
+            html+='<input type="text" placeholder="'+ff[1]+'" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:8px;">';
+        });
+        html+='<button type="button" style="padding:8px 12px;border:0;border-radius:8px;background:#2563eb;color:#fff;">'+(((item&&item.content)||"Submit"))+'</button>';
+        fm.innerHTML=html;
+        wrap.appendChild(fm);
+    }else if(type==="carousel"){
+        var nested=document.createElement("div");
+        nested.style.padding="12px";
+        nested.style.border="1px dashed #93c5fd";
+        nested.style.borderRadius="8px";
+        nested.style.color="#1e40af";
+        nested.style.fontWeight="700";
+        nested.textContent="Nested Carousel";
+        wrap.appendChild(nested);
     }else{
         var t=document.createElement("div");
         t.textContent=type;
@@ -638,7 +694,7 @@ function createRootItem(type){
     return it?Object.assign({kind:"el"},it):null;
 }
 function createDefaultElement(type){
-    const d={heading:{content:"Heading",style:{fontSize:"32px"},settings:{}},text:{content:"Text",style:{fontSize:"16px"},settings:{}},menu:{content:"",style:{fontSize:"16px"},settings:{items:[{label:"Home",url:"#",newWindow:false,hasSubmenu:false},{label:"Contact",url:"/contact",newWindow:false,hasSubmenu:false}],itemGap:13,activeIndex:0,menuAlign:"left",underlineColor:""}},carousel:{content:"",style:{padding:"10px 10px 10px 10px"},settings:{slides:[defaultCarouselSlide("Slide #1")],activeSlide:0,vAlign:"center",showArrows:true,controlsColor:"#64748b",arrowColor:"#ffffff"}},image:{content:"",style:{width:"100%"},settings:{src:"",alt:"Image",alignment:"left"}},button:{content:"Click Me",style:{backgroundColor:"#2563eb",color:"#fff",borderRadius:"999px",padding:"10px 18px",textAlign:"center"},settings:{link:"#"}},form:{content:"Submit",style:{},settings:{}},video:{content:"",style:{},settings:{src:"",alignment:"left"}},spacer:{content:"",style:{height:"24px"},settings:{}}}[type]||null;
+    const d={heading:{content:"Heading",style:{fontSize:"32px"},settings:{}},text:{content:"Text",style:{fontSize:"16px"},settings:{}},menu:{content:"",style:{fontSize:"16px"},settings:{items:[{label:"Home",url:"#",newWindow:false,hasSubmenu:false},{label:"Contact",url:"/contact",newWindow:false,hasSubmenu:false}],itemGap:13,activeIndex:0,menuAlign:"left",underlineColor:""}},carousel:{content:"",style:{padding:"10px 10px 10px 10px"},settings:{slides:[defaultCarouselSlide("Slide #1")],activeSlide:0,vAlign:"center",alignment:"left",showArrows:true,controlsColor:"#64748b",arrowColor:"#ffffff",fixedWidth:500,fixedHeight:500}},image:{content:"",style:{width:"100%"},settings:{src:"",alt:"Image",alignment:"left"}},button:{content:"Click Me",style:{backgroundColor:"#2563eb",color:"#fff",borderRadius:"999px",padding:"10px 18px",textAlign:"center"},settings:{link:"#"}},form:{content:"Submit",style:{},settings:{alignment:"left",width:"100%",fields:[{type:"first_name",label:"First name"},{type:"last_name",label:"Last name"},{type:"email",label:"Email"},{type:"phone_number",label:"Phone (09XXXXXXXXX)"}]}},video:{content:"",style:{},settings:{src:"",alignment:"left"}},spacer:{content:"",style:{height:"24px"},settings:{}}}[type]||null;
     if(!d)return null;
     return {id:uid("el"),type:type,content:d.content,style:clone(d.style),settings:clone(d.settings)};
 }
@@ -673,6 +729,13 @@ function addComponent(type){
         return;
     }
     s.elements=Array.isArray(s.elements)?s.elements:[];
+    if(type==="carousel"){
+        const car=createDefaultElement("carousel");
+        if(!car)return;
+        s.elements.push(car);
+        state.sel={k:"el",scope:"section",s:s.id,e:car.id};
+        return;
+    }
     if(type==="row"){(s.rows=s.rows||[]).push(createDefaultRow());return;}
     let r=row(p.s,p.r)||(s?.rows||[])[0];
     if(!r){
@@ -760,6 +823,20 @@ function addComponentAt(type,target,place){
     }
     s.elements=Array.isArray(s.elements)?s.elements:[];
     s.rows=Array.isArray(s.rows)?s.rows:[];
+    if(type==="carousel"){
+        var secInsertIdx=s.elements.length;
+        if(t.k==="el" && t.scope==="section"){
+            var sf=s.elements.findIndex(x=>x.id===t.e);
+            if(sf>=0)secInsertIdx=(place==="before"?sf:sf+1);
+        }else if(t.k==="sec"){
+            secInsertIdx=(place==="before"?0:s.elements.length);
+        }
+        var secCarousel=createDefaultElement("carousel");
+        if(!secCarousel)return false;
+        s.elements.splice(Math.max(0,Math.min(secInsertIdx,s.elements.length)),0,secCarousel);
+        state.sel={k:"el",scope:"section",s:s.id,e:secCarousel.id};
+        return true;
+    }
 
     if(type==="row"){
         var rIdx=s.rows.length;
@@ -928,6 +1005,8 @@ function removeSelected(){
 
 function renderElement(item,ctx){
     const w=document.createElement("div");w.className="el";
+    if(item.type==="carousel")w.classList.add("el--carousel");
+    if(item.type==="form")w.classList.add("el--form");
     if(item.type!=="button")styleApply(w,item.style||{});
     else if(item.style&&item.style.margin)w.style.margin=item.style.margin;
     if(state.sel&&state.sel.k==="el"&&state.sel.e===item.id)w.classList.add("sel");
@@ -952,7 +1031,48 @@ function renderElement(item,ctx){
         b.oninput=()=>{item.content=b.innerHTML||"";};onRichTextKeys(b,()=>{item.content=b.innerHTML||"";});w.appendChild(b);
     }
     else if(item.type==="image"){w.innerHTML=(item.settings&&item.settings.src)?'<img src="'+item.settings.src+'" alt="'+(item.settings.alt||"Image")+'" style="max-width:100%;height:auto;display:block;">':'<div style="padding:12px;border:1px dashed #94a3b8;border-radius:8px;">Image placeholder</div>';}
-    else if(item.type==="form"){w.innerHTML='<input disabled placeholder="Name"><input disabled placeholder="Email"><button class="fb-btn primary" disabled>'+(item.content||"Submit")+'</button>';}
+    else if(item.type==="form"){
+        item.settings=item.settings||{};
+        var fal=(item.settings.alignment)||"left";
+        var fw=(item.style&&item.style.width)||(item.settings&&item.settings.width)||"100%";
+        w.style.display="block";
+        w.style.boxSizing="border-box";
+        w.style.width=fw;
+        w.style.maxWidth="100%";
+        if(fal==="center"){w.style.marginLeft="auto";w.style.marginRight="auto";}
+        else if(fal==="right"){w.style.marginLeft="auto";w.style.marginRight="0";}
+        else{w.style.marginLeft="0";w.style.marginRight="auto";}
+        var flist=[{type:"first_name",label:"First name"},{type:"last_name",label:"Last name"},{type:"email",label:"Email"},{type:"phone_number",label:"Phone (09XXXXXXXXX)"},{type:"province",label:"Province"},{type:"city_municipality",label:"City / Municipality"},{type:"barangay",label:"Barangay"},{type:"street",label:"Street"}];
+        var formBox=document.createElement("div");
+        formBox.style.width="100%";
+        formBox.style.maxWidth="100%";
+        formBox.style.boxSizing="border-box";
+        flist.forEach(function(f){
+            var lbl=(f&&f.label)?String(f.label):String((f&&f.type)||"Field");
+            var lab=document.createElement("label");
+            lab.style.display="block";
+            lab.style.marginBottom="4px";
+            lab.textContent=lbl;
+            var inp=document.createElement("input");
+            inp.disabled=true;
+            inp.placeholder=lbl;
+            inp.style.width="100%";
+            inp.style.padding="8px";
+            inp.style.border="1px solid #cbd5e1";
+            inp.style.borderRadius="8px";
+            inp.style.marginBottom="8px";
+            formBox.appendChild(lab);
+            formBox.appendChild(inp);
+        });
+        var btn=document.createElement("button");
+        btn.type="button";
+        btn.className="fb-btn primary";
+        btn.disabled=true;
+        btn.textContent=(item.content||"Submit");
+        formBox.appendChild(btn);
+        w.innerHTML="";
+        w.appendChild(formBox);
+    }
     else if(item.type==="menu"){
         var ms=item.settings||{};
         var items=Array.isArray(ms.items)&&ms.items.length?ms.items:[{label:"Menu item",url:"#",newWindow:false,hasSubmenu:false}];
@@ -984,13 +1104,185 @@ function renderElement(item,ctx){
         var slides=ensureCarouselSlides(cs);
         var active=Number(cs.activeSlide);if(isNaN(active)||active<0||active>=slides.length)active=0;
         var curSlide=slides[active]||slides[0]||defaultCarouselSlide("Slide #1");
-        var parentSel={s:ctx.s,r:ctx.r,c:ctx.c,e:item.id};
+        var parentSel={scope:ctx.scope||"column",s:ctx.s,r:ctx.r,c:ctx.c,e:item.id};
+        function slideHasContent(slide){
+            if(!slide||typeof slide!=="object")return false;
+            var img=slide.image&&typeof slide.image==="object"?slide.image:{};
+            return String(img.src||"").trim()!=="";
+        }
+        function getTargetSlideForImageInsert(){
+            if(slides.length===1 && !slideHasContent(slides[0])){
+                return slides[0];
+            }
+            var s={id:uid("sld"),label:"Slide #"+(slides.length+1),image:{src:"",alt:"Image"}};
+            slides.push(s);
+            return s;
+        }
+        function addImageSlide(imageUrl,skipRender){
+            var slide=getTargetSlideForImageInsert();
+            if(!slide.id)slide.id=uid("sld");
+            if(!slide.label||String(slide.label).trim()==="")slide.label="Slide #"+(slides.indexOf(slide)+1);
+            slide.image={src:String(imageUrl||"").trim(),alt:"Image"};
+            cs.activeSlide=slides.length-1;
+            cs.carouselActiveRow=0;
+            cs.carouselActiveCol=0;
+            state.carouselSel=null;
+            if(!skipRender){
+                renderCanvas();
+                renderSettings();
+            }
+        }
+        function promptImageFilesForSlides(){
+            var picker=document.createElement("input");
+            picker.type="file";
+            picker.accept="image/*";
+            picker.multiple=true;
+            picker.style.display="none";
+            document.body.appendChild(picker);
+            picker.onchange=()=>{
+                var files=Array.from(picker.files||[]);
+                if(!files.length){
+                    document.body.removeChild(picker);
+                    return;
+                }
+                var i=0;
+                var added=0;
+                var next=()=>{
+                    if(i>=files.length){
+                        renderCanvas();
+                        renderSettings();
+                        return;
+                    }
+                    var file=files[i++];
+                    uploadImage(file,url=>{
+                        addImageSlide(url,true);
+                        added++;
+                        next();
+                    },"Image upload",()=>{next();});
+                };
+                next();
+                picker.value="";
+                document.body.removeChild(picker);
+            };
+            picker.click();
+        }
+        var simpleWrap=document.createElement("div");
+        simpleWrap.className="carousel-live-editor";
+        simpleWrap.style.position="relative";
+        var fixedW=Number(cs.fixedWidth);
+        var fixedH=Number(cs.fixedHeight);
+        if(isNaN(fixedW)||fixedW<50)fixedW=500;
+        if(isNaN(fixedH)||fixedH<50)fixedH=500;
+        w.style.setProperty("width",fixedW+"px","important");
+        w.style.setProperty("min-width",fixedW+"px","important");
+        w.style.setProperty("max-width",fixedW+"px","important");
+        w.style.setProperty("height",fixedH+"px","important");
+        w.style.setProperty("min-height",fixedH+"px","important");
+        w.style.setProperty("padding","0","important");
+        var carAlign=String(cs.alignment||"left").toLowerCase();
+        if(["left","center","right"].indexOf(carAlign)<0)carAlign="left";
+        w.style.display="block";
+        w.style.boxSizing="border-box";
+        w.style.overflow="hidden";
+        w.style.marginLeft=carAlign==="right"?"auto":(carAlign==="center"?"auto":"0");
+        w.style.marginRight=carAlign==="left"?"auto":(carAlign==="center"?"auto":"0");
+        simpleWrap.style.minHeight=(fixedH+"px");
+        simpleWrap.style.borderRadius="8px";
+        simpleWrap.style.background="#ffffff";
+        simpleWrap.style.color="#0f172a";
+        simpleWrap.style.border="1px solid #e2e8f0";
+        simpleWrap.style.overflow="hidden";
+        simpleWrap.style.display="flex";
+        simpleWrap.style.alignItems="center";
+        simpleWrap.style.justifyContent="center";
+        simpleWrap.style.padding="16px";
+        simpleWrap.ondragover=e=>{e.preventDefault();e.stopPropagation();};
+        simpleWrap.ondrop=e=>{
+            e.preventDefault();
+            e.stopPropagation();
+            var tp=normalizeCarouselDropType(e.dataTransfer.getData("c")||"");
+            if(tp==="image"){
+                saveToHistory();
+                promptImageFilesForSlides();
+            }
+        };
+        simpleWrap.style.width="100%";
+        simpleWrap.style.maxWidth="100%";
+        simpleWrap.style.margin="0";
+        simpleWrap.style.height="100%";
+        var activeSlide=slides[active]||slides[0]||defaultCarouselSlide("Slide #1");
+        var activeImage=(activeSlide&&activeSlide.image&&typeof activeSlide.image==="object")?activeSlide.image:{src:"",alt:"Image"};
+        var src=String(activeImage.src||"").trim();
+        if(src!==""){
+            simpleWrap.innerHTML='<img src="'+src.replace(/"/g,"&quot;")+'" alt="'+String(activeImage.alt||"Image").replace(/"/g,"&quot;")+'" style="width:100%;height:100%;object-fit:cover;display:block;border-radius:8px;">';
+        }else{
+            var emptyPickBtn=document.createElement("button");
+            emptyPickBtn.type="button";
+            emptyPickBtn.innerHTML='<span style="font-size:20px;line-height:1;">+</span><span style="font-size:12px;font-weight:700;">Select images</span>';
+            emptyPickBtn.style.display="inline-flex";
+            emptyPickBtn.style.alignItems="center";
+            emptyPickBtn.style.gap="8px";
+            emptyPickBtn.style.padding="10px 14px";
+            emptyPickBtn.style.borderRadius="999px";
+            emptyPickBtn.style.border="1px solid #93c5fd";
+            emptyPickBtn.style.background="#ffffff";
+            emptyPickBtn.style.color="#1d4ed8";
+            emptyPickBtn.style.cursor="pointer";
+            emptyPickBtn.style.zIndex="4";
+            emptyPickBtn.onclick=e=>{e.preventDefault();e.stopPropagation();saveToHistory();promptImageFilesForSlides();};
+            simpleWrap.appendChild(emptyPickBtn);
+        }
+        if(slides.length>1){
+            var prevBtn=document.createElement("button");
+            prevBtn.type="button";
+            prevBtn.innerHTML='<i class="fas fa-chevron-left" aria-hidden="true"></i>';
+            prevBtn.style.position="absolute";
+            prevBtn.style.left="10px";
+            prevBtn.style.top="50%";
+            prevBtn.style.transform="translateY(-50%)";
+            prevBtn.style.width="30px";
+            prevBtn.style.height="30px";
+            prevBtn.style.borderRadius="999px";
+            prevBtn.style.border="1px solid #cbd5e1";
+            prevBtn.style.background="#fff";
+            prevBtn.style.display="flex";
+            prevBtn.style.alignItems="center";
+            prevBtn.style.justifyContent="center";
+            prevBtn.style.padding="0";
+            prevBtn.style.lineHeight="1";
+            prevBtn.style.cursor="pointer";
+            prevBtn.onclick=e=>{e.preventDefault();e.stopPropagation();saveToHistory();cs.activeSlide=(active-1+slides.length)%slides.length;renderCanvas();renderSettings();};
+            simpleWrap.appendChild(prevBtn);
+            var nextBtn=document.createElement("button");
+            nextBtn.type="button";
+            nextBtn.innerHTML='<i class="fas fa-chevron-right" aria-hidden="true"></i>';
+            nextBtn.style.position="absolute";
+            nextBtn.style.right="10px";
+            nextBtn.style.top="50%";
+            nextBtn.style.transform="translateY(-50%)";
+            nextBtn.style.width="30px";
+            nextBtn.style.height="30px";
+            nextBtn.style.borderRadius="999px";
+            nextBtn.style.border="1px solid #cbd5e1";
+            nextBtn.style.background="#fff";
+            nextBtn.style.display="flex";
+            nextBtn.style.alignItems="center";
+            nextBtn.style.justifyContent="center";
+            nextBtn.style.padding="0";
+            nextBtn.style.lineHeight="1";
+            nextBtn.style.cursor="pointer";
+            nextBtn.onclick=e=>{e.preventDefault();e.stopPropagation();saveToHistory();cs.activeSlide=(active+1)%slides.length;renderCanvas();renderSettings();};
+            simpleWrap.appendChild(nextBtn);
+        }
+        w.innerHTML="";
+        w.appendChild(simpleWrap);
+        return w;
         function addDropToCarousel(type,rowIndex,colIndex){
             type=normalizeCarouselDropType(type);
             if(!carouselAllowsDropType(type))return false;
             var sIdx=Number(cs.activeSlide);if(isNaN(sIdx)||sIdx<0||sIdx>=slides.length)sIdx=0;
             var sl=slides[sIdx];if(!sl)return false;
-            if(type==="row"){
+            if(type==="section"||type==="row"){
                 sl.rows=Array.isArray(sl.rows)?sl.rows:[];
                 sl.rows.push({id:uid("row"),style:{gap:"8px"},columns:[]});
                 cs.carouselActiveRow=sl.rows.length-1;
@@ -1004,7 +1296,6 @@ function renderElement(item,ctx){
             var rIdx=Number(rowIndex);if(isNaN(rIdx)||rIdx<0||rIdx>=sl.rows.length)rIdx=0;
             var rw=sl.rows[rIdx];rw.columns=Array.isArray(rw.columns)?rw.columns:[];
             if(type==="column"){
-                if(rw.columns.length>=4)return false;
                 rw.columns.push({id:uid("col"),style:{},elements:[]});
                 cs.carouselActiveRow=rIdx;
                 cs.carouselActiveCol=rw.columns.length-1;
@@ -1038,6 +1329,25 @@ function renderElement(item,ctx){
         wrap.style.alignItems="stretch";
         wrap.style.justifyContent=bodyJustify;
         wrap.style.padding="16px";
+        var addImageSlideBtn=document.createElement("button");
+        addImageSlideBtn.type="button";
+        addImageSlideBtn.textContent="+";
+        addImageSlideBtn.title="Add image slide";
+        addImageSlideBtn.style.position="absolute";
+        addImageSlideBtn.style.top="10px";
+        addImageSlideBtn.style.right="10px";
+        addImageSlideBtn.style.width="30px";
+        addImageSlideBtn.style.height="30px";
+        addImageSlideBtn.style.borderRadius="999px";
+        addImageSlideBtn.style.border="1px solid #93c5fd";
+        addImageSlideBtn.style.background="#ffffff";
+        addImageSlideBtn.style.color="#1d4ed8";
+        addImageSlideBtn.style.fontSize="20px";
+        addImageSlideBtn.style.fontWeight="800";
+        addImageSlideBtn.style.cursor="pointer";
+        addImageSlideBtn.style.zIndex="4";
+        addImageSlideBtn.onclick=e=>{e.preventDefault();e.stopPropagation();saveToHistory();promptImageFilesForSlides();};
+        wrap.appendChild(addImageSlideBtn);
         wrap.ondragover=e=>{e.preventDefault();e.stopPropagation();};
         wrap.ondrop=e=>{
             e.preventDefault();
@@ -1204,15 +1514,22 @@ function renderElement(item,ctx){
             body.style.display="none";
             wrap.style.alignItems="center";
             wrap.style.justifyContent="center";
-            var ph=document.createElement("div");
-            ph.textContent="Drop & Drag Components";
-            ph.style.fontSize="13px";
-            ph.style.fontWeight="700";
-            ph.style.color="#64748b";
-            ph.style.padding="0";
-            ph.style.textAlign="center";
-            ph.style.pointerEvents="none";
-            wrap.appendChild(ph);
+            addImageSlideBtn.style.display="none";
+            var emptyAdd=document.createElement("button");
+            emptyAdd.type="button";
+            emptyAdd.innerHTML='<span style="font-size:24px;line-height:1;">+</span><span style="font-size:12px;font-weight:700;">Add image slide</span>';
+            emptyAdd.style.display="inline-flex";
+            emptyAdd.style.alignItems="center";
+            emptyAdd.style.gap="8px";
+            emptyAdd.style.padding="10px 14px";
+            emptyAdd.style.borderRadius="999px";
+            emptyAdd.style.border="1px solid #93c5fd";
+            emptyAdd.style.background="#ffffff";
+            emptyAdd.style.color="#1d4ed8";
+            emptyAdd.style.cursor="pointer";
+            emptyAdd.style.zIndex="4";
+            emptyAdd.onclick=e=>{e.preventDefault();e.stopPropagation();saveToHistory();promptImageFilesForSlides();};
+            wrap.appendChild(emptyAdd);
         }
         w.innerHTML="";w.appendChild(wrap);
     }
@@ -1236,7 +1553,11 @@ function renderCanvas(){
     var widthMap={full:"",wide:"1200px",medium:"992px",small:"768px",xsmall:"576px"};
     (state.layout.sections||[]).forEach(s=>{
         var contentWidth=((s.settings&&s.settings.contentWidth)||"full");
+        var secElements=Array.isArray(s.elements)?s.elements:[];
+        var secRows=Array.isArray(s.rows)?s.rows:[];
+        var isBareCarouselSection=!!(s.__bareCarouselWrap||(!s.__rootWrap&&secRows.length===0&&secElements.length===1&&secElements[0]&&secElements[0].type==="carousel"));
         const sn=document.createElement("section");sn.className="sec";styleApply(sn,s.style||{});
+        if(isBareCarouselSection)sn.classList.add("sec--bare-carousel");
         const inner=document.createElement("div");inner.className="sec-inner";
         inner.style.width="100%";
         inner.style.boxSizing="border-box";
@@ -1245,7 +1566,13 @@ function renderCanvas(){
             inner.style.margin="0 auto";
         }
         if(state.sel&&state.sel.k==="sec"&&state.sel.s===s.id)sn.classList.add("sel");
-        sn.onclick=e=>{e.stopPropagation();state.carouselSel=null;state.sel={k:"sec",s:s.id};render();};
+        sn.onclick=e=>{
+            e.stopPropagation();
+            if(isBareCarouselSection)return;
+            state.carouselSel=null;
+            state.sel={k:"sec",s:s.id};
+            render();
+        };
         sn.ondragover=e=>e.preventDefault();
         sn.ondrop=e=>{
             e.preventDefault();
@@ -1304,7 +1631,7 @@ function renderCanvas(){
     });
     if(!(state.layout.sections||[]).length)canvas.innerHTML='<p style="font-size:13px;color:#475569;">Drag any component to start.</p>';
     canvas.ondragover=e=>e.preventDefault();
-    canvas.ondrop=e=>{e.preventDefault();if(e.target&&e.target.closest&&e.target.closest(".carousel-live-editor"))return;const t=e.dataTransfer.getData("c");if(t){addComponent(t);render();}};
+    canvas.ondrop=e=>{e.preventDefault();if(e.target&&e.target.closest&&e.target.closest(".carousel-live-editor"))return;const t=e.dataTransfer.getData("c");if(t){if(addComponentAt(t,null,"after"))render();}};
 }
 
 function refreshAfterSetting(){
@@ -1362,7 +1689,7 @@ function bindPx(id,val,cb,opts){
     n.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();fire();}});
 }
 
-function uploadImage(file,done,label){
+function uploadImage(file,done,label,onFail){
     const fd=new FormData();fd.append("image",file);
     const msg=label||"Upload";
     fetch(uploadUrl,{method:"POST",headers:{"X-CSRF-TOKEN":csrf,"Accept":"application/json"},body:fd})
@@ -1371,9 +1698,13 @@ function uploadImage(file,done,label){
             if(ok&&body&&body.url){done(body.url);return;}
             const err=body&&(body.message||(body.errors&&body.errors.image&&(Array.isArray(body.errors.image)?body.errors.image[0]:body.errors.image)));
             const reason=(err&&String(err).trim())?""+err:"Please check file type and size (max 100 MB).";
+            if(typeof onFail==="function")onFail(reason);
             alert(msg+" failed: "+reason);
         })
-        .catch(()=>alert(msg+" failed. Check your connection and try again."));
+        .catch(()=>{
+            if(typeof onFail==="function")onFail("Check your connection and try again.");
+            alert(msg+" failed. Check your connection and try again.");
+        });
 }
 
 function renderSettings(){
@@ -1699,12 +2030,11 @@ function renderSettings(){
         settings.querySelectorAll(".col-layout-btn").forEach(btn=>{
             btn.addEventListener("click",()=>{var n=Number(btn.getAttribute("data-cols"))||1;applyColumnLayout(n);});
         });
-    } else if(selKind==="el"&&t.type==="carousel"&&!inCarousel){
+    } else if(selKind==="el"&&t.type==="carousel"){
         t.settings=t.settings||{};
+        if(!t.settings.fixedWidth || Number(t.settings.fixedWidth)<50)t.settings.fixedWidth=500;
+        if(!t.settings.fixedHeight || Number(t.settings.fixedHeight)<50)t.settings.fixedHeight=500;
         ensureCarouselSlides(t.settings);
-        var padDef=[10,10,10,10],marDef=[0,0,0,0];
-        var pad=parseSpacing(t.style&&t.style.padding,padDef),mar=parseSpacing(t.style&&t.style.margin,marDef);
-
         function renderCarouselEditor(){
             ensureCarouselSlides(t.settings);
             var slides=t.settings.slides||[];
@@ -1723,7 +2053,16 @@ function renderSettings(){
             var activeCol=Number(t.settings.carouselActiveCol);if(isNaN(activeCol)||activeCol<0||activeCol>=aCols.length)activeCol=0;
             t.settings.carouselActiveRow=activeRow;
             t.settings.carouselActiveCol=activeCol;
-            settings.innerHTML=slidesHtml+'<input id="carSlideLabel" value="'+String((aSlide&&aSlide.label)||"").replace(/"/g,'&quot;')+'" placeholder="Slide title"><button type="button" id="addCarouselSlide" class="fb-btn primary" style="width:100%;margin:6px 0 10px;">Add New Slide</button><div class="menu-split"></div><label>Add component</label><div class="carousel-comp-grid"><button type="button" class="carousel-comp-btn" data-add="heading" draggable="true">Heading</button><button type="button" class="carousel-comp-btn" data-add="text" draggable="true">Text</button><button type="button" class="carousel-comp-btn" data-add="image" draggable="true">Image</button><button type="button" class="carousel-comp-btn" data-add="video" draggable="true">Video</button><button type="button" class="carousel-comp-btn" data-add="button" draggable="true">Button</button><button type="button" class="carousel-comp-btn" data-add="row" draggable="true">Row</button><button type="button" class="carousel-comp-btn" data-add="column" draggable="true">Column</button></div><label>Vertical content alignment</label><div class="carousel-align-grid"><button type="button" class="carousel-align-btn" data-v="top"><i class="fas fa-align-left"></i></button><button type="button" class="carousel-align-btn" data-v="center"><i class="fas fa-align-center"></i></button><button type="button" class="carousel-align-btn" data-v="bottom"><i class="fas fa-align-right"></i></button></div><label class="inline-check"><input id="carShowArrows" type="checkbox"> Display arrow navigation</label><label>Controls color</label><input id="carControlsColor" type="color"><label>Arrow color</label><input id="carArrowColor" type="color"><label>Body color</label><input id="carBodyBgColor" type="color"><div class="menu-split"></div><div class="menu-section-title">Size and position</div><label>Padding</label><div class="size-grid"><div class="fld"><label>T</label><input id="pTop" type="number" value="'+pad[0]+'"></div><div class="fld"><label>R</label><input id="pRight" type="number" value="'+pad[1]+'"></div><div class="fld"><label>B</label><input id="pBottom" type="number" value="'+pad[2]+'"></div><div class="fld"><label>L</label><input id="pLeft" type="number" value="'+pad[3]+'"></div><div class="size-link"><button type="button" id="linkPad" title="Link padding"><span>&harr;</span></button><span>Link</span></div></div><label>Margin</label><div class="size-grid"><div class="fld"><label>T</label><input id="mTop" type="number" value="'+mar[0]+'"></div><div class="fld"><label>R</label><input id="mRight" type="number" value="'+mar[1]+'"></div><div class="fld"><label>B</label><input id="mBottom" type="number" value="'+mar[2]+'"></div><div class="fld"><label>L</label><input id="mLeft" type="number" value="'+mar[3]+'"></div><div class="size-link"><button type="button" id="linkMar" title="Link margin"><span>&harr;</span></button><span>Link</span></div></div>'+remove;
+            var carouselComponentsHtml='';
+            settings.innerHTML='<div class="menu-section-title">Slides</div>'+slidesHtml
+                +'<label>Slide label</label><input id="carSlideLabel" value="'+String((aSlide&&aSlide.label)||"").replace(/"/g,'&quot;')+'" placeholder="Slide title">'
+                +'<div class="meta" style="margin:6px 0 10px;">Use the <strong>+</strong> button inside carousel to add an image slide.</div>'
+                +'<button type="button" id="addImageSlideFromSettings" class="fb-btn primary" style="width:100%;margin:0 0 10px;">Add image slide</button>'
+                +'<input id="carImageSlideFiles" type="file" accept="image/*" multiple style="display:none;">'
+                +carouselComponentsHtml
+                +'<div class="menu-split"></div><div class="menu-section-title">Layout</div><label>Carousel alignment</label><div class="menu-align-row"><button type="button" class="menu-align-btn car-align-btn" data-ca="left"><i class="fas fa-align-left"></i></button><button type="button" class="menu-align-btn car-align-btn" data-ca="center"><i class="fas fa-align-center"></i></button><button type="button" class="menu-align-btn car-align-btn" data-ca="right"><i class="fas fa-align-right"></i></button></div>'
+                +'<label>Fixed width</label><div class="px-wrap"><input id="carFixedW" type="number" min="50" step="1"><span class="px-unit">px</span></div><label>Fixed height</label><div class="px-wrap"><input id="carFixedH" type="number" min="50" step="1"><span class="px-unit">px</span></div>'
+                +remove;
 
             settings.querySelectorAll(".carousel-slide-btn").forEach(btn=>btn.addEventListener("click",()=>{
                 var sid=String(btn.getAttribute("data-sid")||"");
@@ -1766,8 +2105,37 @@ function renderSettings(){
             }));
             var labelInput=document.getElementById("carSlideLabel");
             if(labelInput)labelInput.addEventListener("input",()=>{var i=Number(t.settings.activeSlide)||0;slides[i].label=labelInput.value||"";renderCanvas();});
-            var addSlide=document.getElementById("addCarouselSlide");
-            if(addSlide)addSlide.onclick=()=>{saveToHistory();slides.push(defaultCarouselSlide("Slide #"+(slides.length+1)));t.settings.activeSlide=slides.length-1;t.settings.carouselActiveRow=0;t.settings.carouselActiveCol=0;renderCarouselEditor();renderCanvas();};
+            var addImageSlideFromSettings=document.getElementById("addImageSlideFromSettings");
+            var carImageSlideFiles=document.getElementById("carImageSlideFiles");
+            if(addImageSlideFromSettings&&carImageSlideFiles)addImageSlideFromSettings.onclick=()=>{carImageSlideFiles.click();};
+            if(carImageSlideFiles)carImageSlideFiles.onchange=()=>{
+                var files=Array.from(carImageSlideFiles.files||[]);
+                if(!files.length)return;
+                saveToHistory();
+                var parentRef=(state.carouselSel&&state.carouselSel.parent)?state.carouselSel.parent:{scope:(state.sel&&state.sel.scope)||"column",s:state.sel&&state.sel.s,r:state.sel&&state.sel.r,c:state.sel&&state.sel.c,e:t.id};
+                var idx=0;
+                var addNext=()=>{
+                    if(idx>=files.length){
+                        renderCarouselEditor();
+                        renderCanvas();
+                        return;
+                    }
+                    var file=files[idx++];
+                    uploadImage(file,url=>{
+                        var isDefaultEmpty=(slides.length===1 && (!slides[0] || !slides[0].image || String(slides[0].image.src||"").trim()===""));
+                        var sld=isDefaultEmpty?slides[0]:{id:uid("sld"),label:"Slide #"+(slides.length+1),image:{src:"",alt:"Image"}};
+                        if(!isDefaultEmpty)slides.push(sld);
+                        sld.image={src:String(url||"").trim(),alt:"Image"};
+                        t.settings.activeSlide=slides.length-1;
+                        t.settings.carouselActiveRow=0;
+                        t.settings.carouselActiveCol=0;
+                        state.carouselSel=null;
+                        addNext();
+                    },"Image upload",()=>{addNext();});
+                };
+                addNext();
+                carImageSlideFiles.value="";
+            };
 
             settings.querySelectorAll(".carousel-comp-btn").forEach(btn=>{
                 btn.addEventListener("dragstart",e=>{if(e&&e.dataTransfer)e.dataTransfer.setData("c",btn.getAttribute("data-add")||"");});
@@ -1779,7 +2147,7 @@ function renderSettings(){
                     if(!sl)return;
                     var rows=Array.isArray(sl.rows)?sl.rows:[];
                     sl.rows=rows;
-                    if(tp==="row"){
+                    if(tp==="section"||tp==="row"){
                         rows.push({id:uid("row"),style:{gap:"8px"},columns:[]});
                         t.settings.carouselActiveRow=rows.length-1;
                         t.settings.carouselActiveCol=0;
@@ -1792,7 +2160,7 @@ function renderSettings(){
                     var rw=rows[rows.length-1]||rows[0];
                     rw.columns=Array.isArray(rw.columns)?rw.columns:[];
                     if(tp==="column"){
-                        if(rw.columns.length<4)rw.columns.push({id:uid("col"),style:{},elements:[]});
+                        rw.columns.push({id:uid("col"),style:{},elements:[]});
                         t.settings.carouselActiveCol=Math.max(0,rw.columns.length-1);
                         renderCarouselEditor();renderCanvas();
                         return;
@@ -1810,21 +2178,10 @@ function renderSettings(){
                 });
             });
 
-            var vAlign=(t.settings&&t.settings.vAlign)||"center";
-            settings.querySelectorAll(".carousel-align-btn").forEach(btn=>{if(btn.getAttribute("data-v")===vAlign)btn.classList.add("active");btn.addEventListener("click",()=>{saveToHistory();t.settings.vAlign=btn.getAttribute("data-v");renderCarouselEditor();renderCanvas();});});
-            var showArrows=document.getElementById("carShowArrows");if(showArrows){showArrows.checked=t.settings.showArrows!==false;showArrows.addEventListener("change",()=>{saveToHistory();t.settings.showArrows=!!showArrows.checked;renderCanvas();});}
-            bind("carControlsColor",(t.settings&&t.settings.controlsColor)||"#64748b",v=>{t.settings=t.settings||{};t.settings.controlsColor=v;renderCanvas();},{undo:true});
-            bind("carArrowColor",(t.settings&&t.settings.arrowColor)||"#ffffff",v=>{t.settings=t.settings||{};t.settings.arrowColor=v;renderCanvas();},{undo:true});
-            bind("carBodyBgColor",(t.settings&&t.settings.bodyBgColor)||"#0ea5e9",v=>{t.settings=t.settings||{};t.settings.bodyBgColor=v;renderCanvas();},{undo:true});
-
-            var paddingLinked=false,marginLinked=false;
-            function syncPadding(){saveToHistory();var pt=Number(document.getElementById("pTop").value)||0,pr=Number(document.getElementById("pRight").value)||0,pb=Number(document.getElementById("pBottom").value)||0,pl=Number(document.getElementById("pLeft").value)||0;if(paddingLinked){document.getElementById("pRight").value=pt;document.getElementById("pBottom").value=pt;document.getElementById("pLeft").value=pt;sty().padding=spacingToCss([pt,pt,pt,pt]);}else sty().padding=spacingToCss([pt,pr,pb,pl]);renderCanvas();}
-            function syncMargin(){saveToHistory();var mt=Number(document.getElementById("mTop").value)||0,mr=Number(document.getElementById("mRight").value)||0,mb=Number(document.getElementById("mBottom").value)||0,ml=Number(document.getElementById("mLeft").value)||0;if(marginLinked){document.getElementById("mRight").value=mt;document.getElementById("mBottom").value=mt;document.getElementById("mLeft").value=mt;sty().margin=spacingToCss([mt,mt,mt,mt]);}else sty().margin=spacingToCss([mt,mr,mb,ml]);renderCanvas();}
-            ["pTop","pRight","pBottom","pLeft"].forEach(id=>{var el=document.getElementById(id);if(el)el.addEventListener("input",syncPadding);});
-            ["mTop","mRight","mBottom","mLeft"].forEach(id=>{var el=document.getElementById(id);if(el)el.addEventListener("input",syncMargin);});
-            var linkPad=document.getElementById("linkPad"),linkMar=document.getElementById("linkMar");
-            if(linkPad)linkPad.onclick=()=>{saveToHistory();paddingLinked=!paddingLinked;linkPad.classList.toggle("linked",paddingLinked);if(paddingLinked){var v=document.getElementById("pTop").value;document.getElementById("pRight").value=v;document.getElementById("pBottom").value=v;document.getElementById("pLeft").value=v;sty().padding=spacingToCss([Number(v)||0,Number(v)||0,Number(v)||0,Number(v)||0]);renderCanvas();}};
-            if(linkMar)linkMar.onclick=()=>{saveToHistory();marginLinked=!marginLinked;linkMar.classList.toggle("linked",marginLinked);if(marginLinked){var v=document.getElementById("mTop").value;document.getElementById("mRight").value=v;document.getElementById("mBottom").value=v;document.getElementById("mLeft").value=v;sty().margin=spacingToCss([Number(v)||0,Number(v)||0,Number(v)||0,Number(v)||0]);renderCanvas();}};
+            var carAlignment=(t.settings&&t.settings.alignment)||"left";
+            settings.querySelectorAll(".car-align-btn").forEach(btn=>{if(btn.getAttribute("data-ca")===carAlignment)btn.classList.add("active");btn.addEventListener("click",()=>{saveToHistory();t.settings=t.settings||{};t.settings.alignment=btn.getAttribute("data-ca")||"left";renderCarouselEditor();renderCanvas();});});
+            bind("carFixedW",(t.settings&&t.settings.fixedWidth)||"",v=>{t.settings=t.settings||{};var n=Number(v);t.settings.fixedWidth=(!isNaN(n)&&n>=50)?Math.round(n):"";renderCanvas();},{undo:true});
+            bind("carFixedH",(t.settings&&t.settings.fixedHeight)||"",v=>{t.settings=t.settings||{};var n=Number(v);t.settings.fixedHeight=(!isNaN(n)&&n>=50)?Math.round(n):"";renderCanvas();},{undo:true});
         }
         renderCarouselEditor();
     } else if(selKind==="el"&&t.type==="menu"){
@@ -1840,7 +2197,7 @@ function renderSettings(){
                 var collapsed=!!t.settings.menuCollapsed[idx];
                 return '<div class="menu-item-card"><div class="menu-item-head"><strong>Menu item '+(idx+1)+'</strong><div class="menu-item-actions"><button type="button" class="menu-del" data-idx="'+idx+'" title="Delete"><i class="fas fa-trash"></i></button><button type="button" class="menu-toggle" data-idx="'+idx+'" title="Toggle"><i class="fas '+(collapsed?'fa-chevron-down':'fa-chevron-up')+'"></i></button></div></div>'+(collapsed?'':'<input id="miLabel_'+idx+'" value="'+String((it&&it.label)||"").replace(/"/g,'&quot;')+'" placeholder="Label"><input id="miUrl_'+idx+'" value="'+String((it&&it.url)||"").replace(/"/g,'&quot;')+'" placeholder="Link"><label><input id="miNew_'+idx+'" type="checkbox"'+((it&&it.newWindow)?' checked':'')+'> Open in a new window</label><label><input id="miSub_'+idx+'" type="checkbox"'+((it&&it.hasSubmenu)?' checked':'')+'> Has submenu</label>')+'</div>';
             }).join("");
-            settings.innerHTML='<div class="menu-panel-title">Menu</div>'+cards+'<button type="button" id="addMenuItem" class="fb-btn primary" style="width:100%;margin:6px 0 10px;">Add menu item</button><div class="menu-split"></div><div class="menu-section-title">Typography</div><label>Font family</label><select id="mFont"><option value="">Same font as the page</option>'+fonts.map(f=>'<option value="'+f.value.replace(/"/g,'&quot;')+'">'+f.label+'</option>').join('')+'</select><div class="menu-typo-grid"><div class="px-wrap"><input id="mFs" type="number" step="1"><span class="px-unit">px</span></div><div class="px-wrap"><input id="mLh" type="number" step="0.1"><span class="px-unit">lh</span></div></div><div class="menu-align-row"><button type="button" class="menu-align-btn" data-align="left"><i class="fas fa-align-left"></i></button><button type="button" class="menu-align-btn" data-align="center"><i class="fas fa-align-center"></i></button><button type="button" class="menu-align-btn" data-align="right"><i class="fas fa-align-right"></i></button></div><label>Letter spacing</label><div class="menu-slider-row"><input id="mLsRange" type="range" min="0" max="20" step="0.1"><input id="mLsNum" type="number" min="0" max="20" step="0.1"></div><div class="menu-split"></div><div class="menu-section-title">Color</div><label>Menu items text color</label><input id="mTextColor" type="color"><label>Active menu item color</label><input id="mActiveColor" type="color"><label>Menu items underline color</label><input id="mUnderlineColor" type="color"><div class="menu-split"></div><div class="menu-section-title">Margin</div><label>Spacing between menu items</label><div class="menu-slider-row"><input id="mGapRange" type="range" min="0" max="64" step="1"><input id="mGapNum" type="number" min="0" max="64" step="1"></div><div class="menu-split"></div><div class="menu-section-title">Size and position</div><label>Padding</label><div class="size-grid"><div class="fld"><label>T</label><input id="pTop" type="number" value="'+pad[0]+'"></div><div class="fld"><label>R</label><input id="pRight" type="number" value="'+pad[1]+'"></div><div class="fld"><label>B</label><input id="pBottom" type="number" value="'+pad[2]+'"></div><div class="fld"><label>L</label><input id="pLeft" type="number" value="'+pad[3]+'"></div><div class="size-link"><button type="button" id="linkPad" title="Link padding"><span>&harr;</span></button><span>Link</span></div></div><label>Margin</label><div class="size-grid"><div class="fld"><label>T</label><input id="mTop" type="number" value="'+mar[0]+'"></div><div class="fld"><label>R</label><input id="mRight" type="number" value="'+mar[1]+'"></div><div class="fld"><label>B</label><input id="mBottom" type="number" value="'+mar[2]+'"></div><div class="fld"><label>L</label><input id="mLeft" type="number" value="'+mar[3]+'"></div><div class="size-link"><button type="button" id="linkMar" title="Link margin"><span>&harr;</span></button><span>Link</span></div></div>'+remove;
+            settings.innerHTML='<div class="menu-panel-title">Menu</div>'+cards+'<button type="button" id="addMenuItem" class="fb-btn primary" style="width:100%;margin:6px 0 10px;">Add menu item</button><div class="menu-split"></div><div class="menu-section-title">Typography</div><label>Font family</label><select id="mFont"><option value="">Same font as the page</option>'+fonts.map(f=>'<option value="'+f.value.replace(/"/g,'&quot;')+'">'+f.label+'</option>').join('')+'</select><div class="menu-typo-grid"><div class="px-wrap"><input id="mFs" type="number" step="1"><span class="px-unit">px</span></div><div class="px-wrap"><input id="mLh" type="number" step="0.1"><span class="px-unit">lh</span></div></div><div class="menu-align-row"><button type="button" class="menu-align-btn" data-align="left"><i class="fas fa-align-left"></i></button><button type="button" class="menu-align-btn" data-align="center"><i class="fas fa-align-center"></i></button><button type="button" class="menu-align-btn" data-align="right"><i class="fas fa-align-right"></i></button></div><label>Letter spacing</label><div class="menu-slider-row"><input id="mLsRange" type="range" min="0" max="20" step="0.1"><input id="mLsNum" type="number" min="0" max="20" step="0.1"></div><div class="menu-split"></div><div class="menu-section-title">Color</div><label>Menu items text color</label><input id="mTextColor" type="color"><label>Active menu item color</label><input id="mActiveColor" type="color"><label>Menu items underline color</label><input id="mUnderlineColor" type="color"><label>Background color</label><input id="mBgColor" type="color"><label>Background image URL</label><input id="mBgImg" placeholder="https://..."><label>Upload background image</label><input id="mBgUp" type="file" accept="image/*"><div class="menu-split"></div><div class="menu-section-title">Margin</div><label>Spacing between menu items</label><div class="menu-slider-row"><input id="mGapRange" type="range" min="0" max="64" step="1"><input id="mGapNum" type="number" min="0" max="64" step="1"></div><div class="menu-split"></div><div class="menu-section-title">Size and position</div><label>Padding</label><div class="size-grid"><div class="fld"><label>T</label><input id="pTop" type="number" value="'+pad[0]+'"></div><div class="fld"><label>R</label><input id="pRight" type="number" value="'+pad[1]+'"></div><div class="fld"><label>B</label><input id="pBottom" type="number" value="'+pad[2]+'"></div><div class="fld"><label>L</label><input id="pLeft" type="number" value="'+pad[3]+'"></div><div class="size-link"><button type="button" id="linkPad" title="Link padding"><span>&harr;</span></button><span>Link</span></div></div><label>Margin</label><div class="size-grid"><div class="fld"><label>T</label><input id="mTop" type="number" value="'+mar[0]+'"></div><div class="fld"><label>R</label><input id="mRight" type="number" value="'+mar[1]+'"></div><div class="fld"><label>B</label><input id="mBottom" type="number" value="'+mar[2]+'"></div><div class="fld"><label>L</label><input id="mLeft" type="number" value="'+mar[3]+'"></div><div class="size-link"><button type="button" id="linkMar" title="Link margin"><span>&harr;</span></button><span>Link</span></div></div>'+remove;
 
             items.forEach((it,idx)=>{
                 var lab=document.getElementById("miLabel_"+idx),url=document.getElementById("miUrl_"+idx),nw=document.getElementById("miNew_"+idx),sm=document.getElementById("miSub_"+idx);
@@ -1869,6 +2226,10 @@ function renderSettings(){
             bind("mTextColor",(t.settings&&t.settings.textColor)||"#374151",v=>{t.settings=t.settings||{};t.settings.textColor=v;renderCanvas();},{undo:true});
             bind("mActiveColor",(t.settings&&t.settings.activeColor)||"#a89c76",v=>{t.settings=t.settings||{};t.settings.activeColor=v;renderCanvas();},{undo:true});
             bind("mUnderlineColor",(t.settings&&t.settings.underlineColor)||"#000000",v=>{t.settings=t.settings||{};t.settings.underlineColor=v;renderCanvas();},{undo:true});
+            bind("mBgColor",(t.style&&t.style.backgroundColor)||"#ffffff",v=>{sty().backgroundColor=v;renderCanvas();},{undo:true});
+            bind("mBgImg",readBgImageUrl(),v=>{var s=sty();s.backgroundImage=(v&&String(v).trim()!=="")?('url('+String(v).trim()+')'):"";renderCanvas();},{undo:true});
+            var mBgUp=document.getElementById("mBgUp");
+            if(mBgUp)mBgUp.onchange=()=>{if(mBgUp.files&&mBgUp.files[0]){saveToHistory();var mBgImg=document.getElementById("mBgImg");uploadImage(mBgUp.files[0],url=>{var s=sty();s.backgroundImage='url('+url+')';if(mBgImg)mBgImg.value=url;renderCanvas();},"Menu background image upload");}};
 
             var gapVal=Number((t.settings&&t.settings.itemGap)||13);if(isNaN(gapVal))gapVal=13;
             var gRange=document.getElementById("mGapRange"),gNum=document.getElementById("mGapNum");
@@ -1887,6 +2248,12 @@ function renderSettings(){
             if(linkMar)linkMar.onclick=()=>{saveToHistory();marginLinked=!marginLinked;linkMar.classList.toggle("linked",marginLinked);if(marginLinked){var v=document.getElementById("mTop").value;document.getElementById("mRight").value=v;document.getElementById("mBottom").value=v;document.getElementById("mLeft").value=v;sty().margin=spacingToCss([Number(v)||0,Number(v)||0,Number(v)||0,Number(v)||0]);renderCanvas();}};
         }
         renderMenuEditor();
+    } else if(selKind==="el"&&t.type==="form"){
+        t.settings=t.settings||{};
+        settings.innerHTML='<label>Submit button text</label><input id="formSubmitText" placeholder="Submit"><label>Alignment</label><select id="formAlign"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select><label>Form width</label><input id="formWidth" placeholder="100%"><div class="meta" style="margin-top:8px;">Set width in % (example: 50%) and place using alignment only.</div>'+remove;
+        bind("formSubmitText",t.content||"Submit",v=>{t.content=v||"Submit";},{undo:true});
+        bind("formAlign",(t.settings&&t.settings.alignment)||"left",v=>{t.settings=t.settings||{};t.settings.alignment=v||"left";sty().textAlign=v||"left";},{undo:true});
+        bind("formWidth",(t.style&&t.style.width)||(t.settings&&t.settings.width)||"100%",v=>{var w=v||"100%";sty().width=w;sty().height="";sty().maxWidth="";sty().minHeight="";t.settings=t.settings||{};t.settings.width=w;t.settings.formWidth=w;t.settings.height="";t.settings.maxWidth="";t.settings.minHeight="";},{undo:true});
     } else if(selKind==="el"){
         const rich=(t.type==="text"||t.type==="heading");
         var padDef=[0,0,0,0],marDef=[0,0,0,0];
@@ -1968,18 +2335,36 @@ if(fbTabComponents)fbTabComponents.onclick=()=>showLeftPanel("components");
 if(fbTabSettings)fbTabSettings.onclick=()=>showLeftPanel("settings");
 if(fbComponentsHide)fbComponentsHide.onclick=()=>{if(fbGrid)fbGrid.classList.add("components-hidden");};
 if(fbComponentsShow)fbComponentsShow.onclick=()=>{if(fbGrid)fbGrid.classList.remove("components-hidden");};
-document.getElementById("saveBtn").onclick=()=>{
+function persistCurrentStep(){
     const s=cur();if(!s)return;
     if(document.activeElement&&typeof document.activeElement.blur==="function")document.activeElement.blur();
     var t=selectedTarget();
     if(t&&(t.type==="video"||t.type==="image")){
         var wIn=document.getElementById("w");
         if(wIn){var v=(wIn.value||"").trim();if(v){var w=pxIfNumber(v);t.style=t.style||{};t.style.width=w;t.settings=t.settings||{};t.settings.width=w;}}
+    } else if(t&&t.type==="form"){
+        var fw=document.getElementById("formWidth");
+        if(fw){var fv=(fw.value||"").trim();var fwv=pxIfNumber(fv||"100%");t.style=t.style||{};t.style.width=fwv;t.settings=t.settings||{};t.settings.width=fwv;t.settings.formWidth=fwv;}
+        t.style=t.style||{};t.settings=t.settings||{};
+        t.style.height="";t.style.maxWidth="";t.style.minHeight="";
+        t.settings.height="";t.settings.maxWidth="";t.settings.minHeight="";
+        var fa=document.getElementById("formAlign");
+        if(fa){var aval=(fa.value||"left");t.settings=t.settings||{};t.settings.alignment=aval;t.style=t.style||{};t.style.textAlign=aval;}
     }
     saveMsg.textContent="Saving...";
-    fetch(saveUrl,{method:"POST",headers:{"Content-Type":"application/json","X-CSRF-TOKEN":csrf,"Accept":"application/json"},body:JSON.stringify({step_id:s.id,layout_json:state.layout})}).then(r=>{if(!r.ok)throw 1;return r.json();}).then(p=>{s.layout_json=p.layout_json||clone(state.layout);saveMsg.textContent="Saved "+new Date().toLocaleTimeString();}).catch(()=>{saveMsg.textContent="Save failed";alert("Save failed.");});
+    return fetch(saveUrl,{method:"POST",headers:{"Content-Type":"application/json","X-CSRF-TOKEN":csrf,"Accept":"application/json"},body:JSON.stringify({step_id:s.id,layout_json:state.layout})})
+        .then(r=>{if(!r.ok)throw 1;return r.json();})
+        .then(p=>{s.layout_json=p.layout_json||clone(state.layout);saveMsg.textContent="Saved "+new Date().toLocaleTimeString();});
+}
+document.getElementById("saveBtn").onclick=()=>{
+    persistCurrentStep().catch(()=>{saveMsg.textContent="Save failed";alert("Save failed.");});
 };
-document.getElementById("previewBtn").onclick=()=>{const s=cur();if(s)window.open(previewTpl.replace("__STEP__",String(s.id)),"_blank");};
+document.getElementById("previewBtn").onclick=()=>{
+    const s=cur();if(!s)return;
+    persistCurrentStep()
+        .then(()=>{window.open(previewTpl.replace("__STEP__",String(s.id)),"_blank");})
+        .catch(()=>{saveMsg.textContent="Save failed";alert("Save failed.");});
+};
 document.addEventListener("keydown",e=>{
     const key=String(e.key||"").toLowerCase();
     const ae=document.activeElement;
