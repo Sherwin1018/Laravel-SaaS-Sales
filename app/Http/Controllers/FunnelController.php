@@ -129,8 +129,11 @@ class FunnelController extends Controller
             $decoded = json_decode($rawLayout, true);
             $rawLayout = is_array($decoded) ? $decoded : [];
         }
-        if (! is_array($rawLayout) || ! isset($rawLayout['sections'])) {
-            $rawLayout = ['sections' => []];
+        if (! is_array($rawLayout)) {
+            $rawLayout = [];
+        }
+        if (! isset($rawLayout['root']) && ! isset($rawLayout['sections'])) {
+            $rawLayout = ['root' => [], 'sections' => []];
         }
 
         $step = $funnel->steps()->where('id', $validated['step_id'])->firstOrFail();
@@ -151,38 +154,86 @@ class FunnelController extends Controller
      */
     private function mergeElementSizeFromRaw(array &$layout, array $rawLayout): void
     {
-        $rawSections = $rawLayout['sections'] ?? [];
-        $sections = &$layout['sections'];
-        foreach ($sections as $si => $section) {
-            $rawRows = $rawSections[$si]['rows'] ?? [];
-            foreach (($section['rows'] ?? []) as $ri => $row) {
-                $rawCols = $rawRows[$ri]['columns'] ?? [];
-                foreach (($row['columns'] ?? []) as $ci => $column) {
-                    $rawElements = $rawCols[$ci]['elements'] ?? [];
-                    foreach (($column['elements'] ?? []) as $ei => $element) {
-                        $rawEl = $rawElements[$ei] ?? [];
-                        $rawStyle = is_array($rawEl['style'] ?? null) ? $rawEl['style'] : [];
-                        $type = (string) ($rawEl['type'] ?? $element['type'] ?? '');
-                        if ($type !== 'video' && $type !== 'image') {
-                            continue;
-                        }
-                        foreach (['width', 'height', 'maxWidth', 'minWidth', 'maxHeight', 'minHeight'] as $key) {
-                            if (! isset($rawStyle[$key])) {
-                                continue;
-                            }
-                            $v = trim((string) $rawStyle[$key]);
-                            if ($v === '') {
-                                continue;
-                            }
-                            $v = mb_substr($v, 0, 60);
-                            $layout['sections'][$si]['rows'][$ri]['columns'][$ci]['elements'][$ei]['style'] =
-                                $layout['sections'][$si]['rows'][$ri]['columns'][$ci]['elements'][$ei]['style'] ?? [];
-                            $layout['sections'][$si]['rows'][$ri]['columns'][$ci]['elements'][$ei]['style'][$key] = $v;
-                        }
-                    }
+        $mergeElementSize = function (array &$sanitizedElement, array $rawElement): void {
+            $rawStyle = is_array($rawElement['style'] ?? null) ? $rawElement['style'] : [];
+            $rawSettings = is_array($rawElement['settings'] ?? null) ? $rawElement['settings'] : [];
+            $type = (string) ($rawElement['type'] ?? $sanitizedElement['type'] ?? '');
+            if ($type !== 'video' && $type !== 'image') {
+                return;
+            }
+            foreach (['width', 'height', 'maxWidth', 'minWidth', 'maxHeight', 'minHeight'] as $key) {
+                $v = '';
+                if (isset($rawStyle[$key]) && trim((string) $rawStyle[$key]) !== '') {
+                    $v = mb_substr(trim((string) $rawStyle[$key]), 0, 60);
+                } elseif ($key === 'width' && isset($rawSettings[$key]) && trim((string) $rawSettings[$key]) !== '') {
+                    $v = mb_substr(trim((string) $rawSettings[$key]), 0, 60);
+                }
+                if ($v !== '') {
+                    $sanitizedElement['style'] = $sanitizedElement['style'] ?? [];
+                    $sanitizedElement['style'][$key] = $v;
                 }
             }
+        };
+
+        $mergeColumn = function (array &$sanitizedColumn, array $rawColumn) use ($mergeElementSize): void {
+            foreach (($sanitizedColumn['elements'] ?? []) as $ei => $_element) {
+                $mergeElementSize($sanitizedColumn['elements'][$ei], (array) ($rawColumn['elements'][$ei] ?? []));
+            }
+        };
+
+        $mergeRow = function (array &$sanitizedRow, array $rawRow) use ($mergeColumn): void {
+            foreach (($sanitizedRow['columns'] ?? []) as $ci => $_column) {
+                $mergeColumn($sanitizedRow['columns'][$ci], (array) ($rawRow['columns'][$ci] ?? []));
+            }
+        };
+
+        $mergeSection = function (array &$sanitizedSection, array $rawSection) use ($mergeElementSize, $mergeRow): void {
+            foreach (($sanitizedSection['elements'] ?? []) as $ei => $_element) {
+                $mergeElementSize($sanitizedSection['elements'][$ei], (array) ($rawSection['elements'][$ei] ?? []));
+            }
+            foreach (($sanitizedSection['rows'] ?? []) as $ri => $_row) {
+                $mergeRow($sanitizedSection['rows'][$ri], (array) ($rawSection['rows'][$ri] ?? []));
+            }
+        };
+
+        $layout['root'] = is_array($layout['root'] ?? null) ? $layout['root'] : [];
+        $rawRoot = is_array($rawLayout['root'] ?? null) ? $rawLayout['root'] : [];
+        if (count($rawRoot) === 0 && is_array($rawLayout['sections'] ?? null)) {
+            $rawRoot = collect($rawLayout['sections'])
+                ->filter(fn ($section) => is_array($section))
+                ->map(fn (array $section) => array_merge(['kind' => 'section'], $section))
+                ->values()
+                ->all();
         }
+
+        foreach ($layout['root'] as $ri => $rootItem) {
+            $rawItem = (array) ($rawRoot[$ri] ?? []);
+            $kind = strtolower((string) ($rootItem['kind'] ?? 'section'));
+            if ($kind === 'section') {
+                $mergeSection($layout['root'][$ri], $rawItem);
+                continue;
+            }
+            if ($kind === 'row') {
+                $mergeRow($layout['root'][$ri], $rawItem);
+                continue;
+            }
+            if ($kind === 'column') {
+                $mergeColumn($layout['root'][$ri], $rawItem);
+                continue;
+            }
+            if ($kind === 'el') {
+                $mergeElementSize($layout['root'][$ri], $rawItem);
+            }
+        }
+
+        $layout['sections'] = collect($layout['root'])
+            ->filter(fn ($item) => is_array($item) && strtolower((string) ($item['kind'] ?? '')) === 'section')
+            ->map(function (array $item) {
+                unset($item['kind']);
+                return $item;
+            })
+            ->values()
+            ->all();
     }
 
     public function uploadBuilderImage(Request $request, Funnel $funnel)
@@ -472,90 +523,134 @@ class FunnelController extends Controller
 
     private function sanitizeLayoutJson(array $layout): array
     {
-        $sections = collect($layout['sections'] ?? [])
-            ->filter(fn ($section) => is_array($section))
-            ->take(50)
-            ->map(function (array $section) {
-                $rows = collect($section['rows'] ?? [])
-                    ->filter(fn ($row) => is_array($row))
-                    ->take(12)
-                    ->map(function (array $row) {
-                        $columns = collect($row['columns'] ?? [])
-                            ->filter(fn ($column) => is_array($column))
-                            ->take(4)
-                            ->map(function (array $column) {
-                                $elements = collect($column['elements'] ?? [])
-                                    ->filter(fn ($element) => is_array($element))
-                                    ->take(60)
-                                    ->map(function (array $element) {
-                                        $type = (string) ($element['type'] ?? 'text');
-                                        $type = in_array($type, [
-                                            'heading', 'text', 'image', 'button', 'form', 'video', 'countdown', 'spacer', 'menu', 'carousel',
-                                        ], true) ? $type : 'text';
+        $sanitizeElement = function (array $element): array {
+            $type = (string) ($element['type'] ?? 'text');
+            $type = in_array($type, [
+                'heading', 'text', 'image', 'button', 'form', 'video', 'countdown', 'spacer', 'menu', 'carousel',
+            ], true) ? $type : 'text';
 
-                                        $rawContent = (string) ($element['content'] ?? '');
-                                        $content = in_array($type, ['heading', 'text', 'button'], true)
-                                            ? $this->sanitizeRichText($rawContent)
-                                            : mb_substr(trim($rawContent), 0, 5000);
+            $rawContent = (string) ($element['content'] ?? '');
+            $content = in_array($type, ['heading', 'text', 'button'], true)
+                ? $this->sanitizeRichText($rawContent)
+                : mb_substr(trim($rawContent), 0, 5000);
 
-                                        $rawStyle = is_array($element['style'] ?? null) ? $element['style'] : [];
-                                        $style = $this->sanitizeStyle($rawStyle);
-                                        $rawSettings = is_array($element['settings'] ?? null) ? $element['settings'] : [];
-                                        $settings = $this->sanitizeSettings($rawSettings);
-                                        if ($type === 'video' || $type === 'image') {
-                                            foreach (['width', 'height', 'maxWidth', 'minWidth', 'maxHeight', 'minHeight'] as $sizeKey) {
-                                                $fromStyle = isset($rawStyle[$sizeKey]) && trim((string) $rawStyle[$sizeKey]) !== '';
-                                                $fromSettings = isset($rawSettings[$sizeKey]) && trim((string) $rawSettings[$sizeKey]) !== '';
-                                                if ($fromStyle) {
-                                                    $style[$sizeKey] = mb_substr(trim((string) $rawStyle[$sizeKey]), 0, 60);
-                                                } elseif ($fromSettings && $sizeKey === 'width') {
-                                                    $style['width'] = mb_substr(trim((string) $rawSettings[$sizeKey]), 0, 60);
-                                                }
-                                            }
-                                        }
+            $rawStyle = is_array($element['style'] ?? null) ? $element['style'] : [];
+            $style = $this->sanitizeStyle($rawStyle);
+            $rawSettings = is_array($element['settings'] ?? null) ? $element['settings'] : [];
+            $settings = $this->sanitizeSettings($rawSettings);
+            if ($type === 'video' || $type === 'image') {
+                foreach (['width', 'height', 'maxWidth', 'minWidth', 'maxHeight', 'minHeight'] as $sizeKey) {
+                    $fromStyle = isset($rawStyle[$sizeKey]) && trim((string) $rawStyle[$sizeKey]) !== '';
+                    $fromSettings = isset($rawSettings[$sizeKey]) && trim((string) $rawSettings[$sizeKey]) !== '';
+                    if ($fromStyle) {
+                        $style[$sizeKey] = mb_substr(trim((string) $rawStyle[$sizeKey]), 0, 60);
+                    } elseif ($fromSettings && $sizeKey === 'width') {
+                        $style['width'] = mb_substr(trim((string) $rawSettings[$sizeKey]), 0, 60);
+                    }
+                }
+            }
 
-                                        return [
-                                            'id' => $this->sanitizeId($element['id'] ?? null, 'el'),
-                                            'type' => $type,
-                                            'content' => $content,
-                                            'style' => $style,
-                                            'settings' => $settings,
-                                        ];
-                                    })
-                                    ->values()
-                                    ->all();
+            return [
+                'id' => $this->sanitizeId($element['id'] ?? null, 'el'),
+                'type' => $type,
+                'content' => $content,
+                'style' => $style,
+                'settings' => $settings,
+            ];
+        };
+        $sanitizeColumn = function (array $column) use ($sanitizeElement): array {
+            $elements = collect($column['elements'] ?? [])
+                ->filter(fn ($element) => is_array($element))
+                ->take(60)
+                ->map(fn (array $element) => $sanitizeElement($element))
+                ->values()
+                ->all();
 
-                                return [
-                                    'id' => $this->sanitizeId($column['id'] ?? null, 'col'),
-                                    'style' => $this->sanitizeStyle($column['style'] ?? []),
-                                    'settings' => $this->sanitizeContainerSettings($column['settings'] ?? []),
-                                    'elements' => $elements,
-                                ];
-                            })
-                            ->values()
-                            ->all();
+            return [
+                'id' => $this->sanitizeId($column['id'] ?? null, 'col'),
+                'style' => $this->sanitizeStyle($column['style'] ?? []),
+                'settings' => $this->sanitizeContainerSettings($column['settings'] ?? []),
+                'elements' => $elements,
+            ];
+        };
 
-                        return [
-                            'id' => $this->sanitizeId($row['id'] ?? null, 'row'),
-                            'style' => $this->sanitizeStyle($row['style'] ?? []),
-                            'settings' => $this->sanitizeContainerSettings($row['settings'] ?? []),
-                            'columns' => $columns,
-                        ];
-                    })
-                    ->values()
-                    ->all();
+        $sanitizeRow = function (array $row) use ($sanitizeColumn): array {
+            $columns = collect($row['columns'] ?? [])
+                ->filter(fn ($column) => is_array($column))
+                ->take(4)
+                ->map(fn (array $column) => $sanitizeColumn($column))
+                ->values()
+                ->all();
 
-                return [
-                    'id' => $this->sanitizeId($section['id'] ?? null, 'sec'),
-                    'style' => $this->sanitizeStyle($section['style'] ?? []),
-                    'settings' => $this->sanitizeSectionSettings($section['settings'] ?? []),
-                    'rows' => $rows,
-                ];
+            return [
+                'id' => $this->sanitizeId($row['id'] ?? null, 'row'),
+                'style' => $this->sanitizeStyle($row['style'] ?? []),
+                'settings' => $this->sanitizeContainerSettings($row['settings'] ?? []),
+                'columns' => $columns,
+            ];
+        };
+
+        $sanitizeSection = function (array $section) use ($sanitizeElement, $sanitizeRow): array {
+            $sectionElements = collect($section['elements'] ?? [])
+                ->filter(fn ($element) => is_array($element))
+                ->take(60)
+                ->map(fn (array $element) => $sanitizeElement($element))
+                ->values()
+                ->all();
+            $rows = collect($section['rows'] ?? [])
+                ->filter(fn ($row) => is_array($row))
+                ->take(12)
+                ->map(fn (array $row) => $sanitizeRow($row))
+                ->values()
+                ->all();
+
+            return [
+                'id' => $this->sanitizeId($section['id'] ?? null, 'sec'),
+                'style' => $this->sanitizeStyle($section['style'] ?? []),
+                'settings' => $this->sanitizeSectionSettings($section['settings'] ?? []),
+                'elements' => $sectionElements,
+                'rows' => $rows,
+            ];
+        };
+
+        $rawRoot = is_array($layout['root'] ?? null) ? $layout['root'] : [];
+        if (count($rawRoot) === 0 && is_array($layout['sections'] ?? null)) {
+            $rawRoot = collect($layout['sections'])
+                ->filter(fn ($section) => is_array($section))
+                ->map(fn (array $section) => array_merge(['kind' => 'section'], $section))
+                ->values()
+                ->all();
+        }
+
+        $root = collect($rawRoot)
+            ->filter(fn ($item) => is_array($item))
+            ->take(120)
+            ->map(function (array $item) use ($sanitizeElement, $sanitizeSection, $sanitizeRow, $sanitizeColumn) {
+                $kind = strtolower((string) ($item['kind'] ?? 'section'));
+                if ($kind === 'section') {
+                    return array_merge(['kind' => 'section'], $sanitizeSection($item));
+                }
+                if ($kind === 'row') {
+                    return array_merge(['kind' => 'row'], $sanitizeRow($item));
+                }
+                if ($kind === 'column' || $kind === 'col') {
+                    return array_merge(['kind' => 'column'], $sanitizeColumn($item));
+                }
+                return array_merge(['kind' => 'el'], $sanitizeElement($item));
             })
             ->values()
             ->all();
 
-        return ['sections' => $sections];
+        $sections = collect($root)
+            ->filter(fn ($item) => is_array($item) && strtolower((string) ($item['kind'] ?? '')) === 'section')
+            ->map(function (array $item) {
+                unset($item['kind']);
+                return $item;
+            })
+            ->values()
+            ->all();
+
+        return ['root' => $root, 'sections' => $sections];
     }
 
     private function sanitizeId(mixed $value, string $prefix): string

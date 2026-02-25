@@ -54,9 +54,9 @@
         .row { display: flex; gap: 10px; flex-wrap: wrap; }
         .builder-section { border-radius: 14px; margin-bottom: 14px; border: none; }
         .builder-section-inner { width: 100%; box-sizing: border-box; }
-        .builder-row-inner { width: 100%; box-sizing: border-box; }
+        .builder-row-inner { width: 100%; box-sizing: border-box; display: flex; flex-wrap: wrap; gap: 8px; }
         .builder-col-inner { width: 100%; box-sizing: border-box; }
-        .builder-row { display: flex; gap: 12px; flex-wrap: wrap; padding: 6px; }
+        .builder-row { display: flex; gap: 8px; flex-wrap: wrap; padding: 6px; }
         .builder-col { min-width: 240px; min-height: 24px; flex: 1 1 0; }
         .builder-el + .builder-el { margin-top: 10px; }
         .builder-heading { margin: 0; font-size: 32px; line-height: 1.2; overflow-wrap: break-word; word-break: break-word; }
@@ -88,7 +88,59 @@
     @php
         $isPreview = $isPreview ?? false;
         $layout = is_array($step->layout_json ?? null) ? $step->layout_json : [];
-        $hasBuilderLayout = !empty($layout['sections']) && is_array($layout['sections']);
+        $rootItems = is_array($layout['root'] ?? null) ? $layout['root'] : [];
+        if (count($rootItems) === 0 && is_array($layout['sections'] ?? null)) {
+            foreach ($layout['sections'] as $legacySection) {
+                if (!is_array($legacySection)) {
+                    continue;
+                }
+                $rootItems[] = array_merge(['kind' => 'section'], $legacySection);
+            }
+        }
+        $renderSections = [];
+        foreach ($rootItems as $ri => $rootItem) {
+            if (!is_array($rootItem)) {
+                continue;
+            }
+            $kind = strtolower((string) ($rootItem['kind'] ?? 'section'));
+            if ($kind === 'section') {
+                $renderSections[] = $rootItem;
+                continue;
+            }
+            if ($kind === 'row') {
+                $renderSections[] = [
+                    'id' => 'sec_root_row_' . $ri,
+                    'style' => [],
+                    'settings' => ['contentWidth' => 'full'],
+                    'elements' => [],
+                    'rows' => [$rootItem],
+                ];
+                continue;
+            }
+            if ($kind === 'column' || $kind === 'col') {
+                $renderSections[] = [
+                    'id' => 'sec_root_col_' . $ri,
+                    'style' => [],
+                    'settings' => ['contentWidth' => 'full'],
+                    'elements' => [],
+                    'rows' => [[
+                        'id' => 'row_root_col_' . $ri,
+                        'style' => ['gap' => '8px'],
+                        'settings' => ['contentWidth' => 'full'],
+                        'columns' => [$rootItem],
+                    ]],
+                ];
+                continue;
+            }
+            $renderSections[] = [
+                'id' => 'sec_root_el_' . $ri,
+                'style' => [],
+                'settings' => ['contentWidth' => 'full'],
+                'elements' => [$rootItem],
+                'rows' => [],
+            ];
+        }
+        $hasBuilderLayout = count($renderSections) > 0;
 
         $styleToString = function (array $style): string {
             $allowed = [
@@ -116,6 +168,7 @@
                 'backgroundAttachment' => 'background-attachment',
                 'justifyContent' => 'justify-content',
                 'alignItems' => 'align-items',
+                'flex' => 'flex',
                 'gap' => 'gap',
                 'lineHeight' => 'line-height',
                 'letterSpacing' => 'letter-spacing',
@@ -158,27 +211,52 @@
 
         <div class="step-content--full">
             @if($hasBuilderLayout)
-                @foreach($layout['sections'] as $section)
+                @foreach($renderSections as $section)
                     @php
                         $sectionStyle = $styleToString(is_array($section['style'] ?? null) ? $section['style'] : []);
                         $sectionSettings = is_array($section['settings'] ?? null) ? $section['settings'] : [];
                         $contentWidth = trim((string) ($sectionSettings['contentWidth'] ?? 'full'));
                         $widthMap = ['full' => '', 'wide' => '1200px', 'medium' => '992px', 'small' => '768px', 'xsmall' => '576px'];
                         $innerMax = $widthMap[$contentWidth] ?? '';
+                        $sectionElements = is_array($section['elements'] ?? null) ? $section['elements'] : [];
                         $rows = is_array($section['rows'] ?? null) ? $section['rows'] : [];
+                        if (count($sectionElements) > 0) {
+                            array_unshift($rows, [
+                                'id' => 'sec_el_row_' . md5((string) ($section['id'] ?? uniqid('', true))),
+                                'style' => ['gap' => '8px'],
+                                'settings' => ['contentWidth' => 'full'],
+                                'columns' => [[
+                                    'id' => 'sec_el_col_' . md5((string) ($section['id'] ?? uniqid('', true))),
+                                    'style' => ['flex' => '1 1 240px'],
+                                    'settings' => [],
+                                    'elements' => $sectionElements,
+                                ]],
+                            ]);
+                        }
                     @endphp
                     <section class="builder-section" style="{{ $sectionStyle }}">
                         <div class="builder-section-inner" @if($innerMax !== '') style="max-width: {{ $innerMax }}; margin: 0 auto;" @endif>
                         @foreach($rows as $row)
                             @php
                                 $rowStyle = $styleToString(is_array($row['style'] ?? null) ? $row['style'] : []);
+                                $rowStyleArr = is_array($row['style'] ?? null) ? $row['style'] : [];
                                 $rowSettings = is_array($row['settings'] ?? null) ? $row['settings'] : [];
                                 $rowContentWidth = trim((string) ($rowSettings['contentWidth'] ?? 'full'));
                                 $rowInnerMax = $widthMap[$rowContentWidth] ?? '';
+                                $rowGap = trim((string) ($rowStyleArr['gap'] ?? ''));
+                                $rowInnerStyle = [];
+                                if ($rowInnerMax !== '') {
+                                    $rowInnerStyle[] = 'max-width: ' . $rowInnerMax;
+                                    $rowInnerStyle[] = 'margin: 0 auto';
+                                }
+                                if ($rowGap !== '' && preg_match('/^[#(),.%\-\sA-Za-z0-9]+$/u', $rowGap)) {
+                                    $rowInnerStyle[] = 'gap: ' . $rowGap;
+                                }
+                                $rowInnerStyleString = implode('; ', $rowInnerStyle);
                                 $columns = is_array($row['columns'] ?? null) ? $row['columns'] : [];
                             @endphp
                             <div class="builder-row" style="{{ $rowStyle }}">
-                                <div class="builder-row-inner" @if($rowInnerMax !== '') style="max-width: {{ $rowInnerMax }}; margin: 0 auto;" @endif>
+                                <div class="builder-row-inner" @if($rowInnerStyleString !== '') style="{{ $rowInnerStyleString }}" @endif>
                                 @foreach($columns as $column)
                                     @php
                                         $colStyle = $styleToString(is_array($column['style'] ?? null) ? $column['style'] : []);
@@ -193,12 +271,17 @@
                                             @php
                                                 $type = $element['type'] ?? 'text';
                                                 $content = (string) ($element['content'] ?? '');
-                                                $style = $styleToString(is_array($element['style'] ?? null) ? $element['style'] : []);
+                                                $rawStyle = is_array($element['style'] ?? null) ? $element['style'] : [];
+                                                $style = $styleToString($rawStyle);
                                                 $settings = is_array($element['settings'] ?? null) ? $element['settings'] : [];
                                                 $link = trim((string) ($settings['link'] ?? '#'));
                                                 $src = trim((string) ($settings['src'] ?? ''));
                                                 $alt = trim((string) ($settings['alt'] ?? 'Image'));
-                                                $alignment = $settings['alignment'] ?? 'left';
+                                                $alignment = trim((string) ($settings['alignment'] ?? ''));
+                                                if (!in_array($alignment, ['left', 'center', 'right'], true)) {
+                                                    $fallbackAlign = strtolower(trim((string) ($rawStyle['textAlign'] ?? '')));
+                                                    $alignment = in_array($fallbackAlign, ['left', 'center', 'right'], true) ? $fallbackAlign : 'center';
+                                                }
                                                 $alignStyle = 'display:flex;justify-content:' . ($alignment === 'right' ? 'flex-end' : ($alignment === 'center' ? 'center' : 'flex-start')) . ';';
                                                 $menuAlign = $settings['menuAlign'] ?? 'left';
                                                 $menuAlignStyle = 'display:flex;justify-content:' . ($menuAlign === 'right' ? 'flex-end' : ($menuAlign === 'center' ? 'center' : 'flex-start')) . ';';
