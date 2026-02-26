@@ -262,31 +262,37 @@ steps.forEach(s=>{const o=document.createElement("option");o.value=s.id;o.textCo
 stepSel.value=state.sid;
 
 const uid=p=>p+"_"+Math.random().toString(36).slice(2,10),clone=o=>JSON.parse(JSON.stringify(o));
-const defaults=()=>({
-    root:[{
-        kind:"section",
-        id:uid("sec"),
-        style:{padding:"20px",backgroundColor:"#ffffff"},
-        settings:{contentWidth:"full"},
-        elements:[],
-        rows:[{
-            id:uid("row"),
-            style:{gap:"8px"},
-            columns:[{
-                id:uid("col"),
-                style:{},
-                elements:[{
-                    id:uid("el"),
-                    type:"heading",
-                    content:"Welcome to Our Offer",
-                    style:{fontSize:"32px",color:"#0f172a"},
-                    settings:{}
+const defaults=(stepType)=>{
+    const t=String(stepType||"").toLowerCase();
+    if(t==="landing"||t==="opt_in"||t==="sales"||t==="checkout"||t==="thank_you"){
+        return {root:[],sections:[]};
+    }
+    return {
+        root:[{
+            kind:"section",
+            id:uid("sec"),
+            style:{padding:"20px",backgroundColor:"#ffffff"},
+            settings:{contentWidth:"full"},
+            elements:[],
+            rows:[{
+                id:uid("row"),
+                style:{gap:"8px"},
+                columns:[{
+                    id:uid("col"),
+                    style:{},
+                    elements:[{
+                        id:uid("el"),
+                        type:"heading",
+                        content:"Welcome to Our Offer",
+                        style:{fontSize:"32px",color:"#0f172a"},
+                        settings:{}
+                    }]
                 }]
             }]
-        }]
-    }],
-    sections:[]
-});
+        }],
+        sections:[]
+    };
+};
 const cur=()=>steps.find(s=>+s.id===+state.sid);
 const sec=id=>(state.layout.sections||[]).find(x=>x.id===id);
 const row=(s,r)=>(sec(s)?.rows||[]).find(x=>x.id===r);
@@ -411,7 +417,8 @@ function normalizeElementStyle(layout){
 function loadStep(id){
     state.sid=+id;
     const s=cur();
-    state.layout=(s&&s.layout_json&&((Array.isArray(s.layout_json.root)&&s.layout_json.root.length)||(Array.isArray(s.layout_json.sections)&&s.layout_json.sections.length)))?clone(s.layout_json):defaults();
+    const hasSavedLayout=!!(s&&s.layout_json&&typeof s.layout_json==="object"&&!Array.isArray(s.layout_json));
+    state.layout=hasSavedLayout?clone(s.layout_json):defaults(s&&s.type);
     ensureRootModel();
     normalizeElementStyle(state.layout);
     state.sel=null;
