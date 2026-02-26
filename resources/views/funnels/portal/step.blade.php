@@ -679,7 +679,7 @@
                                                             ['type' => 'first_name', 'label' => 'First name'],
                                                             ['type' => 'last_name', 'label' => 'Last name'],
                                                             ['type' => 'email', 'label' => 'Email'],
-                                                            ['type' => 'phone_number', 'label' => 'Phone (09XXXXXXXXX)'],
+                                                            ['type' => 'phone_number', 'label' => 'Phone'],
                                                             ['type' => 'province', 'label' => 'Province'],
                                                             ['type' => 'city_municipality', 'label' => 'City / Municipality'],
                                                             ['type' => 'barangay', 'label' => 'Barangay'],
@@ -697,9 +697,10 @@
                                                                     $req = in_array($ft, ['email', 'phone_number', 'province', 'city_municipality', 'barangay', 'street'], true);
                                                                     $inputType = $ft === 'email' ? 'email' : 'text';
                                                                     $pat = $ft === 'phone_number' ? 'pattern="^09\d{9}$" maxlength="11" minlength="11" inputmode="numeric"' : '';
+                                                                    $ph = $ft === 'phone_number' ? '09XXXXXXXXX' : $lbl;
                                                                 @endphp
                                                                 <label style="display:block;margin-bottom:4px;">{{ $lbl }}</label>
-                                                                <input type="{{ $inputType }}" name="{{ $nm }}" {{ $req ? 'required' : '' }} {!! $pat !!} placeholder="{{ $lbl }}" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:8px;box-sizing:border-box;">
+                                                                <input type="{{ $inputType }}" name="{{ $nm }}" {{ $req ? 'required' : '' }} {!! $pat !!} placeholder="{{ $ph }}" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:8px;box-sizing:border-box;">
                                                             @endforeach
                                                             <button type="submit" class="btn" style="margin-top:2px;">{{ $content !== '' ? $content : 'Submit' }}</button>
                                                         </form>
@@ -707,10 +708,12 @@
                                                         <form onsubmit="return false;" style="{{ $formInlineStyle }}">
                                                             @foreach($formFields as $f)
                                                                 @php
-                                                                    $lbl = trim((string) ($f['label'] ?? '')) !== '' ? $f['label'] : (($f['type'] ?? 'Field'));
+                                                                    $ft = $f['type'] ?? 'custom';
+                                                                    $lbl = trim((string) ($f['label'] ?? '')) !== '' ? $f['label'] : ($ft ?: 'Field');
+                                                                    $ph = $ft === 'phone_number' ? '09XXXXXXXXX' : $lbl;
                                                                 @endphp
                                                                 <label style="display:block;margin-bottom:4px;">{{ $lbl }}</label>
-                                                                <input type="text" placeholder="{{ $lbl }}" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:8px;box-sizing:border-box;" @if($isPreview) disabled @endif>
+                                                                <input type="text" placeholder="{{ $ph }}" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:8px;box-sizing:border-box;" @if($isPreview) disabled @endif>
                                                             @endforeach
                                                             <button type="button" class="btn" style="margin-top:2px;" @if($isPreview) disabled @endif>{{ $content !== '' ? $content : 'Submit' }}</button>
                                                         </form>

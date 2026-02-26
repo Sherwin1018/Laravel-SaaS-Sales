@@ -878,7 +878,7 @@ class FunnelController extends Controller
                     $label = mb_substr(trim((string) ($field['label'] ?? '')), 0, 150);
                     if ($label === '') {
                         $label = match ($type) {
-                            'phone_number' => 'Phone (09XXXXXXXXX)',
+                            'phone_number' => 'Phone',
                             'city_municipality' => 'City / Municipality',
                             default => ucwords(str_replace('_', ' ', $type)),
                         };
@@ -892,7 +892,7 @@ class FunnelController extends Controller
                     ['type' => 'first_name', 'label' => 'First name'],
                     ['type' => 'last_name', 'label' => 'Last name'],
                     ['type' => 'email', 'label' => 'Email'],
-                    ['type' => 'phone_number', 'label' => 'Phone (09XXXXXXXXX)'],
+                    ['type' => 'phone_number', 'label' => 'Phone'],
                 ];
             }
         }
