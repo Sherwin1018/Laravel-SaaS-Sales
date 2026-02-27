@@ -23,6 +23,7 @@
             box-shadow: none;
             overflow: hidden;
         }
+        body.is-published .step-content--full { padding-top: 0; }
         .step-content--full .builder-section,
         .step-content--full .builder-row,
         .step-content--full .builder-col { max-width: none !important; }
@@ -93,7 +94,7 @@
         }
     </style>
 </head>
-<body>
+<body class="{{ ($isPreview ?? false) ? 'is-preview' : 'is-published' }}">
     @php
         $isPreview = $isPreview ?? false;
         $layout = is_array($step->layout_json ?? null) ? $step->layout_json : [];
@@ -155,35 +156,58 @@
         $styleToString = function (array $style): string {
             $allowed = [
                 'backgroundColor' => 'background-color',
+                'background-color' => 'background-color',
+                'background' => 'background',
                 'color' => 'color',
                 'fontSize' => 'font-size',
+                'font-size' => 'font-size',
                 'fontWeight' => 'font-weight',
+                'font-weight' => 'font-weight',
                 'fontFamily' => 'font-family',
+                'font-family' => 'font-family',
                 'padding' => 'padding',
                 'margin' => 'margin',
                 'textAlign' => 'text-align',
+                'text-align' => 'text-align',
                 'borderRadius' => 'border-radius',
+                'border-radius' => 'border-radius',
                 'border' => 'border',
                 'boxShadow' => 'box-shadow',
+                'box-shadow' => 'box-shadow',
                 'width' => 'width',
                 'height' => 'height',
                 'maxWidth' => 'max-width',
+                'max-width' => 'max-width',
                 'minWidth' => 'min-width',
+                'min-width' => 'min-width',
                 'maxHeight' => 'max-height',
+                'max-height' => 'max-height',
                 'minHeight' => 'min-height',
+                'min-height' => 'min-height',
                 'backgroundImage' => 'background-image',
+                'background-image' => 'background-image',
                 'backgroundSize' => 'background-size',
+                'background-size' => 'background-size',
                 'backgroundPosition' => 'background-position',
+                'background-position' => 'background-position',
                 'backgroundRepeat' => 'background-repeat',
+                'background-repeat' => 'background-repeat',
                 'backgroundAttachment' => 'background-attachment',
+                'background-attachment' => 'background-attachment',
                 'justifyContent' => 'justify-content',
+                'justify-content' => 'justify-content',
                 'alignItems' => 'align-items',
+                'align-items' => 'align-items',
                 'flex' => 'flex',
                 'gap' => 'gap',
                 'lineHeight' => 'line-height',
+                'line-height' => 'line-height',
                 'letterSpacing' => 'letter-spacing',
+                'letter-spacing' => 'letter-spacing',
                 'textDecorationColor' => 'text-decoration-color',
+                'text-decoration-color' => 'text-decoration-color',
                 'textDecoration' => 'text-decoration',
+                'text-decoration' => 'text-decoration',
             ];
 
             $out = [];
@@ -199,7 +223,7 @@
                     $out[] = $cssProp . ':' . $value;
                     continue;
                 }
-                if (!preg_match('/^[#(),.%\-\sA-Za-z0-9]+$/u', $value)) {
+                if (!preg_match('/^[#(),.%:\-\/\sA-Za-z0-9]+$/u', $value)) {
                     continue;
                 }
                 $out[] = $cssProp . ':' . $value;
@@ -314,22 +338,23 @@
                                                         ? $fallbackAlign
                                                         : (($type === 'form') ? 'left' : 'center');
                                                 }
-                                                $alignStyle = 'display:flex;justify-content:' . ($alignment === 'right' ? 'flex-end' : ($alignment === 'center' ? 'center' : 'flex-start')) . ';';
+                                                $alignStyle = 'display:flex;justify-content:' . ($alignment === 'right' ? 'flex-end' : ($alignment === 'center' ? 'center' : 'flex-start')) . ';margin-left:' . ($alignment === 'left' ? '0' : 'auto') . ';margin-right:' . ($alignment === 'right' ? '0' : 'auto') . ';';
                                                 $menuAlign = $settings['menuAlign'] ?? 'left';
                                                 $menuAlignStyle = 'display:flex;justify-content:' . ($menuAlign === 'right' ? 'flex-end' : ($menuAlign === 'center' ? 'center' : 'flex-start')) . ';';
                                                 $widthBehavior = $settings['widthBehavior'] ?? 'fluid';
                                                 $btnWrapStyle = ($type === 'button' ? $alignStyle : '');
+                                                $mediaWrapStyle = ($style !== '' ? ($style . ';') : '') . $alignStyle;
                                                 $btnInnerStyle = $style . ($type === 'button' && $widthBehavior === 'fill' ? (($style !== '' ? ';' : '') . ' width:100%;display:block;box-sizing:border-box;text-align:center;') : '');
                                             @endphp
 
-                                            <div class="builder-el" @if($type === 'image' || $type === 'video' || $type === 'button') style="{{ $type === 'button' ? $btnWrapStyle : $alignStyle }}" @endif>
+                                            <div class="builder-el" @if($type === 'image' || $type === 'video' || $type === 'button') style="{{ $type === 'button' ? $btnWrapStyle : $mediaWrapStyle }}" @endif>
                                                 @if($type === 'heading')
                                                     <h2 class="builder-heading" style="{{ $style }}">{!! $content !!}</h2>
                                                 @elseif($type === 'text')
                                                     <p class="builder-text" style="{{ $style }}">{!! $content !!}</p>
                                                 @elseif($type === 'image')
                                                     @if($src !== '')
-                                                        <img class="builder-img" src="{{ $src }}" alt="{{ $alt !== '' ? $alt : 'Image' }}" style="{{ $style }}">
+                                                        <img class="builder-img" src="{{ $src }}" alt="{{ $alt !== '' ? $alt : 'Image' }}">
                                                     @endif
                                                 @elseif($type === 'button')
                                                     <a class="btn" href="{{ $link !== '' ? $link : '#' }}" style="{{ $btnInnerStyle }}">{!! $content !== '' ? $content : 'Button' !!}</a>
