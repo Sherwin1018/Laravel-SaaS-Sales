@@ -109,6 +109,10 @@ Acceptance criteria:
 - Workflow executions are auditable and retryable.
 - External automation (n8n) can receive reliable event payloads.
 
+**Phase C – Current status (automation MVP):**
+- Done: Lead-created trigger, outbound n8n webhook, Automation tab (workflows, triggers, sequence steps with email/SMS and delay). n8n receives reliable payload; lead can receive scheduled emails via n8n.
+- Not done: Other events (funnel opt-in, lead status changed, payment_*, subscription_renewed), central event bus, execution logs, retry/dead-letter, inbound webhook, delivery/open/click logging. SMS sending and funnel opt-in / lead status changed flows not yet wired.
+
 ---
 
 ### Phase D - Complete Payments + Subscriptions (2-3 weeks)

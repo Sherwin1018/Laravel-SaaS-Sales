@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\SendN8nWebhookJob;
+use App\Models\AutomationWorkflow;
 use App\Models\Lead;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 
 class LeadController extends Controller
@@ -140,7 +143,7 @@ class LeadController extends Controller
         try {
             $assignedTo = $this->normalizeAssignee($validated['assigned_to'] ?? null, $user);
 
-            Lead::create([
+            $lead = Lead::create([
                 'tenant_id' => $user->tenant_id,
                 'assigned_to' => $assignedTo,
                 'name' => $validated['name'],
@@ -150,6 +153,28 @@ class LeadController extends Controller
                 'status' => $validated['status'],
                 'score' => 0,
             ]);
+
+            $payload = [
+                'lead_id' => $lead->id,
+                'tenant_id' => $lead->tenant_id,
+                'name' => $lead->name,
+                'email' => $lead->email,
+                'phone' => $lead->phone,
+                'status' => $lead->status,
+                'source_campaign' => $lead->source_campaign,
+            ];
+
+            $payload['steps'] = $this->getActiveLeadCreatedSteps($lead->tenant_id);
+
+            // Top-level email fields for n8n: first email step with placeholders already replaced.
+            $firstEmail = $this->firstEmailStep($payload['steps']);
+            if ($firstEmail !== null) {
+                $payload['email_subject'] = $this->replaceLeadPlaceholders($firstEmail['subject'] ?? '', $lead);
+                $payload['email_body'] = $this->replaceLeadPlaceholders($firstEmail['body'] ?? '', $lead);
+                $payload['email_sender_name'] = $firstEmail['sender_name'] ?? null;
+            }
+
+            SendN8nWebhookJob::dispatch('lead.created', $payload);
 
             return redirect()->route('leads.index')->with('success', 'Added Successfully');
         } catch (\Throwable $e) {
@@ -402,5 +427,82 @@ class LeadController extends Controller
         }
 
         return $grouped;
+    }
+
+    /**
+     * Get sequence steps from active automation(s) that trigger on lead.created for this tenant.
+     * Used so n8n receives the email/SMS content you configured in the Automation tab.
+     */
+    private function getActiveLeadCreatedSteps(int $tenantId): array
+    {
+        if (! \class_exists(AutomationWorkflow::class)) {
+            return [];
+        }
+
+        $query = AutomationWorkflow::where('tenant_id', $tenantId)
+            ->whereHas('triggers', fn ($q) => $q->where('event', 'lead.created'))
+            ->with(['sequenceSteps' => fn ($q) => $q->orderBy('position')]);
+
+        if (Schema::hasColumn('automation_workflows', 'status')) {
+            $query->where('status', 'active');
+        } else {
+            $query->where('is_active', true);
+        }
+
+        $workflows = $query->get();
+        $steps = [];
+
+        foreach ($workflows as $workflow) {
+            foreach ($workflow->sequenceSteps as $step) {
+                $steps[] = [
+                    'position' => $step->position,
+                    'channel' => $step->channel,
+                    'subject' => $step->subject,
+                    'body' => $step->body,
+                    'sender_name' => $step->sender_name,
+                    'delay_minutes' => (int) $step->delay_minutes,
+                ];
+            }
+        }
+
+        return $steps;
+    }
+
+    /**
+     * First step with channel 'email' from the steps array, or null.
+     */
+    private function firstEmailStep(array $steps): ?array
+    {
+        foreach ($steps as $step) {
+            if (isset($step['channel']) && $step['channel'] === 'email') {
+                return $step;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Replace {{ name }}, {{ email }}, {{ phone }} in template with lead data.
+     * Uses regex so any whitespace inside the braces is matched (e.g. {{ name }}, {{name}}, {{  name  }}).
+     */
+    private function replaceLeadPlaceholders(string $template, Lead $lead): string
+    {
+        $pairs = [
+            'name' => $lead->name,
+            'email' => $lead->email,
+            'phone' => $lead->phone,
+        ];
+
+        foreach ($pairs as $key => $value) {
+            // Match {{ name }}, {{name}}, {{  name  }}, etc. (allow optional whitespace)
+            $template = preg_replace(
+                '/\{\{\s*' . preg_quote($key, '/') . '\s*\}\}/u',
+                $value,
+                $template
+            );
+        }
+
+        return $template;
     }
 }

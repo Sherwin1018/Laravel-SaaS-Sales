@@ -1,4 +1,4 @@
-﻿# SaaS Sales and Marketing Funnel System
+# SaaS Sales and Marketing Funnel System
 
 ## Project Brief
 This project builds a multi-tenant SaaS Sales and Marketing Funnel System where multiple client businesses operate independently in one platform.
@@ -43,11 +43,11 @@ Deliver a platform that:
 - [ ] Lead form capture and tagging
 
 ### Step 3 (Week 4): Automation Engine
-- [ ] Email sequences
-- [ ] SMS integration
-- [ ] Time-delay actions
-- [ ] Conditional workflows
-- [ ] Event-based automation triggers
+- [x] Email sequences (for lead created: defined in Automation tab, sent via n8n webhook)
+- [ ] SMS integration (not yet done)
+- [x] Time-delay actions (delay per step in Automation tab; executed in n8n for lead created)
+- [x] Conditional workflows (trigger + steps in UI for lead created; conditions in n8n)
+- [x] Event-based automation trigger: lead created only (funnel opt-in, lead status changed not yet wired)
 
 ### Step 4 (Week 5): Checkout + Subscriptions
 - [ ] One-time payments flow
@@ -152,10 +152,10 @@ Deliver a platform that:
 - [x] Sales pipeline view (basic Kanban-style section)
 
 ### 4. Automation Engine
-- [ ] Email sequences
-- [ ] SMS workflows
-- [ ] Conditional logic
-- [ ] Trigger-based automation
+- [x] Email sequences (lead created only; Automation tab + n8n webhook)
+- [ ] SMS workflows (not yet done)
+- [x] Conditional logic (trigger + steps for lead created; conditions in n8n)
+- [x] Trigger-based automation (lead created wired; funnel opt-in, lead status changed not yet)
 
 ### 5. Checkout and Payment System
 - [x] Basic payment tracking records
@@ -207,7 +207,7 @@ All modules must remain interconnected: CRM, funnel tracking, automation, and pa
 - CRM <-> Funnel: Implemented. Published funnel opt-in creates/updates leads in CRM (`FunnelPortalController@optIn`).
 - Funnel <-> Payments: Implemented (initial). Checkout/offer steps create payment records linked to funnel lead (`FunnelPortalController@checkout`, `@offer`).
 - CRM <-> Payments: Implemented (initial). Payments can be linked to leads (`payments.lead_id`) and viewed in billing.
-- Automation <-> CRM/Funnel/Payments: Not yet implemented as workflow engine. Current automation is limited to manual/basic lead activity logging and score events.
+- Automation <-> CRM: Implemented (initial). Lead created dispatches webhook to n8n with lead data and active "Lead created" automation steps (email subject/body, placeholders replaced). Automation tab (Account Owner / Marketing Manager) configures workflows and steps. Funnel opt-in and lead status changed triggers not yet wired; SMS not yet done.
 
 ### Comments and Suggestions
 - Add event-driven automation triggers for key points: `lead_created`, `lead_status_changed`, `payment_paid`, `payment_failed`.
@@ -233,6 +233,6 @@ At completion, the platform should provide:
 ## Recommended Immediate Next Tasks
 - [ ] Add lead tags and custom fields. (Not done)
 - [x] Start funnel builder MVP (Week 3 scope). (Initial)
-- [ ] Add automated email sequence infrastructure. (Not done)
+- [x] Automation (initial): lead created webhook to n8n, Automation tab for workflows/steps; funnel opt-in, lead status changed, SMS not yet done.
 - [ ] Integrate payment gateway for real transactions. (Not done)
 - [ ] Add feature tests for assignment, scoring, pipeline, and payments. (Not done)
