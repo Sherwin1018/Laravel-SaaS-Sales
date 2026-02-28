@@ -64,8 +64,9 @@
 .sec.sec--bare-wrap{border:0;background:transparent;padding:0}
 .row{display:flex;flex-wrap:wrap;gap:8px;border:1px dashed #cbd5e1;border-radius:8px;padding:6px}
 .row.row--bare-wrap{border:0;background:transparent;padding:0}
-.row-inner{display:flex;flex-wrap:wrap;gap:8px}
-.col{flex:1 1 240px;min-height:58px;min-width:0;border:1px dashed #bfdbfe;border-radius:7px;padding:6px;background:#f8fafc}
+.row-inner{display:flex;flex-wrap:wrap;gap:8px;position:relative}
+.col{flex:1 1 240px;min-height:120px;min-width:0;border:1px dashed #bfdbfe;border-radius:7px;padding:6px;background:#ffffff;position:relative;overflow:hidden}
+.row-resize-handle-y{position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);z-index:4;width:42px;height:10px;border-radius:999px;border:1px solid #93c5fd;background:#dbeafe;cursor:ns-resize;opacity:.9}
 .el{border:1px solid #e2e8f0;border-radius:7px;padding:7px;background:#fff;margin-bottom:6px;min-width:0;overflow-wrap:break-word;word-break:break-word}
 .el.el--carousel{border:0 !important;background:transparent !important;padding:0 !important}
 .el.el--form{border:0 !important;background:transparent !important;padding:0 !important}
@@ -393,6 +394,14 @@ function onRichTextKeys(node,onUpdate){
 }
 
 function normalizeElementStyle(layout){
+    function normalizeLegacyColBg(col){
+        if(!col||typeof col!=="object")return;
+        col.style=(col.style&&typeof col.style==="object")?col.style:{};
+        var bg=String(col.style.backgroundColor||"").trim().toLowerCase();
+        if(bg==="#f8fafc"||bg==="rgb(248, 250, 252)"||bg==="rgba(248, 250, 252, 1)"){
+            col.style.backgroundColor="#ffffff";
+        }
+    }
     (layout.sections||[]).forEach(sec=>{
         (sec.elements||[]).forEach(el=>{
             if(el.type==="video"||el.type==="image"){
@@ -403,6 +412,7 @@ function normalizeElementStyle(layout){
         });
         (sec.rows||[]).forEach(row=>{
             (row.columns||[]).forEach(col=>{
+                normalizeLegacyColBg(col);
                 (col.elements||[]).forEach(el=>{
                     if(el.type==="video"||el.type==="image"){
                         if(!el.style||typeof el.style!=="object")el.style={};
@@ -763,7 +773,7 @@ function renderCarouselPreviewItem(item,onDelete,onSelect,isSelected){
 }
 
 function createDefaultRow(){return {id:uid("row"),style:{gap:"8px"},columns:[]};}
-function createDefaultColumn(){return {id:uid("col"),style:{flex:"1 1 240px"},elements:[]};}
+function createDefaultColumn(){return {id:uid("col"),style:{flex:"1 1 240px",height:"120px",minHeight:"120px"},elements:[]};}
 function createDefaultSection(){return {id:uid("sec"),style:{padding:"20px",backgroundColor:"#fff"},settings:{contentWidth:"full"},elements:[],rows:[]};}
 function createRootItem(type){
     if(type==="section")return Object.assign({kind:"section"},createDefaultSection());
@@ -844,6 +854,7 @@ function addComponent(type){
         state.sel={k:"el",scope:"section",s:s.id,e:itNoGrid.id};
         return;
     }
+    if(!canAddElementToColumn(s.id,r.id,c.id,type))return;
     const it=createDefaultElement(type);
     if(!it)return;
     c.elements.push(it);
@@ -853,6 +864,94 @@ function dropPlacement(ev,node){
     var rect=node.getBoundingClientRect();
     var y=Number(ev.clientY)||0;
     return y<(rect.top+rect.height/2)?"before":"after";
+}
+
+function estimateNewElementHeight(type,colNode){
+    var t=String(type||"").toLowerCase();
+    if(t==="heading")return 78;
+    if(t==="text")return 64;
+    if(t==="button")return 62;
+    if(t==="image")return 56;
+    if(t==="video")return 180;
+    if(t==="form")return 240;
+    if(t==="menu")return 70;
+    if(t==="spacer")return 36;
+    if(t==="carousel")return 220;
+    var fallback=72;
+    if(!colNode)return fallback;
+    try{
+        var probeItem=createDefaultElement(t);
+        if(!probeItem)return fallback;
+        var probe=document.createElement("div");
+        probe.style.position="absolute";
+        probe.style.left="-10000px";
+        probe.style.top="-10000px";
+        probe.style.visibility="hidden";
+        probe.style.pointerEvents="none";
+        probe.style.width=Math.max(120,(Number(colNode.clientWidth)||260)-12)+"px";
+        var rendered=renderElement(probeItem,{s:"__m__",r:"__m__",c:"__m__",scope:"section"});
+        probe.appendChild(rendered);
+        document.body.appendChild(probe);
+        var mb=0;
+        try{mb=parseFloat((window.getComputedStyle(rendered).marginBottom)||"0")||0;}catch(_e){mb=0;}
+        var measured=(Number(rendered.offsetHeight)||0)+mb;
+        probe.remove();
+        if(measured>0)return measured;
+    }catch(_e){}
+    return fallback;
+}
+
+function showBuilderToast(message,type){
+    var variant=(type==="success")?"success":"error";
+    var iconClass=variant==="success"?"fa-check":"fa-times";
+    var title=variant==="success"?"Success!":"Error!";
+    var id="builderStatusToastContainer";
+    var existing=document.getElementById(id);
+    if(existing)existing.remove();
+    var wrap=document.createElement("div");
+    wrap.id=id;
+    wrap.className="status-toast-container";
+    wrap.innerHTML=
+        '<div class="status-toast '+variant+'">'
+        +'<i class="status-icon fas '+iconClass+'"></i>'
+        +'<div><h4>'+title+'</h4><p>'+String(message||"").replace(/</g,"&lt;").replace(/>/g,"&gt;")+'</p></div>'
+        +'<button type="button" class="status-toast-close" aria-label="Close notification"><i class="fas fa-times-circle"></i></button>'
+        +'</div>';
+    document.body.appendChild(wrap);
+    var closeBtn=wrap.querySelector(".status-toast-close");
+    if(closeBtn)closeBtn.onclick=function(){wrap.remove();};
+    setTimeout(function(){if(wrap&&wrap.parentNode)wrap.remove();},3000);
+}
+
+function notifyColumnFull(){
+    showBuilderToast("Column is full. Increase column height first.","error");
+}
+
+function canAddElementToColumn(sid,rid,cid,type){
+    var t=String(type||"").toLowerCase();
+    if(t==="section"||t==="row"||t==="column")return true;
+    var colNode=canvas?canvas.querySelector('.col[data-col-id="'+String(cid||"")+'"]'):null;
+    if(!colNode)return true;
+    var colInner=colNode.querySelector(".col-inner");
+    if(!colInner)return true;
+    var capacity=Number(colNode.clientHeight)||0;
+    if(capacity<=0)return true;
+    var used=0;
+    Array.from(colInner.children||[]).forEach(function(ch){
+        var mb=0;
+        try{
+            mb=parseFloat((window.getComputedStyle(ch).marginBottom)||"0")||0;
+        }catch(_e){mb=0;}
+        var bottom=(Number(ch.offsetTop)||0)+(Number(ch.offsetHeight)||0)+mb;
+        if(bottom>used)used=bottom;
+    });
+    if(used<=0)used=Number(colInner.scrollHeight)||0;
+    var needed=estimateNewElementHeight(t,colNode);
+    if((used+needed)>(capacity+2)){
+        notifyColumnFull();
+        return false;
+    }
+    return true;
 }
 
 function addComponentAt(type,target,place){
@@ -990,6 +1089,7 @@ function addComponentAt(type,target,place){
     var c=col(t.s,t.r,t.c);
     if(!c)return false;
     c.elements=Array.isArray(c.elements)?c.elements:[];
+    if(!canAddElementToColumn(s.id,r.id,c.id,type))return false;
     var eIdx=placeInside?c.elements.length:(place==="before"?0:c.elements.length);
     if(t.k==="el"){
         var ei=c.elements.findIndex(x=>x.id===t.e);
@@ -1113,7 +1213,7 @@ function renderElement(item,ctx){
         styleApply(b,item.style||{});b.style.border="none";b.style.display=wb==="fill"?"flex":"inline-flex";b.style.width=wb==="fill"?"100%":"auto";b.style.alignItems="center";b.style.justifyContent="center";if(!(item.style&&item.style.backgroundColor))b.style.backgroundColor="#2563eb";if(!(item.style&&item.style.color))b.style.color="#fff";if(!(item.style&&item.style.padding))b.style.padding="10px 18px";if(!(item.style&&item.style.borderRadius))b.style.borderRadius="999px";
         b.oninput=()=>{item.content=b.innerHTML||"";};onRichTextKeys(b,()=>{item.content=b.innerHTML||"";});w.appendChild(b);
     }
-    else if(item.type==="image"){w.innerHTML=(item.settings&&item.settings.src)?'<img src="'+item.settings.src+'" alt="'+(item.settings.alt||"Image")+'" style="max-width:100%;height:auto;display:block;">':'<div style="padding:12px;border:1px dashed #94a3b8;border-radius:8px;">Image placeholder</div>';}
+    else if(item.type==="image"){w.innerHTML=(item.settings&&item.settings.src)?'<img src="'+item.settings.src+'" alt="'+(item.settings.alt||"Image")+'" style="max-width:100%;max-height:100%;width:100%;height:auto;display:block;object-fit:contain;">':'<div style="padding:12px;border:1px dashed #94a3b8;border-radius:8px;">Image placeholder</div>';}
     else if(item.type==="form"){
         item.settings=item.settings||{};
         var fal=(item.settings.alignment)||"left";
@@ -1632,6 +1732,73 @@ function renderElement(item,ctx){
     return w;
 }
 
+function attachRowHeightResizeHandle(rowInner,rowObj){
+    if(!rowInner||!rowObj)return;
+    var cols=Array.isArray(rowObj.columns)?rowObj.columns:[];
+    if(!cols.length)return;
+    var hHandle=document.createElement("div");
+    hHandle.className="row-resize-handle-y";
+    hHandle.title="Drag to resize column height";
+    hHandle.addEventListener("click",e=>{e.preventDefault();e.stopPropagation();});
+    hHandle.addEventListener("mousedown",function(e){
+        e.preventDefault();
+        e.stopPropagation();
+        var colNodes=Array.from(rowInner.querySelectorAll(".col"));
+        if(!colNodes.length)return;
+        var startY=Number(e.clientY)||0;
+        var startH=0;
+        cols.forEach(function(c){
+            c.style=c.style||{};
+            var h=Number(pxToNumber(c.style.minHeight));
+            if(!isNaN(h)&&h>startH)startH=h;
+        });
+        if(startH<=0){
+            startH=Math.max(120,colNodes.reduce(function(m,n){return Math.max(m,n.offsetHeight||0);},0));
+        }
+        var didSave=false;
+        function onMove(ev){
+            if(!didSave){saveToHistory();didSave=true;}
+            var dy=(Number(ev.clientY)||0)-startY;
+            var next=Math.max(58,Math.min(1600,Math.round(startH+dy)));
+            cols.forEach(function(c){c.style=c.style||{};c.style.height=next+"px";c.style.minHeight=next+"px";});
+            colNodes.forEach(function(n){n.style.height=next+"px";n.style.minHeight=next+"px";});
+        }
+        function onUp(){
+            document.removeEventListener("mousemove",onMove);
+            document.removeEventListener("mouseup",onUp);
+        }
+        document.addEventListener("mousemove",onMove);
+        document.addEventListener("mouseup",onUp);
+    });
+    rowInner.appendChild(hHandle);
+}
+
+function applyColumnImageFit(colNode,colInner,colObj){
+    if(!colNode||!colInner||!colObj)return;
+    var els=Array.isArray(colObj.elements)?colObj.elements:[];
+    if(els.length!==1||!els[0]||els[0].type!=="image")return;
+    var hasImageSrc=!!String((els[0].settings&&els[0].settings.src)||"").trim();
+    colNode.style.overflow="hidden";
+    colInner.style.height="";
+    var imgWrap=colInner.querySelector(".el");
+    if(!imgWrap)return;
+    imgWrap.style.height="";
+    imgWrap.style.marginBottom="0";
+    imgWrap.style.overflow="hidden";
+    imgWrap.style.display="block";
+    imgWrap.style.alignItems="";
+    imgWrap.style.justifyContent="";
+    if(!hasImageSrc)return;
+    var img=imgWrap.querySelector("img");
+    if(!img)return;
+    img.style.width="100%";
+    img.style.height="auto";
+    img.style.maxWidth="100%";
+    img.style.maxHeight="";
+    img.style.objectFit="contain";
+    img.style.objectPosition="top center";
+}
+
 function renderCanvas(){
     ensureRootModel();
     canvas.innerHTML="";
@@ -1710,7 +1877,7 @@ function renderCanvas(){
                 }
                 if(addComponentAt(t,{k:"row",s:s.id,r:r.id},dropPlacement(e,rn)))render();
             };
-            (r.columns||[]).forEach(c=>{
+            (r.columns||[]).forEach((c,colIndex)=>{
                 const cn=document.createElement("div");cn.className="col";styleApply(cn,c.style||{});
                 cn.setAttribute("data-col-id",c.id);
                 const colInner=document.createElement("div");colInner.className="col-inner";colInner.style.width="100%";colInner.style.boxSizing="border-box";
@@ -1731,8 +1898,10 @@ function renderCanvas(){
                 };
                 (c.elements||[]).forEach(it=>colInner.appendChild(renderElement(it,{s:s.id,r:r.id,c:c.id})));
                 cn.appendChild(colInner);
+                applyColumnImageFit(cn,colInner,c);
                 rowInner.appendChild(cn);
             });
+            attachRowHeightResizeHandle(rowInner,r);
             rn.appendChild(rowInner);
             inner.appendChild(rn);
         });
@@ -2065,7 +2234,7 @@ function renderSettings(){
         var colCw=(t.settings&&t.settings.contentWidth)||"full";
         var layoutHtml='<div class="col-layout-wrap"><div class="col-layout-title">Column layout</div><div class="col-layout-grid"><button type="button" class="col-layout-btn'+(currentCols===1?' active':'')+'" data-cols="1"><i class="fas fa-square"></i><span>1</span></button><button type="button" class="col-layout-btn'+(currentCols===2?' active':'')+'" data-cols="2"><i class="fas fa-columns"></i><span>2</span></button><button type="button" class="col-layout-btn'+(currentCols===3?' active':'')+'" data-cols="3"><i class="fas fa-table-columns"></i><span>3</span></button><button type="button" class="col-layout-btn'+(currentCols===4?' active':'')+'" data-cols="4"><i class="fas fa-grip"></i><span>4</span></button></div></div>';
         settings.innerHTML='<div class="menu-section-title">Layout</div>'+layoutHtml+'<label>Content width</label><select id="colCw"><option value="full">Full page</option><option value="wide">Wide</option><option value="medium">Medium</option><option value="small">Small</option><option value="xsmall">Extra small</option></select><div class="menu-split"></div><div class="menu-section-title">Spacing</div><div class="size-position"><div class="size-label">Size and position</div><label class="size-label">Padding</label><div class="size-grid"><div class="fld"><label>T</label><input id="pTop" type="number" value="'+pad[0]+'"></div><div class="fld"><label>R</label><input id="pRight" type="number" value="'+pad[1]+'"></div><div class="fld"><label>B</label><input id="pBottom" type="number" value="'+pad[2]+'"></div><div class="fld"><label>L</label><input id="pLeft" type="number" value="'+pad[3]+'"></div><div class="size-link"><button type="button" id="linkPad" title="Link padding"><span>&harr;</span></button><span>Link</span></div></div><label class="size-label">Margin</label><div class="size-grid"><div class="fld"><label>T</label><input id="mTop" type="number" value="'+mar[0]+'"></div><div class="fld"><label>R</label><input id="mRight" type="number" value="'+mar[1]+'"></div><div class="fld"><label>B</label><input id="mBottom" type="number" value="'+mar[2]+'"></div><div class="fld"><label>L</label><input id="mLeft" type="number" value="'+mar[3]+'"></div><div class="size-link"><button type="button" id="linkMar" title="Link margin"><span>&harr;</span></button><span>Link</span></div></div></div><div class="menu-split"></div><div class="menu-section-title">Style</div><label>Background color</label><input id="bg" type="color"><label>Background image URL</label><input id="bgImg" placeholder="https://..."><label>Upload background image</label><input id="bgUp" type="file" accept="image/*">'+remove;
-        bind("bg",(t.style&&t.style.backgroundColor)||"#f8fafc",v=>sty().backgroundColor=v,{undo:true});
+        bind("bg",(t.style&&t.style.backgroundColor)||"#ffffff",v=>sty().backgroundColor=v,{undo:true});
         bind("bgImg",readBgImageUrl(),v=>{var s=sty();s.backgroundImage=(v&&String(v).trim()!=="")?('url('+String(v).trim()+')'):"";renderCanvas();},{undo:true});
         bind("colCw",colCw,v=>{t.settings=t.settings||{};t.settings.contentWidth=v;renderCanvas();},{undo:true});
         var bgUp=document.getElementById("bgUp");if(bgUp)bgUp.onchange=()=>{if(bgUp.files&&bgUp.files[0]){saveToHistory();var bgImg=document.getElementById("bgImg");uploadImage(bgUp.files[0],url=>{var s=sty();s.backgroundImage='url('+url+')';if(bgImg)bgImg.value=url;renderCanvas();},"Background image upload");}};
@@ -2120,7 +2289,7 @@ function renderSettings(){
             saveToHistory();
             parentRow.columns=parentRow.columns||[];
             var cols=parentRow.columns.slice();
-            while(cols.length<count){cols.push({id:uid("col"),style:{},elements:[]});}
+            while(cols.length<count){cols.push(createDefaultColumn());}
             if(cols.length>count){
                 var kept=cols.slice(0,count);
                 var removed=cols.slice(count);

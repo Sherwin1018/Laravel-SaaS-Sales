@@ -1,4 +1,7 @@
 @php $isPreview = $isPreview ?? false; @endphp
+@if($isPreview)
+    {{-- In builder preview, render only explicit builder content (no auto fallback actions/buttons). --}}
+@else
 
 @if($step->type === 'opt_in')
     {{-- No fixed form: opt-in form is only the Form component you add in the builder (same functionality, your layout). --}}
@@ -47,4 +50,5 @@
     @else
         <a class="btn secondary" href="{{ route('funnels.portal.step', ['funnelSlug' => $funnel->slug]) }}">Back to Start</a>
     @endif
+@endif
 @endif

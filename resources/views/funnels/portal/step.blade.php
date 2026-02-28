@@ -56,13 +56,14 @@
         .builder-section { border-radius: 14px; margin-bottom: 14px; border: none; }
         .builder-section-inner { width: 100%; box-sizing: border-box; }
         .builder-row-inner { width: 100%; box-sizing: border-box; display: flex; flex-wrap: wrap; gap: 8px; }
-        .builder-col-inner { width: 100%; box-sizing: border-box; }
+        .builder-col-inner { width: 100%; box-sizing: border-box; max-width: 100%; overflow: hidden; }
         .builder-row { display: flex; gap: 8px; flex-wrap: wrap; padding: 6px; }
-        .builder-col { min-width: 240px; min-height: 24px; flex: 1 1 0; }
+        .builder-col { min-width: 240px; min-height: 24px; flex: 1 1 0; position: relative; overflow: hidden; background: #ffffff; }
+        .builder-col > .builder-col-inner > .builder-el { max-width: 100%; overflow: hidden; }
         .builder-el + .builder-el { margin-top: 10px; }
         .builder-heading { margin: 0; font-size: 32px; line-height: 1.2; overflow-wrap: break-word; word-break: break-word; }
         .builder-text { margin: 0; color: #334155; line-height: 1.6; white-space: pre-wrap; overflow-wrap: break-word; word-break: break-word; }
-        .builder-img { display: block; max-width: 100%; height: auto; border-radius: 10px; }
+        .builder-img { display: block; max-width: 100%; height: auto; border-radius: 10px; object-fit: contain; object-position: top center; }
         .builder-menu { width: 100%; }
         .builder-menu-list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; }
         .builder-menu-link { text-decoration: none; text-underline-offset: 3px; font: inherit; }
@@ -313,7 +314,12 @@
                                 <div class="builder-row-inner" @if($rowInnerStyleString !== '') style="{{ $rowInnerStyleString }}" @endif>
                                 @foreach($columns as $column)
                                     @php
-                                        $colStyle = $styleToString(is_array($column['style'] ?? null) ? $column['style'] : []);
+                                        $colStyleArr = is_array($column['style'] ?? null) ? $column['style'] : [];
+                                        $legacyColBg = strtolower(trim((string) ($colStyleArr['backgroundColor'] ?? '')));
+                                        if ($legacyColBg === '#f8fafc' || $legacyColBg === 'rgb(248, 250, 252)' || $legacyColBg === 'rgba(248, 250, 252, 1)') {
+                                            $colStyleArr['backgroundColor'] = '#ffffff';
+                                        }
+                                        $colStyle = $styleToString($colStyleArr);
                                         $colSettings = is_array($column['settings'] ?? null) ? $column['settings'] : [];
                                         $colContentWidth = trim((string) ($colSettings['contentWidth'] ?? 'full'));
                                         $colInnerMax = $widthMap[$colContentWidth] ?? '';
@@ -334,9 +340,10 @@
                                                 $alignment = trim((string) ($settings['alignment'] ?? ''));
                                                 if (!in_array($alignment, ['left', 'center', 'right'], true)) {
                                                     $fallbackAlign = strtolower(trim((string) ($rawStyle['textAlign'] ?? '')));
+                                                    $defaultAlign = in_array($type, ['image', 'video', 'form', 'menu'], true) ? 'left' : 'center';
                                                     $alignment = in_array($fallbackAlign, ['left', 'center', 'right'], true)
                                                         ? $fallbackAlign
-                                                        : (($type === 'form') ? 'left' : 'center');
+                                                        : $defaultAlign;
                                                 }
                                                 $alignStyle = 'display:flex;justify-content:' . ($alignment === 'right' ? 'flex-end' : ($alignment === 'center' ? 'center' : 'flex-start')) . ';margin-left:' . ($alignment === 'left' ? '0' : 'auto') . ';margin-right:' . ($alignment === 'right' ? '0' : 'auto') . ';';
                                                 $menuAlign = $settings['menuAlign'] ?? 'left';
@@ -741,7 +748,9 @@
                 @if($step->subtitle)
                     <h3 class="subtitle">{{ $step->subtitle }}</h3>
                 @endif
-                <div class="content">{{ $step->content ?: 'No content configured for this step yet.' }}</div>
+                @if(!$isPreview || trim((string) ($step->content ?? '')) !== '')
+                    <div class="content">{{ $step->content }}</div>
+                @endif
                 @include('funnels.portal._step-actions', ['funnel' => $funnel, 'step' => $step, 'nextStep' => $nextStep, 'isPreview' => $isPreview])
             @endif
         </div>
