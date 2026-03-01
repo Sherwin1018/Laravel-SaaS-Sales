@@ -58,16 +58,16 @@
 .fb-lib-group{margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #e2e8f0}
 .fb-lib-group:last-child{margin-bottom:0;padding-bottom:0;border-bottom:0}
 .fb-lib-group-title{font-size:12px;font-weight:900;letter-spacing:.02em;text-transform:uppercase;color:#1e3a8a;margin:0 0 8px}
-#canvas{min-height:60vh;border:2px dashed #93c5fd;border-radius:12px;padding:10px;background:linear-gradient(180deg,#f8fafc,#e0f2fe);overflow-x:hidden;overflow-y:auto}
-.sec{border:1px dashed #64748b;border-radius:10px;padding:8px;margin-bottom:9px;background:#fff}
+#canvas{min-height:60vh;border:2px dashed #93c5fd;border-radius:0;padding:10px;background:linear-gradient(180deg,#f8fafc,#e0f2fe);overflow-x:hidden;overflow-y:auto}
+.sec{border:1px dashed #64748b !important;border-radius:0;padding:8px;margin-bottom:9px;background:#fff}
 .sec.sec--bare-carousel{border:0;background:transparent;padding:0}
 .sec.sec--bare-wrap{border:0;background:transparent;padding:0}
-.row{display:flex;flex-wrap:wrap;gap:8px;border:1px dashed #cbd5e1;border-radius:8px;padding:6px}
+.row{display:flex;flex-wrap:wrap;gap:8px;border:1px dashed #cbd5e1 !important;border-radius:0 !important;padding:6px}
 .row.row--bare-wrap{border:0;background:transparent;padding:0}
 .row-inner{display:flex;flex-wrap:wrap;gap:8px;position:relative}
-.col{flex:1 1 240px;min-height:120px;min-width:0;border:1px dashed #bfdbfe;border-radius:7px;padding:6px;background:#ffffff;position:relative;overflow:hidden}
+.col{flex:1 1 240px;min-height:120px;min-width:0;border:1px dashed #bfdbfe !important;border-radius:0 !important;padding:6px;background:#ffffff;position:relative;overflow:hidden}
 .row-resize-handle-y{position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);z-index:4;width:42px;height:10px;border-radius:999px;border:1px solid #93c5fd;background:#dbeafe;cursor:ns-resize;opacity:.9}
-.el{border:1px solid #e2e8f0;border-radius:7px;padding:7px;background:#fff;margin-bottom:6px;min-width:0;overflow-wrap:break-word;word-break:break-word}
+.el{border:0 !important;border-style:none !important;border-width:0 !important;border-radius:0 !important;padding:7px;background:#fff;margin-bottom:6px;min-width:0;overflow-wrap:break-word;word-break:break-word}
 .el.el--carousel{border:0 !important;background:transparent !important;padding:0 !important}
 .el.el--form{border:0 !important;background:transparent !important;padding:0 !important}
 .el h2,.el p,.el button{overflow-wrap:break-word;word-break:break-word;min-width:0;max-width:100%}
@@ -132,6 +132,7 @@
 .menu-align-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:8px}
 .menu-align-btn{border:1px solid #cbd5e1;background:#f8fafc;border-radius:8px;padding:7px 8px;color:#64748b;cursor:pointer}
 .menu-align-btn.active{border-color:#3b82f6;background:#dbeafe;color:#1d4ed8}
+.menu-style-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-bottom:8px}
 .menu-slider-row{display:grid;grid-template-columns:1fr 96px;gap:8px;align-items:center;margin-bottom:8px}
 .menu-slider-row input{margin-bottom:0}
 .carousel-slide-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
@@ -149,6 +150,36 @@
 .rt-tools{display:flex;gap:6px;padding:6px;border-bottom:1px solid #e2e8f0}
 .rt-tools button{padding:5px 8px;border:1px solid #cbd5e1;border-radius:6px;background:#f8fafc;font-weight:800;cursor:pointer}
 .rt-editor{min-height:90px;padding:8px;outline:none}
+.setting-label-help{display:flex;align-items:center;gap:8px;margin:0 0 6px}
+.setting-help-icon{width:22px;height:22px;border-radius:999px;border:1px solid #93c5fd;background:#eaf2ff;color:#2563eb;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;line-height:1;cursor:pointer;padding:0}
+.setting-help-icon:hover{background:#dbeafe}
+.fb-help-modal{position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;align-items:center;justify-content:center;z-index:1200;padding:16px}
+.fb-help-modal.open{display:flex}
+.fb-help-card{width:min(560px,92vw);background:#0b1220;color:#e2e8f0;border:1px solid #1e293b;border-radius:14px;box-shadow:0 24px 60px rgba(2,6,23,.45);padding:16px;position:relative}
+.fb-help-close{position:absolute;top:8px;right:8px;border:1px solid #334155;background:#111827;color:#cbd5e1;width:28px;height:28px;border-radius:8px;cursor:pointer}
+.fb-help-title{margin:0 0 8px;font-size:16px;font-weight:900;color:#f8fafc}
+.fb-help-text{font-size:13px;line-height:1.55;color:#cbd5e1;margin-bottom:10px}
+.fb-radius-demo{height:92px;border:1px solid #334155;border-radius:8px;background:linear-gradient(135deg,#0f172a,#1e293b);display:flex;align-items:center;justify-content:center}
+.fb-radius-demo-box{width:120px;height:56px;background:#38bdf8;animation:radiusMorph 2.2s ease-in-out infinite}
+.fb-space-demo{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fb-space-box{height:90px;border:1px solid #334155;border-radius:10px;background:#0f172a;position:relative;overflow:hidden}
+.fb-space-pad{position:absolute;inset:12px;border:2px dashed #38bdf8;animation:paddingPulse 1.8s ease-in-out infinite}
+.fb-space-mar{position:absolute;inset:18px;background:#38bdf8;border-radius:8px;animation:marginPulse 1.8s ease-in-out infinite}
+@keyframes paddingPulse{
+    0%{inset:12px}
+    50%{inset:20px}
+    100%{inset:12px}
+}
+@keyframes marginPulse{
+    0%{transform:scale(1)}
+    50%{transform:scale(.82)}
+    100%{transform:scale(1)}
+}
+@keyframes radiusMorph{
+    0%{border-radius:0}
+    50%{border-radius:18px}
+    100%{border-radius:999px}
+}
 @media(max-width:1080px){.fb-grid,.fb-grid.components-hidden{grid-template-columns:1fr}.fb-components-col .fb-panel-toggle{display:none!important}.fb-grid.components-hidden .fb-components-col .fb-left-panel{display:block!important}.fb-left-panel.hidden{display:none!important}}
 </style>
 
@@ -783,7 +814,7 @@ function createRootItem(type){
     return it?Object.assign({kind:"el"},it):null;
 }
 function createDefaultElement(type){
-    const d={heading:{content:"Heading",style:{fontSize:"32px",color:"#000000"},settings:{}},text:{content:"Text",style:{fontSize:"16px",color:"#000000"},settings:{}},menu:{content:"",style:{fontSize:"16px"},settings:{items:[{label:"Home",url:"#",newWindow:false,hasSubmenu:false},{label:"Contact",url:"/contact",newWindow:false,hasSubmenu:false}],itemGap:13,activeIndex:0,menuAlign:"left",underlineColor:""}},carousel:{content:"",style:{padding:"10px 10px 10px 10px"},settings:{slides:[defaultCarouselSlide("Slide #1")],activeSlide:0,vAlign:"center",alignment:"left",showArrows:true,controlsColor:"#64748b",arrowColor:"#ffffff",fixedWidth:500,fixedHeight:500}},image:{content:"",style:{width:"100%"},settings:{src:"",alt:"Image",alignment:"left"}},button:{content:"Click Me",style:{backgroundColor:"#2563eb",color:"#fff",borderRadius:"999px",padding:"10px 18px",textAlign:"center"},settings:{link:"#"}},form:{content:"Submit",style:{},settings:{alignment:"left",width:"100%",fields:[{type:"first_name",label:"First name"},{type:"last_name",label:"Last name"},{type:"email",label:"Email"},{type:"phone_number",label:"Phone"}]}},video:{content:"",style:{},settings:{src:"",alignment:"left"}},spacer:{content:"",style:{height:"24px"},settings:{}}}[type]||null;
+    const d={heading:{content:"Heading",style:{fontSize:"32px",color:"#000000"},settings:{}},text:{content:"Text",style:{fontSize:"16px",color:"#000000"},settings:{}},menu:{content:"",style:{fontSize:"16px"},settings:{items:[{label:"Home",url:"#",newWindow:false,hasSubmenu:false},{label:"Contact",url:"/contact",newWindow:false,hasSubmenu:false}],itemGap:13,activeIndex:0,menuAlign:"left",underlineColor:""}},carousel:{content:"",style:{padding:"10px 10px 10px 10px"},settings:{slides:[defaultCarouselSlide("Slide #1")],activeSlide:0,vAlign:"center",alignment:"left",showArrows:true,slideshowMode:"manual",controlsColor:"#64748b",arrowColor:"#ffffff",fixedWidth:500,fixedHeight:500}},image:{content:"",style:{width:"100%"},settings:{src:"",alt:"Image",alignment:"left"}},button:{content:"Click Me",style:{backgroundColor:"#2563eb",color:"#fff",borderRadius:"999px",padding:"10px 18px",textAlign:"center"},settings:{link:"#"}},form:{content:"Submit",style:{},settings:{alignment:"left",width:"100%",fields:[{type:"first_name",label:"First name"},{type:"last_name",label:"Last name"},{type:"email",label:"Email"},{type:"phone_number",label:"Phone"}]}},video:{content:"",style:{},settings:{src:"",alignment:"left"}},spacer:{content:"",style:{height:"24px"},settings:{}}}[type]||null;
     if(!d)return null;
     return {id:uid("el"),type:type,content:d.content,style:clone(d.style),settings:clone(d.settings)};
 }
@@ -1264,21 +1295,31 @@ function renderElement(item,ctx){
         var gap=Number(ms.itemGap);if(isNaN(gap))gap=13;
         var activeIdx=Number(ms.activeIndex);if(isNaN(activeIdx))activeIdx=0;
         var align=(ms.menuAlign||"left");
+        var st=item.style||{};
         const ul=document.createElement("ul");
         ul.style.listStyle="none";ul.style.margin="0";ul.style.padding="0";
         ul.style.display="flex";ul.style.flexWrap="wrap";ul.style.gap=gap+"px";
         ul.style.justifyContent=align==="right"?"flex-end":align==="center"?"center":"flex-start";
+        if(st.fontFamily)ul.style.fontFamily=st.fontFamily;
+        if(st.fontSize)ul.style.fontSize=st.fontSize;
+        if(st.lineHeight)ul.style.lineHeight=st.lineHeight;
+        if(st.letterSpacing)ul.style.letterSpacing=st.letterSpacing;
         items.forEach((mi,idx)=>{
             const li=document.createElement("li");
             const a=document.createElement("a");
             a.href=(mi&&mi.url)||"#";
             a.textContent=(mi&&mi.label)||("Menu item "+(idx+1));
             if(mi&&mi.newWindow)a.target="_blank";
-            a.style.color=idx===activeIdx?((ms.activeColor)||"#a89c76"):((ms.textColor)||"#374151");
+            a.style.color=(ms.textColor)||"#374151";
             a.style.textDecoration=ms.underlineColor?"underline":"none";
             if(ms.underlineColor)a.style.textDecorationColor=ms.underlineColor;
             a.style.textUnderlineOffset="3px";
-            a.style.font="inherit";
+            a.style.fontFamily="inherit";
+            a.style.fontSize="inherit";
+            a.style.lineHeight="inherit";
+            a.style.letterSpacing="inherit";
+            if(st.fontWeight)a.style.fontWeight=st.fontWeight;
+            if(st.fontStyle)a.style.fontStyle=st.fontStyle;
             a.addEventListener("click",e=>e.preventDefault());
             li.appendChild(a);ul.appendChild(li);
         });
@@ -1288,6 +1329,11 @@ function renderElement(item,ctx){
         var cs=item.settings||{};
         var slides=ensureCarouselSlides(cs);
         var active=Number(cs.activeSlide);if(isNaN(active)||active<0||active>=slides.length)active=0;
+        var slideshowMode=String(cs.slideshowMode||"manual").toLowerCase();
+        if(slideshowMode!=="auto"&&slideshowMode!=="manual")slideshowMode="manual";
+        var isAutoSlideshow=(slideshowMode==="auto");
+        if(typeof cs.showArrows!=="boolean")cs.showArrows=true;
+        if(isAutoSlideshow)cs.showArrows=false;
         var curSlide=slides[active]||slides[0]||defaultCarouselSlide("Slide #1");
         var parentSel={scope:ctx.scope||"column",s:ctx.s,r:ctx.r,c:ctx.c,e:item.id};
         function slideHasContent(slide){
@@ -1417,7 +1463,7 @@ function renderElement(item,ctx){
             emptyPickBtn.onclick=e=>{e.preventDefault();e.stopPropagation();saveToHistory();promptImageFilesForSlides();};
             simpleWrap.appendChild(emptyPickBtn);
         }
-        if(slides.length>1){
+        if(slides.length>1 && !isAutoSlideshow && cs.showArrows!==false){
             var prevBtn=document.createElement("button");
             prevBtn.type="button";
             prevBtn.innerHTML='<i class="fas fa-chevron-left" aria-hidden="true"></i>';
@@ -1458,6 +1504,50 @@ function renderElement(item,ctx){
             nextBtn.style.cursor="pointer";
             nextBtn.onclick=e=>{e.preventDefault();e.stopPropagation();saveToHistory();cs.activeSlide=(active+1)%slides.length;renderCanvas();renderSettings();};
             simpleWrap.appendChild(nextBtn);
+        }
+        if(slides.length>1){
+            var dotsWrap=document.createElement("div");
+            dotsWrap.style.position="absolute";
+            dotsWrap.style.left="50%";
+            dotsWrap.style.bottom="10px";
+            dotsWrap.style.transform="translateX(-50%)";
+            dotsWrap.style.display="flex";
+            dotsWrap.style.alignItems="center";
+            dotsWrap.style.gap="8px";
+            dotsWrap.style.padding="4px 8px";
+            dotsWrap.style.borderRadius="999px";
+            dotsWrap.style.background="rgba(15, 23, 42, 0.35)";
+            dotsWrap.style.backdropFilter="blur(2px)";
+            dotsWrap.style.zIndex="3";
+            slides.forEach(function(_unused,idx){
+                var dot=document.createElement("button");
+                dot.type="button";
+                dot.style.width="8px";
+                dot.style.height="8px";
+                dot.style.borderRadius="999px";
+                dot.style.border="0";
+                dot.style.padding="0";
+                dot.style.cursor="pointer";
+                dot.style.background=(idx===active)?"#ffffff":"rgba(255,255,255,0.55)";
+                dot.onclick=function(e){
+                    e.preventDefault();e.stopPropagation();
+                    saveToHistory();
+                    cs.activeSlide=idx;
+                    renderCanvas();
+                    renderSettings();
+                };
+                dotsWrap.appendChild(dot);
+            });
+            simpleWrap.appendChild(dotsWrap);
+        }
+        if(isAutoSlideshow && slides.length>1){
+            state._carAutoTimers=Array.isArray(state._carAutoTimers)?state._carAutoTimers:[];
+            var tmr=setTimeout(function(){
+                cs.activeSlide=(active+1)%slides.length;
+                renderCanvas();
+                renderSettings();
+            },3000);
+            state._carAutoTimers.push(tmr);
         }
         w.innerHTML="";
         w.appendChild(simpleWrap);
@@ -1800,6 +1890,10 @@ function applyColumnImageFit(colNode,colInner,colObj){
 }
 
 function renderCanvas(){
+    if(Array.isArray(state._carAutoTimers)){
+        state._carAutoTimers.forEach(function(t){try{clearTimeout(t);}catch(_e){}});
+    }
+    state._carAutoTimers=[];
     ensureRootModel();
     canvas.innerHTML="";
     var widthMap={full:"",wide:"1200px",medium:"992px",small:"768px",xsmall:"576px"};
@@ -1986,6 +2080,59 @@ function uploadImage(file,done,label,onFail){
         });
 }
 
+function ensureRadiusHelpModal(){
+    var m=document.getElementById("fbRadiusHelpModal");
+    if(m)return m;
+    m=document.createElement("div");
+    m.id="fbRadiusHelpModal";
+    m.className="fb-help-modal";
+    m.innerHTML='<div class="fb-help-card" role="dialog" aria-modal="true" aria-label="Border radius help">'
+        +'<button type="button" class="fb-help-close" id="fbRadiusHelpClose" aria-label="Close">X</button>'
+        +'<h4 class="fb-help-title">Border Radius</h4>'
+        +'<div class="fb-help-text">The roundness meter. <strong>0</strong> makes sharp corners. Higher values make corners softer and more curved.</div>'
+        +'<div class="fb-radius-demo"><div class="fb-radius-demo-box"></div></div>'
+        +'</div>';
+    m.addEventListener("click",function(e){if(e.target===m)closeRadiusHelpModal();});
+    document.body.appendChild(m);
+    var c=document.getElementById("fbRadiusHelpClose");
+    if(c)c.addEventListener("click",function(e){e.preventDefault();closeRadiusHelpModal();});
+    return m;
+}
+function openRadiusHelpModal(){
+    var m=ensureRadiusHelpModal();
+    m.classList.add("open");
+}
+function closeRadiusHelpModal(){
+    var m=document.getElementById("fbRadiusHelpModal");
+    if(m)m.classList.remove("open");
+}
+function ensureSpacingHelpModal(){
+    var m=document.getElementById("fbSpacingHelpModal");
+    if(m)return m;
+    m=document.createElement("div");
+    m.id="fbSpacingHelpModal";
+    m.className="fb-help-modal";
+    m.innerHTML='<div class="fb-help-card" role="dialog" aria-modal="true" aria-label="Spacing help">'
+        +'<button type="button" class="fb-help-close" id="fbSpacingHelpClose" aria-label="Close">X</button>'
+        +'<h4 class="fb-help-title">Spacing Helper</h4>'
+        +'<div class="fb-help-text"><strong>Padding</strong>: Inside breathing room. It adds space inside the box.<br><strong>Margin</strong>: Personal space. It pushes other elements outside the box.</div>'
+        +'<div class="fb-space-demo"><div class="fb-space-box"><div class="fb-space-pad"></div></div><div class="fb-space-box"><div class="fb-space-mar"></div></div></div>'
+        +'</div>';
+    m.addEventListener("click",function(e){if(e.target===m)closeSpacingHelpModal();});
+    document.body.appendChild(m);
+    var c=document.getElementById("fbSpacingHelpClose");
+    if(c)c.addEventListener("click",function(e){e.preventDefault();closeSpacingHelpModal();});
+    return m;
+}
+function openSpacingHelpModal(){
+    var m=ensureSpacingHelpModal();
+    m.classList.add("open");
+}
+function closeSpacingHelpModal(){
+    var m=document.getElementById("fbSpacingHelpModal");
+    if(m)m.classList.remove("open");
+}
+
 function renderSettings(){
     settingsTitle.textContent="Settings Panel";
     const inCarousel=!!state.carouselSel;
@@ -2050,12 +2197,55 @@ function renderSettings(){
         var m=String(bg).match(/^url\((['"]?)(.*?)\1\)$/i);
         return m?m[2]:"";
     }
+    function radiusHelpLabelHtml(btnId,labelText){
+        return '<div class="setting-label-help"><label style="margin:0;">'+labelText+'</label><button type="button" id="'+btnId+'" class="setting-help-icon" aria-label="'+labelText+' help">?</button></div>';
+    }
+    function bindRadiusHelpButton(btnId){
+        var b=document.getElementById(btnId);
+        if(!b)return;
+        b.addEventListener("click",function(e){
+            e.preventDefault();
+            e.stopPropagation();
+            openRadiusHelpModal();
+        });
+    }
+    function ensureSpacingHelperButton(){
+        var hasSpacingFields=!!(document.getElementById("pTop")||document.getElementById("mTop"));
+        if(!hasSpacingFields)return;
+        var anchor=null;
+        var titles=settings.querySelectorAll(".menu-section-title");
+        titles.forEach(function(n){
+            if(anchor)return;
+            if(String(n.textContent||"").trim().toLowerCase()==="spacing")anchor=n;
+        });
+        if(!anchor){
+            anchor=settings.querySelector(".size-position .size-label");
+        }
+        if(!anchor)return;
+        if(anchor.querySelector(".fb-spacing-help-btn"))return;
+        if(anchor.classList.contains("menu-section-title")){
+            anchor.style.display="flex";
+            anchor.style.alignItems="center";
+            anchor.style.gap="8px";
+        }
+        var b=document.createElement("button");
+        b.type="button";
+        b.className="setting-help-icon fb-spacing-help-btn";
+        b.setAttribute("aria-label","Spacing help");
+        b.textContent="?";
+        b.addEventListener("click",function(e){
+            e.preventDefault();
+            e.stopPropagation();
+            openSpacingHelpModal();
+        });
+        anchor.appendChild(b);
+    }
     if(selKind==="sec"){
         t.settings=t.settings||{};
         var padDef=[20,20,20,20],marDef=[0,0,0,0];
         var pad=parseSpacing(t.style&&t.style.padding,padDef),mar=parseSpacing(t.style&&t.style.margin,marDef);
         var cw=(t.settings&&t.settings.contentWidth)||"full";
-        settings.innerHTML='<div class="menu-section-title">Layout</div><label>Content width</label><select id="secCw"><option value="full">Full page</option><option value="wide">Wide</option><option value="medium">Medium</option><option value="small">Small</option><option value="xsmall">Extra small</option></select><div class="menu-split"></div><div class="menu-section-title">Spacing</div><div class="size-position"><div class="size-label">Size and position</div><label class="size-label">Padding</label><div class="size-grid"><div class="fld"><label>T</label><input id="pTop" type="number" value="'+pad[0]+'"></div><div class="fld"><label>R</label><input id="pRight" type="number" value="'+pad[1]+'"></div><div class="fld"><label>B</label><input id="pBottom" type="number" value="'+pad[2]+'"></div><div class="fld"><label>L</label><input id="pLeft" type="number" value="'+pad[3]+'"></div><div class="size-link"><button type="button" id="linkPad" title="Link padding"><span>&harr;</span></button><span>Link</span></div></div><label class="size-label">Margin</label><div class="size-grid"><div class="fld"><label>T</label><input id="mTop" type="number" value="'+mar[0]+'"></div><div class="fld"><label>R</label><input id="mRight" type="number" value="'+mar[1]+'"></div><div class="fld"><label>B</label><input id="mBottom" type="number" value="'+mar[2]+'"></div><div class="fld"><label>L</label><input id="mLeft" type="number" value="'+mar[3]+'"></div><div class="size-link"><button type="button" id="linkMar" title="Link margin"><span>&harr;</span></button><span>Link</span></div></div></div><div class="menu-split"></div><div class="menu-section-title">Style</div><label>Background color</label><input id="bg" type="color"><label>Background image URL</label><input id="bgImg" placeholder="https://..."><label>Upload background image</label><input id="bgUp" type="file" accept="image/*">'+remove;
+        settings.innerHTML='<div class="menu-section-title">Layout</div><label>Content width</label><select id="secCw"><option value="full">Full page</option><option value="wide">Wide</option><option value="medium">Medium</option><option value="small">Small</option><option value="xsmall">Extra small</option></select><div class="menu-split"></div><div class="menu-section-title">Spacing</div><div class="size-position"><div class="size-label">Size and position</div><label class="size-label">Padding</label><div class="size-grid"><div class="fld"><label>T</label><input id="pTop" type="number" value="'+pad[0]+'"></div><div class="fld"><label>R</label><input id="pRight" type="number" value="'+pad[1]+'"></div><div class="fld"><label>B</label><input id="pBottom" type="number" value="'+pad[2]+'"></div><div class="fld"><label>L</label><input id="pLeft" type="number" value="'+pad[3]+'"></div><div class="size-link"><button type="button" id="linkPad" title="Link padding"><span>&harr;</span></button><span>Link</span></div></div><label class="size-label">Margin</label><div class="size-grid"><div class="fld"><label>T</label><input id="mTop" type="number" value="'+mar[0]+'"></div><div class="fld"><label>R</label><input id="mRight" type="number" value="'+mar[1]+'"></div><div class="fld"><label>B</label><input id="mBottom" type="number" value="'+mar[2]+'"></div><div class="fld"><label>L</label><input id="mLeft" type="number" value="'+mar[3]+'"></div><div class="size-link"><button type="button" id="linkMar" title="Link margin"><span>&harr;</span></button><span>Link</span></div></div></div><div class="menu-split"></div><div class="menu-section-title">Style</div><label>Background color</label><input id="bg" type="color"><label>Background image URL</label><input id="bgImg" placeholder="https://..."><label>Upload background image</label><input id="bgUp" type="file" accept="image/*">'+radiusHelpLabelHtml("secRadiusHelp","Border radius")+'<div class="px-wrap"><input id="secRadius" type="number" min="0" step="1"><span class="px-unit">px</span></div>'+remove;
         bind("bg",(t.style&&t.style.backgroundColor)||"#ffffff",v=>sty().backgroundColor=v,{undo:true});
         bind("bgImg",readBgImageUrl(),v=>{var s=sty();s.backgroundImage=(v&&String(v).trim()!=="")?('url('+String(v).trim()+')'):"";renderCanvas();},{undo:true});
         bind("secCw",cw,v=>{t.settings=t.settings||{};t.settings.contentWidth=v;renderCanvas();},{undo:true});
@@ -2069,6 +2259,8 @@ function renderSettings(){
         var linkPad=document.getElementById("linkPad"),linkMar=document.getElementById("linkMar");
         if(linkPad)linkPad.onclick=()=>{saveToHistory();paddingLinked=!paddingLinked;linkPad.classList.toggle("linked",paddingLinked);if(paddingLinked){var v=document.getElementById("pTop").value;document.getElementById("pRight").value=v;document.getElementById("pBottom").value=v;document.getElementById("pLeft").value=v;sty().padding=spacingToCss([Number(v)||0,Number(v)||0,Number(v)||0,Number(v)||0]);renderCanvas();}};
         if(linkMar)linkMar.onclick=()=>{saveToHistory();marginLinked=!marginLinked;linkMar.classList.toggle("linked",marginLinked);if(marginLinked){var v=document.getElementById("mTop").value;document.getElementById("mRight").value=v;document.getElementById("mBottom").value=v;document.getElementById("mLeft").value=v;sty().margin=spacingToCss([Number(v)||0,Number(v)||0,Number(v)||0,Number(v)||0]);renderCanvas();}};
+        bindPx("secRadius",(t.style&&t.style.borderRadius)||"",v=>sty().borderRadius=v,{undo:true});
+        bindRadiusHelpButton("secRadiusHelp");
     } else if(selKind==="el"&&t.type==="image"){
         t.settings=t.settings||{};
         var marDef=[0,0,0,0],radDef=[0,0,0,0];
@@ -2078,7 +2270,7 @@ function renderSettings(){
         var imageSourceFields=imageSourceType==="upload"
             ? '<label>Upload file</label><input id="up" type="file" accept="image/*"><div class="meta" id="imgCurrentFile"></div>'
             : '<label>URL</label><input id="src">';
-        settings.innerHTML='<div class="menu-section-title">Content</div><label>Image type</label><select id="imgSourceType"><option value="direct"'+(imageSourceType==="direct"?' selected':'')+'>Direct link</option><option value="upload"'+(imageSourceType==="upload"?' selected':'')+'>Upload file</option></select>'+imageSourceFields+'<label>Alt</label><input id="alt"><div class="menu-split"></div><div class="menu-section-title">Layout</div><label>Alignment</label><select id="align"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select><label>Width</label><input id="w" placeholder="100%"><div class="menu-split"></div><div class="menu-section-title">Spacing</div><div class="size-position"><div class="size-label">Size and position</div><label class="size-label">Margin</label><div class="size-grid"><div class="fld"><label>T</label><input id="mTop" type="number" value="'+mar[0]+'"></div><div class="fld"><label>R</label><input id="mRight" type="number" value="'+mar[1]+'"></div><div class="fld"><label>B</label><input id="mBottom" type="number" value="'+mar[2]+'"></div><div class="fld"><label>L</label><input id="mLeft" type="number" value="'+mar[3]+'"></div><div class="size-link"><button type="button" id="linkMar" title="Link margin"><span>&harr;</span></button><span>Link</span></div></div></div><div class="menu-split"></div><div class="menu-section-title">Style</div><label>Border</label><input id="b"><label>Border radius</label><div class="img-radius-panel"><button type="button" id="imgRadiusLink" class="img-radius-link'+(radiusLinked?' linked':'')+'" title="Link corners"><i class="fas fa-link"></i></button><div class="img-radius-row"><input id="imgRadTl" type="number" value="'+rad[0]+'"><input id="imgRadTr" type="number" value="'+rad[1]+'"><input id="imgRadBr" type="number" value="'+rad[2]+'"><input id="imgRadBl" type="number" value="'+rad[3]+'"></div></div><label>Shadow</label><input id="sh">'+moveControls+remove;
+        settings.innerHTML='<div class="menu-section-title">Content</div><label>Image type</label><select id="imgSourceType"><option value="direct"'+(imageSourceType==="direct"?' selected':'')+'>Direct link</option><option value="upload"'+(imageSourceType==="upload"?' selected':'')+'>Upload file</option></select>'+imageSourceFields+'<label>Alt</label><input id="alt"><div class="menu-split"></div><div class="menu-section-title">Layout</div><label>Alignment</label><select id="align"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select><label>Width</label><input id="w" placeholder="100%"><div class="menu-split"></div><div class="menu-section-title">Spacing</div><div class="size-position"><div class="size-label">Size and position</div><label class="size-label">Margin</label><div class="size-grid"><div class="fld"><label>T</label><input id="mTop" type="number" value="'+mar[0]+'"></div><div class="fld"><label>R</label><input id="mRight" type="number" value="'+mar[1]+'"></div><div class="fld"><label>B</label><input id="mBottom" type="number" value="'+mar[2]+'"></div><div class="fld"><label>L</label><input id="mLeft" type="number" value="'+mar[3]+'"></div><div class="size-link"><button type="button" id="linkMar" title="Link margin"><span>&harr;</span></button><span>Link</span></div></div></div><div class="menu-split"></div><div class="menu-section-title">Style</div><label>Border</label><input id="b">'+radiusHelpLabelHtml("imgRadiusHelp","Border radius")+'<div class="img-radius-panel"><button type="button" id="imgRadiusLink" class="img-radius-link'+(radiusLinked?' linked':'')+'" title="Link corners"><i class="fas fa-link"></i></button><div class="img-radius-row"><input id="imgRadTl" type="number" value="'+rad[0]+'"><input id="imgRadTr" type="number" value="'+rad[1]+'"><input id="imgRadBr" type="number" value="'+rad[2]+'"><input id="imgRadBl" type="number" value="'+rad[3]+'"></div></div><label>Shadow</label><input id="sh">'+moveControls+remove;
         var imgSourceType=document.getElementById("imgSourceType");
         if(imgSourceType)imgSourceType.onchange=()=>{saveToHistory();t.settings=t.settings||{};t.settings.imageSourceType=imgSourceType.value;renderSettings();};
         if(imageSourceType==="direct"){
@@ -2118,6 +2310,7 @@ function renderSettings(){
         }
         [imgRadTl,imgRadTr,imgRadBr,imgRadBl].forEach(n=>{if(n)n.addEventListener("input",()=>syncImgRadius(n));});
         if(imgRadiusLink)imgRadiusLink.onclick=()=>{saveToHistory();radiusLinked=!radiusLinked;t.settings=t.settings||{};t.settings.imageRadiusLinked=radiusLinked;imgRadiusLink.classList.toggle("linked",radiusLinked);if(radiusLinked){var v=Number((imgRadTl&&imgRadTl.value)||0)||0;if(imgRadTr)imgRadTr.value=v;if(imgRadBr)imgRadBr.value=v;if(imgRadBl)imgRadBl.value=v;applyImgRadius([v,v,v,v]);}};
+        bindRadiusHelpButton("imgRadiusHelp");
         bind("b",(t.style&&t.style.border)||"",v=>sty().border=v,{undo:true});bind("sh",(t.style&&t.style.boxShadow)||"",v=>sty().boxShadow=v,{undo:true});
     } else if(selKind==="el"&&t.type==="video"){
         t.settings=t.settings||{};
@@ -2127,7 +2320,7 @@ function renderSettings(){
         var videoSourceFields=videoSourceType==="upload"
             ? '<label>Upload file</label><input id="upv" type="file" accept="video/*"><div class="meta" id="vidCurrentFile"></div>'
             : '<label>URL</label><input id="src">';
-        settings.innerHTML='<div class="menu-section-title">Content</div><label>Video type</label><select id="vidSourceType"><option value="direct"'+(videoSourceType==="direct"?' selected':'')+'>Direct link</option><option value="upload"'+(videoSourceType==="upload"?' selected':'')+'>Upload file</option></select>'+videoSourceFields+'<div class="menu-split"></div><div class="menu-section-title">Layout</div><label>Alignment</label><select id="align"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select><label>Width</label><input id="w" placeholder="100%"><div class="menu-split"></div><div class="menu-section-title">Spacing</div><div class="size-position"><div class="size-label">Size and position</div><label class="size-label">Margin</label><div class="size-grid"><div class="fld"><label>T</label><input id="mTop" type="number" value="'+mar[0]+'"></div><div class="fld"><label>R</label><input id="mRight" type="number" value="'+mar[1]+'"></div><div class="fld"><label>B</label><input id="mBottom" type="number" value="'+mar[2]+'"></div><div class="fld"><label>L</label><input id="mLeft" type="number" value="'+mar[3]+'"></div><div class="size-link"><button type="button" id="linkMar" title="Link margin"><span>&harr;</span></button><span>Link</span></div></div></div><div class="menu-split"></div><div class="menu-section-title">Style</div><label>Border</label><input id="b"><label>Border radius</label><div class="img-radius-panel"><button type="button" id="vidRadiusLink" class="img-radius-link'+(videoRadiusLinked?' linked':'')+'" title="Link corners"><i class="fas fa-link"></i></button><div class="img-radius-row"><input id="vidRadTl" type="number" value="'+rad[0]+'"><input id="vidRadTr" type="number" value="'+rad[1]+'"><input id="vidRadBr" type="number" value="'+rad[2]+'"><input id="vidRadBl" type="number" value="'+rad[3]+'"></div></div><label>Shadow</label><input id="sh"><div class="menu-split"></div><div class="menu-section-title">Behavior</div><label>Auto play</label><select id="vAutoplay"><option value="off">Off</option><option value="on">On</option></select><label>Controls</label><select id="vControls"><option value="on">On</option><option value="off">Off</option></select>'+moveControls+remove;
+        settings.innerHTML='<div class="menu-section-title">Content</div><label>Video type</label><select id="vidSourceType"><option value="direct"'+(videoSourceType==="direct"?' selected':'')+'>Direct link</option><option value="upload"'+(videoSourceType==="upload"?' selected':'')+'>Upload file</option></select>'+videoSourceFields+'<div class="menu-split"></div><div class="menu-section-title">Layout</div><label>Alignment</label><select id="align"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select><label>Width</label><input id="w" placeholder="100%"><div class="menu-split"></div><div class="menu-section-title">Spacing</div><div class="size-position"><div class="size-label">Size and position</div><label class="size-label">Margin</label><div class="size-grid"><div class="fld"><label>T</label><input id="mTop" type="number" value="'+mar[0]+'"></div><div class="fld"><label>R</label><input id="mRight" type="number" value="'+mar[1]+'"></div><div class="fld"><label>B</label><input id="mBottom" type="number" value="'+mar[2]+'"></div><div class="fld"><label>L</label><input id="mLeft" type="number" value="'+mar[3]+'"></div><div class="size-link"><button type="button" id="linkMar" title="Link margin"><span>&harr;</span></button><span>Link</span></div></div></div><div class="menu-split"></div><div class="menu-section-title">Style</div><label>Border</label><input id="b">'+radiusHelpLabelHtml("vidRadiusHelp","Border radius")+'<div class="img-radius-panel"><button type="button" id="vidRadiusLink" class="img-radius-link'+(videoRadiusLinked?' linked':'')+'" title="Link corners"><i class="fas fa-link"></i></button><div class="img-radius-row"><input id="vidRadTl" type="number" value="'+rad[0]+'"><input id="vidRadTr" type="number" value="'+rad[1]+'"><input id="vidRadBr" type="number" value="'+rad[2]+'"><input id="vidRadBl" type="number" value="'+rad[3]+'"></div></div><label>Shadow</label><input id="sh"><div class="menu-split"></div><div class="menu-section-title">Behavior</div><label>Auto play</label><select id="vAutoplay"><option value="off">Off</option><option value="on">On</option></select><label>Controls</label><select id="vControls"><option value="on">On</option><option value="off">Off</option></select>'+moveControls+remove;
         var vidSourceType=document.getElementById("vidSourceType");
         if(vidSourceType)vidSourceType.onchange=()=>{saveToHistory();t.settings=t.settings||{};t.settings.videoSourceType=vidSourceType.value;renderSettings();};
         if(videoSourceType==="direct"){
@@ -2168,6 +2361,7 @@ function renderSettings(){
         }
         [vidRadTl,vidRadTr,vidRadBr,vidRadBl].forEach(n=>{if(n)n.addEventListener("input",()=>syncVidRadius(n));});
         if(vidRadiusLink)vidRadiusLink.onclick=()=>{saveToHistory();videoRadiusLinked=!videoRadiusLinked;t.settings=t.settings||{};t.settings.videoRadiusLinked=videoRadiusLinked;vidRadiusLink.classList.toggle("linked",videoRadiusLinked);if(videoRadiusLinked){var v=Number((vidRadTl&&vidRadTl.value)||0)||0;if(vidRadTr)vidRadTr.value=v;if(vidRadBr)vidRadBr.value=v;if(vidRadBl)vidRadBl.value=v;applyVidRadius([v,v,v,v]);}};
+        bindRadiusHelpButton("vidRadiusHelp");
         bind("b",(t.style&&t.style.border)||"",v=>sty().border=v,{undo:true});bind("sh",(t.style&&t.style.boxShadow)||"",v=>sty().boxShadow=v,{undo:true});
     } else if(selKind==="row"){
         var padDef=[0,0,0,0],marDef=[0,0,0,0],radDef=[0,0,0,0];
@@ -2180,7 +2374,7 @@ function renderSettings(){
         var radiusBlock=perCorner
             ? '<div class="row-radius-grid"><div class="row-radius-field"><span>TL</span><input id="rowRadTl" type="number" value="'+rad[0]+'"></div><div class="row-radius-field"><span>TR</span><input id="rowRadTr" type="number" value="'+rad[1]+'"></div><div class="row-radius-field"><span>BL</span><input id="rowRadBl" type="number" value="'+rad[3]+'"></div><div class="row-radius-field"><span>BR</span><input id="rowRadBr" type="number" value="'+rad[2]+'"></div></div>'
             : '<div class="row-radius-field"><span>R</span><input id="rowRadAll" type="number" value="'+rad[0]+'"></div>';
-        settings.innerHTML='<div class="menu-section-title">Layout</div><label>Content width</label><select id="rowCw"><option value="full">Full page</option><option value="wide">Wide</option><option value="medium">Medium</option><option value="small">Small</option><option value="xsmall">Extra small</option></select><label>Gap</label><div class="px-wrap"><input id="g" type="number" step="1"><span class="px-unit">px</span></div><div class="menu-split"></div><div class="menu-section-title">Spacing</div><div class="size-position"><div class="size-label">Size and position</div><label class="size-label">Padding</label><div class="size-grid"><div class="fld"><label>T</label><input id="pTop" type="number" value="'+pad[0]+'"></div><div class="fld"><label>R</label><input id="pRight" type="number" value="'+pad[1]+'"></div><div class="fld"><label>B</label><input id="pBottom" type="number" value="'+pad[2]+'"></div><div class="fld"><label>L</label><input id="pLeft" type="number" value="'+pad[3]+'"></div><div class="size-link"><button type="button" id="linkPad" title="Link padding"><span>&harr;</span></button><span>Link</span></div></div><label class="size-label">Margin</label><div class="size-grid"><div class="fld"><label>T</label><input id="mTop" type="number" value="'+mar[0]+'"></div><div class="fld"><label>R</label><input id="mRight" type="number" value="'+mar[1]+'"></div><div class="fld"><label>B</label><input id="mBottom" type="number" value="'+mar[2]+'"></div><div class="fld"><label>L</label><input id="mLeft" type="number" value="'+mar[3]+'"></div><div class="size-link"><button type="button" id="linkMar" title="Link margin"><span>&harr;</span></button><span>Link</span></div></div></div><div class="menu-split"></div><div class="menu-section-title">Style</div><label>Background color</label><input id="bg" type="color"><label>Background image URL</label><input id="bgImg" placeholder="https://..."><label>Upload background image</label><input id="bgUp" type="file" accept="image/*"><div class="row-border-card"><div class="row-border-head"><strong>Border</strong></div><select id="rowBorderStyle"><option value="none">None</option><option value="solid">Solid</option><option value="dashed">Dashed</option><option value="dotted">Dotted</option><option value="double">Double</option></select><label>Corner radius</label>'+radiusBlock+'<div class="size-link"><button type="button" id="rowRadiusToggle" title="Toggle radius mode"><i class="fas fa-expand"></i></button><span>'+(perCorner?'Per corner':'Single value')+'</span></div></div><div class="menu-split"></div><div class="menu-section-title">Behavior</div><button type="button" id="rowBorderReset" class="fb-btn" style="width:100%;"><i class="fas fa-rotate-right"></i> Reset row border</button>'+remove;
+        settings.innerHTML='<div class="menu-section-title">Layout</div><label>Content width</label><select id="rowCw"><option value="full">Full page</option><option value="wide">Wide</option><option value="medium">Medium</option><option value="small">Small</option><option value="xsmall">Extra small</option></select><label>Gap</label><div class="px-wrap"><input id="g" type="number" step="1"><span class="px-unit">px</span></div><div class="menu-split"></div><div class="menu-section-title">Spacing</div><div class="size-position"><div class="size-label">Size and position</div><label class="size-label">Padding</label><div class="size-grid"><div class="fld"><label>T</label><input id="pTop" type="number" value="'+pad[0]+'"></div><div class="fld"><label>R</label><input id="pRight" type="number" value="'+pad[1]+'"></div><div class="fld"><label>B</label><input id="pBottom" type="number" value="'+pad[2]+'"></div><div class="fld"><label>L</label><input id="pLeft" type="number" value="'+pad[3]+'"></div><div class="size-link"><button type="button" id="linkPad" title="Link padding"><span>&harr;</span></button><span>Link</span></div></div><label class="size-label">Margin</label><div class="size-grid"><div class="fld"><label>T</label><input id="mTop" type="number" value="'+mar[0]+'"></div><div class="fld"><label>R</label><input id="mRight" type="number" value="'+mar[1]+'"></div><div class="fld"><label>B</label><input id="mBottom" type="number" value="'+mar[2]+'"></div><div class="fld"><label>L</label><input id="mLeft" type="number" value="'+mar[3]+'"></div><div class="size-link"><button type="button" id="linkMar" title="Link margin"><span>&harr;</span></button><span>Link</span></div></div></div><div class="menu-split"></div><div class="menu-section-title">Style</div><label>Background color</label><input id="bg" type="color"><label>Background image URL</label><input id="bgImg" placeholder="https://..."><label>Upload background image</label><input id="bgUp" type="file" accept="image/*"><div class="row-border-card"><div class="row-border-head"><strong>Border</strong></div><select id="rowBorderStyle"><option value="none">None</option><option value="solid">Solid</option><option value="dashed">Dashed</option><option value="dotted">Dotted</option><option value="double">Double</option></select>'+radiusHelpLabelHtml("rowRadiusHelp","Corner radius")+radiusBlock+'<div class="size-link"><button type="button" id="rowRadiusToggle" title="Toggle radius mode"><i class="fas fa-expand"></i></button><span>'+(perCorner?'Per corner':'Single value')+'</span></div></div><div class="menu-split"></div><div class="menu-section-title">Behavior</div><button type="button" id="rowBorderReset" class="fb-btn" style="width:100%;"><i class="fas fa-rotate-right"></i> Reset row border</button>'+remove;
         bind("bg",(t.style&&t.style.backgroundColor)||"#ffffff",v=>sty().backgroundColor=v,{undo:true});
         bind("bgImg",readBgImageUrl(),v=>{var s=sty();s.backgroundImage=(v&&String(v).trim()!=="")?('url('+String(v).trim()+')'):"";renderCanvas();},{undo:true});
         bind("rowCw",rowCw,v=>{t.settings=t.settings||{};t.settings.contentWidth=v;renderCanvas();},{undo:true});
@@ -2204,6 +2398,7 @@ function renderSettings(){
         [rowRadTl,rowRadTr,rowRadBr,rowRadBl].forEach(n=>{if(n)n.addEventListener("input",syncCornerRadius);});
         var rowRadiusToggle=document.getElementById("rowRadiusToggle");
         if(rowRadiusToggle)rowRadiusToggle.onclick=()=>{saveToHistory();t.settings=t.settings||{};t.settings.rowRadiusPerCorner=!t.settings.rowRadiusPerCorner;renderSettings();};
+        bindRadiusHelpButton("rowRadiusHelp");
         var rowBorderReset=document.getElementById("rowBorderReset");
         if(rowBorderReset)rowBorderReset.onclick=()=>{saveToHistory();t.settings=t.settings||{};t.settings.rowBorderStyle="none";t.settings.rowRadiusPerCorner=false;sty().border="none";sty().borderRadius="0px";renderSettings();renderCanvas();};
     } else if(selKind==="col"){
@@ -2233,7 +2428,7 @@ function renderSettings(){
         t.settings=t.settings||{};
         var colCw=(t.settings&&t.settings.contentWidth)||"full";
         var layoutHtml='<div class="col-layout-wrap"><div class="col-layout-title">Column layout</div><div class="col-layout-grid"><button type="button" class="col-layout-btn'+(currentCols===1?' active':'')+'" data-cols="1"><i class="fas fa-square"></i><span>1</span></button><button type="button" class="col-layout-btn'+(currentCols===2?' active':'')+'" data-cols="2"><i class="fas fa-columns"></i><span>2</span></button><button type="button" class="col-layout-btn'+(currentCols===3?' active':'')+'" data-cols="3"><i class="fas fa-table-columns"></i><span>3</span></button><button type="button" class="col-layout-btn'+(currentCols===4?' active':'')+'" data-cols="4"><i class="fas fa-grip"></i><span>4</span></button></div></div>';
-        settings.innerHTML='<div class="menu-section-title">Layout</div>'+layoutHtml+'<label>Content width</label><select id="colCw"><option value="full">Full page</option><option value="wide">Wide</option><option value="medium">Medium</option><option value="small">Small</option><option value="xsmall">Extra small</option></select><div class="menu-split"></div><div class="menu-section-title">Spacing</div><div class="size-position"><div class="size-label">Size and position</div><label class="size-label">Padding</label><div class="size-grid"><div class="fld"><label>T</label><input id="pTop" type="number" value="'+pad[0]+'"></div><div class="fld"><label>R</label><input id="pRight" type="number" value="'+pad[1]+'"></div><div class="fld"><label>B</label><input id="pBottom" type="number" value="'+pad[2]+'"></div><div class="fld"><label>L</label><input id="pLeft" type="number" value="'+pad[3]+'"></div><div class="size-link"><button type="button" id="linkPad" title="Link padding"><span>&harr;</span></button><span>Link</span></div></div><label class="size-label">Margin</label><div class="size-grid"><div class="fld"><label>T</label><input id="mTop" type="number" value="'+mar[0]+'"></div><div class="fld"><label>R</label><input id="mRight" type="number" value="'+mar[1]+'"></div><div class="fld"><label>B</label><input id="mBottom" type="number" value="'+mar[2]+'"></div><div class="fld"><label>L</label><input id="mLeft" type="number" value="'+mar[3]+'"></div><div class="size-link"><button type="button" id="linkMar" title="Link margin"><span>&harr;</span></button><span>Link</span></div></div></div><div class="menu-split"></div><div class="menu-section-title">Style</div><label>Background color</label><input id="bg" type="color"><label>Background image URL</label><input id="bgImg" placeholder="https://..."><label>Upload background image</label><input id="bgUp" type="file" accept="image/*">'+remove;
+        settings.innerHTML='<div class="menu-section-title">Layout</div>'+layoutHtml+'<label>Content width</label><select id="colCw"><option value="full">Full page</option><option value="wide">Wide</option><option value="medium">Medium</option><option value="small">Small</option><option value="xsmall">Extra small</option></select><div class="menu-split"></div><div class="menu-section-title">Spacing</div><div class="size-position"><div class="size-label">Size and position</div><label class="size-label">Padding</label><div class="size-grid"><div class="fld"><label>T</label><input id="pTop" type="number" value="'+pad[0]+'"></div><div class="fld"><label>R</label><input id="pRight" type="number" value="'+pad[1]+'"></div><div class="fld"><label>B</label><input id="pBottom" type="number" value="'+pad[2]+'"></div><div class="fld"><label>L</label><input id="pLeft" type="number" value="'+pad[3]+'"></div><div class="size-link"><button type="button" id="linkPad" title="Link padding"><span>&harr;</span></button><span>Link</span></div></div><label class="size-label">Margin</label><div class="size-grid"><div class="fld"><label>T</label><input id="mTop" type="number" value="'+mar[0]+'"></div><div class="fld"><label>R</label><input id="mRight" type="number" value="'+mar[1]+'"></div><div class="fld"><label>B</label><input id="mBottom" type="number" value="'+mar[2]+'"></div><div class="fld"><label>L</label><input id="mLeft" type="number" value="'+mar[3]+'"></div><div class="size-link"><button type="button" id="linkMar" title="Link margin"><span>&harr;</span></button><span>Link</span></div></div></div><div class="menu-split"></div><div class="menu-section-title">Style</div><label>Background color</label><input id="bg" type="color"><label>Background image URL</label><input id="bgImg" placeholder="https://..."><label>Upload background image</label><input id="bgUp" type="file" accept="image/*">'+radiusHelpLabelHtml("colRadiusHelp","Border radius")+'<div class="px-wrap"><input id="colRadius" type="number" min="0" step="1"><span class="px-unit">px</span></div>'+remove;
         bind("bg",(t.style&&t.style.backgroundColor)||"#ffffff",v=>sty().backgroundColor=v,{undo:true});
         bind("bgImg",readBgImageUrl(),v=>{var s=sty();s.backgroundImage=(v&&String(v).trim()!=="")?('url('+String(v).trim()+')'):"";renderCanvas();},{undo:true});
         bind("colCw",colCw,v=>{t.settings=t.settings||{};t.settings.contentWidth=v;renderCanvas();},{undo:true});
@@ -2246,6 +2441,8 @@ function renderSettings(){
         var linkPad=document.getElementById("linkPad"),linkMar=document.getElementById("linkMar");
         if(linkPad)linkPad.onclick=()=>{saveToHistory();paddingLinked=!paddingLinked;linkPad.classList.toggle("linked",paddingLinked);if(paddingLinked){var v=document.getElementById("pTop").value;document.getElementById("pRight").value=v;document.getElementById("pBottom").value=v;document.getElementById("pLeft").value=v;sty().padding=spacingToCss([Number(v)||0,Number(v)||0,Number(v)||0,Number(v)||0]);renderCanvas();}};
         if(linkMar)linkMar.onclick=()=>{saveToHistory();marginLinked=!marginLinked;linkMar.classList.toggle("linked",marginLinked);if(marginLinked){var v=document.getElementById("mTop").value;document.getElementById("mRight").value=v;document.getElementById("mBottom").value=v;document.getElementById("mLeft").value=v;sty().margin=spacingToCss([Number(v)||0,Number(v)||0,Number(v)||0,Number(v)||0]);renderCanvas();}};
+        bindPx("colRadius",(t.style&&t.style.borderRadius)||"",v=>sty().borderRadius=v,{undo:true});
+        bindRadiusHelpButton("colRadiusHelp");
 
         function applyColumnLayout(count){
             // Root-level column is rendered through a synthetic row wrapper.
@@ -2341,13 +2538,15 @@ function renderSettings(){
             var carouselComponentsHtml='';
             settings.innerHTML='<div class="menu-section-title">Content</div><div class="menu-section-title">Slides</div>'+slidesHtml
                 +'<label>Slide label</label><input id="carSlideLabel" value="'+String((aSlide&&aSlide.label)||"").replace(/"/g,'&quot;')+'" placeholder="Slide title">'
-                +'<div class="meta" style="margin:6px 0 10px;">Use the <strong>+</strong> button inside carousel to add an image slide.</div>'
-                +'<button type="button" id="addImageSlideFromSettings" class="fb-btn primary" style="width:100%;margin:0 0 10px;">Add image slide</button>'
+                +'<div class="meta" style="margin:6px 0 10px;">Add a blank slide here, or upload image slides. You can also use the <strong>+</strong> button inside carousel.</div>'
+                +'<button type="button" id="addSlideFromSettings" class="fb-btn primary" style="width:100%;margin:0 0 8px;">Add slide</button>'
+                +'<button type="button" id="addImageSlideFromSettings" class="fb-btn" style="width:100%;margin:0 0 10px;">Add image slide</button>'
                 +'<input id="carImageSlideFiles" type="file" accept="image/*" multiple style="display:none;">'
                 +carouselComponentsHtml
                 +'<div class="menu-split"></div><div class="menu-section-title">Layout</div><label>Carousel alignment</label><div class="menu-align-row"><button type="button" class="menu-align-btn car-align-btn" data-ca="left"><i class="fas fa-align-left"></i></button><button type="button" class="menu-align-btn car-align-btn" data-ca="center"><i class="fas fa-align-center"></i></button><button type="button" class="menu-align-btn car-align-btn" data-ca="right"><i class="fas fa-align-right"></i></button></div>'
                 +'<label>Fixed width</label><div class="px-wrap"><input id="carFixedW" type="number" min="50" step="1"><span class="px-unit">px</span></div><label>Fixed height</label><div class="px-wrap"><input id="carFixedH" type="number" min="50" step="1"><span class="px-unit">px</span></div>'
-                +'<div class="menu-split"></div><div class="menu-section-title">Behavior</div><div class="meta">Slide selection, view, and ordering controls are in the Content section above.</div>'
+                +'<div class="menu-split"></div><div class="menu-section-title">Behavior</div><label>Slideshow mode</label><select id="carSlideMode"><option value="manual">Manual (use arrows)</option><option value="auto">Automatic (no arrows)</option></select><div class="meta">Slide selection, view, and ordering controls are in the Content section above.</div>'
+                +'<div class="menu-split"></div><div class="menu-section-title">Style</div>'+radiusHelpLabelHtml("carRadiusHelp","Border radius")+'<div class="px-wrap"><input id="carRadius" type="number" min="0" step="1"><span class="px-unit">px</span></div>'
                 +moveControls+remove;
 
             settings.querySelectorAll(".carousel-slide-btn").forEach(btn=>btn.addEventListener("click",()=>{
@@ -2391,8 +2590,22 @@ function renderSettings(){
             }));
             var labelInput=document.getElementById("carSlideLabel");
             if(labelInput)labelInput.addEventListener("input",()=>{var i=Number(t.settings.activeSlide)||0;slides[i].label=labelInput.value||"";renderCanvas();});
+            var addSlideFromSettings=document.getElementById("addSlideFromSettings");
             var addImageSlideFromSettings=document.getElementById("addImageSlideFromSettings");
             var carImageSlideFiles=document.getElementById("carImageSlideFiles");
+            if(addSlideFromSettings)addSlideFromSettings.onclick=()=>{
+                ensureCarouselSlides(t.settings);
+                var liveSlides=t.settings.slides||[];
+                saveToHistory();
+                var next={id:uid("sld"),label:"Slide #"+(liveSlides.length+1),image:{src:"",alt:"Image"}};
+                liveSlides.push(next);
+                t.settings.activeSlide=liveSlides.length-1;
+                t.settings.carouselActiveRow=0;
+                t.settings.carouselActiveCol=0;
+                state.carouselSel=null;
+                renderCarouselEditor();
+                renderCanvas();
+            };
             if(addImageSlideFromSettings&&carImageSlideFiles)addImageSlideFromSettings.onclick=()=>{carImageSlideFiles.click();};
             if(carImageSlideFiles)carImageSlideFiles.onchange=()=>{
                 var files=Array.from(carImageSlideFiles.files||[]);
@@ -2468,6 +2681,9 @@ function renderSettings(){
             settings.querySelectorAll(".car-align-btn").forEach(btn=>{if(btn.getAttribute("data-ca")===carAlignment)btn.classList.add("active");btn.addEventListener("click",()=>{saveToHistory();t.settings=t.settings||{};t.settings.alignment=btn.getAttribute("data-ca")||"left";renderCarouselEditor();renderCanvas();});});
             bind("carFixedW",(t.settings&&t.settings.fixedWidth)||"",v=>{t.settings=t.settings||{};var n=Number(v);t.settings.fixedWidth=(!isNaN(n)&&n>=50)?Math.round(n):"";renderCanvas();},{undo:true});
             bind("carFixedH",(t.settings&&t.settings.fixedHeight)||"",v=>{t.settings=t.settings||{};var n=Number(v);t.settings.fixedHeight=(!isNaN(n)&&n>=50)?Math.round(n):"";renderCanvas();},{undo:true});
+            bind("carSlideMode",(t.settings&&t.settings.slideshowMode)||"manual",v=>{t.settings=t.settings||{};var m=(v==="auto")?"auto":"manual";t.settings.slideshowMode=m;t.settings.showArrows=(m==="auto")?false:true;renderCanvas();},{undo:true});
+            bindPx("carRadius",(t.style&&t.style.borderRadius)||"",v=>sty().borderRadius=v,{undo:true});
+            bindRadiusHelpButton("carRadiusHelp");
         }
         renderCarouselEditor();
     } else if(selKind==="el"&&t.type==="menu"){
@@ -2483,7 +2699,7 @@ function renderSettings(){
                 var collapsed=!!t.settings.menuCollapsed[idx];
                 return '<div class="menu-item-card"><div class="menu-item-head"><strong>Menu item '+(idx+1)+'</strong><div class="menu-item-actions"><button type="button" class="menu-del" data-idx="'+idx+'" title="Delete"><i class="fas fa-trash"></i></button><button type="button" class="menu-toggle" data-idx="'+idx+'" title="Toggle"><i class="fas '+(collapsed?'fa-chevron-down':'fa-chevron-up')+'"></i></button></div></div>'+(collapsed?'':'<input id="miLabel_'+idx+'" value="'+String((it&&it.label)||"").replace(/"/g,'&quot;')+'" placeholder="Label"><input id="miUrl_'+idx+'" value="'+String((it&&it.url)||"").replace(/"/g,'&quot;')+'" placeholder="Link"><label><input id="miNew_'+idx+'" type="checkbox"'+((it&&it.newWindow)?' checked':'')+'> Open in a new window</label><label><input id="miSub_'+idx+'" type="checkbox"'+((it&&it.hasSubmenu)?' checked':'')+'> Has submenu</label>')+'</div>';
             }).join("");
-            settings.innerHTML='<div class="menu-panel-title">Menu</div><div class="menu-section-title">Content</div>'+cards+'<button type="button" id="addMenuItem" class="fb-btn primary" style="width:100%;margin:6px 0 10px;">Add menu item</button><div class="menu-split"></div><div class="menu-section-title">Style</div><label>Font family</label><select id="mFont"><option value="">Same font as the page</option>'+fonts.map(f=>'<option value="'+f.value.replace(/"/g,'&quot;')+'">'+f.label+'</option>').join('')+'</select><div class="menu-typo-grid"><div class="px-wrap"><input id="mFs" type="number" step="1"><span class="px-unit">px</span></div><div class="px-wrap"><input id="mLh" type="number" step="0.1"><span class="px-unit">lh</span></div></div><div class="menu-split"></div><div class="menu-section-title">Layout</div><div class="menu-align-row"><button type="button" class="menu-align-btn" data-align="left"><i class="fas fa-align-left"></i></button><button type="button" class="menu-align-btn" data-align="center"><i class="fas fa-align-center"></i></button><button type="button" class="menu-align-btn" data-align="right"><i class="fas fa-align-right"></i></button></div><div class="menu-split"></div><div class="menu-section-title">Style</div><label>Letter spacing</label><div class="menu-slider-row"><input id="mLsRange" type="range" min="0" max="20" step="0.1"><input id="mLsNum" type="number" min="0" max="20" step="0.1"></div><label>Menu items text color</label><input id="mTextColor" type="color"><label>Active menu item color</label><input id="mActiveColor" type="color"><label>Menu items underline color</label><input id="mUnderlineColor" type="color"><label>Background color</label><input id="mBgColor" type="color"><label>Background image URL</label><input id="mBgImg" placeholder="https://..."><label>Upload background image</label><input id="mBgUp" type="file" accept="image/*"><div class="menu-split"></div><div class="menu-section-title">Spacing</div><label>Spacing between menu items</label><div class="menu-slider-row"><input id="mGapRange" type="range" min="0" max="64" step="1"><input id="mGapNum" type="number" min="0" max="64" step="1"></div><label>Padding</label><div class="size-grid"><div class="fld"><label>T</label><input id="pTop" type="number" value="'+pad[0]+'"></div><div class="fld"><label>R</label><input id="pRight" type="number" value="'+pad[1]+'"></div><div class="fld"><label>B</label><input id="pBottom" type="number" value="'+pad[2]+'"></div><div class="fld"><label>L</label><input id="pLeft" type="number" value="'+pad[3]+'"></div><div class="size-link"><button type="button" id="linkPad" title="Link padding"><span>&harr;</span></button><span>Link</span></div></div><label>Margin</label><div class="size-grid"><div class="fld"><label>T</label><input id="mTop" type="number" value="'+mar[0]+'"></div><div class="fld"><label>R</label><input id="mRight" type="number" value="'+mar[1]+'"></div><div class="fld"><label>B</label><input id="mBottom" type="number" value="'+mar[2]+'"></div><div class="fld"><label>L</label><input id="mLeft" type="number" value="'+mar[3]+'"></div><div class="size-link"><button type="button" id="linkMar" title="Link margin"><span>&harr;</span></button><span>Link</span></div></div>'+moveControls+remove;
+            settings.innerHTML='<div class="menu-panel-title">Menu</div><div class="menu-section-title">Content</div>'+cards+'<button type="button" id="addMenuItem" class="fb-btn primary" style="width:100%;margin:6px 0 10px;">Add menu item</button><div class="menu-split"></div><div class="menu-section-title">Style</div><label>Font family</label><select id="mFont"><option value="">Same font as the page</option>'+fonts.map(f=>'<option value="'+f.value.replace(/"/g,'&quot;')+'">'+f.label+'</option>').join('')+'</select><div class="menu-typo-grid"><div class="px-wrap"><input id="mFs" type="number" step="1"><span class="px-unit">px</span></div><div class="px-wrap"><input id="mLh" type="number" step="0.1"><span class="px-unit">lh</span></div></div><label>Text style</label><div class="menu-style-row"><button type="button" id="mBold" class="menu-align-btn" title="Bold (Ctrl+B)"><i class="fas fa-bold"></i></button><button type="button" id="mItalic" class="menu-align-btn" title="Italic (Ctrl+I)"><i class="fas fa-italic"></i></button></div><div class="menu-split"></div><div class="menu-section-title">Layout</div><div class="menu-align-row"><button type="button" class="menu-align-btn" data-align="left"><i class="fas fa-align-left"></i></button><button type="button" class="menu-align-btn" data-align="center"><i class="fas fa-align-center"></i></button><button type="button" class="menu-align-btn" data-align="right"><i class="fas fa-align-right"></i></button></div><div class="menu-split"></div><div class="menu-section-title">Style</div><label>Letter spacing</label><div class="menu-slider-row"><input id="mLsRange" type="range" min="0" max="20" step="0.1"><input id="mLsNum" type="number" min="0" max="20" step="0.1"></div><label>Text color</label><input id="mTextColor" type="color"><label>Menu items underline color</label><input id="mUnderlineColor" type="color"><label>Background color</label><input id="mBgColor" type="color"><label>Background image URL</label><input id="mBgImg" placeholder="https://..."><label>Upload background image</label><input id="mBgUp" type="file" accept="image/*"><div class="menu-split"></div><div class="menu-section-title">Spacing</div><label>Spacing between menu items</label><div class="menu-slider-row"><input id="mGapRange" type="range" min="0" max="64" step="1"><input id="mGapNum" type="number" min="0" max="64" step="1"></div><label>Padding</label><div class="size-grid"><div class="fld"><label>T</label><input id="pTop" type="number" value="'+pad[0]+'"></div><div class="fld"><label>R</label><input id="pRight" type="number" value="'+pad[1]+'"></div><div class="fld"><label>B</label><input id="pBottom" type="number" value="'+pad[2]+'"></div><div class="fld"><label>L</label><input id="pLeft" type="number" value="'+pad[3]+'"></div><div class="size-link"><button type="button" id="linkPad" title="Link padding"><span>&harr;</span></button><span>Link</span></div></div><label>Margin</label><div class="size-grid"><div class="fld"><label>T</label><input id="mTop" type="number" value="'+mar[0]+'"></div><div class="fld"><label>R</label><input id="mRight" type="number" value="'+mar[1]+'"></div><div class="fld"><label>B</label><input id="mBottom" type="number" value="'+mar[2]+'"></div><div class="fld"><label>L</label><input id="mLeft" type="number" value="'+mar[3]+'"></div><div class="size-link"><button type="button" id="linkMar" title="Link margin"><span>&harr;</span></button><span>Link</span></div></div>'+moveControls+remove;
 
             items.forEach((it,idx)=>{
                 var lab=document.getElementById("miLabel_"+idx),url=document.getElementById("miUrl_"+idx),nw=document.getElementById("miNew_"+idx),sm=document.getElementById("miSub_"+idx);
@@ -2499,8 +2715,22 @@ function renderSettings(){
             var mFont=document.getElementById("mFont");if(mFont){mFont.value=(t.style&&t.style.fontFamily)||"";mFont.addEventListener("change",()=>{saveToHistory();sty().fontFamily=mFont.value||"";renderCanvas();});}
             bindPx("mFs",(t.style&&t.style.fontSize)||"",v=>sty().fontSize=v,{undo:true});
             bind("mLh",(t.style&&t.style.lineHeight)||"",v=>sty().lineHeight=v,{undo:true});
+            var mBold=document.getElementById("mBold"),mItalic=document.getElementById("mItalic");
+            function menuStyleState(){
+                var fw=String((t.style&&t.style.fontWeight)||"").toLowerCase();
+                var fs=String((t.style&&t.style.fontStyle)||"").toLowerCase();
+                return {bold:(fw==="bold"||Number(fw)>=600),italic:(fs==="italic")};
+            }
+            function syncMenuStyleButtons(){
+                var st=menuStyleState();
+                if(mBold)mBold.classList.toggle("active",!!st.bold);
+                if(mItalic)mItalic.classList.toggle("active",!!st.italic);
+            }
+            if(mBold)mBold.onclick=()=>{saveToHistory();var st=menuStyleState();sty().fontWeight=st.bold?"400":"700";syncMenuStyleButtons();renderCanvas();};
+            if(mItalic)mItalic.onclick=()=>{saveToHistory();var st=menuStyleState();sty().fontStyle=st.italic?"normal":"italic";syncMenuStyleButtons();renderCanvas();};
+            syncMenuStyleButtons();
             var curAlign=(t.settings&&t.settings.menuAlign)||"left";
-            settings.querySelectorAll(".menu-align-btn").forEach(btn=>{if(btn.getAttribute("data-align")===curAlign)btn.classList.add("active");btn.addEventListener("click",()=>{saveToHistory();t.settings=t.settings||{};t.settings.menuAlign=btn.getAttribute("data-align");renderMenuEditor();renderCanvas();});});
+            settings.querySelectorAll(".menu-align-btn[data-align]").forEach(btn=>{if(btn.getAttribute("data-align")===curAlign)btn.classList.add("active");btn.addEventListener("click",()=>{saveToHistory();t.settings=t.settings||{};t.settings.menuAlign=btn.getAttribute("data-align");renderMenuEditor();renderCanvas();});});
 
             var lsVal=Number(pxToNumber((t.style&&t.style.letterSpacing)||""));if(isNaN(lsVal))lsVal=0;
             var lsRange=document.getElementById("mLsRange"),lsNum=document.getElementById("mLsNum");
@@ -2510,7 +2740,6 @@ function renderSettings(){
             syncLs(lsVal,false,false);
 
             bind("mTextColor",(t.settings&&t.settings.textColor)||"#374151",v=>{t.settings=t.settings||{};t.settings.textColor=v;renderCanvas();},{undo:true});
-            bind("mActiveColor",(t.settings&&t.settings.activeColor)||"#a89c76",v=>{t.settings=t.settings||{};t.settings.activeColor=v;renderCanvas();},{undo:true});
             bind("mUnderlineColor",(t.settings&&t.settings.underlineColor)||"#000000",v=>{t.settings=t.settings||{};t.settings.underlineColor=v;renderCanvas();},{undo:true});
             bind("mBgColor",(t.style&&t.style.backgroundColor)||"#ffffff",v=>{sty().backgroundColor=v;renderCanvas();},{undo:true});
             bind("mBgImg",readBgImageUrl(),v=>{var s=sty();s.backgroundImage=(v&&String(v).trim()!=="")?('url('+String(v).trim()+')'):"";renderCanvas();},{undo:true});
@@ -2549,7 +2778,8 @@ function renderSettings(){
             : '';
         var sizeBlock='<div class="size-position"><div class="size-label">Size and position</div><label class="size-label">Padding</label><div class="size-grid"><div class="fld"><label>T</label><input id="pTop" type="number" value="'+pad[0]+'"></div><div class="fld"><label>R</label><input id="pRight" type="number" value="'+pad[1]+'"></div><div class="fld"><label>B</label><input id="pBottom" type="number" value="'+pad[2]+'"></div><div class="fld"><label>L</label><input id="pLeft" type="number" value="'+pad[3]+'"></div><div class="size-link"><button type="button" id="linkPad" title="Link padding"><span>↔</span></button><span>Link</span></div></div><label class="size-label">Margin</label><div class="size-grid"><div class="fld"><label>T</label><input id="mTop" type="number" value="'+mar[0]+'"></div><div class="fld"><label>R</label><input id="mRight" type="number" value="'+mar[1]+'"></div><div class="fld"><label>B</label><input id="mBottom" type="number" value="'+mar[2]+'"></div><div class="fld"><label>L</label><input id="mLeft" type="number" value="'+mar[3]+'"></div><div class="size-link"><button type="button" id="linkMar" title="Link margin"><span>↔</span></button><span>Link</span></div></div></div>';
         var buttonBgControl=(t.type==="button")?'<label>Button color</label><input id="btnBg" type="color">':'';
-        settings.innerHTML='<div class="menu-section-title">Content</div>'+(rich?'<div class="rt-box"><div class="rt-tools"><button id="rtBold" type="button"><b>B</b></button><button id="rtItalic" type="button"><i>I</i></button><button id="rtUnderline" type="button"><u>U</u></button></div><div id="contentRt" class="rt-editor" contenteditable="true"></div></div>':'<label>Content</label><textarea id="content" rows="4"></textarea>')+'<div class="menu-split"></div><div class="menu-section-title">Layout</div><label>Alignment</label><select id="a"><option value="">Default</option><option>left</option><option>center</option><option>right</option></select><div class="menu-split"></div><div class="menu-section-title">Spacing</div>'+sizeBlock+'<div class="menu-split"></div><div class="menu-section-title">Style</div>'+buttonBgControl+'<label>Color</label><input id="co" type="color"><label>Font size</label><div class="px-wrap"><input id="fs" type="number" step="1"><span class="px-unit">px</span></div>'+textTypographyControls+fontSelectHtml('ff')+moveControls+remove;
+        var buttonRadiusControl=(t.type==="button")?(radiusHelpLabelHtml("btnRadiusHelp","Border radius")+'<div class="px-wrap"><input id="btnRadius" type="number" min="0" step="1"><span class="px-unit">px</span></div>'):'';
+        settings.innerHTML='<div class="menu-section-title">Content</div>'+(rich?'<div class="rt-box"><div class="rt-tools"><button id="rtBold" type="button"><b>B</b></button><button id="rtItalic" type="button"><i>I</i></button><button id="rtUnderline" type="button"><u>U</u></button></div><div id="contentRt" class="rt-editor" contenteditable="true"></div></div>':'<label>Content</label><textarea id="content" rows="4"></textarea>')+'<div class="menu-split"></div><div class="menu-section-title">Layout</div><label>Alignment</label><select id="a"><option value="">Default</option><option>left</option><option>center</option><option>right</option></select><div class="menu-split"></div><div class="menu-section-title">Spacing</div>'+sizeBlock+'<div class="menu-split"></div><div class="menu-section-title">Style</div>'+buttonBgControl+buttonRadiusControl+'<label>Color</label><input id="co" type="color"><label>Font size</label><div class="px-wrap"><input id="fs" type="number" step="1"><span class="px-unit">px</span></div>'+textTypographyControls+fontSelectHtml('ff')+moveControls+remove;
         if(rich){
             bindRichEditor("contentRt",t.content,v=>t.content=v);
             const rt=document.getElementById("contentRt");
@@ -2588,6 +2818,8 @@ function renderSettings(){
         }
         bindPx("fs",(t.style&&t.style.fontSize)||"",v=>sty().fontSize=v,{undo:true});bind("ff",(t.style&&t.style.fontFamily)||"Inter, sans-serif",v=>sty().fontFamily=v,{undo:true});
         if(t.type==="button"){
+            bindPx("btnRadius",(t.style&&t.style.borderRadius)||"",v=>sty().borderRadius=v,{undo:true});
+            bindRadiusHelpButton("btnRadiusHelp");
             var btnBg=document.getElementById("btnBg");
             if(btnBg){
                 btnBg.value=(t.style&&t.style.backgroundColor)||"#2563eb";
@@ -2640,6 +2872,7 @@ function renderSettings(){
         if(linkMar)linkMar.onclick=()=>{saveToHistory();marginLinked=!marginLinked;linkMar.classList.toggle("linked",marginLinked);if(marginLinked){var v=document.getElementById("mTop").value;document.getElementById("mRight").value=v;document.getElementById("mBottom").value=v;document.getElementById("mLeft").value=v;sty().margin=spacingToCss([Number(v)||0,Number(v)||0,Number(v)||0,Number(v)||0]);renderCanvas();}};
         bindPx("g",(t.style&&t.style.gap)||"",v=>sty().gap=v,{undo:true});
     }
+    ensureSpacingHelperButton();
     mountBackgroundImageDisplayControl();
     const btnMoveUp=document.getElementById("btnMoveUp");if(btnMoveUp)btnMoveUp.onclick=()=>moveSelectedElement(-1);
     const btnMoveDown=document.getElementById("btnMoveDown");if(btnMoveDown)btnMoveDown.onclick=()=>moveSelectedElement(1);
@@ -2718,10 +2951,31 @@ document.addEventListener("keydown",e=>{
     const key=String(e.key||"").toLowerCase();
     const ae=document.activeElement;
     const isTextField=!!(ae && (ae.tagName==="INPUT" || ae.tagName==="TEXTAREA" || ae.isContentEditable));
+    if(key==="escape"){
+        closeRadiusHelpModal();
+        closeSpacingHelpModal();
+    }
 
     if((e.ctrlKey||e.metaKey)&&key==="s"){e.preventDefault();document.getElementById("saveBtn").click();return;}
 
     if((e.ctrlKey||e.metaKey)&&(key==="b"||key==="i"||key==="u")){
+        var selT=selectedTarget();
+        if(selT&&selT.type==="menu"&&!isTextField&&(key==="b"||key==="i")){
+            e.preventDefault();
+            saveToHistory();
+            selT.style=selT.style||{};
+            if(key==="b"){
+                var fw=String(selT.style.fontWeight||"").toLowerCase();
+                var isBold=(fw==="bold"||Number(fw)>=600);
+                selT.style.fontWeight=isBold?"400":"700";
+            }else if(key==="i"){
+                var fs=String(selT.style.fontStyle||"").toLowerCase();
+                selT.style.fontStyle=(fs==="italic")?"normal":"italic";
+            }
+            renderCanvas();
+            renderSettings();
+            return;
+        }
         if(ae && ae.isContentEditable){
             e.preventDefault();
             if(key==="b")document.execCommand("bold");
