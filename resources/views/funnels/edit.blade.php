@@ -58,16 +58,15 @@
 .fb-lib-group{margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #e2e8f0}
 .fb-lib-group:last-child{margin-bottom:0;padding-bottom:0;border-bottom:0}
 .fb-lib-group-title{font-size:12px;font-weight:900;letter-spacing:.02em;text-transform:uppercase;color:#1e3a8a;margin:0 0 8px}
-#canvas{min-height:60vh;border:2px dashed #93c5fd;border-radius:12px;padding:10px;background:linear-gradient(180deg,#f8fafc,#e0f2fe);overflow-x:hidden;overflow-y:auto}
-.sec{border:1px dashed #64748b;border-radius:10px;padding:8px;margin-bottom:9px;background:#fff}
+#canvas{min-height:60vh;border:2px dashed #93c5fd;border-radius:0;padding:10px;background:linear-gradient(180deg,#f8fafc,#e0f2fe);overflow-x:hidden;overflow-y:auto}
+.sec{border:1px dashed #64748b !important;border-radius:0;padding:8px;margin-bottom:9px;background:#fff}
 .sec.sec--bare-carousel{border:0;background:transparent;padding:0}
 .sec.sec--bare-wrap{border:0;background:transparent;padding:0}
-.row{display:flex;flex-wrap:wrap;gap:8px;border:1px dashed #cbd5e1;border-radius:8px;padding:6px}
+.row{display:flex;flex-wrap:wrap;gap:8px;border:1px dashed #cbd5e1 !important;border-radius:0 !important;padding:6px}
 .row.row--bare-wrap{border:0;background:transparent;padding:0}
-.row-inner{display:flex;flex-wrap:wrap;gap:8px;position:relative}
-.col{flex:1 1 240px;min-height:120px;min-width:0;border:1px dashed #bfdbfe;border-radius:7px;padding:6px;background:#ffffff;position:relative;overflow:hidden}
-.row-resize-handle-y{position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);z-index:4;width:42px;height:10px;border-radius:999px;border:1px solid #93c5fd;background:#dbeafe;cursor:ns-resize;opacity:.9}
-.el{border:1px solid #e2e8f0;border-radius:7px;padding:7px;background:#fff;margin-bottom:6px;min-width:0;overflow-wrap:break-word;word-break:break-word}
+.row-inner{display:flex;flex-wrap:wrap;gap:8px}
+.col{flex:1 1 0;min-height:120px;min-width:0;border:1px dashed #bfdbfe !important;border-radius:0;padding:6px;background:#f8fafc}
+.el{border:0 !important;border-style:none !important;border-width:0 !important;border-radius:0;padding:7px;background:#fff;margin-bottom:6px;min-width:0;overflow-wrap:break-word;word-break:break-word}
 .el.el--carousel{border:0 !important;background:transparent !important;padding:0 !important}
 .el.el--form{border:0 !important;background:transparent !important;padding:0 !important}
 .el h2,.el p,.el button{overflow-wrap:break-word;word-break:break-word;min-width:0;max-width:100%}
@@ -110,6 +109,9 @@
 .img-radius-link.linked{border-color:#3b82f6;background:#dbeafe;color:#1d4ed8}
 .img-radius-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;flex:1}
 .img-radius-row input{margin-bottom:0;text-align:center}
+.radius-inline{display:grid;grid-template-columns:36px 1fr;align-items:end;gap:8px;margin-bottom:8px}
+.radius-icon{width:36px;height:36px;border:2px dashed #64748b;border-radius:10px;background:#f8fafc;color:#334155;display:flex;align-items:center;justify-content:center;padding:0}
+.radius-inline input{margin-bottom:0;border:0;border-bottom:1px solid #94a3b8;border-radius:0;background:transparent;padding:8px 2px}
 .col-layout-wrap{border:1px solid #e2e8f0;border-radius:10px;padding:10px;margin:10px 0;background:#fff}
 .col-layout-title{font-size:13px;font-weight:800;color:#0f172a;margin:0 0 8px}
 .col-layout-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
@@ -134,6 +136,26 @@
 .menu-align-btn.active{border-color:#3b82f6;background:#dbeafe;color:#1d4ed8}
 .menu-slider-row{display:grid;grid-template-columns:1fr 96px;gap:8px;align-items:center;margin-bottom:8px}
 .menu-slider-row input{margin-bottom:0}
+.setting-label-help{display:flex;align-items:center;gap:6px}
+.setting-help-icon{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border:1px solid #93c5fd;border-radius:50%;background:#eff6ff;color:#1d4ed8;font-size:11px;font-weight:900;line-height:1;padding:0;cursor:pointer}
+.fb-help-modal{position:fixed;inset:0;background:rgba(2,6,23,.55);display:none;align-items:center;justify-content:center;z-index:3000;padding:16px}
+.fb-help-modal.open{display:flex}
+.fb-help-card{width:min(560px,96vw);background:#fff;border-radius:12px;border:1px solid #cbd5e1;box-shadow:0 22px 48px rgba(2,6,23,.28);padding:14px}
+.fb-help-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.fb-help-title{font-size:18px;font-weight:900;color:#0f172a}
+.fb-help-close{width:32px;height:32px;border:1px solid #cbd5e1;border-radius:8px;background:#f8fafc;color:#475569;cursor:pointer}
+.fb-help-copy{font-size:13px;line-height:1.45;color:#334155;margin-bottom:12px}
+.fb-radius-stage{height:180px;border:1px solid #e2e8f0;border-radius:10px;background:linear-gradient(180deg,#f8fafc,#eef2ff);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
+.fb-radius-demo{width:180px;height:100px;background:linear-gradient(135deg,#2563eb,#38bdf8);animation:radiusMorph 2.4s ease-in-out infinite}
+.fb-radius-caption{font-size:12px;color:#475569;font-weight:700}
+@keyframes radiusMorph{0%{border-radius:0}45%{border-radius:22px}100%{border-radius:999px}}
+.fb-space-stage{height:190px;border:1px solid #e2e8f0;border-radius:10px;background:linear-gradient(180deg,#f8fafc,#eef2ff);display:flex;align-items:center;justify-content:center;padding:12px}
+.fb-space-wrap{position:relative;width:220px;height:130px;background:rgba(37,99,235,.10);border:1px dashed rgba(37,99,235,.45);animation:marginPulse 2.2s ease-in-out infinite}
+.fb-space-box{position:absolute;inset:16px;background:#bfdbfe;border:1px solid #60a5fa;display:flex;align-items:center;justify-content:center;font-size:12px;color:#1e3a8a;font-weight:800;animation:paddingPulse 2.2s ease-in-out infinite}
+.fb-space-core{width:64px;height:34px;background:#2563eb;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800}
+.fb-space-legend{display:grid;grid-template-columns:1fr;gap:8px;margin-top:10px;font-size:12px;color:#334155}
+@keyframes paddingPulse{0%,100%{inset:16px}50%{inset:24px}}
+@keyframes marginPulse{0%,100%{transform:scale(1)}50%{transform:scale(.94)}}
 .carousel-slide-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
 .carousel-slide-btn{flex:1;border:1px solid #cbd5e1;background:#f8fafc;border-radius:8px;padding:8px 10px;text-align:left;font-weight:700;color:#334155;cursor:pointer}
 .carousel-slide-btn.active{background:#0ea5e9;border-color:#0284c7;color:#fff}
@@ -149,6 +171,7 @@
 .rt-tools{display:flex;gap:6px;padding:6px;border-bottom:1px solid #e2e8f0}
 .rt-tools button{padding:5px 8px;border:1px solid #cbd5e1;border-radius:6px;background:#f8fafc;font-weight:800;cursor:pointer}
 .rt-editor{min-height:90px;padding:8px;outline:none}
+.fb-dim-tip{position:fixed;left:0;top:0;transform:translate(12px,12px);z-index:2000;pointer-events:none;background:rgba(15,23,42,0.92);color:#fff;border:1px solid rgba(148,163,184,0.45);border-radius:6px;padding:3px 7px;font-size:11px;font-weight:700;line-height:1.2;white-space:nowrap;box-shadow:0 6px 18px rgba(2,6,23,0.35);display:none}
 @media(max-width:1080px){.fb-grid,.fb-grid.components-hidden{grid-template-columns:1fr}.fb-components-col .fb-panel-toggle{display:none!important}.fb-grid.components-hidden .fb-components-col .fb-left-panel{display:block!important}.fb-left-panel.hidden{display:none!important}}
 </style>
 
@@ -258,11 +281,51 @@ const fonts=[
 
 const stepSel=document.getElementById("stepSel"),canvas=document.getElementById("canvas"),settings=document.getElementById("settings"),saveMsg=document.getElementById("saveMsg"),settingsTitle=document.getElementById("settingsTitle");
 if(!steps.length){canvas.textContent="No steps found.";return;}
+const dimTip=document.createElement("div");
+dimTip.className="fb-dim-tip";
+document.body.appendChild(dimTip);
+const dimCtx={hoverNode:null,hoverLabel:"",x:0,y:0,inCanvas:false};
+
+function dimsText(node){
+    if(!node||!node.getBoundingClientRect)return "";
+    var r=node.getBoundingClientRect();
+    return Math.max(0,Math.round(r.width))+" x "+Math.max(0,Math.round(r.height));
+}
+function showDimTip(text){
+    if(!text){dimTip.style.display="none";return;}
+    dimTip.textContent=text;
+    dimTip.style.display="block";
+    dimTip.style.left=Math.round(dimCtx.x)+"px";
+    dimTip.style.top=Math.round(dimCtx.y)+"px";
+}
+function updateDimTip(){
+    if(!dimCtx.inCanvas){showDimTip("");return;}
+    var node=dimCtx.hoverNode;
+    if(!node){showDimTip("");return;}
+    var size=dimsText(node);
+    if(!size){showDimTip("");return;}
+    var prefix="Hover "+(dimCtx.hoverLabel||"Component");
+    showDimTip(prefix+": "+size);
+}
+function watchDimNode(node,label){
+    if(!node)return;
+    node.addEventListener("mouseenter",()=>{dimCtx.hoverNode=node;dimCtx.hoverLabel=label||"Component";updateDimTip();});
+    node.addEventListener("mousemove",e=>{dimCtx.x=e.clientX;dimCtx.y=e.clientY;updateDimTip();});
+    node.addEventListener("mouseleave",()=>{if(dimCtx.hoverNode===node){dimCtx.hoverNode=null;dimCtx.hoverLabel="";updateDimTip();}});
+}
+if(canvas){
+    canvas.addEventListener("mousemove",e=>{dimCtx.inCanvas=true;dimCtx.x=e.clientX;dimCtx.y=e.clientY;updateDimTip();});
+    canvas.addEventListener("mouseenter",e=>{dimCtx.inCanvas=true;dimCtx.x=e.clientX;dimCtx.y=e.clientY;updateDimTip();});
+    canvas.addEventListener("mouseleave",()=>{dimCtx.inCanvas=false;dimCtx.hoverNode=null;dimCtx.hoverLabel="";updateDimTip();});
+}
 
 steps.forEach(s=>{const o=document.createElement("option");o.value=s.id;o.textContent=s.title;stepSel.appendChild(o);});
 stepSel.value=state.sid;
 
 const uid=p=>p+"_"+Math.random().toString(36).slice(2,10),clone=o=>JSON.parse(JSON.stringify(o));
+const DEFAULT_COLUMN_STYLE={flex:"1 1 0",minHeight:"120px"};
+var radiusHelpModal=null;
+var spacingHelpModal=null;
 const defaults=(stepType)=>{
     const t=String(stepType||"").toLowerCase();
     if(t==="landing"||t==="opt_in"||t==="sales"||t==="checkout"||t==="thank_you"){
@@ -280,7 +343,7 @@ const defaults=(stepType)=>{
                 style:{gap:"8px"},
                 columns:[{
                     id:uid("col"),
-                    style:{},
+                    style:clone(DEFAULT_COLUMN_STYLE),
                     elements:[{
                         id:uid("el"),
                         type:"heading",
@@ -394,14 +457,6 @@ function onRichTextKeys(node,onUpdate){
 }
 
 function normalizeElementStyle(layout){
-    function normalizeLegacyColBg(col){
-        if(!col||typeof col!=="object")return;
-        col.style=(col.style&&typeof col.style==="object")?col.style:{};
-        var bg=String(col.style.backgroundColor||"").trim().toLowerCase();
-        if(bg==="#f8fafc"||bg==="rgb(248, 250, 252)"||bg==="rgba(248, 250, 252, 1)"){
-            col.style.backgroundColor="#ffffff";
-        }
-    }
     (layout.sections||[]).forEach(sec=>{
         (sec.elements||[]).forEach(el=>{
             if(el.type==="video"||el.type==="image"){
@@ -412,13 +467,36 @@ function normalizeElementStyle(layout){
         });
         (sec.rows||[]).forEach(row=>{
             (row.columns||[]).forEach(col=>{
-                normalizeLegacyColBg(col);
                 (col.elements||[]).forEach(el=>{
                     if(el.type==="video"||el.type==="image"){
                         if(!el.style||typeof el.style!=="object")el.style={};
                         var sw=(el.settings&&el.settings.width)||"";
                         if(sw&&!el.style.width)el.style.width=sw;
                     }
+                });
+            });
+        });
+    });
+}
+function applyDefaultColumnStyle(colObj,forceFlex){
+    if(!colObj)return;
+    colObj.style=(colObj.style&&typeof colObj.style==="object")?colObj.style:{};
+    if(forceFlex||!colObj.style.flex)colObj.style.flex=DEFAULT_COLUMN_STYLE.flex;
+    if(!colObj.style.minHeight)colObj.style.minHeight=DEFAULT_COLUMN_STYLE.minHeight;
+}
+function normalizeColumnDefaults(layout){
+    (layout.sections||[]).forEach(sec=>{
+        (sec.rows||[]).forEach(rw=>{
+            rw.columns=Array.isArray(rw.columns)?rw.columns:[];
+            rw.columns.forEach(cl=>applyDefaultColumnStyle(cl));
+        });
+        (sec.elements||[]).forEach(el=>{
+            if(!el||el.type!=="carousel")return;
+            var slides=ensureCarouselSlides(el.settings);
+            slides.forEach(sl=>{
+                (sl.rows||[]).forEach(rw=>{
+                    rw.columns=Array.isArray(rw.columns)?rw.columns:[];
+                    rw.columns.forEach(cl=>applyDefaultColumnStyle(cl));
                 });
             });
         });
@@ -431,6 +509,7 @@ function loadStep(id){
     state.layout=hasSavedLayout?clone(s.layout_json):defaults(s&&s.type);
     ensureRootModel();
     normalizeElementStyle(state.layout);
+    normalizeColumnDefaults(state.layout);
     state.sel=null;
     state.carouselSel=null;
     undoHistory.length=0;
@@ -577,6 +656,54 @@ function moveSelectedElement(offset){
     render();
     return true;
 }
+function selectedStructureMoveContext(){
+    if(state.carouselSel)return null;
+    const x=state.sel;
+    if(!x)return null;
+    if(x.k==="sec"){
+        const rs=rootItems();
+        const index=rs.findIndex(i=>String((i&&i.kind)||"").toLowerCase()==="section"&&String((i&&i.id)||"")===String(x.s||""));
+        if(index<0)return null;
+        return {list:rs,index:index};
+    }
+    if(x.k==="row"){
+        const s=sec(x.s);
+        if(!s)return null;
+        s.rows=Array.isArray(s.rows)?s.rows:[];
+        const index=s.rows.findIndex(i=>String((i&&i.id)||"")===String(x.r||""));
+        if(index<0)return null;
+        return {list:s.rows,index:index};
+    }
+    if(x.k==="col"){
+        const r=row(x.s,x.r);
+        if(!r)return null;
+        r.columns=Array.isArray(r.columns)?r.columns:[];
+        const index=r.columns.findIndex(i=>String((i&&i.id)||"")===String(x.c||""));
+        if(index<0)return null;
+        return {list:r.columns,index:index};
+    }
+    return null;
+}
+function moveSelectedStructure(offset){
+    const ctx=selectedStructureMoveContext();
+    if(!ctx)return false;
+    const to=ctx.index+offset;
+    if(to<0||to>=ctx.list.length)return false;
+    saveToHistory();
+    const item=ctx.list[ctx.index];
+    ctx.list.splice(ctx.index,1);
+    ctx.list.splice(to,0,item);
+    if(state.sel&&state.sel.k==="sec")state.sel.s=item.id;
+    if(state.sel&&state.sel.k==="row")state.sel.r=item.id;
+    if(state.sel&&state.sel.k==="col")state.sel.c=item.id;
+    render();
+    return true;
+}
+function moveSelectedBySelection(offset){
+    if(moveSelectedElement(offset))return true;
+    if(moveSelectedStructure(offset))return true;
+    return false;
+}
 function defaultCarouselSlide(label){return {id:uid("sld"),label:label||"Slide #1",image:{src:"",alt:"Image"}};}
 function ensureCarouselSlides(settings){
     settings=settings||{};
@@ -638,7 +765,7 @@ function renderCarouselPreviewItem(item,onDelete,onSelect,isSelected){
     if(isSelected){
         wrap.style.outline="2px solid #2563eb";
         wrap.style.outlineOffset="2px";
-        wrap.style.borderRadius="8px";
+        wrap.style.borderRadius="0";
     }
     wrap.addEventListener("click",e=>{e.stopPropagation();if(typeof onSelect==="function")onSelect();});
     wrap.addEventListener("mousedown",e=>e.stopPropagation());
@@ -691,12 +818,13 @@ function renderCarouselPreviewItem(item,onDelete,onSelect,isSelected){
         wrap.appendChild(p);
     }else if(type==="image"){
         var imgBody=document.createElement("div");
-        imgBody.innerHTML=(item.settings&&item.settings.src)?'<img src="'+item.settings.src+'" alt="'+(item.settings.alt||"Image")+'" style="max-width:100%;height:auto;display:block;">':'<div style="padding:12px;border:1px dashed #94a3b8;border-radius:8px;">Image placeholder</div>';
+        imgBody.innerHTML=(item.settings&&item.settings.src)?'<img src="'+item.settings.src+'" alt="'+(item.settings.alt||"Image")+'" style="max-width:100%;height:auto;display:block;">':'<div style="padding:12px;border:1px dashed #94a3b8;border-radius:0;">Image placeholder</div>';
         wrap.appendChild(imgBody);
     }else if(type==="video"){
         const raw=(item.settings&&item.settings.src)||"";
         const vurl=raw?(raw.startsWith("http")?raw:"https://"+raw.replace(/^\/*/,"")):"";
-        const wrapStyle="position:relative;width:100%;min-height:200px;padding-top:56.25%;background:#0f172a;border-radius:8px;overflow:hidden;box-sizing:border-box;display:flex;align-items:center;justify-content:center;pointer-events:none;";
+        const vidRadius=((item&&item.style&&item.style.borderRadius)||"0px");
+        const wrapStyle="position:relative;width:100%;min-height:200px;padding-top:56.25%;background:#0f172a;border-radius:"+vidRadius+";overflow:hidden;box-sizing:border-box;display:flex;align-items:center;justify-content:center;pointer-events:none;";
         var vidBody=document.createElement("div");
         if(vurl){
             const label=vurl.length>50?vurl.slice(0,47)+"...":vurl;
@@ -711,7 +839,7 @@ function renderCarouselPreviewItem(item,onDelete,onSelect,isSelected){
         b.contentEditable="true";
         b.textContent=(item&&item.content)||"Button";
         b.style.border="none";
-        b.style.borderRadius=((item&&item.style&&item.style.borderRadius)||"999px");
+        b.style.borderRadius=((item&&item.style&&item.style.borderRadius)||"0px");
         b.style.padding=((item&&item.style&&item.style.padding)||"8px 14px");
         b.style.background=((item&&item.style&&item.style.backgroundColor)||"#2563eb");
         b.style.color=((item&&item.style&&item.style.color)||"#fff");
@@ -721,7 +849,7 @@ function renderCarouselPreviewItem(item,onDelete,onSelect,isSelected){
         var sp=document.createElement("div");
         sp.style.height=((item&&item.style&&item.style.height)||"24px");
         sp.style.background="repeating-linear-gradient(90deg,#f1f5f9,#f1f5f9 8px,#e2e8f0 8px,#e2e8f0 16px)";
-        sp.style.borderRadius="6px";
+        sp.style.borderRadius="0";
         wrap.appendChild(sp);
     }else if(type==="menu"){
         var ms=(item&&item.settings)||{};
@@ -759,7 +887,7 @@ function renderCarouselPreviewItem(item,onDelete,onSelect,isSelected){
         var nested=document.createElement("div");
         nested.style.padding="12px";
         nested.style.border="1px dashed #93c5fd";
-        nested.style.borderRadius="8px";
+        nested.style.borderRadius="0";
         nested.style.color="#1e40af";
         nested.style.fontWeight="700";
         nested.textContent="Nested Carousel";
@@ -773,7 +901,7 @@ function renderCarouselPreviewItem(item,onDelete,onSelect,isSelected){
 }
 
 function createDefaultRow(){return {id:uid("row"),style:{gap:"8px"},columns:[]};}
-function createDefaultColumn(){return {id:uid("col"),style:{flex:"1 1 240px",height:"120px",minHeight:"120px"},elements:[]};}
+function createDefaultColumn(){return {id:uid("col"),style:clone(DEFAULT_COLUMN_STYLE),elements:[]};}
 function createDefaultSection(){return {id:uid("sec"),style:{padding:"20px",backgroundColor:"#fff"},settings:{contentWidth:"full"},elements:[],rows:[]};}
 function createRootItem(type){
     if(type==="section")return Object.assign({kind:"section"},createDefaultSection());
@@ -783,7 +911,7 @@ function createRootItem(type){
     return it?Object.assign({kind:"el"},it):null;
 }
 function createDefaultElement(type){
-    const d={heading:{content:"Heading",style:{fontSize:"32px",color:"#000000"},settings:{}},text:{content:"Text",style:{fontSize:"16px",color:"#000000"},settings:{}},menu:{content:"",style:{fontSize:"16px"},settings:{items:[{label:"Home",url:"#",newWindow:false,hasSubmenu:false},{label:"Contact",url:"/contact",newWindow:false,hasSubmenu:false}],itemGap:13,activeIndex:0,menuAlign:"left",underlineColor:""}},carousel:{content:"",style:{padding:"10px 10px 10px 10px"},settings:{slides:[defaultCarouselSlide("Slide #1")],activeSlide:0,vAlign:"center",alignment:"left",showArrows:true,controlsColor:"#64748b",arrowColor:"#ffffff",fixedWidth:500,fixedHeight:500}},image:{content:"",style:{width:"100%"},settings:{src:"",alt:"Image",alignment:"left"}},button:{content:"Click Me",style:{backgroundColor:"#2563eb",color:"#fff",borderRadius:"999px",padding:"10px 18px",textAlign:"center"},settings:{link:"#"}},form:{content:"Submit",style:{},settings:{alignment:"left",width:"100%",fields:[{type:"first_name",label:"First name"},{type:"last_name",label:"Last name"},{type:"email",label:"Email"},{type:"phone_number",label:"Phone"}]}},video:{content:"",style:{},settings:{src:"",alignment:"left"}},spacer:{content:"",style:{height:"24px"},settings:{}}}[type]||null;
+    const d={heading:{content:"Heading",style:{fontSize:"32px",color:"#000000"},settings:{}},text:{content:"Text",style:{fontSize:"16px",color:"#000000"},settings:{}},menu:{content:"",style:{fontSize:"16px"},settings:{items:[{label:"Home",url:"#",newWindow:false,hasSubmenu:false,bold:false},{label:"Contact",url:"/contact",newWindow:false,hasSubmenu:false,bold:false}],itemGap:13,activeIndex:-1,menuAlign:"left",underlineColor:""}},carousel:{content:"",style:{padding:"10px 10px 10px 10px"},settings:{slides:[defaultCarouselSlide("Slide #1")],activeSlide:0,vAlign:"center",alignment:"left",showArrows:true,slideshowMode:"manual",controlsColor:"#64748b",arrowColor:"#ffffff",fixedWidth:500,fixedHeight:500}},image:{content:"",style:{width:"100%"},settings:{src:"",alt:"Image",alignment:"left"}},button:{content:"Click Me",style:{backgroundColor:"#2563eb",color:"#fff",borderRadius:"0px",padding:"10px 18px",textAlign:"center"},settings:{link:"#"}},form:{content:"Submit",style:{},settings:{alignment:"left",width:"100%",fields:[{type:"first_name",label:"First name"},{type:"last_name",label:"Last name"},{type:"email",label:"Email"},{type:"phone_number",label:"Phone"}]}},video:{content:"",style:{},settings:{src:"",alignment:"left"}},spacer:{content:"",style:{height:"24px"},settings:{}}}[type]||null;
     if(!d)return null;
     return {id:uid("el"),type:type,content:d.content,style:clone(d.style),settings:clone(d.settings)};
 }
@@ -854,7 +982,6 @@ function addComponent(type){
         state.sel={k:"el",scope:"section",s:s.id,e:itNoGrid.id};
         return;
     }
-    if(!canAddElementToColumn(s.id,r.id,c.id,type))return;
     const it=createDefaultElement(type);
     if(!it)return;
     c.elements.push(it);
@@ -864,94 +991,6 @@ function dropPlacement(ev,node){
     var rect=node.getBoundingClientRect();
     var y=Number(ev.clientY)||0;
     return y<(rect.top+rect.height/2)?"before":"after";
-}
-
-function estimateNewElementHeight(type,colNode){
-    var t=String(type||"").toLowerCase();
-    if(t==="heading")return 78;
-    if(t==="text")return 64;
-    if(t==="button")return 62;
-    if(t==="image")return 56;
-    if(t==="video")return 180;
-    if(t==="form")return 240;
-    if(t==="menu")return 70;
-    if(t==="spacer")return 36;
-    if(t==="carousel")return 220;
-    var fallback=72;
-    if(!colNode)return fallback;
-    try{
-        var probeItem=createDefaultElement(t);
-        if(!probeItem)return fallback;
-        var probe=document.createElement("div");
-        probe.style.position="absolute";
-        probe.style.left="-10000px";
-        probe.style.top="-10000px";
-        probe.style.visibility="hidden";
-        probe.style.pointerEvents="none";
-        probe.style.width=Math.max(120,(Number(colNode.clientWidth)||260)-12)+"px";
-        var rendered=renderElement(probeItem,{s:"__m__",r:"__m__",c:"__m__",scope:"section"});
-        probe.appendChild(rendered);
-        document.body.appendChild(probe);
-        var mb=0;
-        try{mb=parseFloat((window.getComputedStyle(rendered).marginBottom)||"0")||0;}catch(_e){mb=0;}
-        var measured=(Number(rendered.offsetHeight)||0)+mb;
-        probe.remove();
-        if(measured>0)return measured;
-    }catch(_e){}
-    return fallback;
-}
-
-function showBuilderToast(message,type){
-    var variant=(type==="success")?"success":"error";
-    var iconClass=variant==="success"?"fa-check":"fa-times";
-    var title=variant==="success"?"Success!":"Error!";
-    var id="builderStatusToastContainer";
-    var existing=document.getElementById(id);
-    if(existing)existing.remove();
-    var wrap=document.createElement("div");
-    wrap.id=id;
-    wrap.className="status-toast-container";
-    wrap.innerHTML=
-        '<div class="status-toast '+variant+'">'
-        +'<i class="status-icon fas '+iconClass+'"></i>'
-        +'<div><h4>'+title+'</h4><p>'+String(message||"").replace(/</g,"&lt;").replace(/>/g,"&gt;")+'</p></div>'
-        +'<button type="button" class="status-toast-close" aria-label="Close notification"><i class="fas fa-times-circle"></i></button>'
-        +'</div>';
-    document.body.appendChild(wrap);
-    var closeBtn=wrap.querySelector(".status-toast-close");
-    if(closeBtn)closeBtn.onclick=function(){wrap.remove();};
-    setTimeout(function(){if(wrap&&wrap.parentNode)wrap.remove();},3000);
-}
-
-function notifyColumnFull(){
-    showBuilderToast("Column is full. Increase column height first.","error");
-}
-
-function canAddElementToColumn(sid,rid,cid,type){
-    var t=String(type||"").toLowerCase();
-    if(t==="section"||t==="row"||t==="column")return true;
-    var colNode=canvas?canvas.querySelector('.col[data-col-id="'+String(cid||"")+'"]'):null;
-    if(!colNode)return true;
-    var colInner=colNode.querySelector(".col-inner");
-    if(!colInner)return true;
-    var capacity=Number(colNode.clientHeight)||0;
-    if(capacity<=0)return true;
-    var used=0;
-    Array.from(colInner.children||[]).forEach(function(ch){
-        var mb=0;
-        try{
-            mb=parseFloat((window.getComputedStyle(ch).marginBottom)||"0")||0;
-        }catch(_e){mb=0;}
-        var bottom=(Number(ch.offsetTop)||0)+(Number(ch.offsetHeight)||0)+mb;
-        if(bottom>used)used=bottom;
-    });
-    if(used<=0)used=Number(colInner.scrollHeight)||0;
-    var needed=estimateNewElementHeight(t,colNode);
-    if((used+needed)>(capacity+2)){
-        notifyColumnFull();
-        return false;
-    }
-    return true;
 }
 
 function addComponentAt(type,target,place){
@@ -1089,7 +1128,6 @@ function addComponentAt(type,target,place){
     var c=col(t.s,t.r,t.c);
     if(!c)return false;
     c.elements=Array.isArray(c.elements)?c.elements:[];
-    if(!canAddElementToColumn(s.id,r.id,c.id,type))return false;
     var eIdx=placeInside?c.elements.length:(place==="before"?0:c.elements.length);
     if(t.k==="el"){
         var ei=c.elements.findIndex(x=>x.id===t.e);
@@ -1210,10 +1248,13 @@ function renderElement(item,ctx){
         w.classList.add(wb==="fill"?"el--button-fill":"el--button");
         w.style.display="flex";w.style.justifyContent=al==="right"?"flex-end":al==="center"?"center":"flex-start";
         const b=document.createElement("button");b.type="button";b.contentEditable="true";b.innerHTML=item.content||"Button";
-        styleApply(b,item.style||{});b.style.border="none";b.style.display=wb==="fill"?"flex":"inline-flex";b.style.width=wb==="fill"?"100%":"auto";b.style.alignItems="center";b.style.justifyContent="center";if(!(item.style&&item.style.backgroundColor))b.style.backgroundColor="#2563eb";if(!(item.style&&item.style.color))b.style.color="#fff";if(!(item.style&&item.style.padding))b.style.padding="10px 18px";if(!(item.style&&item.style.borderRadius))b.style.borderRadius="999px";
+        styleApply(b,item.style||{});b.style.border="none";b.style.display=wb==="fill"?"flex":"inline-flex";b.style.width=wb==="fill"?"100%":"auto";b.style.alignItems="center";b.style.justifyContent="center";if(!(item.style&&item.style.backgroundColor))b.style.backgroundColor="#2563eb";if(!(item.style&&item.style.color))b.style.color="#fff";if(!(item.style&&item.style.padding))b.style.padding="10px 18px";if(!(item.style&&item.style.borderRadius))b.style.borderRadius="0px";
         b.oninput=()=>{item.content=b.innerHTML||"";};onRichTextKeys(b,()=>{item.content=b.innerHTML||"";});w.appendChild(b);
     }
-    else if(item.type==="image"){w.innerHTML=(item.settings&&item.settings.src)?'<img src="'+item.settings.src+'" alt="'+(item.settings.alt||"Image")+'" style="max-width:100%;max-height:100%;width:100%;height:auto;display:block;object-fit:contain;">':'<div style="padding:12px;border:1px dashed #94a3b8;border-radius:8px;">Image placeholder</div>';}
+    else if(item.type==="image"){
+        w.style.overflow="hidden";
+        w.innerHTML=(item.settings&&item.settings.src)?'<img src="'+item.settings.src+'" alt="'+(item.settings.alt||"Image")+'" style="max-width:100%;height:auto;display:block;">':'<div style="padding:12px;border:1px dashed #94a3b8;border-radius:0;">Image placeholder</div>';
+    }
     else if(item.type==="form"){
         item.settings=item.settings||{};
         var fal=(item.settings.alignment)||"left";
@@ -1260,13 +1301,16 @@ function renderElement(item,ctx){
     }
     else if(item.type==="menu"){
         var ms=item.settings||{};
+        var menuStyle=(item&&item.style&&typeof item.style==="object")?item.style:{};
         var items=Array.isArray(ms.items)&&ms.items.length?ms.items:[{label:"Menu item",url:"#",newWindow:false,hasSubmenu:false}];
         var gap=Number(ms.itemGap);if(isNaN(gap))gap=13;
-        var activeIdx=Number(ms.activeIndex);if(isNaN(activeIdx))activeIdx=0;
+        var activeIdx=Number(ms.activeIndex);if(isNaN(activeIdx))activeIdx=-1;
+        var hasActive=(activeIdx>=0&&activeIdx<items.length);
         var align=(ms.menuAlign||"left");
         const ul=document.createElement("ul");
         ul.style.listStyle="none";ul.style.margin="0";ul.style.padding="0";
         ul.style.display="flex";ul.style.flexWrap="wrap";ul.style.gap=gap+"px";
+        ul.style.fontFamily=(menuStyle.fontFamily||"Inter, sans-serif");
         ul.style.justifyContent=align==="right"?"flex-end":align==="center"?"center":"flex-start";
         items.forEach((mi,idx)=>{
             const li=document.createElement("li");
@@ -1274,20 +1318,32 @@ function renderElement(item,ctx){
             a.href=(mi&&mi.url)||"#";
             a.textContent=(mi&&mi.label)||("Menu item "+(idx+1));
             if(mi&&mi.newWindow)a.target="_blank";
-            a.style.color=idx===activeIdx?((ms.activeColor)||"#a89c76"):((ms.textColor)||"#374151");
+            var baseColor=(ms.textColor)||"#374151";
+            a.style.color=baseColor;
             a.style.textDecoration=ms.underlineColor?"underline":"none";
             if(ms.underlineColor)a.style.textDecorationColor=ms.underlineColor;
             a.style.textUnderlineOffset="3px";
-            a.style.font="inherit";
+            a.style.fontFamily=(menuStyle.fontFamily||"inherit");
+            if(menuStyle.fontSize)a.style.fontSize=menuStyle.fontSize;
+            if(menuStyle.lineHeight)a.style.lineHeight=menuStyle.lineHeight;
+            if(menuStyle.letterSpacing)a.style.letterSpacing=menuStyle.letterSpacing;
+            a.style.fontWeight=(mi&&mi.bold)?"700":(menuStyle.fontWeight||"inherit");
+            a.style.fontStyle=(menuStyle.fontStyle||"normal");
             a.addEventListener("click",e=>e.preventDefault());
             li.appendChild(a);ul.appendChild(li);
         });
         w.innerHTML="";w.appendChild(ul);
     }
     else if(item.type==="carousel"){
+        w.style.overflow="hidden";
         var cs=item.settings||{};
         var slides=ensureCarouselSlides(cs);
         var active=Number(cs.activeSlide);if(isNaN(active)||active<0||active>=slides.length)active=0;
+        var slideshowMode=String(cs.slideshowMode||"manual").toLowerCase();
+        if(slideshowMode!=="auto"&&slideshowMode!=="manual")slideshowMode="manual";
+        var isAutoSlideshow=(slideshowMode==="auto");
+        if(typeof cs.showArrows!=="boolean")cs.showArrows=true;
+        if(isAutoSlideshow)cs.showArrows=false;
         var curSlide=slides[active]||slides[0]||defaultCarouselSlide("Slide #1");
         var parentSel={scope:ctx.scope||"column",s:ctx.s,r:ctx.r,c:ctx.c,e:item.id};
         function slideHasContent(slide){
@@ -1399,7 +1455,7 @@ function renderElement(item,ctx){
         var activeImage=(activeSlide&&activeSlide.image&&typeof activeSlide.image==="object")?activeSlide.image:{src:"",alt:"Image"};
         var src=String(activeImage.src||"").trim();
         if(src!==""){
-            simpleWrap.innerHTML='<img src="'+src.replace(/"/g,"&quot;")+'" alt="'+String(activeImage.alt||"Image").replace(/"/g,"&quot;")+'" style="width:100%;height:100%;object-fit:cover;display:block;border-radius:8px;">';
+            simpleWrap.innerHTML='<img src="'+src.replace(/"/g,"&quot;")+'" alt="'+String(activeImage.alt||"Image").replace(/"/g,"&quot;")+'" style="width:100%;height:100%;object-fit:cover;display:block;border-radius:0;">';
         }else{
             var emptyPickBtn=document.createElement("button");
             emptyPickBtn.type="button";
@@ -1417,7 +1473,7 @@ function renderElement(item,ctx){
             emptyPickBtn.onclick=e=>{e.preventDefault();e.stopPropagation();saveToHistory();promptImageFilesForSlides();};
             simpleWrap.appendChild(emptyPickBtn);
         }
-        if(slides.length>1){
+        if(slides.length>1 && !isAutoSlideshow && cs.showArrows!==false){
             var prevBtn=document.createElement("button");
             prevBtn.type="button";
             prevBtn.innerHTML='<i class="fas fa-chevron-left" aria-hidden="true"></i>';
@@ -1459,6 +1515,51 @@ function renderElement(item,ctx){
             nextBtn.onclick=e=>{e.preventDefault();e.stopPropagation();saveToHistory();cs.activeSlide=(active+1)%slides.length;renderCanvas();renderSettings();};
             simpleWrap.appendChild(nextBtn);
         }
+        if(slides.length>1){
+            var dotsWrap=document.createElement("div");
+            dotsWrap.style.position="absolute";
+            dotsWrap.style.left="50%";
+            dotsWrap.style.bottom="10px";
+            dotsWrap.style.transform="translateX(-50%)";
+            dotsWrap.style.display="flex";
+            dotsWrap.style.alignItems="center";
+            dotsWrap.style.gap="8px";
+            dotsWrap.style.padding="4px 8px";
+            dotsWrap.style.borderRadius="999px";
+            dotsWrap.style.background="rgba(15,23,42,0.35)";
+            dotsWrap.style.backdropFilter="blur(2px)";
+            dotsWrap.style.zIndex="3";
+            slides.forEach((_,idx)=>{
+                var dot=document.createElement("button");
+                dot.type="button";
+                dot.setAttribute("aria-label","Go to slide "+(idx+1));
+                dot.style.width="8px";
+                dot.style.height="8px";
+                dot.style.borderRadius="999px";
+                dot.style.border="0";
+                dot.style.padding="0";
+                dot.style.cursor="pointer";
+                dot.style.background=(idx===active)?"#ffffff":"rgba(255,255,255,0.55)";
+                dot.onclick=e=>{
+                    e.preventDefault();
+                    e.stopPropagation();
+                    saveToHistory();
+                    cs.activeSlide=idx;
+                    renderCanvas();
+                    renderSettings();
+                };
+                dotsWrap.appendChild(dot);
+            });
+            simpleWrap.appendChild(dotsWrap);
+        }
+        if(slides.length>1 && isAutoSlideshow){
+            state["carAutoTimer_"+String(item.id||"")]=setTimeout(()=>{
+                var cur=Number(cs.activeSlide);
+                if(isNaN(cur)||cur<0||cur>=slides.length)cur=0;
+                cs.activeSlide=(cur+1)%slides.length;
+                renderCanvas();
+            },3000);
+        }
         w.innerHTML="";
         w.appendChild(simpleWrap);
         return w;
@@ -1481,13 +1582,13 @@ function renderElement(item,ctx){
             var rIdx=Number(rowIndex);if(isNaN(rIdx)||rIdx<0||rIdx>=sl.rows.length)rIdx=0;
             var rw=sl.rows[rIdx];rw.columns=Array.isArray(rw.columns)?rw.columns:[];
             if(type==="column"){
-                rw.columns.push({id:uid("col"),style:{},elements:[]});
+                rw.columns.push(createDefaultColumn());
                 cs.carouselActiveRow=rIdx;
                 cs.carouselActiveCol=rw.columns.length-1;
                 return true;
             }
             if(!rw.columns.length){
-                rw.columns.push({id:uid("col"),style:{},elements:[]});
+                rw.columns.push(createDefaultColumn());
             }
             var cIdx=Number(colIndex);if(isNaN(cIdx)||cIdx<0||cIdx>=rw.columns.length)cIdx=0;
             var target=rw.columns[cIdx];
@@ -1622,7 +1723,7 @@ function renderElement(item,ctx){
             (rw.columns||[]).forEach((cl,ci)=>{
                 var colBox=document.createElement("div");
                 var hasColElements=Array.isArray(cl.elements)&&cl.elements.length>0;
-                colBox.style.flex=(cl&&cl.style&&cl.style.flex)||"1 1 220px";
+                colBox.style.flex=(cl&&cl.style&&cl.style.flex)||DEFAULT_COLUMN_STYLE.flex;
                 colBox.style.minWidth="180px";
                 colBox.style.display="flex";
                 colBox.style.flexDirection="column";
@@ -1721,7 +1822,8 @@ function renderElement(item,ctx){
     else if(item.type==="video"){
         const raw=(item.settings&&item.settings.src)||"";
         const vurl=raw?(raw.startsWith("http")?raw:"https://"+raw.replace(/^\/*/,"")):"";
-        const wrapStyle="position:relative;width:100%;min-height:200px;padding-top:56.25%;background:#0f172a;border-radius:8px;overflow:hidden;box-sizing:border-box;display:flex;align-items:center;justify-content:center;pointer-events:none;";
+        const vidRadius=((item&&item.style&&item.style.borderRadius)||"0px");
+        const wrapStyle="position:relative;width:100%;min-height:200px;padding-top:56.25%;background:#0f172a;border-radius:"+vidRadius+";overflow:hidden;box-sizing:border-box;display:flex;align-items:center;justify-content:center;pointer-events:none;";
         if(vurl){
             const label=vurl.length>50?vurl.slice(0,47)+"...":vurl;
             w.innerHTML='<div style="'+wrapStyle+'"><div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:rgba(255,255,255,0.9);padding:12px;text-align:center;"><span style="font-size:32px;margin-bottom:8px;opacity:0.9;">▶</span><span style="font-size:12px;font-weight:700;">Video</span><span style="font-size:11px;opacity:0.8;word-break:break-all;max-width:100%;">'+label.replace(/</g,"&lt;").replace(/>/g,"&gt;")+'</span></div></div>';
@@ -1729,77 +1831,19 @@ function renderElement(item,ctx){
     }
     else if(item.type==="spacer"){const h=((item.style&&item.style.height)||"24px");const isSel=!!(state.sel&&state.sel.k==="el"&&state.sel.e===item.id);const bg=isSel?'repeating-linear-gradient(90deg,#f1f5f9,#f1f5f9 8px,#e2e8f0 8px,#e2e8f0 16px)':'transparent';w.innerHTML='<div style="height:'+h+';background:'+bg+'"></div>';}
     if(item.type==="image"||item.type==="video"){var a=(item.settings&&item.settings.alignment)||"left";w.style.setProperty("display","flex");w.style.setProperty("justify-content",a==="right"?"flex-end":a==="center"?"center":"flex-start");w.style.setProperty("margin-left",a==="left"?"0":"auto");w.style.setProperty("margin-right",a==="right"?"0":"auto");}
+    watchDimNode(w,String(item&&item.type?item.type:"component"));
     return w;
 }
 
-function attachRowHeightResizeHandle(rowInner,rowObj){
-    if(!rowInner||!rowObj)return;
-    var cols=Array.isArray(rowObj.columns)?rowObj.columns:[];
-    if(!cols.length)return;
-    var hHandle=document.createElement("div");
-    hHandle.className="row-resize-handle-y";
-    hHandle.title="Drag to resize column height";
-    hHandle.addEventListener("click",e=>{e.preventDefault();e.stopPropagation();});
-    hHandle.addEventListener("mousedown",function(e){
-        e.preventDefault();
-        e.stopPropagation();
-        var colNodes=Array.from(rowInner.querySelectorAll(".col"));
-        if(!colNodes.length)return;
-        var startY=Number(e.clientY)||0;
-        var startH=0;
-        cols.forEach(function(c){
-            c.style=c.style||{};
-            var h=Number(pxToNumber(c.style.minHeight));
-            if(!isNaN(h)&&h>startH)startH=h;
-        });
-        if(startH<=0){
-            startH=Math.max(120,colNodes.reduce(function(m,n){return Math.max(m,n.offsetHeight||0);},0));
-        }
-        var didSave=false;
-        function onMove(ev){
-            if(!didSave){saveToHistory();didSave=true;}
-            var dy=(Number(ev.clientY)||0)-startY;
-            var next=Math.max(58,Math.min(1600,Math.round(startH+dy)));
-            cols.forEach(function(c){c.style=c.style||{};c.style.height=next+"px";c.style.minHeight=next+"px";});
-            colNodes.forEach(function(n){n.style.height=next+"px";n.style.minHeight=next+"px";});
-        }
-        function onUp(){
-            document.removeEventListener("mousemove",onMove);
-            document.removeEventListener("mouseup",onUp);
-        }
-        document.addEventListener("mousemove",onMove);
-        document.addEventListener("mouseup",onUp);
-    });
-    rowInner.appendChild(hHandle);
-}
-
-function applyColumnImageFit(colNode,colInner,colObj){
-    if(!colNode||!colInner||!colObj)return;
-    var els=Array.isArray(colObj.elements)?colObj.elements:[];
-    if(els.length!==1||!els[0]||els[0].type!=="image")return;
-    var hasImageSrc=!!String((els[0].settings&&els[0].settings.src)||"").trim();
-    colNode.style.overflow="hidden";
-    colInner.style.height="";
-    var imgWrap=colInner.querySelector(".el");
-    if(!imgWrap)return;
-    imgWrap.style.height="";
-    imgWrap.style.marginBottom="0";
-    imgWrap.style.overflow="hidden";
-    imgWrap.style.display="block";
-    imgWrap.style.alignItems="";
-    imgWrap.style.justifyContent="";
-    if(!hasImageSrc)return;
-    var img=imgWrap.querySelector("img");
-    if(!img)return;
-    img.style.width="100%";
-    img.style.height="auto";
-    img.style.maxWidth="100%";
-    img.style.maxHeight="";
-    img.style.objectFit="contain";
-    img.style.objectPosition="top center";
-}
-
 function renderCanvas(){
+    Object.keys(state).forEach(k=>{
+        if(k.indexOf("carAutoTimer_")===0 && state[k]){
+            clearTimeout(state[k]);
+            delete state[k];
+        }
+    });
+    dimCtx.hoverNode=null;
+    dimCtx.hoverLabel="";
     ensureRootModel();
     canvas.innerHTML="";
     var widthMap={full:"",wide:"1200px",medium:"992px",small:"768px",xsmall:"576px"};
@@ -1813,6 +1857,11 @@ function renderCanvas(){
         const sn=document.createElement("section");sn.className="sec";styleApply(sn,s.style||{});
         if(isBareCarouselSection)sn.classList.add("sec--bare-carousel");
         if(isBareRootWrap)sn.classList.add("sec--bare-wrap");
+        if(!isBareSection && widthMap[contentWidth]){
+            sn.style.maxWidth=widthMap[contentWidth];
+            sn.style.marginLeft="auto";
+            sn.style.marginRight="auto";
+        }
         const inner=document.createElement("div");inner.className="sec-inner";
         inner.style.width="100%";
         inner.style.boxSizing="border-box";
@@ -1838,6 +1887,7 @@ function renderCanvas(){
             state.carouselSel=null;
             if(addComponentAt(t,{k:"sec",s:s.id},dropPlacement(e,sn)))render();
         };
+        watchDimNode(sn,"section");
         s.elements=Array.isArray(s.elements)?s.elements:[];
         (s.elements||[]).forEach(it=>inner.appendChild(renderElement(it,{s:s.id,scope:"section"})));
         (s.rows||[]).forEach(r=>{
@@ -1877,7 +1927,10 @@ function renderCanvas(){
                 }
                 if(addComponentAt(t,{k:"row",s:s.id,r:r.id},dropPlacement(e,rn)))render();
             };
-            (r.columns||[]).forEach((c,colIndex)=>{
+            watchDimNode(rn,"row");
+            r.columns=Array.isArray(r.columns)?r.columns:[];
+            r.columns.forEach(c=>applyDefaultColumnStyle(c));
+            (r.columns||[]).forEach(c=>{
                 const cn=document.createElement("div");cn.className="col";styleApply(cn,c.style||{});
                 cn.setAttribute("data-col-id",c.id);
                 const colInner=document.createElement("div");colInner.className="col-inner";colInner.style.width="100%";colInner.style.boxSizing="border-box";
@@ -1896,12 +1949,11 @@ function renderCanvas(){
                     var place=(t!=="column"&&t!=="row"&&t!=="section")?"inside":dropPlacement(e,cn);
                     if(addComponentAt(t,{k:"col",s:s.id,r:r.id,c:c.id},place))render();
                 };
+                watchDimNode(cn,"column");
                 (c.elements||[]).forEach(it=>colInner.appendChild(renderElement(it,{s:s.id,r:r.id,c:c.id})));
                 cn.appendChild(colInner);
-                applyColumnImageFit(cn,colInner,c);
                 rowInner.appendChild(cn);
             });
-            attachRowHeightResizeHandle(rowInner,r);
             rn.appendChild(rowInner);
             inner.appendChild(rn);
         });
@@ -1911,6 +1963,7 @@ function renderCanvas(){
     if(!(state.layout.sections||[]).length)canvas.innerHTML='<p style="font-size:13px;color:#475569;">Drag any component to start.</p>';
     canvas.ondragover=e=>e.preventDefault();
     canvas.ondrop=e=>{e.preventDefault();if(e.target&&e.target.closest&&e.target.closest(".carousel-live-editor"))return;const t=e.dataTransfer.getData("c");if(t){if(addComponentAt(t,null,"after"))render();}};
+    updateDimTip();
 }
 
 function refreshAfterSetting(){
@@ -1985,6 +2038,87 @@ function uploadImage(file,done,label,onFail){
             alert(msg+" failed. Check your connection and try again.");
         });
 }
+function ensureRadiusHelpModal(){
+    if(radiusHelpModal)return radiusHelpModal;
+    const modal=document.createElement("div");
+    modal.className="fb-help-modal";
+    modal.innerHTML='<div class="fb-help-card" role="dialog" aria-modal="true" aria-label="Border radius help"><div class="fb-help-head"><div class="fb-help-title">What Is Border Radius?</div><button type="button" class="fb-help-close" data-close="radius-help" aria-label="Close">×</button></div><div class="fb-help-copy">Border radius controls corner roundness. <strong>0</strong> makes a sharp square. Higher values make corners more rounded, up to a pill/circle look.</div><div class="fb-radius-stage"><div class="fb-radius-demo"></div><div class="fb-radius-caption">Square → Rounded → Pill</div></div></div>';
+    modal.addEventListener("click",e=>{if(e.target===modal)closeRadiusHelpModal();});
+    var closeBtn=modal.querySelector('[data-close="radius-help"]');
+    if(closeBtn)closeBtn.addEventListener("click",()=>closeRadiusHelpModal());
+    document.body.appendChild(modal);
+    radiusHelpModal=modal;
+    return modal;
+}
+function openRadiusHelpModal(){
+    var m=ensureRadiusHelpModal();
+    m.classList.add("open");
+}
+function closeRadiusHelpModal(){
+    if(!radiusHelpModal)return;
+    radiusHelpModal.classList.remove("open");
+}
+function ensureSpacingHelpModal(){
+    if(spacingHelpModal)return spacingHelpModal;
+    const modal=document.createElement("div");
+    modal.className="fb-help-modal";
+    modal.innerHTML='<div class="fb-help-card" role="dialog" aria-modal="true" aria-label="Spacing help"><div class="fb-help-head"><div class="fb-help-title">Padding Vs Margin</div><button type="button" class="fb-help-close" data-close="spacing-help" aria-label="Close">×</button></div><div class="fb-help-copy"><strong>Padding</strong> is the inside breathing room of a box.<br><strong>Margin</strong> is the outside personal space that pushes other elements away.</div><div class="fb-space-stage"><div><div class="fb-space-wrap"><div class="fb-space-box"><div class="fb-space-core">Content</div></div></div><div class="fb-space-legend"><div><strong>Padding:</strong> space inside the box.</div><div><strong>Margin:</strong> space outside the box.</div></div></div></div></div>';
+    modal.addEventListener("click",e=>{if(e.target===modal)closeSpacingHelpModal();});
+    var closeBtn=modal.querySelector('[data-close="spacing-help"]');
+    if(closeBtn)closeBtn.addEventListener("click",()=>closeSpacingHelpModal());
+    document.body.appendChild(modal);
+    spacingHelpModal=modal;
+    return modal;
+}
+function openSpacingHelpModal(){
+    var m=ensureSpacingHelpModal();
+    m.classList.add("open");
+}
+function closeSpacingHelpModal(){
+    if(!spacingHelpModal)return;
+    spacingHelpModal.classList.remove("open");
+}
+function ensureSpacingHelperButton(){
+    if(!settings)return;
+    var hasPadding=!!document.getElementById("pTop");
+    var hasMargin=!!document.getElementById("mTop");
+    if(!(hasPadding||hasMargin))return;
+    settings.querySelectorAll('.setting-label-help[data-spacing-helper="1"]').forEach(n=>n.remove());
+    var oldBtn=document.getElementById("spacingHelpBtn");
+    if(oldBtn)oldBtn.remove();
+
+    var titleEl=null;
+    var titles=Array.from(settings.querySelectorAll(".menu-section-title,label,.size-label"));
+    for(var i=0;i<titles.length;i++){
+        var txt=String((titles[i].textContent||"")).trim().toLowerCase();
+        if(txt==="spacing"){titleEl=titles[i];break;}
+    }
+    if(!titleEl){
+        var pTop=document.getElementById("pTop");
+        if(pTop){
+            var grid=pTop.closest(".size-grid");
+            if(grid && grid.previousElementSibling)titleEl=grid.previousElementSibling;
+        }
+    }
+    if(!titleEl)return;
+
+    var host=document.createElement("div");
+    host.className="setting-label-help";
+    host.setAttribute("data-spacing-helper","1");
+    var txtSpan=document.createElement("span");
+    txtSpan.textContent=titleEl.textContent||"Spacing";
+    titleEl.textContent="";
+    var btn=document.createElement("button");
+    btn.type="button";
+    btn.id="spacingHelpBtn";
+    btn.className="setting-help-icon";
+    btn.setAttribute("aria-label","Spacing help");
+    btn.textContent="?";
+    btn.onclick=()=>openSpacingHelpModal();
+    host.appendChild(txtSpan);
+    host.appendChild(btn);
+    titleEl.appendChild(host);
+}
 
 function renderSettings(){
     settingsTitle.textContent="Settings Panel";
@@ -1994,10 +2128,13 @@ function renderSettings(){
     if((!state.sel&&!inCarousel)||!t){settings.innerHTML='<p class="meta">Select a component to edit.</p>';return;}
     settingsTitle.textContent=titleCase(selectedType())+" Settings";
     const sty=()=>{t.style=t.style||{};return t.style;};
-    const moveCtx=selectedElementMoveContext();
+    const moveCtxEl=selectedElementMoveContext();
+    const moveCtxStruct=selectedStructureMoveContext();
+    const canStructureMove=(!inCarousel&&(selKind==="sec"||selKind==="row"||selKind==="col"));
+    const moveCtx=(selKind==="el"?moveCtxEl:(canStructureMove?moveCtxStruct:null));
     const canMoveUp=!!(moveCtx&&moveCtx.index>0);
     const canMoveDown=!!(moveCtx&&moveCtx.index<(moveCtx.list.length-1));
-    const moveControls=(selKind==="el"&&moveCtx)
+    const moveControls=(moveCtx)
         ? '<div class="menu-split"></div><div class="menu-section-title">Order</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;"><button type="button" id="btnMoveUp" class="fb-btn"'+(canMoveUp?'':' disabled')+'>Move Up</button><button type="button" id="btnMoveDown" class="fb-btn"'+(canMoveDown?'':' disabled')+'>Move Down</button></div>'
         : '';
     const remove='<div class="settings-delete-wrap"><button type="button" id="btnDeleteSelected" class="fb-btn danger"><i class="fas fa-trash-alt"></i> Delete</button></div>';
@@ -2050,14 +2187,31 @@ function renderSettings(){
         var m=String(bg).match(/^url\((['"]?)(.*?)\1\)$/i);
         return m?m[2]:"";
     }
+    function radiusNumberFromStyle(v){
+        var arr=parseSpacing(v,[0,0,0,0]);
+        return Number(arr[0])||0;
+    }
+    function radiusControlHtml(id,val){
+        return '<div class="radius-inline"><button type="button" class="radius-icon" tabindex="-1" aria-hidden="true"><i class="fas fa-vector-square"></i></button><input id="'+id+'" type="number" min="0" step="1" value="'+(Number(val)||0)+'"></div>';
+    }
+    function radiusHelpLabelHtml(btnId,labelText){
+        var txt=labelText||"Border radius";
+        return '<div class="setting-label-help"><label style="margin:0;">'+txt+'</label><button type="button" id="'+btnId+'" class="setting-help-icon" aria-label="Border radius help">?</button></div>';
+    }
+    function bindRadiusHelpButton(btnId){
+        var n=document.getElementById(btnId);
+        if(n)n.onclick=()=>openRadiusHelpModal();
+    }
     if(selKind==="sec"){
         t.settings=t.settings||{};
         var padDef=[20,20,20,20],marDef=[0,0,0,0];
         var pad=parseSpacing(t.style&&t.style.padding,padDef),mar=parseSpacing(t.style&&t.style.margin,marDef);
         var cw=(t.settings&&t.settings.contentWidth)||"full";
-        settings.innerHTML='<div class="menu-section-title">Layout</div><label>Content width</label><select id="secCw"><option value="full">Full page</option><option value="wide">Wide</option><option value="medium">Medium</option><option value="small">Small</option><option value="xsmall">Extra small</option></select><div class="menu-split"></div><div class="menu-section-title">Spacing</div><div class="size-position"><div class="size-label">Size and position</div><label class="size-label">Padding</label><div class="size-grid"><div class="fld"><label>T</label><input id="pTop" type="number" value="'+pad[0]+'"></div><div class="fld"><label>R</label><input id="pRight" type="number" value="'+pad[1]+'"></div><div class="fld"><label>B</label><input id="pBottom" type="number" value="'+pad[2]+'"></div><div class="fld"><label>L</label><input id="pLeft" type="number" value="'+pad[3]+'"></div><div class="size-link"><button type="button" id="linkPad" title="Link padding"><span>&harr;</span></button><span>Link</span></div></div><label class="size-label">Margin</label><div class="size-grid"><div class="fld"><label>T</label><input id="mTop" type="number" value="'+mar[0]+'"></div><div class="fld"><label>R</label><input id="mRight" type="number" value="'+mar[1]+'"></div><div class="fld"><label>B</label><input id="mBottom" type="number" value="'+mar[2]+'"></div><div class="fld"><label>L</label><input id="mLeft" type="number" value="'+mar[3]+'"></div><div class="size-link"><button type="button" id="linkMar" title="Link margin"><span>&harr;</span></button><span>Link</span></div></div></div><div class="menu-split"></div><div class="menu-section-title">Style</div><label>Background color</label><input id="bg" type="color"><label>Background image URL</label><input id="bgImg" placeholder="https://..."><label>Upload background image</label><input id="bgUp" type="file" accept="image/*">'+remove;
+        settings.innerHTML='<div class="menu-section-title">Layout</div><label>Content width</label><select id="secCw"><option value="full">Full page</option><option value="wide">Wide</option><option value="medium">Medium</option><option value="small">Small</option><option value="xsmall">Extra small</option></select><div class="menu-split"></div><div class="menu-section-title">Spacing</div><div class="size-position"><div class="size-label">Size and position</div><label class="size-label">Padding</label><div class="size-grid"><div class="fld"><label>T</label><input id="pTop" type="number" value="'+pad[0]+'"></div><div class="fld"><label>R</label><input id="pRight" type="number" value="'+pad[1]+'"></div><div class="fld"><label>B</label><input id="pBottom" type="number" value="'+pad[2]+'"></div><div class="fld"><label>L</label><input id="pLeft" type="number" value="'+pad[3]+'"></div><div class="size-link"><button type="button" id="linkPad" title="Link padding"><span>&harr;</span></button><span>Link</span></div></div><label class="size-label">Margin</label><div class="size-grid"><div class="fld"><label>T</label><input id="mTop" type="number" value="'+mar[0]+'"></div><div class="fld"><label>R</label><input id="mRight" type="number" value="'+mar[1]+'"></div><div class="fld"><label>B</label><input id="mBottom" type="number" value="'+mar[2]+'"></div><div class="fld"><label>L</label><input id="mLeft" type="number" value="'+mar[3]+'"></div><div class="size-link"><button type="button" id="linkMar" title="Link margin"><span>&harr;</span></button><span>Link</span></div></div></div><div class="menu-split"></div><div class="menu-section-title">Style</div><label>Background color</label><input id="bg" type="color"><label>Background image URL</label><input id="bgImg" placeholder="https://..."><label>Upload background image</label><input id="bgUp" type="file" accept="image/*">'+radiusHelpLabelHtml("secRadiusHelp","Border radius")+radiusControlHtml("secRadius",radiusNumberFromStyle(t.style&&t.style.borderRadius))+moveControls+remove;
         bind("bg",(t.style&&t.style.backgroundColor)||"#ffffff",v=>sty().backgroundColor=v,{undo:true});
         bind("bgImg",readBgImageUrl(),v=>{var s=sty();s.backgroundImage=(v&&String(v).trim()!=="")?('url('+String(v).trim()+')'):"";renderCanvas();},{undo:true});
+        bindPx("secRadius",(t.style&&t.style.borderRadius)||"0px",v=>sty().borderRadius=v,{undo:true});
+        bindRadiusHelpButton("secRadiusHelp");
         bind("secCw",cw,v=>{t.settings=t.settings||{};t.settings.contentWidth=v;renderCanvas();},{undo:true});
         var bgUp=document.getElementById("bgUp");
         if(bgUp)bgUp.onchange=()=>{if(bgUp.files&&bgUp.files[0]){saveToHistory();var bgImg=document.getElementById("bgImg");uploadImage(bgUp.files[0],url=>{var s=sty();s.backgroundImage='url('+url+')';if(bgImg)bgImg.value=url;renderCanvas();},"Background image upload");}};
@@ -2071,14 +2225,13 @@ function renderSettings(){
         if(linkMar)linkMar.onclick=()=>{saveToHistory();marginLinked=!marginLinked;linkMar.classList.toggle("linked",marginLinked);if(marginLinked){var v=document.getElementById("mTop").value;document.getElementById("mRight").value=v;document.getElementById("mBottom").value=v;document.getElementById("mLeft").value=v;sty().margin=spacingToCss([Number(v)||0,Number(v)||0,Number(v)||0,Number(v)||0]);renderCanvas();}};
     } else if(selKind==="el"&&t.type==="image"){
         t.settings=t.settings||{};
-        var marDef=[0,0,0,0],radDef=[0,0,0,0];
-        var mar=parseSpacing(t.style&&t.style.margin,marDef),rad=parseSpacing(t.style&&t.style.borderRadius,radDef);
-        var radiusLinked=t.settings.imageRadiusLinked!==false;
+        var marDef=[0,0,0,0];
+        var mar=parseSpacing(t.style&&t.style.margin,marDef);
         var imageSourceType=(t.settings&&t.settings.imageSourceType)||"direct";
         var imageSourceFields=imageSourceType==="upload"
             ? '<label>Upload file</label><input id="up" type="file" accept="image/*"><div class="meta" id="imgCurrentFile"></div>'
             : '<label>URL</label><input id="src">';
-        settings.innerHTML='<div class="menu-section-title">Content</div><label>Image type</label><select id="imgSourceType"><option value="direct"'+(imageSourceType==="direct"?' selected':'')+'>Direct link</option><option value="upload"'+(imageSourceType==="upload"?' selected':'')+'>Upload file</option></select>'+imageSourceFields+'<label>Alt</label><input id="alt"><div class="menu-split"></div><div class="menu-section-title">Layout</div><label>Alignment</label><select id="align"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select><label>Width</label><input id="w" placeholder="100%"><div class="menu-split"></div><div class="menu-section-title">Spacing</div><div class="size-position"><div class="size-label">Size and position</div><label class="size-label">Margin</label><div class="size-grid"><div class="fld"><label>T</label><input id="mTop" type="number" value="'+mar[0]+'"></div><div class="fld"><label>R</label><input id="mRight" type="number" value="'+mar[1]+'"></div><div class="fld"><label>B</label><input id="mBottom" type="number" value="'+mar[2]+'"></div><div class="fld"><label>L</label><input id="mLeft" type="number" value="'+mar[3]+'"></div><div class="size-link"><button type="button" id="linkMar" title="Link margin"><span>&harr;</span></button><span>Link</span></div></div></div><div class="menu-split"></div><div class="menu-section-title">Style</div><label>Border</label><input id="b"><label>Border radius</label><div class="img-radius-panel"><button type="button" id="imgRadiusLink" class="img-radius-link'+(radiusLinked?' linked':'')+'" title="Link corners"><i class="fas fa-link"></i></button><div class="img-radius-row"><input id="imgRadTl" type="number" value="'+rad[0]+'"><input id="imgRadTr" type="number" value="'+rad[1]+'"><input id="imgRadBr" type="number" value="'+rad[2]+'"><input id="imgRadBl" type="number" value="'+rad[3]+'"></div></div><label>Shadow</label><input id="sh">'+moveControls+remove;
+        settings.innerHTML='<div class="menu-section-title">Content</div><label>Image type</label><select id="imgSourceType"><option value="direct"'+(imageSourceType==="direct"?' selected':'')+'>Direct link</option><option value="upload"'+(imageSourceType==="upload"?' selected':'')+'>Upload file</option></select>'+imageSourceFields+'<label>Alt</label><input id="alt"><div class="menu-split"></div><div class="menu-section-title">Layout</div><label>Alignment</label><select id="align"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select><label>Width</label><input id="w" placeholder="100%"><div class="menu-split"></div><div class="menu-section-title">Spacing</div><div class="size-position"><div class="size-label">Size and position</div><label class="size-label">Margin</label><div class="size-grid"><div class="fld"><label>T</label><input id="mTop" type="number" value="'+mar[0]+'"></div><div class="fld"><label>R</label><input id="mRight" type="number" value="'+mar[1]+'"></div><div class="fld"><label>B</label><input id="mBottom" type="number" value="'+mar[2]+'"></div><div class="fld"><label>L</label><input id="mLeft" type="number" value="'+mar[3]+'"></div><div class="size-link"><button type="button" id="linkMar" title="Link margin"><span>&harr;</span></button><span>Link</span></div></div></div><div class="menu-split"></div><div class="menu-section-title">Style</div><label>Border</label><input id="b">'+radiusHelpLabelHtml("imgRadiusHelp","Border radius")+radiusControlHtml("imgRadius",radiusNumberFromStyle(t.style&&t.style.borderRadius))+'<label>Shadow</label><input id="sh">'+moveControls+remove;
         var imgSourceType=document.getElementById("imgSourceType");
         if(imgSourceType)imgSourceType.onchange=()=>{saveToHistory();t.settings=t.settings||{};t.settings.imageSourceType=imgSourceType.value;renderSettings();};
         if(imageSourceType==="direct"){
@@ -2100,34 +2253,17 @@ function renderSettings(){
         ["mTop","mRight","mBottom","mLeft"].forEach(id=>{var el=document.getElementById(id);if(el)el.addEventListener("input",syncMargin);});
         var linkMar=document.getElementById("linkMar");
         if(linkMar)linkMar.onclick=()=>{saveToHistory();marginLinked=!marginLinked;linkMar.classList.toggle("linked",marginLinked);if(marginLinked){var v=document.getElementById("mTop").value;document.getElementById("mRight").value=v;document.getElementById("mBottom").value=v;document.getElementById("mLeft").value=v;sty().margin=spacingToCss([Number(v)||0,Number(v)||0,Number(v)||0,Number(v)||0]);renderCanvas();}};
-        var imgRadTl=document.getElementById("imgRadTl"),imgRadTr=document.getElementById("imgRadTr"),imgRadBr=document.getElementById("imgRadBr"),imgRadBl=document.getElementById("imgRadBl"),imgRadiusLink=document.getElementById("imgRadiusLink");
-        function applyImgRadius(vals){sty().borderRadius=spacingToCss(vals);renderCanvas();}
-        function readRadius(){return [Number((imgRadTl&&imgRadTl.value)||0)||0,Number((imgRadTr&&imgRadTr.value)||0)||0,Number((imgRadBr&&imgRadBr.value)||0)||0,Number((imgRadBl&&imgRadBl.value)||0)||0];}
-        function syncImgRadius(from){
-            saveToHistory();
-            if(radiusLinked){
-                var v=Number((from&&from.value)||0)||0;
-                if(imgRadTl)imgRadTl.value=v;
-                if(imgRadTr)imgRadTr.value=v;
-                if(imgRadBr)imgRadBr.value=v;
-                if(imgRadBl)imgRadBl.value=v;
-                applyImgRadius([v,v,v,v]);
-            }else{
-                applyImgRadius(readRadius());
-            }
-        }
-        [imgRadTl,imgRadTr,imgRadBr,imgRadBl].forEach(n=>{if(n)n.addEventListener("input",()=>syncImgRadius(n));});
-        if(imgRadiusLink)imgRadiusLink.onclick=()=>{saveToHistory();radiusLinked=!radiusLinked;t.settings=t.settings||{};t.settings.imageRadiusLinked=radiusLinked;imgRadiusLink.classList.toggle("linked",radiusLinked);if(radiusLinked){var v=Number((imgRadTl&&imgRadTl.value)||0)||0;if(imgRadTr)imgRadTr.value=v;if(imgRadBr)imgRadBr.value=v;if(imgRadBl)imgRadBl.value=v;applyImgRadius([v,v,v,v]);}};
+        bindPx("imgRadius",(t.style&&t.style.borderRadius)||"0px",v=>sty().borderRadius=v,{undo:true});
+        bindRadiusHelpButton("imgRadiusHelp");
         bind("b",(t.style&&t.style.border)||"",v=>sty().border=v,{undo:true});bind("sh",(t.style&&t.style.boxShadow)||"",v=>sty().boxShadow=v,{undo:true});
     } else if(selKind==="el"&&t.type==="video"){
         t.settings=t.settings||{};
-        var marDef=[0,0,0,0],radDef=[0,0,0,0],mar=parseSpacing(t.style&&t.style.margin,marDef),rad=parseSpacing(t.style&&t.style.borderRadius,radDef);
-        var videoRadiusLinked=t.settings.videoRadiusLinked!==false;
+        var marDef=[0,0,0,0],mar=parseSpacing(t.style&&t.style.margin,marDef);
         var videoSourceType=(t.settings&&t.settings.videoSourceType)||"direct";
         var videoSourceFields=videoSourceType==="upload"
             ? '<label>Upload file</label><input id="upv" type="file" accept="video/*"><div class="meta" id="vidCurrentFile"></div>'
             : '<label>URL</label><input id="src">';
-        settings.innerHTML='<div class="menu-section-title">Content</div><label>Video type</label><select id="vidSourceType"><option value="direct"'+(videoSourceType==="direct"?' selected':'')+'>Direct link</option><option value="upload"'+(videoSourceType==="upload"?' selected':'')+'>Upload file</option></select>'+videoSourceFields+'<div class="menu-split"></div><div class="menu-section-title">Layout</div><label>Alignment</label><select id="align"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select><label>Width</label><input id="w" placeholder="100%"><div class="menu-split"></div><div class="menu-section-title">Spacing</div><div class="size-position"><div class="size-label">Size and position</div><label class="size-label">Margin</label><div class="size-grid"><div class="fld"><label>T</label><input id="mTop" type="number" value="'+mar[0]+'"></div><div class="fld"><label>R</label><input id="mRight" type="number" value="'+mar[1]+'"></div><div class="fld"><label>B</label><input id="mBottom" type="number" value="'+mar[2]+'"></div><div class="fld"><label>L</label><input id="mLeft" type="number" value="'+mar[3]+'"></div><div class="size-link"><button type="button" id="linkMar" title="Link margin"><span>&harr;</span></button><span>Link</span></div></div></div><div class="menu-split"></div><div class="menu-section-title">Style</div><label>Border</label><input id="b"><label>Border radius</label><div class="img-radius-panel"><button type="button" id="vidRadiusLink" class="img-radius-link'+(videoRadiusLinked?' linked':'')+'" title="Link corners"><i class="fas fa-link"></i></button><div class="img-radius-row"><input id="vidRadTl" type="number" value="'+rad[0]+'"><input id="vidRadTr" type="number" value="'+rad[1]+'"><input id="vidRadBr" type="number" value="'+rad[2]+'"><input id="vidRadBl" type="number" value="'+rad[3]+'"></div></div><label>Shadow</label><input id="sh"><div class="menu-split"></div><div class="menu-section-title">Behavior</div><label>Auto play</label><select id="vAutoplay"><option value="off">Off</option><option value="on">On</option></select><label>Controls</label><select id="vControls"><option value="on">On</option><option value="off">Off</option></select>'+moveControls+remove;
+        settings.innerHTML='<div class="menu-section-title">Content</div><label>Video type</label><select id="vidSourceType"><option value="direct"'+(videoSourceType==="direct"?' selected':'')+'>Direct link</option><option value="upload"'+(videoSourceType==="upload"?' selected':'')+'>Upload file</option></select>'+videoSourceFields+'<div class="menu-split"></div><div class="menu-section-title">Layout</div><label>Alignment</label><select id="align"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select><label>Width</label><input id="w" placeholder="100%"><div class="menu-split"></div><div class="menu-section-title">Spacing</div><div class="size-position"><div class="size-label">Size and position</div><label class="size-label">Margin</label><div class="size-grid"><div class="fld"><label>T</label><input id="mTop" type="number" value="'+mar[0]+'"></div><div class="fld"><label>R</label><input id="mRight" type="number" value="'+mar[1]+'"></div><div class="fld"><label>B</label><input id="mBottom" type="number" value="'+mar[2]+'"></div><div class="fld"><label>L</label><input id="mLeft" type="number" value="'+mar[3]+'"></div><div class="size-link"><button type="button" id="linkMar" title="Link margin"><span>&harr;</span></button><span>Link</span></div></div></div><div class="menu-split"></div><div class="menu-section-title">Style</div><label>Border</label><input id="b">'+radiusHelpLabelHtml("vidRadiusHelp","Border radius")+radiusControlHtml("vidRadius",radiusNumberFromStyle(t.style&&t.style.borderRadius))+'<label>Shadow</label><input id="sh"><div class="menu-split"></div><div class="menu-section-title">Behavior</div><label>Auto play</label><select id="vAutoplay"><option value="off">Off</option><option value="on">On</option></select><label>Controls</label><select id="vControls"><option value="on">On</option><option value="off">Off</option></select>'+moveControls+remove;
         var vidSourceType=document.getElementById("vidSourceType");
         if(vidSourceType)vidSourceType.onchange=()=>{saveToHistory();t.settings=t.settings||{};t.settings.videoSourceType=vidSourceType.value;renderSettings();};
         if(videoSourceType==="direct"){
@@ -2150,24 +2286,8 @@ function renderSettings(){
         ["mTop","mRight","mBottom","mLeft"].forEach(id=>{var el=document.getElementById(id);if(el)el.addEventListener("input",syncMargin);});
         var linkMar=document.getElementById("linkMar");
         if(linkMar)linkMar.onclick=()=>{saveToHistory();marginLinked=!marginLinked;linkMar.classList.toggle("linked",marginLinked);if(marginLinked){var v=document.getElementById("mTop").value;document.getElementById("mRight").value=v;document.getElementById("mBottom").value=v;document.getElementById("mLeft").value=v;sty().margin=spacingToCss([Number(v)||0,Number(v)||0,Number(v)||0,Number(v)||0]);renderCanvas();}};
-        var vidRadTl=document.getElementById("vidRadTl"),vidRadTr=document.getElementById("vidRadTr"),vidRadBr=document.getElementById("vidRadBr"),vidRadBl=document.getElementById("vidRadBl"),vidRadiusLink=document.getElementById("vidRadiusLink");
-        function applyVidRadius(vals){sty().borderRadius=spacingToCss(vals);renderCanvas();}
-        function readVidRadius(){return [Number((vidRadTl&&vidRadTl.value)||0)||0,Number((vidRadTr&&vidRadTr.value)||0)||0,Number((vidRadBr&&vidRadBr.value)||0)||0,Number((vidRadBl&&vidRadBl.value)||0)||0];}
-        function syncVidRadius(from){
-            saveToHistory();
-            if(videoRadiusLinked){
-                var v=Number((from&&from.value)||0)||0;
-                if(vidRadTl)vidRadTl.value=v;
-                if(vidRadTr)vidRadTr.value=v;
-                if(vidRadBr)vidRadBr.value=v;
-                if(vidRadBl)vidRadBl.value=v;
-                applyVidRadius([v,v,v,v]);
-            }else{
-                applyVidRadius(readVidRadius());
-            }
-        }
-        [vidRadTl,vidRadTr,vidRadBr,vidRadBl].forEach(n=>{if(n)n.addEventListener("input",()=>syncVidRadius(n));});
-        if(vidRadiusLink)vidRadiusLink.onclick=()=>{saveToHistory();videoRadiusLinked=!videoRadiusLinked;t.settings=t.settings||{};t.settings.videoRadiusLinked=videoRadiusLinked;vidRadiusLink.classList.toggle("linked",videoRadiusLinked);if(videoRadiusLinked){var v=Number((vidRadTl&&vidRadTl.value)||0)||0;if(vidRadTr)vidRadTr.value=v;if(vidRadBr)vidRadBr.value=v;if(vidRadBl)vidRadBl.value=v;applyVidRadius([v,v,v,v]);}};
+        bindPx("vidRadius",(t.style&&t.style.borderRadius)||"0px",v=>sty().borderRadius=v,{undo:true});
+        bindRadiusHelpButton("vidRadiusHelp");
         bind("b",(t.style&&t.style.border)||"",v=>sty().border=v,{undo:true});bind("sh",(t.style&&t.style.boxShadow)||"",v=>sty().boxShadow=v,{undo:true});
     } else if(selKind==="row"){
         var padDef=[0,0,0,0],marDef=[0,0,0,0],radDef=[0,0,0,0];
@@ -2180,7 +2300,7 @@ function renderSettings(){
         var radiusBlock=perCorner
             ? '<div class="row-radius-grid"><div class="row-radius-field"><span>TL</span><input id="rowRadTl" type="number" value="'+rad[0]+'"></div><div class="row-radius-field"><span>TR</span><input id="rowRadTr" type="number" value="'+rad[1]+'"></div><div class="row-radius-field"><span>BL</span><input id="rowRadBl" type="number" value="'+rad[3]+'"></div><div class="row-radius-field"><span>BR</span><input id="rowRadBr" type="number" value="'+rad[2]+'"></div></div>'
             : '<div class="row-radius-field"><span>R</span><input id="rowRadAll" type="number" value="'+rad[0]+'"></div>';
-        settings.innerHTML='<div class="menu-section-title">Layout</div><label>Content width</label><select id="rowCw"><option value="full">Full page</option><option value="wide">Wide</option><option value="medium">Medium</option><option value="small">Small</option><option value="xsmall">Extra small</option></select><label>Gap</label><div class="px-wrap"><input id="g" type="number" step="1"><span class="px-unit">px</span></div><div class="menu-split"></div><div class="menu-section-title">Spacing</div><div class="size-position"><div class="size-label">Size and position</div><label class="size-label">Padding</label><div class="size-grid"><div class="fld"><label>T</label><input id="pTop" type="number" value="'+pad[0]+'"></div><div class="fld"><label>R</label><input id="pRight" type="number" value="'+pad[1]+'"></div><div class="fld"><label>B</label><input id="pBottom" type="number" value="'+pad[2]+'"></div><div class="fld"><label>L</label><input id="pLeft" type="number" value="'+pad[3]+'"></div><div class="size-link"><button type="button" id="linkPad" title="Link padding"><span>&harr;</span></button><span>Link</span></div></div><label class="size-label">Margin</label><div class="size-grid"><div class="fld"><label>T</label><input id="mTop" type="number" value="'+mar[0]+'"></div><div class="fld"><label>R</label><input id="mRight" type="number" value="'+mar[1]+'"></div><div class="fld"><label>B</label><input id="mBottom" type="number" value="'+mar[2]+'"></div><div class="fld"><label>L</label><input id="mLeft" type="number" value="'+mar[3]+'"></div><div class="size-link"><button type="button" id="linkMar" title="Link margin"><span>&harr;</span></button><span>Link</span></div></div></div><div class="menu-split"></div><div class="menu-section-title">Style</div><label>Background color</label><input id="bg" type="color"><label>Background image URL</label><input id="bgImg" placeholder="https://..."><label>Upload background image</label><input id="bgUp" type="file" accept="image/*"><div class="row-border-card"><div class="row-border-head"><strong>Border</strong></div><select id="rowBorderStyle"><option value="none">None</option><option value="solid">Solid</option><option value="dashed">Dashed</option><option value="dotted">Dotted</option><option value="double">Double</option></select><label>Corner radius</label>'+radiusBlock+'<div class="size-link"><button type="button" id="rowRadiusToggle" title="Toggle radius mode"><i class="fas fa-expand"></i></button><span>'+(perCorner?'Per corner':'Single value')+'</span></div></div><div class="menu-split"></div><div class="menu-section-title">Behavior</div><button type="button" id="rowBorderReset" class="fb-btn" style="width:100%;"><i class="fas fa-rotate-right"></i> Reset row border</button>'+remove;
+        settings.innerHTML='<div class="menu-section-title">Layout</div><label>Content width</label><select id="rowCw"><option value="full">Full page</option><option value="wide">Wide</option><option value="medium">Medium</option><option value="small">Small</option><option value="xsmall">Extra small</option></select><label>Gap</label><div class="px-wrap"><input id="g" type="number" step="1"><span class="px-unit">px</span></div><div class="menu-split"></div><div class="menu-section-title">Spacing</div><div class="size-position"><div class="size-label">Size and position</div><label class="size-label">Padding</label><div class="size-grid"><div class="fld"><label>T</label><input id="pTop" type="number" value="'+pad[0]+'"></div><div class="fld"><label>R</label><input id="pRight" type="number" value="'+pad[1]+'"></div><div class="fld"><label>B</label><input id="pBottom" type="number" value="'+pad[2]+'"></div><div class="fld"><label>L</label><input id="pLeft" type="number" value="'+pad[3]+'"></div><div class="size-link"><button type="button" id="linkPad" title="Link padding"><span>&harr;</span></button><span>Link</span></div></div><label class="size-label">Margin</label><div class="size-grid"><div class="fld"><label>T</label><input id="mTop" type="number" value="'+mar[0]+'"></div><div class="fld"><label>R</label><input id="mRight" type="number" value="'+mar[1]+'"></div><div class="fld"><label>B</label><input id="mBottom" type="number" value="'+mar[2]+'"></div><div class="fld"><label>L</label><input id="mLeft" type="number" value="'+mar[3]+'"></div><div class="size-link"><button type="button" id="linkMar" title="Link margin"><span>&harr;</span></button><span>Link</span></div></div></div><div class="menu-split"></div><div class="menu-section-title">Style</div><label>Background color</label><input id="bg" type="color"><label>Background image URL</label><input id="bgImg" placeholder="https://..."><label>Upload background image</label><input id="bgUp" type="file" accept="image/*"><div class="row-border-card"><div class="row-border-head"><strong>Border</strong></div><select id="rowBorderStyle"><option value="none">None</option><option value="solid">Solid</option><option value="dashed">Dashed</option><option value="dotted">Dotted</option><option value="double">Double</option></select><label>Corner radius</label>'+radiusBlock+'<div class="size-link"><button type="button" id="rowRadiusToggle" title="Toggle radius mode"><i class="fas fa-expand"></i></button><span>'+(perCorner?'Per corner':'Single value')+'</span></div></div><div class="menu-split"></div><div class="menu-section-title">Behavior</div><button type="button" id="rowBorderReset" class="fb-btn" style="width:100%;"><i class="fas fa-rotate-right"></i> Reset row border</button>'+moveControls+remove;
         bind("bg",(t.style&&t.style.backgroundColor)||"#ffffff",v=>sty().backgroundColor=v,{undo:true});
         bind("bgImg",readBgImageUrl(),v=>{var s=sty();s.backgroundImage=(v&&String(v).trim()!=="")?('url('+String(v).trim()+')'):"";renderCanvas();},{undo:true});
         bind("rowCw",rowCw,v=>{t.settings=t.settings||{};t.settings.contentWidth=v;renderCanvas();},{undo:true});
@@ -2233,9 +2353,11 @@ function renderSettings(){
         t.settings=t.settings||{};
         var colCw=(t.settings&&t.settings.contentWidth)||"full";
         var layoutHtml='<div class="col-layout-wrap"><div class="col-layout-title">Column layout</div><div class="col-layout-grid"><button type="button" class="col-layout-btn'+(currentCols===1?' active':'')+'" data-cols="1"><i class="fas fa-square"></i><span>1</span></button><button type="button" class="col-layout-btn'+(currentCols===2?' active':'')+'" data-cols="2"><i class="fas fa-columns"></i><span>2</span></button><button type="button" class="col-layout-btn'+(currentCols===3?' active':'')+'" data-cols="3"><i class="fas fa-table-columns"></i><span>3</span></button><button type="button" class="col-layout-btn'+(currentCols===4?' active':'')+'" data-cols="4"><i class="fas fa-grip"></i><span>4</span></button></div></div>';
-        settings.innerHTML='<div class="menu-section-title">Layout</div>'+layoutHtml+'<label>Content width</label><select id="colCw"><option value="full">Full page</option><option value="wide">Wide</option><option value="medium">Medium</option><option value="small">Small</option><option value="xsmall">Extra small</option></select><div class="menu-split"></div><div class="menu-section-title">Spacing</div><div class="size-position"><div class="size-label">Size and position</div><label class="size-label">Padding</label><div class="size-grid"><div class="fld"><label>T</label><input id="pTop" type="number" value="'+pad[0]+'"></div><div class="fld"><label>R</label><input id="pRight" type="number" value="'+pad[1]+'"></div><div class="fld"><label>B</label><input id="pBottom" type="number" value="'+pad[2]+'"></div><div class="fld"><label>L</label><input id="pLeft" type="number" value="'+pad[3]+'"></div><div class="size-link"><button type="button" id="linkPad" title="Link padding"><span>&harr;</span></button><span>Link</span></div></div><label class="size-label">Margin</label><div class="size-grid"><div class="fld"><label>T</label><input id="mTop" type="number" value="'+mar[0]+'"></div><div class="fld"><label>R</label><input id="mRight" type="number" value="'+mar[1]+'"></div><div class="fld"><label>B</label><input id="mBottom" type="number" value="'+mar[2]+'"></div><div class="fld"><label>L</label><input id="mLeft" type="number" value="'+mar[3]+'"></div><div class="size-link"><button type="button" id="linkMar" title="Link margin"><span>&harr;</span></button><span>Link</span></div></div></div><div class="menu-split"></div><div class="menu-section-title">Style</div><label>Background color</label><input id="bg" type="color"><label>Background image URL</label><input id="bgImg" placeholder="https://..."><label>Upload background image</label><input id="bgUp" type="file" accept="image/*">'+remove;
-        bind("bg",(t.style&&t.style.backgroundColor)||"#ffffff",v=>sty().backgroundColor=v,{undo:true});
+        settings.innerHTML='<div class="menu-section-title">Layout</div>'+layoutHtml+'<label>Content width</label><select id="colCw"><option value="full">Full page</option><option value="wide">Wide</option><option value="medium">Medium</option><option value="small">Small</option><option value="xsmall">Extra small</option></select><div class="menu-split"></div><div class="menu-section-title">Spacing</div><div class="size-position"><div class="size-label">Size and position</div><label class="size-label">Padding</label><div class="size-grid"><div class="fld"><label>T</label><input id="pTop" type="number" value="'+pad[0]+'"></div><div class="fld"><label>R</label><input id="pRight" type="number" value="'+pad[1]+'"></div><div class="fld"><label>B</label><input id="pBottom" type="number" value="'+pad[2]+'"></div><div class="fld"><label>L</label><input id="pLeft" type="number" value="'+pad[3]+'"></div><div class="size-link"><button type="button" id="linkPad" title="Link padding"><span>&harr;</span></button><span>Link</span></div></div><label class="size-label">Margin</label><div class="size-grid"><div class="fld"><label>T</label><input id="mTop" type="number" value="'+mar[0]+'"></div><div class="fld"><label>R</label><input id="mRight" type="number" value="'+mar[1]+'"></div><div class="fld"><label>B</label><input id="mBottom" type="number" value="'+mar[2]+'"></div><div class="fld"><label>L</label><input id="mLeft" type="number" value="'+mar[3]+'"></div><div class="size-link"><button type="button" id="linkMar" title="Link margin"><span>&harr;</span></button><span>Link</span></div></div></div><div class="menu-split"></div><div class="menu-section-title">Style</div><label>Background color</label><input id="bg" type="color"><label>Background image URL</label><input id="bgImg" placeholder="https://..."><label>Upload background image</label><input id="bgUp" type="file" accept="image/*">'+radiusHelpLabelHtml("colRadiusHelp","Border radius")+radiusControlHtml("colRadius",radiusNumberFromStyle(t.style&&t.style.borderRadius))+moveControls+remove;
+        bind("bg",(t.style&&t.style.backgroundColor)||"#f8fafc",v=>sty().backgroundColor=v,{undo:true});
         bind("bgImg",readBgImageUrl(),v=>{var s=sty();s.backgroundImage=(v&&String(v).trim()!=="")?('url('+String(v).trim()+')'):"";renderCanvas();},{undo:true});
+        bindPx("colRadius",(t.style&&t.style.borderRadius)||"0px",v=>sty().borderRadius=v,{undo:true});
+        bindRadiusHelpButton("colRadiusHelp");
         bind("colCw",colCw,v=>{t.settings=t.settings||{};t.settings.contentWidth=v;renderCanvas();},{undo:true});
         var bgUp=document.getElementById("bgUp");if(bgUp)bgUp.onchange=()=>{if(bgUp.files&&bgUp.files[0]){saveToHistory();var bgImg=document.getElementById("bgImg");uploadImage(bgUp.files[0],url=>{var s=sty();s.backgroundImage='url('+url+')';if(bgImg)bgImg.value=url;renderCanvas();},"Background image upload");}};
         var paddingLinked=false,marginLinked=false;
@@ -2266,7 +2388,7 @@ function renderSettings(){
                     }
                     cols=keptRoot;
                 }
-                cols.forEach(c=>{c.style=c.style||{};c.style.flex="1 1 240px";});
+                cols.forEach(c=>applyDefaultColumnStyle(c,true));
 
                 if(count<=1){
                     rs[colRootCtx.index]=Object.assign({kind:"column"},cols[0]);
@@ -2300,7 +2422,7 @@ function renderSettings(){
                 }
                 cols=kept;
             }
-            cols.forEach(c=>{c.style=c.style||{};c.style.flex="1 1 240px";});
+            cols.forEach(c=>applyDefaultColumnStyle(c,true));
             parentRow.columns=cols;
             if(inCarousel && state.carouselSel){
                 if(!parentRow.columns.find(c=>c.id===state.carouselSel.colId) && parentRow.columns[0]){
@@ -2341,13 +2463,13 @@ function renderSettings(){
             var carouselComponentsHtml='';
             settings.innerHTML='<div class="menu-section-title">Content</div><div class="menu-section-title">Slides</div>'+slidesHtml
                 +'<label>Slide label</label><input id="carSlideLabel" value="'+String((aSlide&&aSlide.label)||"").replace(/"/g,'&quot;')+'" placeholder="Slide title">'
-                +'<div class="meta" style="margin:6px 0 10px;">Use the <strong>+</strong> button inside carousel to add an image slide.</div>'
-                +'<button type="button" id="addImageSlideFromSettings" class="fb-btn primary" style="width:100%;margin:0 0 10px;">Add image slide</button>'
-                +'<input id="carImageSlideFiles" type="file" accept="image/*" multiple style="display:none;">'
+                +'<div class="meta" style="margin:6px 0 10px;">Use the <strong>+</strong> button inside carousel to upload images. Use the button below to add a blank slide.</div>'
+                +'<button type="button" id="addImageSlideFromSettings" class="fb-btn primary" style="width:100%;margin:0 0 10px;">Add slide</button>'
                 +carouselComponentsHtml
                 +'<div class="menu-split"></div><div class="menu-section-title">Layout</div><label>Carousel alignment</label><div class="menu-align-row"><button type="button" class="menu-align-btn car-align-btn" data-ca="left"><i class="fas fa-align-left"></i></button><button type="button" class="menu-align-btn car-align-btn" data-ca="center"><i class="fas fa-align-center"></i></button><button type="button" class="menu-align-btn car-align-btn" data-ca="right"><i class="fas fa-align-right"></i></button></div>'
                 +'<label>Fixed width</label><div class="px-wrap"><input id="carFixedW" type="number" min="50" step="1"><span class="px-unit">px</span></div><label>Fixed height</label><div class="px-wrap"><input id="carFixedH" type="number" min="50" step="1"><span class="px-unit">px</span></div>'
-                +'<div class="menu-split"></div><div class="menu-section-title">Behavior</div><div class="meta">Slide selection, view, and ordering controls are in the Content section above.</div>'
+                +'<div class="menu-split"></div><div class="menu-section-title">Style</div>'+radiusHelpLabelHtml("carRadiusHelp","Border radius")+radiusControlHtml("carRadius",radiusNumberFromStyle(t.style&&t.style.borderRadius))
+                +'<div class="menu-split"></div><div class="menu-section-title">Behavior</div><label>Slideshow mode</label><select id="carSlideMode"><option value="manual">Manual (use arrows)</option><option value="auto">Automatic (no arrows)</option></select><div class="meta">Slide selection, view, and ordering controls are in the Content section above.</div>'
                 +moveControls+remove;
 
             settings.querySelectorAll(".carousel-slide-btn").forEach(btn=>btn.addEventListener("click",()=>{
@@ -2392,35 +2514,15 @@ function renderSettings(){
             var labelInput=document.getElementById("carSlideLabel");
             if(labelInput)labelInput.addEventListener("input",()=>{var i=Number(t.settings.activeSlide)||0;slides[i].label=labelInput.value||"";renderCanvas();});
             var addImageSlideFromSettings=document.getElementById("addImageSlideFromSettings");
-            var carImageSlideFiles=document.getElementById("carImageSlideFiles");
-            if(addImageSlideFromSettings&&carImageSlideFiles)addImageSlideFromSettings.onclick=()=>{carImageSlideFiles.click();};
-            if(carImageSlideFiles)carImageSlideFiles.onchange=()=>{
-                var files=Array.from(carImageSlideFiles.files||[]);
-                if(!files.length)return;
+            if(addImageSlideFromSettings)addImageSlideFromSettings.onclick=()=>{
                 saveToHistory();
-                var parentRef=(state.carouselSel&&state.carouselSel.parent)?state.carouselSel.parent:{scope:(state.sel&&state.sel.scope)||"column",s:state.sel&&state.sel.s,r:state.sel&&state.sel.r,c:state.sel&&state.sel.c,e:t.id};
-                var idx=0;
-                var addNext=()=>{
-                    if(idx>=files.length){
-                        renderCarouselEditor();
-                        renderCanvas();
-                        return;
-                    }
-                    var file=files[idx++];
-                    uploadImage(file,url=>{
-                        var isDefaultEmpty=(slides.length===1 && (!slides[0] || !slides[0].image || String(slides[0].image.src||"").trim()===""));
-                        var sld=isDefaultEmpty?slides[0]:{id:uid("sld"),label:"Slide #"+(slides.length+1),image:{src:"",alt:"Image"}};
-                        if(!isDefaultEmpty)slides.push(sld);
-                        sld.image={src:String(url||"").trim(),alt:"Image"};
-                        t.settings.activeSlide=slides.length-1;
-                        t.settings.carouselActiveRow=0;
-                        t.settings.carouselActiveCol=0;
-                        state.carouselSel=null;
-                        addNext();
-                    },"Image upload",()=>{addNext();});
-                };
-                addNext();
-                carImageSlideFiles.value="";
+                slides.push({id:uid("sld"),label:"Slide #"+(slides.length+1),image:{src:"",alt:"Image"},rows:[]});
+                t.settings.activeSlide=slides.length-1;
+                t.settings.carouselActiveRow=0;
+                t.settings.carouselActiveCol=0;
+                state.carouselSel=null;
+                renderCarouselEditor();
+                renderCanvas();
             };
 
             settings.querySelectorAll(".carousel-comp-btn").forEach(btn=>{
@@ -2446,13 +2548,13 @@ function renderSettings(){
                     var rw=rows[rows.length-1]||rows[0];
                     rw.columns=Array.isArray(rw.columns)?rw.columns:[];
                     if(tp==="column"){
-                        rw.columns.push({id:uid("col"),style:{},elements:[]});
+                        rw.columns.push(createDefaultColumn());
                         t.settings.carouselActiveCol=Math.max(0,rw.columns.length-1);
                         renderCarouselEditor();renderCanvas();
                         return;
                     }
                     if(!rw.columns.length){
-                        rw.columns.push({id:uid("col"),style:{},elements:[]});
+                        rw.columns.push(createDefaultColumn());
                     }
                     var it=carouselElementDefaults(tp);
                     if(!it)return;
@@ -2468,11 +2570,14 @@ function renderSettings(){
             settings.querySelectorAll(".car-align-btn").forEach(btn=>{if(btn.getAttribute("data-ca")===carAlignment)btn.classList.add("active");btn.addEventListener("click",()=>{saveToHistory();t.settings=t.settings||{};t.settings.alignment=btn.getAttribute("data-ca")||"left";renderCarouselEditor();renderCanvas();});});
             bind("carFixedW",(t.settings&&t.settings.fixedWidth)||"",v=>{t.settings=t.settings||{};var n=Number(v);t.settings.fixedWidth=(!isNaN(n)&&n>=50)?Math.round(n):"";renderCanvas();},{undo:true});
             bind("carFixedH",(t.settings&&t.settings.fixedHeight)||"",v=>{t.settings=t.settings||{};var n=Number(v);t.settings.fixedHeight=(!isNaN(n)&&n>=50)?Math.round(n):"";renderCanvas();},{undo:true});
+            bind("carSlideMode",(t.settings&&t.settings.slideshowMode)||"manual",v=>{t.settings=t.settings||{};var m=(v==="auto")?"auto":"manual";t.settings.slideshowMode=m;t.settings.showArrows=(m==="auto")?false:true;renderCanvas();},{undo:true});
+            bindPx("carRadius",(t.style&&t.style.borderRadius)||"0px",v=>sty().borderRadius=v,{undo:true});
+            bindRadiusHelpButton("carRadiusHelp");
         }
         renderCarouselEditor();
     } else if(selKind==="el"&&t.type==="menu"){
         t.settings=t.settings||{};
-        if(!Array.isArray(t.settings.items)||!t.settings.items.length)t.settings.items=[{label:"Home",url:"#",newWindow:false,hasSubmenu:false},{label:"Contact",url:"/contact",newWindow:false,hasSubmenu:false}];
+        if(!Array.isArray(t.settings.items)||!t.settings.items.length)t.settings.items=[{label:"Home",url:"#",newWindow:false,hasSubmenu:false,bold:false},{label:"Contact",url:"/contact",newWindow:false,hasSubmenu:false,bold:false}];
         if(!t.settings.menuCollapsed||typeof t.settings.menuCollapsed!=="object")t.settings.menuCollapsed={};
         var padDef=[0,0,0,0],marDef=[0,0,0,0];
         var pad=parseSpacing(t.style&&t.style.padding,padDef),mar=parseSpacing(t.style&&t.style.margin,marDef);
@@ -2483,24 +2588,53 @@ function renderSettings(){
                 var collapsed=!!t.settings.menuCollapsed[idx];
                 return '<div class="menu-item-card"><div class="menu-item-head"><strong>Menu item '+(idx+1)+'</strong><div class="menu-item-actions"><button type="button" class="menu-del" data-idx="'+idx+'" title="Delete"><i class="fas fa-trash"></i></button><button type="button" class="menu-toggle" data-idx="'+idx+'" title="Toggle"><i class="fas '+(collapsed?'fa-chevron-down':'fa-chevron-up')+'"></i></button></div></div>'+(collapsed?'':'<input id="miLabel_'+idx+'" value="'+String((it&&it.label)||"").replace(/"/g,'&quot;')+'" placeholder="Label"><input id="miUrl_'+idx+'" value="'+String((it&&it.url)||"").replace(/"/g,'&quot;')+'" placeholder="Link"><label><input id="miNew_'+idx+'" type="checkbox"'+((it&&it.newWindow)?' checked':'')+'> Open in a new window</label><label><input id="miSub_'+idx+'" type="checkbox"'+((it&&it.hasSubmenu)?' checked':'')+'> Has submenu</label>')+'</div>';
             }).join("");
-            settings.innerHTML='<div class="menu-panel-title">Menu</div><div class="menu-section-title">Content</div>'+cards+'<button type="button" id="addMenuItem" class="fb-btn primary" style="width:100%;margin:6px 0 10px;">Add menu item</button><div class="menu-split"></div><div class="menu-section-title">Style</div><label>Font family</label><select id="mFont"><option value="">Same font as the page</option>'+fonts.map(f=>'<option value="'+f.value.replace(/"/g,'&quot;')+'">'+f.label+'</option>').join('')+'</select><div class="menu-typo-grid"><div class="px-wrap"><input id="mFs" type="number" step="1"><span class="px-unit">px</span></div><div class="px-wrap"><input id="mLh" type="number" step="0.1"><span class="px-unit">lh</span></div></div><div class="menu-split"></div><div class="menu-section-title">Layout</div><div class="menu-align-row"><button type="button" class="menu-align-btn" data-align="left"><i class="fas fa-align-left"></i></button><button type="button" class="menu-align-btn" data-align="center"><i class="fas fa-align-center"></i></button><button type="button" class="menu-align-btn" data-align="right"><i class="fas fa-align-right"></i></button></div><div class="menu-split"></div><div class="menu-section-title">Style</div><label>Letter spacing</label><div class="menu-slider-row"><input id="mLsRange" type="range" min="0" max="20" step="0.1"><input id="mLsNum" type="number" min="0" max="20" step="0.1"></div><label>Menu items text color</label><input id="mTextColor" type="color"><label>Active menu item color</label><input id="mActiveColor" type="color"><label>Menu items underline color</label><input id="mUnderlineColor" type="color"><label>Background color</label><input id="mBgColor" type="color"><label>Background image URL</label><input id="mBgImg" placeholder="https://..."><label>Upload background image</label><input id="mBgUp" type="file" accept="image/*"><div class="menu-split"></div><div class="menu-section-title">Spacing</div><label>Spacing between menu items</label><div class="menu-slider-row"><input id="mGapRange" type="range" min="0" max="64" step="1"><input id="mGapNum" type="number" min="0" max="64" step="1"></div><label>Padding</label><div class="size-grid"><div class="fld"><label>T</label><input id="pTop" type="number" value="'+pad[0]+'"></div><div class="fld"><label>R</label><input id="pRight" type="number" value="'+pad[1]+'"></div><div class="fld"><label>B</label><input id="pBottom" type="number" value="'+pad[2]+'"></div><div class="fld"><label>L</label><input id="pLeft" type="number" value="'+pad[3]+'"></div><div class="size-link"><button type="button" id="linkPad" title="Link padding"><span>&harr;</span></button><span>Link</span></div></div><label>Margin</label><div class="size-grid"><div class="fld"><label>T</label><input id="mTop" type="number" value="'+mar[0]+'"></div><div class="fld"><label>R</label><input id="mRight" type="number" value="'+mar[1]+'"></div><div class="fld"><label>B</label><input id="mBottom" type="number" value="'+mar[2]+'"></div><div class="fld"><label>L</label><input id="mLeft" type="number" value="'+mar[3]+'"></div><div class="size-link"><button type="button" id="linkMar" title="Link margin"><span>&harr;</span></button><span>Link</span></div></div>'+moveControls+remove;
+            settings.innerHTML='<div class="menu-panel-title">Menu</div><div class="menu-section-title">Content</div>'+cards+'<button type="button" id="addMenuItem" class="fb-btn primary" style="width:100%;margin:6px 0 10px;">Add menu item</button><div class="menu-split"></div><div class="menu-section-title">Style</div>'+fontSelectHtml('mFont')+'<label>Text style</label><div class="menu-align-row"><button type="button" id="mBold" class="menu-align-btn" title="Bold (Ctrl+B)"><i class="fas fa-bold"></i></button><button type="button" id="mItalic" class="menu-align-btn" title="Italic (Ctrl+I)"><i class="fas fa-italic"></i></button></div><div class="menu-typo-grid"><div class="px-wrap"><input id="mFs" type="number" step="1"><span class="px-unit">px</span></div><div class="px-wrap"><input id="mLh" type="number" step="0.1"><span class="px-unit">lh</span></div></div><div class="menu-split"></div><div class="menu-section-title">Layout</div><div class="menu-align-row"><button type="button" class="menu-align-btn" data-align="left"><i class="fas fa-align-left"></i></button><button type="button" class="menu-align-btn" data-align="center"><i class="fas fa-align-center"></i></button><button type="button" class="menu-align-btn" data-align="right"><i class="fas fa-align-right"></i></button></div><div class="menu-split"></div><div class="menu-section-title">Style</div><label>Letter spacing</label><div class="menu-slider-row"><input id="mLsRange" type="range" min="0" max="20" step="0.1"><input id="mLsNum" type="number" min="0" max="20" step="0.1"></div><label>Text color</label><input id="mTextColor" type="color"><label>Menu items underline color</label><input id="mUnderlineColor" type="color"><label>Background color</label><input id="mBgColor" type="color"><label>Background image URL</label><input id="mBgImg" placeholder="https://..."><label>Upload background image</label><input id="mBgUp" type="file" accept="image/*"><div class="menu-split"></div><div class="menu-section-title">Spacing</div><label>Spacing between menu items</label><div class="menu-slider-row"><input id="mGapRange" type="range" min="0" max="64" step="1"><input id="mGapNum" type="number" min="0" max="64" step="1"></div><label>Padding</label><div class="size-grid"><div class="fld"><label>T</label><input id="pTop" type="number" value="'+pad[0]+'"></div><div class="fld"><label>R</label><input id="pRight" type="number" value="'+pad[1]+'"></div><div class="fld"><label>B</label><input id="pBottom" type="number" value="'+pad[2]+'"></div><div class="fld"><label>L</label><input id="pLeft" type="number" value="'+pad[3]+'"></div><div class="size-link"><button type="button" id="linkPad" title="Link padding"><span>&harr;</span></button><span>Link</span></div></div><label>Margin</label><div class="size-grid"><div class="fld"><label>T</label><input id="mTop" type="number" value="'+mar[0]+'"></div><div class="fld"><label>R</label><input id="mRight" type="number" value="'+mar[1]+'"></div><div class="fld"><label>B</label><input id="mBottom" type="number" value="'+mar[2]+'"></div><div class="fld"><label>L</label><input id="mLeft" type="number" value="'+mar[3]+'"></div><div class="size-link"><button type="button" id="linkMar" title="Link margin"><span>&harr;</span></button><span>Link</span></div></div>'+moveControls+remove;
 
             items.forEach((it,idx)=>{
                 var lab=document.getElementById("miLabel_"+idx),url=document.getElementById("miUrl_"+idx),nw=document.getElementById("miNew_"+idx),sm=document.getElementById("miSub_"+idx);
-                if(lab)lab.addEventListener("input",()=>{it.label=lab.value||"";renderCanvas();});
+                if(typeof it.bold!=="boolean")it.bold=false;
+                if(lab){
+                    lab.style.fontWeight=it.bold?"700":"400";
+                    lab.addEventListener("input",()=>{it.label=lab.value||"";renderCanvas();});
+                    lab.addEventListener("keydown",e=>{
+                        if(!(e.ctrlKey||e.metaKey))return;
+                        var key=(e.key||"").toLowerCase();
+                        if(key!=="b")return;
+                        e.preventDefault();
+                        saveToHistory();
+                        it.bold=!it.bold;
+                        lab.style.fontWeight=it.bold?"700":"400";
+                        renderCanvas();
+                    });
+                }
                 if(url)url.addEventListener("input",()=>{it.url=url.value||"";renderCanvas();});
                 if(nw)nw.addEventListener("change",()=>{it.newWindow=!!nw.checked;renderCanvas();});
                 if(sm)sm.addEventListener("change",()=>{it.hasSubmenu=!!sm.checked;renderCanvas();});
             });
             settings.querySelectorAll(".menu-del").forEach(btn=>btn.addEventListener("click",()=>{var i=Number(btn.getAttribute("data-idx"));if(items.length<=1)return;saveToHistory();items.splice(i,1);delete t.settings.menuCollapsed[i];renderMenuEditor();renderCanvas();}));
             settings.querySelectorAll(".menu-toggle").forEach(btn=>btn.addEventListener("click",()=>{var i=Number(btn.getAttribute("data-idx"));t.settings.menuCollapsed[i]=!t.settings.menuCollapsed[i];renderMenuEditor();}));
-            var addBtn=document.getElementById("addMenuItem");if(addBtn)addBtn.onclick=()=>{saveToHistory();items.push({label:"Menu item "+(items.length+1),url:"#",newWindow:false,hasSubmenu:false});renderMenuEditor();renderCanvas();};
+            var addBtn=document.getElementById("addMenuItem");if(addBtn)addBtn.onclick=()=>{saveToHistory();items.push({label:"Menu item "+(items.length+1),url:"#",newWindow:false,hasSubmenu:false,bold:false});renderMenuEditor();renderCanvas();};
 
-            var mFont=document.getElementById("mFont");if(mFont){mFont.value=(t.style&&t.style.fontFamily)||"";mFont.addEventListener("change",()=>{saveToHistory();sty().fontFamily=mFont.value||"";renderCanvas();});}
+            bind("mFont",(t.style&&t.style.fontFamily)||"Inter, sans-serif",v=>sty().fontFamily=v,{undo:true});
+            var mBold=document.getElementById("mBold"),mItalic=document.getElementById("mItalic");
+            function menuStyleState(){
+                var s=sty();
+                var fw=String((s&&s.fontWeight)||"").toLowerCase();
+                var fi=String((s&&s.fontStyle)||"").toLowerCase();
+                return {bold:(fw==="700"||fw==="bold"),italic:(fi==="italic")};
+            }
+            function syncMenuStyleButtons(){
+                var st=menuStyleState();
+                if(mBold)mBold.classList.toggle("active",st.bold);
+                if(mItalic)mItalic.classList.toggle("active",st.italic);
+            }
+            if(mBold)mBold.onclick=()=>{saveToHistory();var s=sty();var st=menuStyleState();s.fontWeight=st.bold?"400":"700";renderCanvas();syncMenuStyleButtons();};
+            if(mItalic)mItalic.onclick=()=>{saveToHistory();var s=sty();var st=menuStyleState();s.fontStyle=st.italic?"normal":"italic";renderCanvas();syncMenuStyleButtons();};
+            syncMenuStyleButtons();
             bindPx("mFs",(t.style&&t.style.fontSize)||"",v=>sty().fontSize=v,{undo:true});
             bind("mLh",(t.style&&t.style.lineHeight)||"",v=>sty().lineHeight=v,{undo:true});
             var curAlign=(t.settings&&t.settings.menuAlign)||"left";
-            settings.querySelectorAll(".menu-align-btn").forEach(btn=>{if(btn.getAttribute("data-align")===curAlign)btn.classList.add("active");btn.addEventListener("click",()=>{saveToHistory();t.settings=t.settings||{};t.settings.menuAlign=btn.getAttribute("data-align");renderMenuEditor();renderCanvas();});});
+            settings.querySelectorAll(".menu-align-btn[data-align]").forEach(btn=>{if(btn.getAttribute("data-align")===curAlign)btn.classList.add("active");btn.addEventListener("click",()=>{saveToHistory();t.settings=t.settings||{};t.settings.menuAlign=btn.getAttribute("data-align");renderMenuEditor();renderCanvas();});});
 
             var lsVal=Number(pxToNumber((t.style&&t.style.letterSpacing)||""));if(isNaN(lsVal))lsVal=0;
             var lsRange=document.getElementById("mLsRange"),lsNum=document.getElementById("mLsNum");
@@ -2510,7 +2644,6 @@ function renderSettings(){
             syncLs(lsVal,false,false);
 
             bind("mTextColor",(t.settings&&t.settings.textColor)||"#374151",v=>{t.settings=t.settings||{};t.settings.textColor=v;renderCanvas();},{undo:true});
-            bind("mActiveColor",(t.settings&&t.settings.activeColor)||"#a89c76",v=>{t.settings=t.settings||{};t.settings.activeColor=v;renderCanvas();},{undo:true});
             bind("mUnderlineColor",(t.settings&&t.settings.underlineColor)||"#000000",v=>{t.settings=t.settings||{};t.settings.underlineColor=v;renderCanvas();},{undo:true});
             bind("mBgColor",(t.style&&t.style.backgroundColor)||"#ffffff",v=>{sty().backgroundColor=v;renderCanvas();},{undo:true});
             bind("mBgImg",readBgImageUrl(),v=>{var s=sty();s.backgroundImage=(v&&String(v).trim()!=="")?('url('+String(v).trim()+')'):"";renderCanvas();},{undo:true});
@@ -2548,8 +2681,10 @@ function renderSettings(){
             ? '<label>Line height</label><input id="lh" placeholder="1.5"><label>Letter spacing</label><div class="px-wrap"><input id="ls" type="number" step="0.1"><span class="px-unit">px</span></div>'
             : '';
         var sizeBlock='<div class="size-position"><div class="size-label">Size and position</div><label class="size-label">Padding</label><div class="size-grid"><div class="fld"><label>T</label><input id="pTop" type="number" value="'+pad[0]+'"></div><div class="fld"><label>R</label><input id="pRight" type="number" value="'+pad[1]+'"></div><div class="fld"><label>B</label><input id="pBottom" type="number" value="'+pad[2]+'"></div><div class="fld"><label>L</label><input id="pLeft" type="number" value="'+pad[3]+'"></div><div class="size-link"><button type="button" id="linkPad" title="Link padding"><span>↔</span></button><span>Link</span></div></div><label class="size-label">Margin</label><div class="size-grid"><div class="fld"><label>T</label><input id="mTop" type="number" value="'+mar[0]+'"></div><div class="fld"><label>R</label><input id="mRight" type="number" value="'+mar[1]+'"></div><div class="fld"><label>B</label><input id="mBottom" type="number" value="'+mar[2]+'"></div><div class="fld"><label>L</label><input id="mLeft" type="number" value="'+mar[3]+'"></div><div class="size-link"><button type="button" id="linkMar" title="Link margin"><span>↔</span></button><span>Link</span></div></div></div>';
+        var buttonLinkControl=(t.type==="button")?'<label>Button link</label><input id="btnLink" placeholder="/contact or https://example.com">':'';
         var buttonBgControl=(t.type==="button")?'<label>Button color</label><input id="btnBg" type="color">':'';
-        settings.innerHTML='<div class="menu-section-title">Content</div>'+(rich?'<div class="rt-box"><div class="rt-tools"><button id="rtBold" type="button"><b>B</b></button><button id="rtItalic" type="button"><i>I</i></button><button id="rtUnderline" type="button"><u>U</u></button></div><div id="contentRt" class="rt-editor" contenteditable="true"></div></div>':'<label>Content</label><textarea id="content" rows="4"></textarea>')+'<div class="menu-split"></div><div class="menu-section-title">Layout</div><label>Alignment</label><select id="a"><option value="">Default</option><option>left</option><option>center</option><option>right</option></select><div class="menu-split"></div><div class="menu-section-title">Spacing</div>'+sizeBlock+'<div class="menu-split"></div><div class="menu-section-title">Style</div>'+buttonBgControl+'<label>Color</label><input id="co" type="color"><label>Font size</label><div class="px-wrap"><input id="fs" type="number" step="1"><span class="px-unit">px</span></div>'+textTypographyControls+fontSelectHtml('ff')+moveControls+remove;
+        var buttonRadiusControl=(t.type==="button")?'<div class="setting-label-help"><label style="margin:0;">Border radius</label><button type="button" id="btnRadiusHelp" class="setting-help-icon" aria-label="Border radius help">?</button></div>'+radiusControlHtml("btnRadius",radiusNumberFromStyle(t.style&&t.style.borderRadius)):'';
+        settings.innerHTML='<div class="menu-section-title">Content</div>'+(rich?'<div class="rt-box"><div class="rt-tools"><button id="rtBold" type="button"><b>B</b></button><button id="rtItalic" type="button"><i>I</i></button><button id="rtUnderline" type="button"><u>U</u></button></div><div id="contentRt" class="rt-editor" contenteditable="true"></div></div>':'<label>Content</label><textarea id="content" rows="4"></textarea>')+buttonLinkControl+'<div class="menu-split"></div><div class="menu-section-title">Layout</div><label>Alignment</label><select id="a"><option value="">Default</option><option>left</option><option>center</option><option>right</option></select><div class="menu-split"></div><div class="menu-section-title">Spacing</div>'+sizeBlock+'<div class="menu-split"></div><div class="menu-section-title">Style</div>'+buttonBgControl+buttonRadiusControl+'<label>Color</label><input id="co" type="color"><label>Font size</label><div class="px-wrap"><input id="fs" type="number" step="1"><span class="px-unit">px</span></div>'+textTypographyControls+fontSelectHtml('ff')+moveControls+remove;
         if(rich){
             bindRichEditor("contentRt",t.content,v=>t.content=v);
             const rt=document.getElementById("contentRt");
@@ -2588,6 +2723,7 @@ function renderSettings(){
         }
         bindPx("fs",(t.style&&t.style.fontSize)||"",v=>sty().fontSize=v,{undo:true});bind("ff",(t.style&&t.style.fontFamily)||"Inter, sans-serif",v=>sty().fontFamily=v,{undo:true});
         if(t.type==="button"){
+            bind("btnLink",(t.settings&&t.settings.link)||"#",v=>{t.settings=t.settings||{};t.settings.link=(v||"").trim()||"#";},{undo:true});
             var btnBg=document.getElementById("btnBg");
             if(btnBg){
                 btnBg.value=(t.style&&t.style.backgroundColor)||"#2563eb";
@@ -2609,6 +2745,8 @@ function renderSettings(){
                     refreshAfterSetting();
                 });
             }
+            bindPx("btnRadius",(t.style&&t.style.borderRadius)||"0px",v=>sty().borderRadius=v,{undo:true});
+            bindRadiusHelpButton("btnRadiusHelp");
             bind("a",(t.settings&&t.settings.alignment)||(t.style&&t.style.textAlign)||"center",v=>{t.settings=t.settings||{};t.settings.alignment=v||"center";sty().textAlign=v||"center";},{undo:true});
         } else {
             bind("a",(t.style&&t.style.textAlign)||"",v=>sty().textAlign=v,{undo:true});
@@ -2640,9 +2778,10 @@ function renderSettings(){
         if(linkMar)linkMar.onclick=()=>{saveToHistory();marginLinked=!marginLinked;linkMar.classList.toggle("linked",marginLinked);if(marginLinked){var v=document.getElementById("mTop").value;document.getElementById("mRight").value=v;document.getElementById("mBottom").value=v;document.getElementById("mLeft").value=v;sty().margin=spacingToCss([Number(v)||0,Number(v)||0,Number(v)||0,Number(v)||0]);renderCanvas();}};
         bindPx("g",(t.style&&t.style.gap)||"",v=>sty().gap=v,{undo:true});
     }
+    ensureSpacingHelperButton();
     mountBackgroundImageDisplayControl();
-    const btnMoveUp=document.getElementById("btnMoveUp");if(btnMoveUp)btnMoveUp.onclick=()=>moveSelectedElement(-1);
-    const btnMoveDown=document.getElementById("btnMoveDown");if(btnMoveDown)btnMoveDown.onclick=()=>moveSelectedElement(1);
+    const btnMoveUp=document.getElementById("btnMoveUp");if(btnMoveUp)btnMoveUp.onclick=()=>moveSelectedBySelection(-1);
+    const btnMoveDown=document.getElementById("btnMoveDown");if(btnMoveDown)btnMoveDown.onclick=()=>moveSelectedBySelection(1);
     const btnDel=document.getElementById("btnDeleteSelected");if(btnDel)btnDel.onclick=()=>removeSelected();
 }
 
@@ -2718,8 +2857,37 @@ document.addEventListener("keydown",e=>{
     const key=String(e.key||"").toLowerCase();
     const ae=document.activeElement;
     const isTextField=!!(ae && (ae.tagName==="INPUT" || ae.tagName==="TEXTAREA" || ae.isContentEditable));
+    const selectedEl=selectedTarget();
+    const isMenuSelected=!!(state.sel&&state.sel.k==="el"&&selectedEl&&selectedEl.type==="menu");
+    if(key==="escape" && radiusHelpModal && radiusHelpModal.classList.contains("open")){
+        e.preventDefault();
+        closeRadiusHelpModal();
+        return;
+    }
+    if(key==="escape" && spacingHelpModal && spacingHelpModal.classList.contains("open")){
+        e.preventDefault();
+        closeSpacingHelpModal();
+        return;
+    }
 
     if((e.ctrlKey||e.metaKey)&&key==="s"){e.preventDefault();document.getElementById("saveBtn").click();return;}
+
+    if((e.ctrlKey||e.metaKey)&&!isTextField&&isMenuSelected&&(key==="b"||key==="i")){
+        e.preventDefault();
+        saveToHistory();
+        selectedEl.style=selectedEl.style||{};
+        if(key==="b"){
+            var fw=String(selectedEl.style.fontWeight||"").toLowerCase();
+            selectedEl.style.fontWeight=(fw==="700"||fw==="bold")?"400":"700";
+        }
+        if(key==="i"){
+            var fi=String(selectedEl.style.fontStyle||"").toLowerCase();
+            selectedEl.style.fontStyle=(fi==="italic")?"normal":"italic";
+        }
+        renderCanvas();
+        renderSettings();
+        return;
+    }
 
     if((e.ctrlKey||e.metaKey)&&(key==="b"||key==="i"||key==="u")){
         if(ae && ae.isContentEditable){
@@ -2741,9 +2909,9 @@ document.addEventListener("keydown",e=>{
     if((key==="arrowup"||key==="arrowdown") && (state.sel||state.carouselSel) && !isTextField){
         e.preventDefault();
         if(key==="arrowup"){
-            moveSelectedElement(-1);
+            moveSelectedBySelection(-1);
         }else{
-            moveSelectedElement(1);
+            moveSelectedBySelection(1);
         }
     }
 

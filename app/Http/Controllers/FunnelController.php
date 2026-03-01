@@ -817,6 +817,7 @@ class FunnelController extends Controller
             'videoSourceType' => ['direct', 'upload'],
             'menuAlign' => ['left', 'center', 'right'],
             'vAlign' => ['top', 'center', 'bottom'],
+            'slideshowMode' => ['manual', 'auto'],
         ] as $k => $allowed) {
             $v = $readEnum($k, $allowed);
             if ($v !== null) {
@@ -838,7 +839,7 @@ class FunnelController extends Controller
             }
         }
 
-        foreach (['textColor', 'activeColor', 'controlsColor', 'arrowColor', 'bodyBgColor'] as $k) {
+        foreach (['textColor', 'controlsColor', 'arrowColor', 'bodyBgColor'] as $k) {
             $v = $readColor($k);
             if ($v !== null) {
                 $safe[$k] = $v;
