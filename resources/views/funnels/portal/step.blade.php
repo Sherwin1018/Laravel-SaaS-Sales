@@ -56,13 +56,14 @@
         .builder-section { border-radius: 14px; margin-bottom: 14px; border: none; }
         .builder-section-inner { width: 100%; box-sizing: border-box; }
         .builder-row-inner { width: 100%; box-sizing: border-box; display: flex; flex-wrap: wrap; gap: 8px; }
-        .builder-col-inner { width: 100%; box-sizing: border-box; }
+        .builder-col-inner { width: 100%; box-sizing: border-box; max-width: 100%; overflow: hidden; }
         .builder-row { display: flex; gap: 8px; flex-wrap: wrap; padding: 6px; }
-        .builder-col { min-width: 240px; min-height: 24px; flex: 1 1 0; }
+        .builder-col { min-width: 240px; min-height: 24px; flex: 1 1 0; position: relative; overflow: hidden; background: #ffffff; }
+        .builder-col > .builder-col-inner > .builder-el { max-width: 100%; overflow: hidden; }
         .builder-el + .builder-el { margin-top: 10px; }
         .builder-heading { margin: 0; font-size: 32px; line-height: 1.2; overflow-wrap: break-word; word-break: break-word; }
         .builder-text { margin: 0; color: #334155; line-height: 1.6; white-space: pre-wrap; overflow-wrap: break-word; word-break: break-word; }
-        .builder-img { display: block; max-width: 100%; height: auto; border-radius: 10px; }
+        .builder-img { display: block; max-width: 100%; height: auto; border-radius: 10px; object-fit: contain; object-position: top center; }
         .builder-menu { width: 100%; }
         .builder-menu-list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; }
         .builder-menu-link { text-decoration: none; text-underline-offset: 3px; font: inherit; }
@@ -79,9 +80,6 @@
         .builder-carousel-arrow:focus-visible { outline: 2px solid #dbeafe; outline-offset: 2px; }
         .builder-carousel-arrow.is-left { left: 16px; }
         .builder-carousel-arrow.is-right { right: 16px; }
-        .builder-carousel-dots { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; padding: 4px 8px; border-radius: 999px; background: rgba(15, 23, 42, 0.35); backdrop-filter: blur(2px); z-index: 3; }
-        .builder-carousel-dot { width: 8px; height: 8px; border-radius: 999px; border: 0; padding: 0; cursor: pointer; background: rgba(255,255,255,0.55); }
-        .builder-carousel-dot.is-active { background: #ffffff; }
         @media (max-width: 640px) {
             .builder-carousel-arrow { width: 36px; height: 36px; font-size: 20px; }
             .builder-carousel-arrow.is-left { left: 10px; }
@@ -316,7 +314,12 @@
                                 <div class="builder-row-inner" @if($rowInnerStyleString !== '') style="{{ $rowInnerStyleString }}" @endif>
                                 @foreach($columns as $column)
                                     @php
-                                        $colStyle = $styleToString(is_array($column['style'] ?? null) ? $column['style'] : []);
+                                        $colStyleArr = is_array($column['style'] ?? null) ? $column['style'] : [];
+                                        $legacyColBg = strtolower(trim((string) ($colStyleArr['backgroundColor'] ?? '')));
+                                        if ($legacyColBg === '#f8fafc' || $legacyColBg === 'rgb(248, 250, 252)' || $legacyColBg === 'rgba(248, 250, 252, 1)') {
+                                            $colStyleArr['backgroundColor'] = '#ffffff';
+                                        }
+                                        $colStyle = $styleToString($colStyleArr);
                                         $colSettings = is_array($column['settings'] ?? null) ? $column['settings'] : [];
                                         $colContentWidth = trim((string) ($colSettings['contentWidth'] ?? 'full'));
                                         $colInnerMax = $widthMap[$colContentWidth] ?? '';
@@ -337,9 +340,10 @@
                                                 $alignment = trim((string) ($settings['alignment'] ?? ''));
                                                 if (!in_array($alignment, ['left', 'center', 'right'], true)) {
                                                     $fallbackAlign = strtolower(trim((string) ($rawStyle['textAlign'] ?? '')));
+                                                    $defaultAlign = in_array($type, ['image', 'video', 'form', 'menu'], true) ? 'left' : 'center';
                                                     $alignment = in_array($fallbackAlign, ['left', 'center', 'right'], true)
                                                         ? $fallbackAlign
-                                                        : (($type === 'form') ? 'left' : 'center');
+                                                        : $defaultAlign;
                                                 }
                                                 $alignStyle = 'display:flex;justify-content:' . ($alignment === 'right' ? 'flex-end' : ($alignment === 'center' ? 'center' : 'flex-start')) . ';margin-left:' . ($alignment === 'left' ? '0' : 'auto') . ';margin-right:' . ($alignment === 'right' ? '0' : 'auto') . ';';
                                                 $menuAlign = $settings['menuAlign'] ?? 'left';
@@ -423,8 +427,9 @@
                                                             ];
                                                         }
                                                         $itemGap = max(0, min(300, (int) ($settings['itemGap'] ?? 13)));
-                                                        $activeIndex = max(-1, min(500, (int) ($settings['activeIndex'] ?? -1)));
+                                                        $activeIndex = max(0, min(500, (int) ($settings['activeIndex'] ?? 0)));
                                                         $menuText = trim((string) ($settings['textColor'] ?? '#374151'));
+                                                        $menuActive = trim((string) ($settings['activeColor'] ?? '#a89c76'));
                                                         $menuUnderline = trim((string) ($settings['underlineColor'] ?? ''));
                                                     @endphp
                                                     <nav class="builder-menu" style="{{ $menuAlignStyle }}{{ $style !== '' ? $style : '' }}">
@@ -434,7 +439,7 @@
                                                                     $menuLabel = trim((string) ($menuItem['label'] ?? 'Menu item ' . ($i + 1)));
                                                                     $menuHref = trim((string) ($menuItem['url'] ?? '#'));
                                                                     $menuNew = (bool) ($menuItem['newWindow'] ?? false);
-                                                                    $linkColor = $menuText;
+                                                                    $linkColor = $i === $activeIndex ? $menuActive : $menuText;
                                                                     $decoStyle = $menuUnderline !== '' ? 'text-decoration:underline;text-decoration-color:' . $menuUnderline . ';' : 'text-decoration:none;';
                                                                 @endphp
                                                                 <li>
@@ -487,12 +492,7 @@
                                                         $activeSlide = max(0, min(count($slides) - 1, (int) ($settings['activeSlide'] ?? 0)));
                                                         $vAlign = $settings['vAlign'] ?? 'center';
                                                         $aItems = $vAlign === 'top' ? 'flex-start' : ($vAlign === 'bottom' ? 'flex-end' : 'center');
-                                                        $slideshowMode = strtolower(trim((string) ($settings['slideshowMode'] ?? 'manual')));
-                                                        if (!in_array($slideshowMode, ['manual', 'auto'], true)) {
-                                                            $slideshowMode = 'manual';
-                                                        }
-                                                        $isAutoSlideshow = $slideshowMode === 'auto';
-                                                        $showArrows = !$isAutoSlideshow && (($settings['showArrows'] ?? true) !== false);
+                                                        $showArrows = ($settings['showArrows'] ?? true) !== false;
                                                         $controlsColor = trim((string) ($settings['controlsColor'] ?? '#64748b'));
                                                         $arrowColor = trim((string) ($settings['arrowColor'] ?? '#ffffff'));
                                                         $bodyBgColor = trim((string) ($settings['bodyBgColor'] ?? ''));
@@ -521,7 +521,7 @@
                                                         $carouselSizeStyle .= 'height:' . $fixedHeight . 'px !important;min-height:' . $fixedHeight . 'px !important;';
                                                         $carouselId = 'car_' . md5((string) ($element['id'] ?? uniqid('', true)));
                                                     @endphp
-                                                    <div class="builder-carousel-wrap" data-carousel id="{{ $carouselId }}" data-active="{{ $activeSlide }}" data-mode="{{ $slideshowMode }}" style="{{ $carouselSizeStyle }} background:#ffffff !important; background-image:none !important; color:#0f172a;">
+                                                    <div class="builder-carousel-wrap" data-carousel id="{{ $carouselId }}" data-active="{{ $activeSlide }}" style="{{ $carouselSizeStyle }} background:#ffffff !important; background-image:none !important; color:#0f172a;">
                                                         <div class="builder-carousel-track" data-carousel-track>
                                                             @foreach($slides as $si => $slide)
                                                                 @php
@@ -615,10 +615,11 @@
                                                                                                         }
                                                                                                         $itemGap = (int) ($ssc['itemGap'] ?? 13);
                                                                                                         $itemGap = max(0, min(64, $itemGap));
-                                                                                                        $activeIndex = (int) ($ssc['activeIndex'] ?? -1);
+                                                                                                        $activeIndex = (int) ($ssc['activeIndex'] ?? 0);
                                                                                                         $menuAlign = $ssc['menuAlign'] ?? 'left';
                                                                                                         $menuAlignStyle = 'display:flex;justify-content:' . ($menuAlign === 'right' ? 'flex-end' : ($menuAlign === 'center' ? 'center' : 'flex-start')) . ';';
                                                                                                         $menuText = trim((string) ($ssc['textColor'] ?? '#374151'));
+                                                                                                        $menuActive = trim((string) ($ssc['activeColor'] ?? '#a89c76'));
                                                                                                         $menuUnderline = trim((string) ($ssc['underlineColor'] ?? ''));
                                                                                                     @endphp
                                                                                                     <nav class="builder-menu" style="{{ $menuAlignStyle }}{{ $ss !== '' ? $ss : '' }}">
@@ -628,7 +629,7 @@
                                                                                                                     $menuLabel = trim((string) ($menuItem['label'] ?? 'Menu item ' . ($i + 1)));
                                                                                                                     $menuHref = trim((string) ($menuItem['url'] ?? '#'));
                                                                                                                     $menuNew = (bool) ($menuItem['newWindow'] ?? false);
-                                                                                                                    $linkColor = $menuText;
+                                                                                                                    $linkColor = $i === $activeIndex ? $menuActive : $menuText;
                                                                                                                     $decoStyle = $menuUnderline !== '' ? 'text-decoration:underline;text-decoration-color:' . $menuUnderline . ';' : 'text-decoration:none;';
                                                                                                                 @endphp
                                                                                                                 <li>
@@ -661,13 +662,6 @@
                                                         @if($showArrows && !$isCarouselEmpty)
                                                             <button type="button" class="builder-carousel-arrow is-left" data-carousel-prev style="background: {{ $controlsColor }}; color: {{ $arrowColor }};"><i class="fas fa-chevron-left" aria-hidden="true"></i></button>
                                                             <button type="button" class="builder-carousel-arrow is-right" data-carousel-next style="background: {{ $controlsColor }}; color: {{ $arrowColor }};"><i class="fas fa-chevron-right" aria-hidden="true"></i></button>
-                                                        @endif
-                                                        @if(count($slides) > 1 && !$isCarouselEmpty)
-                                                            <div class="builder-carousel-dots" data-carousel-dots>
-                                                                @foreach($slides as $si => $unused)
-                                                                    <button type="button" class="builder-carousel-dot{{ $si === $activeSlide ? ' is-active' : '' }}" data-carousel-dot="{{ $si }}" aria-label="Go to slide {{ $si + 1 }}"></button>
-                                                                @endforeach
-                                                            </div>
                                                         @endif
                                                     </div>
                                                 @elseif($type === 'spacer')
@@ -754,7 +748,9 @@
                 @if($step->subtitle)
                     <h3 class="subtitle">{{ $step->subtitle }}</h3>
                 @endif
-                <div class="content">{{ $step->content ?: 'No content configured for this step yet.' }}</div>
+                @if(!$isPreview || trim((string) ($step->content ?? '')) !== '')
+                    <div class="content">{{ $step->content }}</div>
+                @endif
                 @include('funnels.portal._step-actions', ['funnel' => $funnel, 'step' => $step, 'nextStep' => $nextStep, 'isPreview' => $isPreview])
             @endif
         </div>
@@ -769,47 +765,14 @@
             var total=slides.length||1;
             var index=parseInt(car.getAttribute("data-active")||"0",10);
             if(isNaN(index)||index<0||index>=total)index=0;
-            var mode=(car.getAttribute("data-mode")||"manual").toLowerCase();
-            if(mode!=="auto"&&mode!=="manual")mode="manual";
-            var dotsWrap=car.querySelector("[data-carousel-dots]");
-            var dots=dotsWrap?dotsWrap.querySelectorAll("[data-carousel-dot]"):[];
-            var autoTimer=null;
             function paint(){
                 track.style.transform="translateX(" + (-index*100) + "%)";
-                if(dots && dots.length){
-                    dots.forEach(function(dot,di){
-                        if(di===index)dot.classList.add("is-active");
-                        else dot.classList.remove("is-active");
-                    });
-                }
-            }
-            function restartAuto(){
-                if(autoTimer){clearInterval(autoTimer);autoTimer=null;}
-                if(mode==="auto"&&total>1){
-                    autoTimer=setInterval(function(){
-                        index=(index+1)%total;
-                        paint();
-                    },3000);
-                }
             }
             var prev=car.querySelector("[data-carousel-prev]");
             var next=car.querySelector("[data-carousel-next]");
-            if(prev)prev.addEventListener("click",function(e){e.preventDefault();index=(index-1+total)%total;paint();restartAuto();});
-            if(next)next.addEventListener("click",function(e){e.preventDefault();index=(index+1)%total;paint();restartAuto();});
-            if(dots && dots.length){
-                dots.forEach(function(dot){
-                    dot.addEventListener("click",function(e){
-                        e.preventDefault();
-                        var target=parseInt(dot.getAttribute("data-carousel-dot")||"0",10);
-                        if(isNaN(target)||target<0||target>=total)return;
-                        index=target;
-                        paint();
-                        restartAuto();
-                    });
-                });
-            }
+            if(prev)prev.addEventListener("click",function(e){e.preventDefault();index=(index-1+total)%total;paint();});
+            if(next)next.addEventListener("click",function(e){e.preventDefault();index=(index+1)%total;paint();});
             paint();
-            restartAuto();
         });
     })();
     </script>
