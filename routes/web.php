@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\AutomationController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FunnelController;
 use App\Http\Controllers\FunnelPortalController;
@@ -130,6 +131,18 @@ Route::middleware(['auth', 'role:sales-agent,marketing-manager,account-owner,fin
 
     Route::middleware(['role:account-owner,marketing-manager'])->group(function () {
         Route::get('/funnels', [FunnelController::class, 'index'])->name('funnels.index');
+        Route::get('/automation', [AutomationController::class, 'index'])->name('automation.index');
+        Route::get('/automation/create', [AutomationController::class, 'create'])->name('automation.create');
+        Route::post('/automation', [AutomationController::class, 'store'])->name('automation.store');
+        Route::get('/automation/{workflow}', [AutomationController::class, 'show'])->name('automation.show');
+        Route::get('/automation/{workflow}/edit', [AutomationController::class, 'edit'])->name('automation.edit');
+        Route::put('/automation/{workflow}', [AutomationController::class, 'update'])->name('automation.update');
+        Route::post('/automation/{workflow}/duplicate', [AutomationController::class, 'duplicate'])->name('automation.duplicate');
+        Route::post('/automation/{workflow}/toggle-status', [AutomationController::class, 'toggleStatus'])->name('automation.toggle-status');
+        Route::delete('/automation/{workflow}', [AutomationController::class, 'destroy'])->name('automation.destroy');
+        Route::post('/automation/{workflow}/sequences', [AutomationController::class, 'sequenceStore'])->name('automation.sequences.store');
+        Route::put('/automation/{workflow}/sequences/{step}', [AutomationController::class, 'sequenceUpdate'])->name('automation.sequences.update');
+        Route::delete('/automation/{workflow}/sequences/{step}', [AutomationController::class, 'sequenceDestroy'])->name('automation.sequences.destroy');
         Route::get('/funnels/create', [FunnelController::class, 'create'])->name('funnels.create');
         Route::post('/funnels', [FunnelController::class, 'store'])->name('funnels.store');
         Route::get('/funnels/{funnel}/edit', [FunnelController::class, 'edit'])->name('funnels.edit');
