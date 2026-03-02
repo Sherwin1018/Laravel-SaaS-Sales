@@ -465,7 +465,7 @@
                                                                     $decoStyle = $menuUnderline !== '' ? 'text-decoration:underline;text-decoration-color:' . $menuUnderline . ';' : 'text-decoration:none;';
                                                                 @endphp
                                                                 <li>
-                                                                    <a class="builder-menu-link" href="{{ $menuHref !== '' ? $menuHref : '#' }}" @if($menuNew) target="_blank" rel="noopener" @endif style="color: {{ $linkColor }}; {{ $decoStyle }}">{{ $menuLabel !== '' ? $menuLabel : ('Menu item ' . ($i + 1)) }}</a>
+                                                                    <a class="builder-menu-link" href="{{ $menuHref !== '' ? $menuHref : '#' }}" @if($menuNew) target="_blank" rel="noopener" @endif style="color: {{ $linkColor }}; {{ $decoStyle }} font-family:inherit; font-size:inherit; line-height:inherit; letter-spacing:inherit; font-weight:inherit; font-style:inherit;">{{ $menuLabel !== '' ? $menuLabel : ('Menu item ' . ($i + 1)) }}</a>
                                                                 </li>
                                                             @endforeach
                                                         </ul>
@@ -658,7 +658,7 @@
                                                                                                                     $decoStyle = $menuUnderline !== '' ? 'text-decoration:underline;text-decoration-color:' . $menuUnderline . ';' : 'text-decoration:none;';
                                                                                                                 @endphp
                                                                                                                 <li>
-                                                                                                                    <a class="builder-menu-link" href="{{ $menuHref !== '' ? $menuHref : '#' }}" @if($menuNew) target="_blank" rel="noopener" @endif style="color: {{ $linkColor }}; {{ $decoStyle }}">{{ $menuLabel !== '' ? $menuLabel : ('Menu item ' . ($i + 1)) }}</a>
+                                                                                                                    <a class="builder-menu-link" href="{{ $menuHref !== '' ? $menuHref : '#' }}" @if($menuNew) target="_blank" rel="noopener" @endif style="color: {{ $linkColor }}; {{ $decoStyle }} font-family:inherit; font-size:inherit; line-height:inherit; letter-spacing:inherit; font-weight:inherit; font-style:inherit;">{{ $menuLabel !== '' ? $menuLabel : ('Menu item ' . ($i + 1)) }}</a>
                                                                                                                 </li>
                                                                                                             @endforeach
                                                                                                         </ul>

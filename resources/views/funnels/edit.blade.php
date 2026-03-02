@@ -153,18 +153,20 @@
 .setting-label-help{display:flex;align-items:center;gap:8px;margin:0 0 6px}
 .setting-help-icon{width:22px;height:22px;border-radius:999px;border:1px solid #93c5fd;background:#eaf2ff;color:#2563eb;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;line-height:1;cursor:pointer;padding:0}
 .setting-help-icon:hover{background:#dbeafe}
-.fb-help-modal{position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;align-items:center;justify-content:center;z-index:1200;padding:16px}
+.fb-help-modal{position:fixed;inset:0;background:rgba(37,99,235,.16);display:none;align-items:center;justify-content:center;z-index:1200;padding:16px}
 .fb-help-modal.open{display:flex}
-.fb-help-card{width:min(560px,92vw);background:#0b1220;color:#e2e8f0;border:1px solid #1e293b;border-radius:14px;box-shadow:0 24px 60px rgba(2,6,23,.45);padding:16px;position:relative}
-.fb-help-close{position:absolute;top:8px;right:8px;border:1px solid #334155;background:#111827;color:#cbd5e1;width:28px;height:28px;border-radius:8px;cursor:pointer}
-.fb-help-title{margin:0 0 8px;font-size:16px;font-weight:900;color:#f8fafc}
-.fb-help-text{font-size:13px;line-height:1.55;color:#cbd5e1;margin-bottom:10px}
-.fb-radius-demo{height:92px;border:1px solid #334155;border-radius:8px;background:linear-gradient(135deg,#0f172a,#1e293b);display:flex;align-items:center;justify-content:center}
-.fb-radius-demo-box{width:120px;height:56px;background:#38bdf8;animation:radiusMorph 2.2s ease-in-out infinite}
+.fb-help-card{width:min(560px,92vw);background:#ffffff;color:#334155;border:1px solid #dbeafe;border-radius:14px;box-shadow:0 18px 44px rgba(30,64,175,.18);padding:16px;position:relative}
+.fb-help-close{position:absolute;top:8px;right:8px;border:1px solid #bfdbfe;background:#eff6ff;color:#1d4ed8;width:28px;height:28px;border-radius:8px;cursor:pointer}
+.fb-help-close:hover{background:#dbeafe}
+.fb-help-title{margin:0 0 8px;font-size:16px;font-weight:900;color:#1e40af}
+.fb-help-text{font-size:13px;line-height:1.55;color:#334155;margin-bottom:10px}
+.fb-radius-demo{height:92px;border:1px solid #bfdbfe;border-radius:8px;background:linear-gradient(180deg,#f8fbff,#eaf2ff);display:flex;align-items:center;justify-content:center}
+.fb-radius-demo-box{width:120px;height:56px;background:#2563eb;animation:radiusMorph 2.2s ease-in-out infinite}
+.fb-dim-tip{position:fixed;left:0;top:0;transform:translate(12px,12px);z-index:1300;pointer-events:none;display:none;padding:5px 8px;border:1px solid #93c5fd;border-radius:8px;background:#eff6ff;color:#1e3a8a;font-size:11px;font-weight:800;line-height:1.2;white-space:nowrap;box-shadow:0 6px 18px rgba(30,64,175,.18)}
 .fb-space-demo{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.fb-space-box{height:90px;border:1px solid #334155;border-radius:10px;background:#0f172a;position:relative;overflow:hidden}
-.fb-space-pad{position:absolute;inset:12px;border:2px dashed #38bdf8;animation:paddingPulse 1.8s ease-in-out infinite}
-.fb-space-mar{position:absolute;inset:18px;background:#38bdf8;border-radius:8px;animation:marginPulse 1.8s ease-in-out infinite}
+.fb-space-box{height:90px;border:1px solid #bfdbfe;border-radius:10px;background:#f8fbff;position:relative;overflow:hidden}
+.fb-space-pad{position:absolute;inset:12px;border:2px dashed #2563eb;animation:paddingPulse 1.8s ease-in-out infinite}
+.fb-space-mar{position:absolute;inset:18px;background:#93c5fd;border-radius:8px;animation:marginPulse 1.8s ease-in-out infinite}
 @keyframes paddingPulse{
     0%{inset:12px}
     50%{inset:20px}
@@ -607,6 +609,66 @@ function moveSelectedElement(offset){
     if(state.sel&&state.sel.k==="el")state.sel.e=item.id;
     render();
     return true;
+}
+function selectedStructureMoveContext(){
+    if(state.carouselSel)return null;
+    const x=state.sel;
+    if(!x)return null;
+    if(x.k==="sec"){
+        const sctx=sectionRootContext(x.s);
+        if(sctx&&sctx.index>=0){
+            return {list:rootItems(),index:sctx.index,kind:"sec"};
+        }
+        const secs=Array.isArray(state.layout.sections)?state.layout.sections:[];
+        const idx=secs.findIndex(s=>String((s&&s.id)||"")===String(x.s||""));
+        if(idx>=0)return {list:secs,index:idx,kind:"sec"};
+        return null;
+    }
+    if(x.k==="row"){
+        const sctx=sectionRootContext(x.s);
+        if(sctx&&sctx.isWrap&&sctx.root&&String(sctx.root.kind||"").toLowerCase()==="row"&&sctx.index>=0){
+            return {list:rootItems(),index:sctx.index,kind:"row"};
+        }
+        const s=sec(x.s);if(!s)return null;
+        s.rows=Array.isArray(s.rows)?s.rows:[];
+        const idx=s.rows.findIndex(r=>String((r&&r.id)||"")===String(x.r||""));
+        if(idx>=0)return {list:s.rows,index:idx,kind:"row"};
+        return null;
+    }
+    if(x.k==="col"){
+        const sctx=sectionRootContext(x.s);
+        if(sctx&&sctx.isWrap&&sctx.root&&String(sctx.root.kind||"").toLowerCase()==="column"&&sctx.index>=0){
+            return {list:rootItems(),index:sctx.index,kind:"col"};
+        }
+        const r=row(x.s,x.r);if(!r)return null;
+        r.columns=Array.isArray(r.columns)?r.columns:[];
+        const idx=r.columns.findIndex(c=>String((c&&c.id)||"")===String(x.c||""));
+        if(idx>=0)return {list:r.columns,index:idx,kind:"col"};
+        return null;
+    }
+    return null;
+}
+function moveSelectedStructure(offset){
+    const ctx=selectedStructureMoveContext();
+    if(!ctx)return false;
+    const to=ctx.index+offset;
+    if(to<0||to>=ctx.list.length)return false;
+    saveToHistory();
+    const item=ctx.list[ctx.index];
+    ctx.list.splice(ctx.index,1);
+    ctx.list.splice(to,0,item);
+    if(state.sel){
+        if(ctx.kind==="sec")state.sel={k:"sec",s:item.id};
+        else if(ctx.kind==="row")state.sel={k:"row",s:state.sel.s,r:item.id};
+        else if(ctx.kind==="col")state.sel={k:"col",s:state.sel.s,r:state.sel.r,c:item.id};
+    }
+    render();
+    return true;
+}
+function moveSelectedBySelection(offset){
+    if(moveSelectedElement(offset))return true;
+    if(moveSelectedStructure(offset))return true;
+    return false;
 }
 function defaultCarouselSlide(label){return {id:uid("sld"),label:label||"Slide #1",image:{src:"",alt:"Image"}};}
 function ensureCarouselSlides(settings){
@@ -1217,6 +1279,7 @@ function removeSelected(){
 
 function renderElement(item,ctx){
     const w=document.createElement("div");w.className="el";
+    w.setAttribute("data-el-type",String(item.type||"element"));
     if(item.type==="carousel")w.classList.add("el--carousel");
     if(item.type==="form")w.classList.add("el--form");
     if(item.type!=="button")styleApply(w,item.style||{});
@@ -1314,12 +1377,12 @@ function renderElement(item,ctx){
             a.style.textDecoration=ms.underlineColor?"underline":"none";
             if(ms.underlineColor)a.style.textDecorationColor=ms.underlineColor;
             a.style.textUnderlineOffset="3px";
-            a.style.fontFamily="inherit";
-            a.style.fontSize="inherit";
-            a.style.lineHeight="inherit";
-            a.style.letterSpacing="inherit";
-            if(st.fontWeight)a.style.fontWeight=st.fontWeight;
-            if(st.fontStyle)a.style.fontStyle=st.fontStyle;
+            a.style.fontFamily=st.fontFamily||"inherit";
+            a.style.fontSize=st.fontSize||"inherit";
+            a.style.lineHeight=st.lineHeight||"inherit";
+            a.style.letterSpacing=st.letterSpacing||"inherit";
+            a.style.fontWeight=st.fontWeight||"inherit";
+            a.style.fontStyle=st.fontStyle||"inherit";
             a.addEventListener("click",e=>e.preventDefault());
             li.appendChild(a);ul.appendChild(li);
         });
@@ -1890,6 +1953,7 @@ function applyColumnImageFit(colNode,colInner,colObj){
 }
 
 function renderCanvas(){
+    hideDimTip();
     if(Array.isArray(state._carAutoTimers)){
         state._carAutoTimers.forEach(function(t){try{clearTimeout(t);}catch(_e){}});
     }
@@ -1904,7 +1968,7 @@ function renderCanvas(){
         var isBareCarouselSection=!!(s.__bareCarouselWrap||(!s.__rootWrap&&secRows.length===0&&secElements.length===1&&secElements[0]&&secElements[0].type==="carousel"));
         var isBareRootWrap=!!s.__bareRootWrap;
         var isBareSection=!!(isBareCarouselSection||isBareRootWrap);
-        const sn=document.createElement("section");sn.className="sec";styleApply(sn,s.style||{});
+        const sn=document.createElement("section");sn.className="sec";sn.setAttribute("data-node-kind","section");styleApply(sn,s.style||{});
         if(isBareCarouselSection)sn.classList.add("sec--bare-carousel");
         if(isBareRootWrap)sn.classList.add("sec--bare-wrap");
         const inner=document.createElement("div");inner.className="sec-inner";
@@ -1936,7 +2000,7 @@ function renderCanvas(){
         (s.elements||[]).forEach(it=>inner.appendChild(renderElement(it,{s:s.id,scope:"section"})));
         (s.rows||[]).forEach(r=>{
             var isAutoWrapColumnRow=!!(s.__rootWrap&&s.__rootKind==="column"&&String(r.id||"").indexOf("row_wrap_col_")===0);
-            const rn=document.createElement("div");rn.className="row";styleApply(rn,r.style||{});
+            const rn=document.createElement("div");rn.className="row";rn.setAttribute("data-node-kind","row");styleApply(rn,r.style||{});
             if(isAutoWrapColumnRow)rn.classList.add("row--bare-wrap");
             const rowInner=document.createElement("div");rowInner.className="row-inner";rowInner.style.width="100%";rowInner.style.boxSizing="border-box";rowInner.style.display="flex";rowInner.style.flexWrap="wrap";rowInner.style.gap=((r&&r.style&&r.style.gap)||"8px");
             var rowCw=((r.settings&&r.settings.contentWidth)||"full");
@@ -1972,7 +2036,7 @@ function renderCanvas(){
                 if(addComponentAt(t,{k:"row",s:s.id,r:r.id},dropPlacement(e,rn)))render();
             };
             (r.columns||[]).forEach((c,colIndex)=>{
-                const cn=document.createElement("div");cn.className="col";styleApply(cn,c.style||{});
+                const cn=document.createElement("div");cn.className="col";cn.setAttribute("data-node-kind","column");styleApply(cn,c.style||{});
                 cn.setAttribute("data-col-id",c.id);
                 const colInner=document.createElement("div");colInner.className="col-inner";colInner.style.width="100%";colInner.style.boxSizing="border-box";
                 var colCw=((c.settings&&c.settings.contentWidth)||"full");
@@ -2010,6 +2074,53 @@ function renderCanvas(){
 function refreshAfterSetting(){
     if(state.carouselSel)render();
     else renderCanvas();
+}
+const dimCtx={tip:null};
+function ensureDimTip(){
+    if(dimCtx.tip&&dimCtx.tip.parentNode)return dimCtx.tip;
+    var n=document.createElement("div");
+    n.className="fb-dim-tip";
+    n.id="fbDimTip";
+    document.body.appendChild(n);
+    dimCtx.tip=n;
+    return n;
+}
+function dimTypeLabel(node){
+    if(!node)return "Component";
+    if(node.classList&&node.classList.contains("el")){
+        var t=String(node.getAttribute("data-el-type")||"component");
+        return titleCase(t);
+    }
+    var k=String(node.getAttribute("data-node-kind")||"component");
+    return titleCase(k);
+}
+function updateDimTipFromEvent(e){
+    if(!canvas)return;
+    var tip=ensureDimTip();
+    var trg=e&&e.target&&e.target.closest?e.target.closest(".el,.col,.row,.sec"):null;
+    if(!trg||!canvas.contains(trg)){
+        tip.style.display="none";
+        return;
+    }
+    var r=trg.getBoundingClientRect();
+    var w=Math.max(0,Math.round(r.width));
+    var h=Math.max(0,Math.round(r.height));
+    tip.textContent=dimTypeLabel(trg)+": "+w+" x "+h;
+    tip.style.left=(Number(e.clientX)||0)+"px";
+    tip.style.top=(Number(e.clientY)||0)+"px";
+    tip.style.display="block";
+}
+function hideDimTip(){
+    var tip=dimCtx.tip||document.getElementById("fbDimTip");
+    if(tip)tip.style.display="none";
+}
+function initDimTipHover(){
+    if(!canvas||canvas.__dimTipBound)return;
+    canvas.__dimTipBound=true;
+    canvas.addEventListener("mousemove",updateDimTipFromEvent);
+    canvas.addEventListener("mouseleave",hideDimTip);
+    canvas.addEventListener("dragstart",hideDimTip);
+    canvas.addEventListener("drop",hideDimTip);
 }
 
 function bind(id,val,cb,opts){
@@ -2141,10 +2252,10 @@ function renderSettings(){
     if((!state.sel&&!inCarousel)||!t){settings.innerHTML='<p class="meta">Select a component to edit.</p>';return;}
     settingsTitle.textContent=titleCase(selectedType())+" Settings";
     const sty=()=>{t.style=t.style||{};return t.style;};
-    const moveCtx=selectedElementMoveContext();
+    const moveCtx=(selKind==="el")?selectedElementMoveContext():((selKind==="sec"||selKind==="row"||selKind==="col")?selectedStructureMoveContext():null);
     const canMoveUp=!!(moveCtx&&moveCtx.index>0);
     const canMoveDown=!!(moveCtx&&moveCtx.index<(moveCtx.list.length-1));
-    const moveControls=(selKind==="el"&&moveCtx)
+    const moveControls=((selKind==="el"||selKind==="sec"||selKind==="row"||selKind==="col")&&moveCtx)
         ? '<div class="menu-split"></div><div class="menu-section-title">Order</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;"><button type="button" id="btnMoveUp" class="fb-btn"'+(canMoveUp?'':' disabled')+'>Move Up</button><button type="button" id="btnMoveDown" class="fb-btn"'+(canMoveDown?'':' disabled')+'>Move Down</button></div>'
         : '';
     const remove='<div class="settings-delete-wrap"><button type="button" id="btnDeleteSelected" class="fb-btn danger"><i class="fas fa-trash-alt"></i> Delete</button></div>';
@@ -2712,7 +2823,7 @@ function renderSettings(){
             settings.querySelectorAll(".menu-toggle").forEach(btn=>btn.addEventListener("click",()=>{var i=Number(btn.getAttribute("data-idx"));t.settings.menuCollapsed[i]=!t.settings.menuCollapsed[i];renderMenuEditor();}));
             var addBtn=document.getElementById("addMenuItem");if(addBtn)addBtn.onclick=()=>{saveToHistory();items.push({label:"Menu item "+(items.length+1),url:"#",newWindow:false,hasSubmenu:false});renderMenuEditor();renderCanvas();};
 
-            var mFont=document.getElementById("mFont");if(mFont){mFont.value=(t.style&&t.style.fontFamily)||"";mFont.addEventListener("change",()=>{saveToHistory();sty().fontFamily=mFont.value||"";renderCanvas();});}
+            bind("mFont",(t.style&&t.style.fontFamily)||"",v=>sty().fontFamily=v,{undo:true});
             bindPx("mFs",(t.style&&t.style.fontSize)||"",v=>sty().fontSize=v,{undo:true});
             bind("mLh",(t.style&&t.style.lineHeight)||"",v=>sty().lineHeight=v,{undo:true});
             var mBold=document.getElementById("mBold"),mItalic=document.getElementById("mItalic");
@@ -2779,7 +2890,8 @@ function renderSettings(){
         var sizeBlock='<div class="size-position"><div class="size-label">Size and position</div><label class="size-label">Padding</label><div class="size-grid"><div class="fld"><label>T</label><input id="pTop" type="number" value="'+pad[0]+'"></div><div class="fld"><label>R</label><input id="pRight" type="number" value="'+pad[1]+'"></div><div class="fld"><label>B</label><input id="pBottom" type="number" value="'+pad[2]+'"></div><div class="fld"><label>L</label><input id="pLeft" type="number" value="'+pad[3]+'"></div><div class="size-link"><button type="button" id="linkPad" title="Link padding"><span>↔</span></button><span>Link</span></div></div><label class="size-label">Margin</label><div class="size-grid"><div class="fld"><label>T</label><input id="mTop" type="number" value="'+mar[0]+'"></div><div class="fld"><label>R</label><input id="mRight" type="number" value="'+mar[1]+'"></div><div class="fld"><label>B</label><input id="mBottom" type="number" value="'+mar[2]+'"></div><div class="fld"><label>L</label><input id="mLeft" type="number" value="'+mar[3]+'"></div><div class="size-link"><button type="button" id="linkMar" title="Link margin"><span>↔</span></button><span>Link</span></div></div></div>';
         var buttonBgControl=(t.type==="button")?'<label>Button color</label><input id="btnBg" type="color">':'';
         var buttonRadiusControl=(t.type==="button")?(radiusHelpLabelHtml("btnRadiusHelp","Border radius")+'<div class="px-wrap"><input id="btnRadius" type="number" min="0" step="1"><span class="px-unit">px</span></div>'):'';
-        settings.innerHTML='<div class="menu-section-title">Content</div>'+(rich?'<div class="rt-box"><div class="rt-tools"><button id="rtBold" type="button"><b>B</b></button><button id="rtItalic" type="button"><i>I</i></button><button id="rtUnderline" type="button"><u>U</u></button></div><div id="contentRt" class="rt-editor" contenteditable="true"></div></div>':'<label>Content</label><textarea id="content" rows="4"></textarea>')+'<div class="menu-split"></div><div class="menu-section-title">Layout</div><label>Alignment</label><select id="a"><option value="">Default</option><option>left</option><option>center</option><option>right</option></select><div class="menu-split"></div><div class="menu-section-title">Spacing</div>'+sizeBlock+'<div class="menu-split"></div><div class="menu-section-title">Style</div>'+buttonBgControl+buttonRadiusControl+'<label>Color</label><input id="co" type="color"><label>Font size</label><div class="px-wrap"><input id="fs" type="number" step="1"><span class="px-unit">px</span></div>'+textTypographyControls+fontSelectHtml('ff')+moveControls+remove;
+        var buttonLinkControl=(t.type==="button")?'<label>Link</label><input id="btnLink" placeholder="/contact or https://example.com">':'';
+        settings.innerHTML='<div class="menu-section-title">Content</div>'+(rich?'<div class="rt-box"><div class="rt-tools"><button id="rtBold" type="button"><b>B</b></button><button id="rtItalic" type="button"><i>I</i></button><button id="rtUnderline" type="button"><u>U</u></button></div><div id="contentRt" class="rt-editor" contenteditable="true"></div></div>':'<label>Content</label><textarea id="content" rows="4"></textarea>')+buttonLinkControl+'<div class="menu-split"></div><div class="menu-section-title">Layout</div><label>Alignment</label><select id="a"><option value="">Default</option><option>left</option><option>center</option><option>right</option></select><div class="menu-split"></div><div class="menu-section-title">Spacing</div>'+sizeBlock+'<div class="menu-split"></div><div class="menu-section-title">Style</div>'+buttonBgControl+buttonRadiusControl+'<label>Color</label><input id="co" type="color"><label>Font size</label><div class="px-wrap"><input id="fs" type="number" step="1"><span class="px-unit">px</span></div>'+textTypographyControls+fontSelectHtml('ff')+moveControls+remove;
         if(rich){
             bindRichEditor("contentRt",t.content,v=>t.content=v);
             const rt=document.getElementById("contentRt");
@@ -2818,6 +2930,7 @@ function renderSettings(){
         }
         bindPx("fs",(t.style&&t.style.fontSize)||"",v=>sty().fontSize=v,{undo:true});bind("ff",(t.style&&t.style.fontFamily)||"Inter, sans-serif",v=>sty().fontFamily=v,{undo:true});
         if(t.type==="button"){
+            bind("btnLink",(t.settings&&t.settings.link)||"#",v=>{t.settings=t.settings||{};var u=String(v||"").trim();t.settings.link=(u==="")?"#":u;},{undo:true});
             bindPx("btnRadius",(t.style&&t.style.borderRadius)||"",v=>sty().borderRadius=v,{undo:true});
             bindRadiusHelpButton("btnRadiusHelp");
             var btnBg=document.getElementById("btnBg");
@@ -2874,8 +2987,8 @@ function renderSettings(){
     }
     ensureSpacingHelperButton();
     mountBackgroundImageDisplayControl();
-    const btnMoveUp=document.getElementById("btnMoveUp");if(btnMoveUp)btnMoveUp.onclick=()=>moveSelectedElement(-1);
-    const btnMoveDown=document.getElementById("btnMoveDown");if(btnMoveDown)btnMoveDown.onclick=()=>moveSelectedElement(1);
+    const btnMoveUp=document.getElementById("btnMoveUp");if(btnMoveUp)btnMoveUp.onclick=()=>moveSelectedBySelection(-1);
+    const btnMoveDown=document.getElementById("btnMoveDown");if(btnMoveDown)btnMoveDown.onclick=()=>moveSelectedBySelection(1);
     const btnDel=document.getElementById("btnDeleteSelected");if(btnDel)btnDel.onclick=()=>removeSelected();
 }
 
@@ -2991,13 +3104,13 @@ document.addEventListener("keydown",e=>{
         removeSelected();
     }
 
-    // Arrow keys for moving elements up/down (when element is selected, not in text field)
+    // Arrow keys for moving selected item up/down (element or structure), not in text fields
     if((key==="arrowup"||key==="arrowdown") && (state.sel||state.carouselSel) && !isTextField){
         e.preventDefault();
         if(key==="arrowup"){
-            moveSelectedElement(-1);
+            moveSelectedBySelection(-1);
         }else{
-            moveSelectedElement(1);
+            moveSelectedBySelection(1);
         }
     }
 
@@ -3007,6 +3120,7 @@ document.addEventListener("keydown",e=>{
     }
 });
 
+initDimTipHover();
 loadStep(state.sid);
 })();
 </script>
