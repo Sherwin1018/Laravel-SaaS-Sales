@@ -44,7 +44,7 @@
             text-decoration: none;
             font-weight: 700;
             cursor: pointer;
-            box-shadow: 0 10px 25px rgba(37, 99, 235, 0.35);
+            box-shadow: none;
         }
         .btn.secondary { background: #1e40af; }
         .btn.gray { background: #64748b; }
@@ -62,7 +62,12 @@
         .builder-col > .builder-col-inner > .builder-el { max-width: 100%; overflow: hidden; }
         .builder-el + .builder-el { margin-top: 10px; }
         .builder-heading { margin: 0; font-size: 32px; line-height: 1.2; overflow-wrap: break-word; word-break: break-word; }
-        .builder-text { margin: 0; color: #334155; line-height: 1.6; white-space: pre-wrap; overflow-wrap: break-word; word-break: break-word; }
+        .builder-text { margin: 0; color: #334155; line-height: normal; white-space: pre-wrap; overflow-wrap: break-word; word-break: break-word; }
+        .builder-text p,
+        .builder-text div,
+        .builder-text ul,
+        .builder-text ol,
+        .builder-text li { margin: 0; }
         .builder-img { display: block; max-width: 100%; height: auto; border-radius: 10px; object-fit: contain; object-position: top center; }
         .builder-menu { width: 100%; }
         .builder-menu-list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; }
@@ -399,7 +404,7 @@
                                                 @if($type === 'heading')
                                                     <h2 class="builder-heading" style="{{ $style }}">{!! $content !!}</h2>
                                                 @elseif($type === 'text')
-                                                    <p class="builder-text" style="{{ $style }}">{!! $content !!}</p>
+                                                    <div class="builder-text" style="{{ $style }}">{!! $content !!}</div>
                                                 @elseif($type === 'image')
                                                     @if($src !== '')
                                                         @php

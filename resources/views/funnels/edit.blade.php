@@ -42,7 +42,7 @@
 #fbLeftPanelComponents .fb-card::-webkit-scrollbar-thumb:hover{background:#94a3b8}
 .fb-grid > *{min-width:0}
 .fb-grid .fb-card{overflow-x:hidden}
-#canvas{overflow-x:hidden;overflow-y:auto;max-width:100%;box-sizing:border-box}
+#canvas{overflow-x:hidden;overflow-y:auto;box-sizing:border-box}
 #canvas .sec,#canvas .row,#canvas .col,#canvas .el,#canvas .sec-inner,#canvas .row-inner,#canvas .col-inner{max-width:100%;box-sizing:border-box}
 #canvas img,#canvas video,#canvas iframe{max-width:100%;height:auto}
 #fbSettingsCard{display:flex;flex-direction:column;max-height:calc(100vh - 120px);min-height:0}
@@ -58,7 +58,19 @@
 .fb-lib-group{margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #e2e8f0}
 .fb-lib-group:last-child{margin-bottom:0;padding-bottom:0;border-bottom:0}
 .fb-lib-group-title{font-size:12px;font-weight:900;letter-spacing:.02em;text-transform:uppercase;color:#1e3a8a;margin:0 0 8px}
-#canvas{min-height:60vh;border:2px dashed #93c5fd;border-radius:0;padding:10px;background:linear-gradient(180deg,#f8fafc,#e0f2fe);overflow-x:hidden;overflow-y:auto}
+#canvas{
+    width:min(100%,1200px);
+    margin:0 auto;
+    height:calc(100vh - 220px);
+    min-height:520px;
+    max-height:calc(100vh - 220px);
+    border:2px dashed #93c5fd;
+    border-radius:0;
+    padding:10px;
+    background:linear-gradient(180deg,#f8fafc,#e0f2fe);
+    overflow-x:hidden;
+    overflow-y:auto
+}
 .sec{border:1px dashed #64748b !important;border-radius:0;padding:8px;margin-bottom:9px;background:#fff}
 .sec.sec--bare-carousel{border:0;background:transparent;padding:0}
 .sec.sec--bare-wrap{border:0;background:transparent;padding:0}
@@ -312,6 +324,7 @@
             'title' => $step->title,
             'type' => $step->type,
             'layout_json' => $step->layout_json,
+            'background_color' => $step->background_color,
         ];
     })->all();
 @endphp
@@ -1971,7 +1984,7 @@ function renderElement(item,ctx){
         var place=(ctx&&ctx.c&&t!=="column"&&t!=="row"&&t!=="section")?"inside":dropPlacement(e,w);
         if(addComponentAt(t,dropTarget,place))render();
     };
-    if(item.type==="heading"||item.type==="text"){const n=document.createElement(item.type==="heading"?"h2":"p");n.contentEditable="true";n.style.margin="0";n.innerHTML=item.content||"";styleApply(n,item.style||{});if(!(item.style&&item.style.color))n.style.color="#000000";n.oninput=()=>{item.content=n.innerHTML||"";};onRichTextKeys(n,()=>{item.content=n.innerHTML||"";});w.appendChild(n);}
+    if(item.type==="heading"||item.type==="text"){const n=document.createElement(item.type==="heading"?"h2":"div");n.contentEditable="true";n.style.margin="0";n.style.overflowWrap="break-word";n.style.wordBreak="break-word";n.style.maxWidth="100%";n.innerHTML=item.content||"";styleApply(n,item.style||{});if(!(item.style&&item.style.color))n.style.color="#000000";n.oninput=()=>{item.content=n.innerHTML||"";};onRichTextKeys(n,()=>{item.content=n.innerHTML||"";});w.appendChild(n);}
     else if(item.type==="button"){
         var wb=(item.settings&&item.settings.widthBehavior)||"fluid",al=(item.settings&&item.settings.alignment)||((item.style&&item.style.textAlign)||"center");
         var wrapBg=(item.settings&&item.settings.containerBgColor)||"";
@@ -2009,8 +2022,28 @@ function renderElement(item,ctx){
     }
     else if(item.type==="image"){
         var hasFixedH=!!(item.style&&String(item.style.height||"").trim()!=="");
-        var imgHeightStyle=hasFixedH?"height:100%;object-fit:cover;":"height:auto;object-fit:contain;";
-        w.innerHTML=(item.settings&&item.settings.src)?'<img src="'+item.settings.src+'" alt="'+(item.settings.alt||"Image")+'" style="max-width:100%;max-height:100%;width:100%;'+imgHeightStyle+'display:block;'+mediaClip+'">':'<div style="padding:12px;border:1px dashed #94a3b8;border-radius:8px;">Image placeholder</div>';
+        if(item.settings&&item.settings.src){
+            var img=document.createElement("img");
+            img.src=String(item.settings.src||"");
+            img.alt=String(item.settings.alt||"Image");
+            img.style.display="block";
+            img.style.maxWidth="100%";
+            if(hasFixedH){
+                // Match preview behavior for fixed-height image blocks.
+                img.style.width="100%";
+                img.style.height="100%";
+                img.style.objectFit="cover";
+            }else{
+                img.style.height="auto";
+                img.style.objectFit="contain";
+                img.style.objectPosition="top center";
+            }
+            if(mediaClip)img.style.cssText+=(img.style.cssText&&img.style.cssText.slice(-1)!==";"?";":"")+mediaClip;
+            w.innerHTML="";
+            w.appendChild(img);
+        }else{
+            w.innerHTML='<div style="padding:12px;border:1px dashed #94a3b8;border-radius:8px;">Image placeholder</div>';
+        }
     }
     else if(item.type==="form"){
         item.settings=item.settings||{};
@@ -2649,14 +2682,86 @@ function renderElement(item,ctx){
         w.innerHTML="";w.appendChild(wrap);
     }
     else if(item.type==="video"){
-        const raw=(item.settings&&item.settings.src)||"";
-        const vurl=raw?(raw.startsWith("http")?raw:"https://"+raw.replace(/^\/*/,"")):"";
+        const raw=String((item.settings&&item.settings.src)||"").trim();
+        const settings=(item&&item.settings&&typeof item.settings==="object")?item.settings:{};
+        const lower=raw.toLowerCase();
+        const isYoutubeVimeo=lower.indexOf("youtube.com")>=0||lower.indexOf("youtu.be")>=0||lower.indexOf("vimeo.com")>=0;
+        let embedUrl=raw;
+        if(/youtube\.com\/watch/i.test(raw)){
+            const q=raw.split("?")[1]||"";
+            const params=new URLSearchParams(q);
+            const v=params.get("v");
+            if(v)embedUrl="https://www.youtube.com/embed/"+v;
+        }else{
+            const ytShort=raw.match(/youtu\.be\/([a-zA-Z0-9_-]+)/i);
+            if(ytShort&&ytShort[1])embedUrl="https://www.youtube.com/embed/"+ytShort[1];
+            const vimeo=raw.match(/vimeo\.com\/(?:video\/)?(\d+)/i);
+            if(vimeo&&vimeo[1])embedUrl="https://player.vimeo.com/video/"+vimeo[1];
+        }
+        const isHttp=/^https?:\/\//i.test(raw);
+        const videoSrc=isYoutubeVimeo
+            ? embedUrl
+            : (isHttp?raw:(raw!==""?((raw.charAt(0)==="/")?(window.location.origin+raw):(window.location.origin+"/"+raw.replace(/^\/+/,""))):""));
         var hasFixedVideoH=!!(item.style&&String(item.style.height||"").trim()!=="");
-        const wrapStyle="position:relative;width:100%;"+(hasFixedVideoH?"height:100%;":"min-height:200px;padding-top:56.25%;")+"background:#0f172a;border-radius:8px;overflow:hidden;box-sizing:border-box;display:flex;align-items:center;justify-content:center;pointer-events:none;"+mediaClip;
-        if(vurl){
-            const label=vurl.length>50?vurl.slice(0,47)+"...":vurl;
-            w.innerHTML='<div style="'+wrapStyle+'"><div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:rgba(255,255,255,0.9);padding:12px;text-align:center;"><span style="font-size:32px;margin-bottom:8px;opacity:0.9;">&#9654;</span><span style="font-size:12px;font-weight:700;">Video</span><span style="font-size:11px;opacity:0.8;word-break:break-all;max-width:100%;">'+label.replace(/</g,"&lt;").replace(/>/g,"&gt;")+'</span></div></div>';
-        } else w.innerHTML='<div style="'+wrapStyle+'"><div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:rgba(255,255,255,0.8);padding:12px;"><span style="font-size:28px;margin-bottom:6px;">&#9654;</span><span style="font-size:12px;">Video URL placeholder</span><span style="font-size:11px;margin-top:4px;">Paste link or upload</span></div></div>';
+        const wrap=document.createElement("div");
+        wrap.style.position="relative";
+        wrap.style.width="100%";
+        wrap.style.background="#0f172a";
+        wrap.style.borderRadius="8px";
+        wrap.style.overflow="hidden";
+        wrap.style.boxSizing="border-box";
+        if(hasFixedVideoH){
+            wrap.style.height="100%";
+        }else{
+            wrap.style.minHeight="200px";
+            wrap.style.paddingTop="56.25%";
+        }
+        if(mediaClip)wrap.style.cssText+=(wrap.style.cssText&&wrap.style.cssText.slice(-1)!==";"?";":"")+mediaClip;
+        if(videoSrc!==""){
+            if(isYoutubeVimeo){
+                const qs=[];
+                if(settings&&settings.autoplay===true)qs.push("autoplay=1");
+                if(settings&&settings.controls===false)qs.push("controls=0");
+                let src=embedUrl;
+                if(src!==""){
+                    src+=(src.indexOf("?")>=0?"&":"?")+qs.join("&");
+                    src=src.replace(/[?&]$/,"");
+                }
+                const frame=document.createElement("iframe");
+                frame.src=src;
+                frame.allowFullscreen=true;
+                frame.allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
+                frame.loading="lazy";
+                frame.style.position="absolute";
+                frame.style.top="0";
+                frame.style.left="0";
+                frame.style.width="100%";
+                frame.style.height="100%";
+                frame.style.border="0";
+                frame.style.pointerEvents="none";
+                wrap.appendChild(frame);
+            }else{
+                const video=document.createElement("video");
+                video.src=videoSrc;
+                if((settings&&settings.controls)!==false)video.controls=true;
+                if(settings&&settings.autoplay===true){video.autoplay=true;video.muted=true;}
+                video.playsInline=true;
+                video.preload="metadata";
+                video.style.position="absolute";
+                video.style.top="0";
+                video.style.left="0";
+                video.style.width="100%";
+                video.style.height="100%";
+                video.style.border="0";
+                video.style.objectFit="contain";
+                video.style.pointerEvents="none";
+                wrap.appendChild(video);
+            }
+        }else{
+            wrap.innerHTML='<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:rgba(255,255,255,0.8);padding:12px;"><span style="font-size:28px;margin-bottom:6px;">&#9654;</span><span style="font-size:12px;">Video URL placeholder</span><span style="font-size:11px;margin-top:4px;">Paste link or upload</span></div>';
+        }
+        w.innerHTML="";
+        w.appendChild(wrap);
     }
     else if(item.type==="spacer"){const h=((item.style&&item.style.height)||"24px");const isSel=!!(state.sel&&state.sel.k==="el"&&state.sel.e===item.id);const bg=isSel?'repeating-linear-gradient(90deg,#f1f5f9,#f1f5f9 8px,#e2e8f0 8px,#e2e8f0 16px)':'transparent';w.innerHTML='<div style="height:'+h+';background:'+bg+'"></div>';}
     if(item.type==="image"||item.type==="video"||item.type==="icon"){
