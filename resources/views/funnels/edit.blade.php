@@ -77,7 +77,7 @@
 .row{display:flex;flex-wrap:wrap;gap:8px;border:1px dashed #cbd5e1 !important;border-radius:0 !important;padding:6px}
 .row.row--bare-wrap{border:0;background:transparent;padding:0}
 .row-inner{display:flex;flex-wrap:wrap;gap:8px;position:relative}
-.col{flex:1 1 240px;min-height:120px;min-width:0;border:1px dashed #bfdbfe !important;border-radius:0 !important;padding:6px;background:#ffffff;position:relative;overflow:hidden}
+.col{flex:1 1 240px;min-height:120px;min-width:0;border:1px dashed #bfdbfe !important;border-radius:0;padding:6px;background:#ffffff;position:relative;overflow:hidden}
 .row-resize-handle-y{position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);z-index:4;width:42px;height:10px;border-radius:999px;border:1px solid #93c5fd;background:#dbeafe;cursor:ns-resize;opacity:.9}
 .media-resize-dot{position:absolute;z-index:5;width:18px;height:18px;border-radius:999px;border:2px solid #ffffff;background:#3b82f6;box-shadow:0 1px 2px rgba(15,23,42,.24)}
 .media-resize-dot-left{left:-9px;top:50%;transform:translateY(-50%);cursor:ew-resize}
@@ -94,7 +94,7 @@
 .el{border:0 !important;border-style:none !important;border-width:0 !important;border-radius:0 !important;padding:7px;background:#fff;margin-bottom:6px;min-width:0;overflow-wrap:break-word;word-break:break-word}
 .el.el--carousel{border:0 !important;background:transparent !important;padding:0 !important}
 .el.el--form{border:0 !important;background:transparent !important;padding:0 !important}
-#canvas.canvas-outline-mode .sec,#canvas.canvas-outline-mode .row,#canvas.canvas-outline-mode .col,#canvas.canvas-outline-mode .el{position:relative;background:transparent;border:1px dashed #93c5fd !important;border-radius:0 !important;box-shadow:none !important}
+#canvas.canvas-outline-mode .sec,#canvas.canvas-outline-mode .row,#canvas.canvas-outline-mode .col,#canvas.canvas-outline-mode .el{position:relative;background:transparent;border:1px dashed #93c5fd !important;border-radius:0;box-shadow:none !important}
 #canvas.canvas-outline-mode .sec.sec--bare-wrap,#canvas.canvas-outline-mode .sec.sec--bare-carousel{border:0 !important;background:transparent !important;padding:0 !important;margin-bottom:0 !important}
 #canvas.canvas-outline-mode .sec{padding:5px !important;margin-bottom:6px}
 #canvas.canvas-outline-mode .row{padding:4px !important}
@@ -556,6 +556,35 @@ function pxToNumber(v){const t=(v||"").toString().trim();const m=t.match(/^(-?\d
 function parseSpacing(str,def){if(!str||typeof str!=="string")return def||[0,0,0,0];var parts=str.trim().split(/\s+/).map(s=>{var n=parseFloat(String(s).replace(/px$/i,""));return isNaN(n)?0:n;});if(parts.length===1)return [parts[0],parts[0],parts[0],parts[0]];if(parts.length===2)return [parts[0],parts[1],parts[0],parts[1]];if(parts.length>=4)return [parts[0],parts[1],parts[2],parts[3]];return def||[0,0,0,0];}
 function spacingToCss(arr){if(!arr||arr.length!==4)return "";return arr.map(v=>v+"px").join(" ");}
 function styleApply(node,s){if(!s)return;Object.keys(s).forEach(k=>{if(s[k]!==""&&s[k]!=null)node.style[k]=s[k];});}
+function normalizeFormFields(raw,preferEmailDefault){
+    var list=Array.isArray(raw)?raw:[];
+    var out=list.map(function(field,idx){
+        var f=(field&&typeof field==="object")?field:{};
+        var type=String(f.type||"text").trim().toLowerCase();
+        if(type==="")type="text";
+        var label=String(f.label||"").trim();
+        if(label===""){
+            if(type==="email")label="Email";
+            else if(type==="phone_number")label="Phone";
+            else label=("Field "+(idx+1));
+        }
+        var placeholder=String(f.placeholder||"").trim();
+        if(placeholder===""){
+            if(type==="phone_number")placeholder="09XXXXXXXXX";
+            else if(type==="email")placeholder="Email address";
+            else placeholder=label;
+        }
+        return {type:type,label:label,placeholder:placeholder,required:!!f.required};
+    }).filter(function(f){return String(f.label||"").trim()!=="";});
+    if(!out.length){
+        out.push(
+            preferEmailDefault
+                ? {type:"email",label:"Email",placeholder:"Email address",required:true}
+                : {type:"text",label:"First name",placeholder:"First name",required:false}
+        );
+    }
+    return out;
+}
 function editorPrefs(){
     state.layout=state.layout||{};
     state.layout.__editor=(state.layout.__editor&&typeof state.layout.__editor==="object")?state.layout.__editor:{};
@@ -1512,11 +1541,11 @@ function renderCarouselPreviewItem(item,onDelete,onSelect,isSelected){
         wrap.appendChild(menuUl);
     }else if(type==="form"){
         var fm=document.createElement("div");
-        var formFields=[["First name","First name"],["Last name","Last name"],["Email","Email"],["Phone","09XXXXXXXXX"],["Province","Province"],["City / Municipality","City / Municipality"],["Barangay","Barangay"],["Street","Street"]];
+        var formFields=normalizeFormFields(item&&item.settings&&item.settings.fields,false);
         var html="";
         formFields.forEach(function(ff){
-            html+='<label style="display:block;margin-bottom:4px;">'+ff[0]+'</label>';
-            html+='<input type="text" placeholder="'+ff[1]+'" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:8px;">';
+            html+='<label style="display:block;margin-bottom:4px;">'+String(ff.label||"Field").replace(/</g,"&lt;").replace(/>/g,"&gt;")+'</label>';
+            html+='<input type="text" placeholder="'+String(ff.placeholder||ff.label||"Field").replace(/"/g,'&quot;')+'" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:8px;">';
         });
         html+='<button type="button" style="padding:8px 12px;border:0;border-radius:8px;background:#2563eb;color:#fff;">'+(((item&&item.content)||"Submit"))+'</button>';
         fm.innerHTML=html;
@@ -1549,7 +1578,7 @@ function createRootItem(type){
     return it?Object.assign({kind:"el"},it):null;
 }
 function createDefaultElement(type){
-    const d={heading:{content:"Heading",style:{fontSize:"32px",color:"#000000"},settings:{}},text:{content:"Text",style:{fontSize:"16px",color:"#000000"},settings:{}},menu:{content:"",style:{fontSize:"16px"},settings:{items:[{label:"Home",url:"#",newWindow:false,hasSubmenu:false},{label:"Contact",url:"/contact",newWindow:false,hasSubmenu:false}],itemGap:13,activeIndex:0,menuAlign:"left",underlineColor:""}},carousel:{content:"",style:{padding:"10px 10px 10px 10px"},settings:{slides:[defaultCarouselSlide("Slide #1")],activeSlide:0,vAlign:"center",alignment:"left",showArrows:true,slideshowMode:"manual",controlsColor:"#64748b",arrowColor:"#ffffff",fixedWidth:500,fixedHeight:500}},image:{content:"",style:{width:"100%"},settings:{src:"",alt:"Image",alignment:"left"}},button:{content:"Click Me",style:{backgroundColor:"#2563eb",color:"#fff",borderRadius:"999px",padding:"10px 18px",textAlign:"center"},settings:{link:"#"}},icon:{content:"",style:{fontSize:"36px",color:"#1d4ed8",padding:"0px",borderRadius:"0px"},settings:{iconName:"star",iconStyle:"solid",alignment:"center",link:""}},form:{content:"Submit",style:{},settings:{alignment:"left",width:"100%",fields:[{type:"first_name",label:"First name"},{type:"last_name",label:"Last name"},{type:"email",label:"Email"},{type:"phone_number",label:"Phone"}]}},video:{content:"",style:{},settings:{src:"",alignment:"left"}},spacer:{content:"",style:{height:"24px"},settings:{}}}[type]||null;
+    const d={heading:{content:"Heading",style:{fontSize:"32px",color:"#000000"},settings:{}},text:{content:"Text",style:{fontSize:"16px",color:"#000000"},settings:{}},menu:{content:"",style:{fontSize:"16px"},settings:{items:[{label:"Home",url:"#",newWindow:false,hasSubmenu:false},{label:"Contact",url:"/contact",newWindow:false,hasSubmenu:false}],itemGap:13,activeIndex:0,menuAlign:"left",underlineColor:""}},carousel:{content:"",style:{padding:"10px 10px 10px 10px"},settings:{slides:[defaultCarouselSlide("Slide #1")],activeSlide:0,vAlign:"center",alignment:"left",showArrows:true,slideshowMode:"manual",controlsColor:"#64748b",arrowColor:"#ffffff",fixedWidth:500,fixedHeight:500}},image:{content:"",style:{width:"100%"},settings:{src:"",alt:"Image",alignment:"left"}},button:{content:"Click Me",style:{backgroundColor:"#2563eb",color:"#fff",borderRadius:"999px",padding:"10px 18px",textAlign:"center"},settings:{link:"#"}},icon:{content:"",style:{fontSize:"36px",color:"#1d4ed8",padding:"0px",borderRadius:"0px"},settings:{iconName:"star",iconStyle:"solid",alignment:"center",link:""}},form:{content:"Submit",style:{},settings:{alignment:"left",width:"100%",fields:[{type:"text",label:"First name",placeholder:"First name",required:false}]}},video:{content:"",style:{},settings:{src:"",alignment:"left"}},spacer:{content:"",style:{height:"24px"},settings:{}}}[type]||null;
     if(!d)return null;
     return {id:uid("el"),type:type,content:d.content,style:clone(d.style),settings:clone(d.settings)};
 }
@@ -1968,8 +1997,14 @@ function renderElement(item,ctx){
     w.setAttribute("data-outline-label",titleCase(String(item.type||"element")));
     if(item.type==="carousel")w.classList.add("el--carousel");
     if(item.type==="form")w.classList.add("el--form");
+    if(item.type==="image")w.classList.add("el--image");
+    if(item.type==="video")w.classList.add("el--video");
     if(item.type!=="button")styleApply(w,item.style||{});
     else if(item.style&&item.style.margin)w.style.margin=item.style.margin;
+    if((item.type==="image"||item.type==="video")&&(item.style&&item.style.borderRadius)){
+        // Preserve media corner radius even when outline mode forces square corners.
+        w.style.setProperty("border-radius",String(item.style.borderRadius),"important");
+    }
     if(isSelected)w.classList.add("sel");
     w.onclick=e=>{e.stopPropagation();state.carouselSel=null;state.sel=ctx.scope==="section"?{k:"el",scope:"section",s:ctx.s,e:item.id}:{k:"el",s:ctx.s,r:ctx.r,c:ctx.c,e:item.id};render();};
     w.ondragover=e=>{e.preventDefault();e.stopPropagation();};
@@ -2028,6 +2063,7 @@ function renderElement(item,ctx){
             img.alt=String(item.settings.alt||"Image");
             img.style.display="block";
             img.style.maxWidth="100%";
+            if(item.style&&item.style.borderRadius)img.style.borderRadius=String(item.style.borderRadius);
             if(hasFixedH){
                 // Match preview behavior for fixed-height image blocks.
                 img.style.width="100%";
@@ -2049,6 +2085,8 @@ function renderElement(item,ctx){
         item.settings=item.settings||{};
         var fal=(item.settings.alignment)||"left";
         var fw=(item.style&&item.style.width)||(item.settings&&item.settings.width)||"100%";
+        var flist=normalizeFormFields(item.settings.fields,false);
+        item.settings.fields=flist;
         w.style.display="block";
         w.style.boxSizing="border-box";
         w.style.textAlign="left";
@@ -2057,21 +2095,20 @@ function renderElement(item,ctx){
         if(fal==="center"){w.style.marginLeft="auto";w.style.marginRight="auto";}
         else if(fal==="right"){w.style.marginLeft="auto";w.style.marginRight="0";}
         else{w.style.marginLeft="0";w.style.marginRight="auto";}
-        var flist=[{type:"first_name",label:"First name"},{type:"last_name",label:"Last name"},{type:"email",label:"Email"},{type:"phone_number",label:"Phone"},{type:"province",label:"Province"},{type:"city_municipality",label:"City / Municipality"},{type:"barangay",label:"Barangay"},{type:"street",label:"Street"}];
         var formBox=document.createElement("div");
         formBox.style.width="100%";
         formBox.style.maxWidth="100%";
         formBox.style.boxSizing="border-box";
         formBox.style.textAlign="left";
         flist.forEach(function(f){
-            var lbl=(f&&f.label)?String(f.label):String((f&&f.type)||"Field");
+            var lbl=(f&&f.label)?String(f.label):"Field";
             var lab=document.createElement("label");
             lab.style.display="block";
             lab.style.marginBottom="4px";
             lab.textContent=lbl;
             var inp=document.createElement("input");
             inp.disabled=true;
-            inp.placeholder=((f&&f.type)==="phone_number")?"09XXXXXXXXX":lbl;
+            inp.placeholder=String((f&&f.placeholder)||lbl);
             inp.style.width="100%";
             inp.style.padding="8px";
             inp.style.border="1px solid #cbd5e1";
@@ -2642,7 +2679,7 @@ function renderElement(item,ctx){
         wrap.style.position="relative";
         wrap.style.width="100%";
         wrap.style.background="#0f172a";
-        wrap.style.borderRadius="8px";
+        wrap.style.borderRadius=(item.style&&item.style.borderRadius)?String(item.style.borderRadius):"8px";
         wrap.style.overflow="hidden";
         wrap.style.boxSizing="border-box";
         if(hasFixedVideoH){
@@ -3985,7 +4022,97 @@ function renderSettings(){
         renderMenuEditor();
     } else if(selKind==="el"&&t.type==="form"){
         t.settings=t.settings||{};
-        settings.innerHTML='<div class="menu-section-title">Content</div><label>Submit button text</label><input id="formSubmitText" placeholder="Submit"><div class="menu-split"></div><div class="menu-section-title">Layout</div><label>Alignment</label><select id="formAlign"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select><label>Form width</label><input id="formWidth" placeholder="100%"><div class="meta" style="margin-top:8px;">Set width in % (example: 50%) and place using alignment only.</div><div class="menu-split"></div><div class="menu-section-title">Style</div><label>Background color</label><input id="bg" type="color"><label>Background image URL</label><input id="bgImg" placeholder="https://..."><label>Upload background image</label><input id="bgUp" type="file" accept="image/*">'+moveControls+remove;
+        t.settings.fields=normalizeFormFields(t.settings.fields,false);
+        settings.innerHTML='<div class="menu-section-title">Content</div><label>Submit button text</label><input id="formSubmitText" placeholder="Submit"><div class="menu-split"></div><div class="menu-section-title">Form inputs</div><div id="formFieldsEditor"></div><button type="button" id="addFormInput" class="fb-btn" style="width:100%;margin:6px 0 10px;">Add form-input</button><div class="menu-split"></div><div class="menu-section-title">Layout</div><label>Alignment</label><select id="formAlign"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select><label>Form width</label><input id="formWidth" placeholder="100%"><div class="meta" style="margin-top:8px;">Set width in % (example: 50%) and place using alignment only.</div><div class="menu-split"></div><div class="menu-section-title">Style</div><label>Background color</label><input id="bg" type="color"><label>Background image URL</label><input id="bgImg" placeholder="https://..."><label>Upload background image</label><input id="bgUp" type="file" accept="image/*">'+moveControls+remove;
+        function renderFormFieldsEditor(){
+            t.settings=t.settings||{};
+            t.settings.fields=normalizeFormFields(t.settings.fields,false);
+            var box=document.getElementById("formFieldsEditor");
+            if(!box)return;
+            var cards=t.settings.fields.map(function(f,idx){
+                var lbl=String((f&&f.label)||"Field").replace(/"/g,'&quot;');
+                var ph=String((f&&f.placeholder)||lbl).replace(/"/g,'&quot;');
+                return '<div class="menu-item-card" data-idx="'+idx+'">'
+                    +'<div class="menu-item-head"><strong>Input '+(idx+1)+'</strong><div class="menu-item-actions">'
+                    +'<button type="button" class="formFieldMoveUp" data-idx="'+idx+'" title="Move up"><i class="fas fa-arrow-up"></i></button>'
+                    +'<button type="button" class="formFieldMoveDown" data-idx="'+idx+'" title="Move down"><i class="fas fa-arrow-down"></i></button>'
+                    +'<button type="button" class="formFieldDelete menu-del" data-idx="'+idx+'" title="Delete"><i class="fas fa-trash"></i></button>'
+                    +'</div></div>'
+                    +'<label>Label</label><input class="formFieldLabel" data-idx="'+idx+'" value="'+lbl+'" placeholder="Field label">'
+                    +'<label>Placeholder</label><input class="formFieldPlaceholder" data-idx="'+idx+'" value="'+ph+'" placeholder="Field placeholder">'
+                    +'</div>';
+            }).join("");
+            box.innerHTML=cards;
+            box.querySelectorAll(".formFieldLabel").forEach(function(inp){
+                inp.addEventListener("input",function(){
+                    var idx=Number(inp.getAttribute("data-idx"));
+                    if(isNaN(idx)||!t.settings.fields[idx])return;
+                    saveToHistory();
+                    t.settings.fields[idx].label=String(inp.value||"").trim()||("Field "+(idx+1));
+                    if(!String((t.settings.fields[idx]&&t.settings.fields[idx].placeholder)||"").trim()){
+                        t.settings.fields[idx].placeholder=t.settings.fields[idx].label;
+                    }
+                    renderCanvas();
+                });
+            });
+            box.querySelectorAll(".formFieldPlaceholder").forEach(function(inp){
+                inp.addEventListener("input",function(){
+                    var idx=Number(inp.getAttribute("data-idx"));
+                    if(isNaN(idx)||!t.settings.fields[idx])return;
+                    saveToHistory();
+                    t.settings.fields[idx].placeholder=String(inp.value||"").trim()||t.settings.fields[idx].label||("Field "+(idx+1));
+                    renderCanvas();
+                });
+            });
+            box.querySelectorAll(".formFieldDelete").forEach(function(btn){
+                btn.addEventListener("click",function(){
+                    var idx=Number(btn.getAttribute("data-idx"));
+                    if(isNaN(idx)||!Array.isArray(t.settings.fields))return;
+                    saveToHistory();
+                    t.settings.fields.splice(idx,1);
+                    t.settings.fields=normalizeFormFields(t.settings.fields,false);
+                    renderFormFieldsEditor();
+                    renderCanvas();
+                });
+            });
+            box.querySelectorAll(".formFieldMoveUp").forEach(function(btn){
+                btn.addEventListener("click",function(){
+                    var idx=Number(btn.getAttribute("data-idx"));
+                    if(isNaN(idx)||idx<=0||!Array.isArray(t.settings.fields))return;
+                    saveToHistory();
+                    var tmp=t.settings.fields[idx-1];
+                    t.settings.fields[idx-1]=t.settings.fields[idx];
+                    t.settings.fields[idx]=tmp;
+                    renderFormFieldsEditor();
+                    renderCanvas();
+                });
+            });
+            box.querySelectorAll(".formFieldMoveDown").forEach(function(btn){
+                btn.addEventListener("click",function(){
+                    var idx=Number(btn.getAttribute("data-idx"));
+                    if(isNaN(idx)||!Array.isArray(t.settings.fields)||idx>=t.settings.fields.length-1)return;
+                    saveToHistory();
+                    var tmp=t.settings.fields[idx+1];
+                    t.settings.fields[idx+1]=t.settings.fields[idx];
+                    t.settings.fields[idx]=tmp;
+                    renderFormFieldsEditor();
+                    renderCanvas();
+                });
+            });
+        }
+        var addFormInputBtn=document.getElementById("addFormInput");
+        if(addFormInputBtn){
+            addFormInputBtn.onclick=function(){
+                saveToHistory();
+                t.settings=t.settings||{};
+                t.settings.fields=normalizeFormFields(t.settings.fields,false);
+                var nextIndex=t.settings.fields.length+1;
+                t.settings.fields.push({type:"text",label:"Field "+nextIndex,placeholder:"Field "+nextIndex,required:false});
+                renderFormFieldsEditor();
+                renderCanvas();
+            };
+        }
+        renderFormFieldsEditor();
         bind("formSubmitText",t.content||"Submit",v=>{t.content=v||"Submit";},{undo:true});
         bind("formAlign",(t.settings&&t.settings.alignment)||"left",v=>{t.settings=t.settings||{};t.settings.alignment=v||"left";var s=sty();if(s&&Object.prototype.hasOwnProperty.call(s,"textAlign"))delete s.textAlign;},{undo:true});
         bind("formWidth",(t.style&&t.style.width)||(t.settings&&t.settings.width)||"100%",v=>{var w=v||"100%";sty().width=w;sty().height="";sty().maxWidth="";sty().minHeight="";t.settings=t.settings||{};t.settings.width=w;t.settings.formWidth=w;t.settings.height="";t.settings.maxWidth="";t.settings.minHeight="";},{undo:true});

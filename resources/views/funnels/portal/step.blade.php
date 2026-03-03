@@ -797,29 +797,69 @@
                                                         } else {
                                                             $formInlineStyle .= 'margin-left:0;margin-right:auto;';
                                                         }
-                                                        $formFields = [
-                                                            ['type' => 'first_name', 'label' => 'First name'],
-                                                            ['type' => 'last_name', 'label' => 'Last name'],
-                                                            ['type' => 'email', 'label' => 'Email'],
-                                                            ['type' => 'phone_number', 'label' => 'Phone'],
-                                                            ['type' => 'province', 'label' => 'Province'],
-                                                            ['type' => 'city_municipality', 'label' => 'City / Municipality'],
-                                                            ['type' => 'barangay', 'label' => 'Barangay'],
-                                                            ['type' => 'street', 'label' => 'Street'],
-                                                        ];
+                                                        $rawFormFields = is_array($settings['fields'] ?? null) ? $settings['fields'] : [];
+                                                        $formFields = [];
+                                                        foreach ($rawFormFields as $fi => $rf) {
+                                                            if (!is_array($rf)) {
+                                                                continue;
+                                                            }
+                                                            $ft = strtolower(trim((string) ($rf['type'] ?? 'text')));
+                                                            if ($ft === '') {
+                                                                $ft = 'text';
+                                                            }
+                                                            $lbl = trim((string) ($rf['label'] ?? ''));
+                                                            if ($lbl === '') {
+                                                                if ($ft === 'email') {
+                                                                    $lbl = 'Email';
+                                                                } elseif ($ft === 'phone_number') {
+                                                                    $lbl = 'Phone';
+                                                                } else {
+                                                                    $lbl = 'Field ' . ($fi + 1);
+                                                                }
+                                                            }
+                                                            $ph = trim((string) ($rf['placeholder'] ?? ''));
+                                                            if ($ph === '') {
+                                                                if ($ft === 'phone_number') {
+                                                                    $ph = '09XXXXXXXXX';
+                                                                } elseif ($ft === 'email') {
+                                                                    $ph = 'Email address';
+                                                                } else {
+                                                                    $ph = $lbl;
+                                                                }
+                                                            }
+                                                            $formFields[] = [
+                                                                'type' => $ft,
+                                                                'label' => $lbl,
+                                                                'placeholder' => $ph,
+                                                                'required' => (bool) ($rf['required'] ?? false),
+                                                            ];
+                                                        }
+                                                        if (count($formFields) === 0) {
+                                                            if ($step->type === 'opt_in') {
+                                                                $formFields[] = ['type' => 'email', 'label' => 'Email', 'placeholder' => 'Email address', 'required' => true];
+                                                            } else {
+                                                                $formFields[] = ['type' => 'text', 'label' => 'First name', 'placeholder' => 'First name', 'required' => false];
+                                                            }
+                                                        }
                                                     @endphp
                                                     @if($step->type === 'opt_in' && !$isPreview)
                                                         <form method="POST" action="{{ route('funnels.portal.optin', ['funnelSlug' => $funnel->slug, 'stepSlug' => $step->slug]) }}" style="{{ $formInlineStyle }}">
                                                             @csrf
                                                             @foreach($formFields as $f)
                                                                 @php
-                                                                    $ft = $f['type'] ?? 'custom';
+                                                                    $ft = strtolower(trim((string) ($f['type'] ?? 'text')));
                                                                     $lbl = trim((string) ($f['label'] ?? '')) !== '' ? $f['label'] : $ft;
                                                                     $nm = in_array($ft, ['first_name', 'last_name', 'email', 'phone_number', 'province', 'city_municipality', 'barangay', 'street'], true) ? $ft : 'custom_' . $loop->index;
-                                                                    $req = in_array($ft, ['email', 'phone_number', 'province', 'city_municipality', 'barangay', 'street'], true);
-                                                                    $inputType = $ft === 'email' ? 'email' : 'text';
+                                                                    $req = (bool) ($f['required'] ?? false);
+                                                                    if ($ft === 'email') {
+                                                                        $req = true;
+                                                                    }
+                                                                    $inputType = $ft === 'email' ? 'email' : ($ft === 'phone_number' ? 'tel' : 'text');
                                                                     $pat = $ft === 'phone_number' ? 'pattern="^09\d{9}$" maxlength="11" minlength="11" inputmode="numeric"' : '';
-                                                                    $ph = $ft === 'phone_number' ? '09XXXXXXXXX' : $lbl;
+                                                                    $ph = trim((string) ($f['placeholder'] ?? ''));
+                                                                    if ($ph === '') {
+                                                                        $ph = $ft === 'phone_number' ? '09XXXXXXXXX' : $lbl;
+                                                                    }
                                                                 @endphp
                                                                 <label style="display:block;margin-bottom:4px;">{{ $lbl }}</label>
                                                                 <input type="{{ $inputType }}" name="{{ $nm }}" {{ $req ? 'required' : '' }} {!! $pat !!} placeholder="{{ $ph }}" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:8px;box-sizing:border-box;">
@@ -830,9 +870,12 @@
                                                         <form onsubmit="return false;" style="{{ $formInlineStyle }}">
                                                             @foreach($formFields as $f)
                                                                 @php
-                                                                    $ft = $f['type'] ?? 'custom';
+                                                                    $ft = strtolower(trim((string) ($f['type'] ?? 'text')));
                                                                     $lbl = trim((string) ($f['label'] ?? '')) !== '' ? $f['label'] : ($ft ?: 'Field');
-                                                                    $ph = $ft === 'phone_number' ? '09XXXXXXXXX' : $lbl;
+                                                                    $ph = trim((string) ($f['placeholder'] ?? ''));
+                                                                    if ($ph === '') {
+                                                                        $ph = $ft === 'phone_number' ? '09XXXXXXXXX' : $lbl;
+                                                                    }
                                                                 @endphp
                                                                 <label style="display:block;margin-bottom:4px;">{{ $lbl }}</label>
                                                                 <input type="text" placeholder="{{ $ph }}" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:8px;box-sizing:border-box;" @if($isPreview) disabled @endif>
