@@ -842,7 +842,20 @@ class FunnelController extends Controller
             }
         }
 
-        foreach (['itemGap' => [0, 300], 'activeIndex' => [0, 500], 'activeSlide' => [0, 500], 'carouselActiveRow' => [0, 500], 'carouselActiveCol' => [0, 500], 'fixedWidth' => [50, 2400], 'fixedHeight' => [50, 1600]] as $k => $range) {
+        foreach ([
+            'itemGap' => [0, 300],
+            'activeIndex' => [0, 500],
+            'activeSlide' => [0, 500],
+            'carouselActiveRow' => [0, 500],
+            'carouselActiveCol' => [0, 500],
+            'fixedWidth' => [50, 2400],
+            'fixedHeight' => [50, 1600],
+            'offsetX' => [-2400, 2400],
+            'cropTop' => [0, 1800],
+            'cropRight' => [0, 2400],
+            'cropBottom' => [0, 1800],
+            'cropLeft' => [0, 2400],
+        ] as $k => $range) {
             $v = $readInt($k, $range[0], $range[1]);
             if ($v !== null) {
                 $safe[$k] = $v;

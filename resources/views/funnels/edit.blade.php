@@ -67,6 +67,18 @@
 .row-inner{display:flex;flex-wrap:wrap;gap:8px;position:relative}
 .col{flex:1 1 240px;min-height:120px;min-width:0;border:1px dashed #bfdbfe !important;border-radius:0 !important;padding:6px;background:#ffffff;position:relative;overflow:hidden}
 .row-resize-handle-y{position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);z-index:4;width:42px;height:10px;border-radius:999px;border:1px solid #93c5fd;background:#dbeafe;cursor:ns-resize;opacity:.9}
+.media-resize-dot{position:absolute;z-index:5;width:18px;height:18px;border-radius:999px;border:2px solid #ffffff;background:#3b82f6;box-shadow:0 1px 2px rgba(15,23,42,.24)}
+.media-resize-dot-left{left:-9px;top:50%;transform:translateY(-50%);cursor:ew-resize}
+.media-resize-dot-right{right:-9px;top:50%;transform:translateY(-50%);cursor:ew-resize}
+.media-resize-dot-bl{left:-9px;bottom:-9px;cursor:nesw-resize}
+.media-resize-dot-b{left:50%;bottom:-9px;transform:translateX(-50%);cursor:ns-resize}
+.media-resize-dot-br{right:-9px;bottom:-9px;cursor:nwse-resize}
+.carousel-resize-dot{position:absolute;z-index:50;width:22px;height:22px;border-radius:999px;border:2px solid #ffffff;background:#2563eb;box-shadow:0 2px 6px rgba(15,23,42,.28);pointer-events:auto}
+.carousel-resize-dot-left{left:6px;top:50%;transform:translateY(-50%);cursor:ew-resize}
+.carousel-resize-dot-right{right:6px;top:50%;transform:translateY(-50%);cursor:ew-resize}
+.carousel-resize-dot-bl{left:6px;bottom:6px;cursor:nesw-resize}
+.carousel-resize-dot-b{left:50%;bottom:6px;transform:translateX(-50%);cursor:ns-resize}
+.carousel-resize-dot-br{right:6px;bottom:6px;cursor:nwse-resize}
 .el{border:0 !important;border-style:none !important;border-width:0 !important;border-radius:0 !important;padding:7px;background:#fff;margin-bottom:6px;min-width:0;overflow-wrap:break-word;word-break:break-word}
 .el.el--carousel{border:0 !important;background:transparent !important;padding:0 !important}
 .el.el--form{border:0 !important;background:transparent !important;padding:0 !important}
@@ -1928,6 +1940,12 @@ function removeSelected(){
 
 function renderElement(item,ctx){
     const w=document.createElement("div");w.className="el";
+    const isSelected=!!(state.sel&&state.sel.k==="el"&&state.sel.e===item.id);
+    const isCarouselActive=!!(
+        isSelected
+        || (state.carouselSel && state.carouselSel.parent && state.carouselSel.parent.e===item.id)
+    );
+    const mediaClip="";
     w.setAttribute("data-el-type",String(item.type||"element"));
     w.setAttribute("data-el-id",String(item.id||""));
     w.setAttribute("data-s",String(ctx&&ctx.s||""));
@@ -1939,7 +1957,7 @@ function renderElement(item,ctx){
     if(item.type==="form")w.classList.add("el--form");
     if(item.type!=="button")styleApply(w,item.style||{});
     else if(item.style&&item.style.margin)w.style.margin=item.style.margin;
-    if(state.sel&&state.sel.k==="el"&&state.sel.e===item.id)w.classList.add("sel");
+    if(isSelected)w.classList.add("sel");
     w.onclick=e=>{e.stopPropagation();state.carouselSel=null;state.sel=ctx.scope==="section"?{k:"el",scope:"section",s:ctx.s,e:item.id}:{k:"el",s:ctx.s,r:ctx.r,c:ctx.c,e:item.id};render();};
     w.ondragover=e=>{e.preventDefault();e.stopPropagation();};
     w.ondrop=e=>{
@@ -1989,7 +2007,11 @@ function renderElement(item,ctx){
         w.innerHTML="";
         w.appendChild(node);
     }
-    else if(item.type==="image"){w.innerHTML=(item.settings&&item.settings.src)?'<img src="'+item.settings.src+'" alt="'+(item.settings.alt||"Image")+'" style="max-width:100%;max-height:100%;width:100%;height:auto;display:block;object-fit:contain;">':'<div style="padding:12px;border:1px dashed #94a3b8;border-radius:8px;">Image placeholder</div>';}
+    else if(item.type==="image"){
+        var hasFixedH=!!(item.style&&String(item.style.height||"").trim()!=="");
+        var imgHeightStyle=hasFixedH?"height:100%;object-fit:cover;":"height:auto;object-fit:contain;";
+        w.innerHTML=(item.settings&&item.settings.src)?'<img src="'+item.settings.src+'" alt="'+(item.settings.alt||"Image")+'" style="max-width:100%;max-height:100%;width:100%;'+imgHeightStyle+'display:block;'+mediaClip+'">':'<div style="padding:12px;border:1px dashed #94a3b8;border-radius:8px;">Image placeholder</div>';
+    }
     else if(item.type==="form"){
         item.settings=item.settings||{};
         var fal=(item.settings.alignment)||"left";
@@ -2564,15 +2586,255 @@ function renderElement(item,ctx){
     else if(item.type==="video"){
         const raw=(item.settings&&item.settings.src)||"";
         const vurl=raw?(raw.startsWith("http")?raw:"https://"+raw.replace(/^\/*/,"")):"";
-        const wrapStyle="position:relative;width:100%;min-height:200px;padding-top:56.25%;background:#0f172a;border-radius:8px;overflow:hidden;box-sizing:border-box;display:flex;align-items:center;justify-content:center;pointer-events:none;";
+        var hasFixedVideoH=!!(item.style&&String(item.style.height||"").trim()!=="");
+        const wrapStyle="position:relative;width:100%;"+(hasFixedVideoH?"height:100%;":"min-height:200px;padding-top:56.25%;")+"background:#0f172a;border-radius:8px;overflow:hidden;box-sizing:border-box;display:flex;align-items:center;justify-content:center;pointer-events:none;"+mediaClip;
         if(vurl){
             const label=vurl.length>50?vurl.slice(0,47)+"...":vurl;
             w.innerHTML='<div style="'+wrapStyle+'"><div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:rgba(255,255,255,0.9);padding:12px;text-align:center;"><span style="font-size:32px;margin-bottom:8px;opacity:0.9;">&#9654;</span><span style="font-size:12px;font-weight:700;">Video</span><span style="font-size:11px;opacity:0.8;word-break:break-all;max-width:100%;">'+label.replace(/</g,"&lt;").replace(/>/g,"&gt;")+'</span></div></div>';
         } else w.innerHTML='<div style="'+wrapStyle+'"><div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:rgba(255,255,255,0.8);padding:12px;"><span style="font-size:28px;margin-bottom:6px;">&#9654;</span><span style="font-size:12px;">Video URL placeholder</span><span style="font-size:11px;margin-top:4px;">Paste link or upload</span></div></div>';
     }
     else if(item.type==="spacer"){const h=((item.style&&item.style.height)||"24px");const isSel=!!(state.sel&&state.sel.k==="el"&&state.sel.e===item.id);const bg=isSel?'repeating-linear-gradient(90deg,#f1f5f9,#f1f5f9 8px,#e2e8f0 8px,#e2e8f0 16px)':'transparent';w.innerHTML='<div style="height:'+h+';background:'+bg+'"></div>';}
-    if(item.type==="image"||item.type==="video"||item.type==="icon"){var a=(item.settings&&item.settings.alignment)||(item.type==="icon"?"center":"left");w.style.setProperty("display","flex");w.style.setProperty("justify-content",a==="right"?"flex-end":a==="center"?"center":"flex-start");w.style.setProperty("margin-left",a==="left"?"0":"auto");w.style.setProperty("margin-right",a==="right"?"0":"auto");}
+    if(item.type==="image"||item.type==="video"||item.type==="icon"){
+        var a=(item.settings&&item.settings.alignment)||(item.type==="icon"?"center":"left");
+        w.style.setProperty("display","flex");
+        w.style.setProperty("justify-content",a==="right"?"flex-end":a==="center"?"center":"flex-start");
+        w.style.setProperty("margin-left",a==="left"?"0":"auto");
+        w.style.setProperty("margin-right",a==="right"?"0":"auto");
+    }
+    if(item.type==="image"||item.type==="video"){
+        var a=(item.settings&&item.settings.alignment)||"left";
+        w.style.setProperty("display","flex");
+        w.style.setProperty("justify-content",a==="right"?"flex-end":a==="center"?"center":"flex-start");
+        w.style.setProperty("margin-left",a==="left"?"0":"auto");
+        w.style.setProperty("margin-right",a==="right"?"0":"auto");
+        var editorOffsetX=Number(item&&item.settings&&item.settings.offsetX)||0;
+        if(!isNaN(editorOffsetX)&&editorOffsetX!==0){
+            w.style.transform="translateX("+editorOffsetX+"px)";
+        }else{
+            w.style.transform="";
+        }
+        if(isSelected)attachMediaResizeHandles(w,item);
+    }
+    if(item.type==="carousel"){
+        attachCarouselResizeHandles(w,item);
+    }
     return w;
+}
+
+function attachCarouselResizeHandles(node,item){
+    if(!node||!item)return;
+    node.style.position="relative";
+    node.style.overflow="visible";
+    node.style.zIndex="6";
+    item.settings=item.settings||{};
+    var parseNum=function(v,fallback){
+        var n=Number(v);
+        return isNaN(n)?fallback:n;
+    };
+    var clamp=function(n,min,max){return Math.max(min,Math.min(max,n));};
+    var applySize=function(w,h){
+        var nextW=clamp(Math.round(parseNum(w,500)),50,2400);
+        var nextH=clamp(Math.round(parseNum(h,500)),50,1600);
+        item.settings.fixedWidth=nextW;
+        item.settings.fixedHeight=nextH;
+        node.style.setProperty("width",nextW+"px","important");
+        node.style.setProperty("min-width",nextW+"px","important");
+        node.style.setProperty("max-width",nextW+"px","important");
+        node.style.setProperty("height",nextH+"px","important");
+        node.style.setProperty("min-height",nextH+"px","important");
+    };
+    function startDrag(mode,e){
+        e.preventDefault();
+        e.stopPropagation();
+        var rect=node.getBoundingClientRect();
+        var startX=Number(e.clientX)||0;
+        var startY=Number(e.clientY)||0;
+        var startW=Math.max(50,Math.round(rect.width||parseNum(item.settings.fixedWidth,500)));
+        var startH=Math.max(50,Math.round(rect.height||parseNum(item.settings.fixedHeight,500)));
+        var didSave=false;
+        function onMove(ev){
+            if(!didSave){saveToHistory();didSave=true;}
+            var dx=(Number(ev.clientX)||0)-startX;
+            var dy=(Number(ev.clientY)||0)-startY;
+            var nextW=startW;
+            var nextH=startH;
+            if(mode==="left")nextW=clamp(startW-dx,50,2400);
+            else if(mode==="right")nextW=clamp(startW+dx,50,2400);
+            else if(mode==="bottom")nextH=clamp(startH+dy,50,1600);
+            else if(mode==="bottom-left"){
+                nextW=clamp(startW-dx,50,2400);
+                nextH=clamp(startH+dy,50,1600);
+            }else if(mode==="bottom-right"){
+                nextW=clamp(startW+dx,50,2400);
+                nextH=clamp(startH+dy,50,1600);
+            }
+            applySize(nextW,nextH);
+            positionOverlays();
+        }
+        function onUp(){
+            document.removeEventListener("mousemove",onMove);
+            document.removeEventListener("mouseup",onUp);
+            renderCanvas();
+            renderSettings();
+        }
+        document.addEventListener("mousemove",onMove);
+        document.addEventListener("mouseup",onUp);
+    }
+    var overlays=[];
+    function positionOverlays(){
+        var rect=node.getBoundingClientRect();
+        overlays.forEach(function(h){
+            if(!h||!h._mode)return;
+            h.style.left="";
+            h.style.right="";
+            h.style.top="";
+            h.style.bottom="";
+            h.style.transform="none";
+            if(h._mode==="left"){
+                h.style.left=(Math.round(rect.left)+6)+"px";
+                h.style.top=(Math.round(rect.top+rect.height/2))+"px";
+                h.style.transform="translate(-50%,-50%)";
+            }else if(h._mode==="right"){
+                h.style.left=(Math.round(rect.right)-6)+"px";
+                h.style.top=(Math.round(rect.top+rect.height/2))+"px";
+                h.style.transform="translate(-50%,-50%)";
+            }else if(h._mode==="bottom"){
+                h.style.left=(Math.round(rect.left+rect.width/2))+"px";
+                h.style.top=(Math.round(rect.bottom)-6)+"px";
+                h.style.transform="translate(-50%,-50%)";
+            }else if(h._mode==="bottom-left"){
+                h.style.left=(Math.round(rect.left)+6)+"px";
+                h.style.top=(Math.round(rect.bottom)-6)+"px";
+                h.style.transform="translate(-50%,-50%)";
+            }else if(h._mode==="bottom-right"){
+                h.style.left=(Math.round(rect.right)-6)+"px";
+                h.style.top=(Math.round(rect.bottom)-6)+"px";
+                h.style.transform="translate(-50%,-50%)";
+            }
+        });
+    }
+    function makeHandle(cls,mode){
+        var h=document.createElement("div");
+        h.className=cls;
+        h.classList.add("carousel-resize-overlay-dot");
+        h._mode=mode;
+        h.title="Drag to resize";
+        h.style.position="fixed";
+        h.style.width="22px";
+        h.style.height="22px";
+        h.style.borderRadius="999px";
+        h.style.border="2px solid #ffffff";
+        h.style.background="#2563eb";
+        h.style.boxShadow="0 2px 6px rgba(15,23,42,.28)";
+        h.style.pointerEvents="auto";
+        h.style.zIndex="2000";
+        if(mode==="left"||mode==="right")h.style.cursor="ew-resize";
+        else if(mode==="bottom")h.style.cursor="ns-resize";
+        else if(mode==="bottom-left")h.style.cursor="nesw-resize";
+        else if(mode==="bottom-right")h.style.cursor="nwse-resize";
+        h.addEventListener("click",function(ev){ev.preventDefault();ev.stopPropagation();});
+        h.addEventListener("mousedown",function(ev){startDrag(mode,ev);});
+        document.body.appendChild(h);
+        overlays.push(h);
+    }
+    makeHandle("carousel-resize-dot carousel-resize-dot-left","left");
+    makeHandle("carousel-resize-dot carousel-resize-dot-right","right");
+    makeHandle("carousel-resize-dot carousel-resize-dot-bl","bottom-left");
+    makeHandle("carousel-resize-dot carousel-resize-dot-b","bottom");
+    makeHandle("carousel-resize-dot carousel-resize-dot-br","bottom-right");
+    positionOverlays();
+
+    setTimeout(positionOverlays,0);
+}
+
+function attachMediaResizeHandles(node,item){
+    if(!node||!item)return;
+    if(getComputedStyle(node).position==="static")node.style.position="relative";
+    item.style=item.style||{};
+    item.settings=item.settings||{};
+    var img=node.querySelector("img");
+    var mediaRatio=(item.type==="video")
+        ? (16/9)
+        : ((img&&img.naturalWidth>0&&img.naturalHeight>0) ? (img.naturalWidth/img.naturalHeight) : null);
+
+    function parsePx(v){
+        if(v===null||v===undefined)return 0;
+        var n=Number(String(v).replace("px","").trim());
+        return isNaN(n)?0:n;
+    }
+    function clamp(n,min,max){return Math.max(min,Math.min(max,n));}
+    function startDrag(mode,e){
+        e.preventDefault();
+        e.stopPropagation();
+        var rect=node.getBoundingClientRect();
+        var startX=Number(e.clientX)||0;
+        var startY=Number(e.clientY)||0;
+        var startW=Math.max(60,Math.round(rect.width||parsePx(item.style.width)||300));
+        var startH=Math.max(40,Math.round(rect.height||parsePx(item.style.height)||180));
+        var startOffsetX=Number(item&&item.settings&&item.settings.offsetX)||0;
+        var ratio=(mediaRatio&&mediaRatio>0)?mediaRatio:((startH>0)?(startW/startH):null);
+        var didSave=false;
+        function applySize(nextW,nextH){
+            if(nextW>0){
+                item.style.width=Math.round(nextW)+"px";
+                item.settings.width=item.style.width;
+                node.style.width=item.style.width;
+            }
+            if(nextH>0){
+                item.style.height=Math.round(nextH)+"px";
+                node.style.height=item.style.height;
+            }
+        }
+        function onMove(ev){
+            if(!didSave){saveToHistory();didSave=true;}
+            var dx=(Number(ev.clientX)||0)-startX;
+            var dy=(Number(ev.clientY)||0)-startY;
+            var nextW=startW;
+            var nextH=startH;
+            if(mode==="left")nextW=clamp(startW-dx,60,2400);
+            else if(mode==="right")nextW=clamp(startW+dx,60,2400);
+            else if(mode==="bottom")nextH=clamp(startH+dy,40,1800);
+            else if(mode==="bottom-left"){
+                nextW=clamp(startW-dx,60,2400);
+                nextH=clamp(startH+dy,40,1800);
+            } else if(mode==="bottom-right"){
+                nextW=clamp(startW+dx,60,2400);
+                nextH=clamp(startH+dy,40,1800);
+            }
+            if(ratio&&(mode==="bottom-left"||mode==="bottom-right")){
+                nextH=clamp(nextW/ratio,40,1800);
+            }
+            applySize(nextW,nextH);
+            if(mode==="left"||mode==="bottom-left"){
+                var effectiveDx=startW-nextW;
+                item.settings=item.settings||{};
+                item.settings.offsetX=startOffsetX+effectiveDx;
+            }
+            var ox=Number(item&&item.settings&&item.settings.offsetX)||0;
+            node.style.transform=(ox!==0)?("translateX("+ox+"px)"):"";
+        }
+        function onUp(){
+            document.removeEventListener("mousemove",onMove);
+            document.removeEventListener("mouseup",onUp);
+            renderCanvas();
+            renderSettings();
+        }
+        document.addEventListener("mousemove",onMove);
+        document.addEventListener("mouseup",onUp);
+    }
+    function makeHandle(cls,mode){
+        var h=document.createElement("div");
+        h.className=cls;
+        h.title="Drag to resize";
+        h.addEventListener("click",function(ev){ev.preventDefault();ev.stopPropagation();});
+        h.addEventListener("mousedown",function(ev){startDrag(mode,ev);});
+        node.appendChild(h);
+    }
+    makeHandle("media-resize-dot media-resize-dot-left","left");
+    makeHandle("media-resize-dot media-resize-dot-right","right");
+    makeHandle("media-resize-dot media-resize-dot-bl","bottom-left");
+    makeHandle("media-resize-dot media-resize-dot-b","bottom");
+    makeHandle("media-resize-dot media-resize-dot-br","bottom-right");
 }
 
 function attachRowHeightResizeHandle(rowInner,rowObj){
@@ -2644,6 +2906,7 @@ function applyColumnImageFit(colNode,colInner,colObj){
 
 function renderCanvas(){
     hideDimTip();
+    document.querySelectorAll(".carousel-resize-overlay-dot").forEach(function(n){if(n&&n.parentNode)n.parentNode.removeChild(n);});
     applyCanvasBgPreference();
     syncCanvasBgControls();
     if(Array.isArray(state._carAutoTimers)){
@@ -3109,7 +3372,7 @@ function renderSettings(){
         var imageSourceFields=imageSourceType==="upload"
             ? '<label>Upload file</label><input id="up" type="file" accept="image/*"><div class="meta" id="imgCurrentFile"></div>'
             : '<label>URL</label><input id="src">';
-        settings.innerHTML='<div class="menu-section-title">Content</div><label>Image type</label><select id="imgSourceType"><option value="direct"'+(imageSourceType==="direct"?' selected':'')+'>Direct link</option><option value="upload"'+(imageSourceType==="upload"?' selected':'')+'>Upload file</option></select>'+imageSourceFields+'<label>Alt</label><input id="alt"><div class="menu-split"></div><div class="menu-section-title">Layout</div><label>Alignment</label><select id="align"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select><label>Width</label><input id="w" placeholder="100%"><div class="menu-split"></div><div class="menu-section-title">Spacing</div><div class="size-position"><div class="size-label">Size and position</div><label class="size-label">Margin</label><div class="size-grid"><div class="fld"><label>T</label><input id="mTop" type="number" value="'+mar[0]+'"></div><div class="fld"><label>R</label><input id="mRight" type="number" value="'+mar[1]+'"></div><div class="fld"><label>B</label><input id="mBottom" type="number" value="'+mar[2]+'"></div><div class="fld"><label>L</label><input id="mLeft" type="number" value="'+mar[3]+'"></div><div class="size-link"><button type="button" id="linkMar" title="Link margin"><span>&harr;</span></button><span>Link</span></div></div></div><div class="menu-split"></div><div class="menu-section-title">Style</div><label>Border</label><input id="b">'+radiusHelpLabelHtml("imgRadiusHelp","Border radius")+'<div class="img-radius-panel"><button type="button" id="imgRadiusLink" class="img-radius-link'+(radiusLinked?' linked':'')+'" title="Link corners"><i class="fas fa-link"></i></button><div class="img-radius-row"><input id="imgRadTl" type="number" value="'+rad[0]+'"><input id="imgRadTr" type="number" value="'+rad[1]+'"><input id="imgRadBr" type="number" value="'+rad[2]+'"><input id="imgRadBl" type="number" value="'+rad[3]+'"></div></div><label>Shadow</label><input id="sh">'+moveControls+remove;
+        settings.innerHTML='<div class="menu-section-title">Content</div><label>Image type</label><select id="imgSourceType"><option value="direct"'+(imageSourceType==="direct"?' selected':'')+'>Direct link</option><option value="upload"'+(imageSourceType==="upload"?' selected':'')+'>Upload file</option></select>'+imageSourceFields+'<label>Alt</label><input id="alt"><div class="menu-split"></div><div class="menu-section-title">Layout</div><label>Alignment</label><select id="align"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select><label>Width</label><input id="w" placeholder="100%"><label>Height</label><input id="h" placeholder="auto"><div class="menu-split"></div><div class="menu-section-title">Spacing</div><div class="size-position"><div class="size-label">Size and position</div><label class="size-label">Margin</label><div class="size-grid"><div class="fld"><label>T</label><input id="mTop" type="number" value="'+mar[0]+'"></div><div class="fld"><label>R</label><input id="mRight" type="number" value="'+mar[1]+'"></div><div class="fld"><label>B</label><input id="mBottom" type="number" value="'+mar[2]+'"></div><div class="fld"><label>L</label><input id="mLeft" type="number" value="'+mar[3]+'"></div><div class="size-link"><button type="button" id="linkMar" title="Link margin"><span>&harr;</span></button><span>Link</span></div></div></div><div class="menu-split"></div><div class="menu-section-title">Style</div><label>Border</label><input id="b">'+radiusHelpLabelHtml("imgRadiusHelp","Border radius")+'<div class="img-radius-panel"><button type="button" id="imgRadiusLink" class="img-radius-link'+(radiusLinked?' linked':'')+'" title="Link corners"><i class="fas fa-link"></i></button><div class="img-radius-row"><input id="imgRadTl" type="number" value="'+rad[0]+'"><input id="imgRadTr" type="number" value="'+rad[1]+'"><input id="imgRadBr" type="number" value="'+rad[2]+'"><input id="imgRadBl" type="number" value="'+rad[3]+'"></div></div><label>Shadow</label><input id="sh">'+moveControls+remove;
         var imgSourceType=document.getElementById("imgSourceType");
         if(imgSourceType)imgSourceType.onchange=()=>{saveToHistory();t.settings=t.settings||{};t.settings.imageSourceType=imgSourceType.value;renderSettings();};
         if(imageSourceType==="direct"){
@@ -3126,6 +3389,7 @@ function renderSettings(){
         bind("alt",(t.settings&&t.settings.alt)||"",v=>{t.settings=t.settings||{};t.settings.alt=v;},{undo:true});
         bind("align",(t.settings&&t.settings.alignment)||"left",v=>{t.settings=t.settings||{};t.settings.alignment=v;},{undo:true});
         bind("w",(t.style&&t.style.width)||(t.settings&&t.settings.width)||"100%",v=>{sty().width=v;t.settings=t.settings||{};t.settings.width=v;},{px:true,undo:true});
+        bind("h",(t.style&&t.style.height)||"auto",v=>{sty().height=v;},{px:true,undo:true});
         var marginLinked=false;
         function syncMargin(){saveToHistory();var mt=Number(document.getElementById("mTop").value)||0,mr=Number(document.getElementById("mRight").value)||0,mb=Number(document.getElementById("mBottom").value)||0,ml=Number(document.getElementById("mLeft").value)||0;if(marginLinked){document.getElementById("mRight").value=mt;document.getElementById("mBottom").value=mt;document.getElementById("mLeft").value=mt;sty().margin=spacingToCss([mt,mt,mt,mt]);}else sty().margin=spacingToCss([mt,mr,mb,ml]);renderCanvas();}
         ["mTop","mRight","mBottom","mLeft"].forEach(id=>{var el=document.getElementById(id);if(el)el.addEventListener("input",syncMargin);});
@@ -3159,7 +3423,7 @@ function renderSettings(){
         var videoSourceFields=videoSourceType==="upload"
             ? '<label>Upload file</label><input id="upv" type="file" accept="video/*"><div class="meta" id="vidCurrentFile"></div>'
             : '<label>URL</label><input id="src">';
-        settings.innerHTML='<div class="menu-section-title">Content</div><label>Video type</label><select id="vidSourceType"><option value="direct"'+(videoSourceType==="direct"?' selected':'')+'>Direct link</option><option value="upload"'+(videoSourceType==="upload"?' selected':'')+'>Upload file</option></select>'+videoSourceFields+'<div class="menu-split"></div><div class="menu-section-title">Layout</div><label>Alignment</label><select id="align"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select><label>Width</label><input id="w" placeholder="100%"><div class="menu-split"></div><div class="menu-section-title">Spacing</div><div class="size-position"><div class="size-label">Size and position</div><label class="size-label">Margin</label><div class="size-grid"><div class="fld"><label>T</label><input id="mTop" type="number" value="'+mar[0]+'"></div><div class="fld"><label>R</label><input id="mRight" type="number" value="'+mar[1]+'"></div><div class="fld"><label>B</label><input id="mBottom" type="number" value="'+mar[2]+'"></div><div class="fld"><label>L</label><input id="mLeft" type="number" value="'+mar[3]+'"></div><div class="size-link"><button type="button" id="linkMar" title="Link margin"><span>&harr;</span></button><span>Link</span></div></div></div><div class="menu-split"></div><div class="menu-section-title">Style</div><label>Border</label><input id="b">'+radiusHelpLabelHtml("vidRadiusHelp","Border radius")+'<div class="img-radius-panel"><button type="button" id="vidRadiusLink" class="img-radius-link'+(videoRadiusLinked?' linked':'')+'" title="Link corners"><i class="fas fa-link"></i></button><div class="img-radius-row"><input id="vidRadTl" type="number" value="'+rad[0]+'"><input id="vidRadTr" type="number" value="'+rad[1]+'"><input id="vidRadBr" type="number" value="'+rad[2]+'"><input id="vidRadBl" type="number" value="'+rad[3]+'"></div></div><label>Shadow</label><input id="sh"><div class="menu-split"></div><div class="menu-section-title">Behavior</div><label>Auto play</label><select id="vAutoplay"><option value="off">Off</option><option value="on">On</option></select><label>Controls</label><select id="vControls"><option value="on">On</option><option value="off">Off</option></select>'+moveControls+remove;
+        settings.innerHTML='<div class="menu-section-title">Content</div><label>Video type</label><select id="vidSourceType"><option value="direct"'+(videoSourceType==="direct"?' selected':'')+'>Direct link</option><option value="upload"'+(videoSourceType==="upload"?' selected':'')+'>Upload file</option></select>'+videoSourceFields+'<div class="menu-split"></div><div class="menu-section-title">Layout</div><label>Alignment</label><select id="align"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select><label>Width</label><input id="w" placeholder="100%"><label>Height</label><input id="h" placeholder="auto"><div class="menu-split"></div><div class="menu-section-title">Spacing</div><div class="size-position"><div class="size-label">Size and position</div><label class="size-label">Margin</label><div class="size-grid"><div class="fld"><label>T</label><input id="mTop" type="number" value="'+mar[0]+'"></div><div class="fld"><label>R</label><input id="mRight" type="number" value="'+mar[1]+'"></div><div class="fld"><label>B</label><input id="mBottom" type="number" value="'+mar[2]+'"></div><div class="fld"><label>L</label><input id="mLeft" type="number" value="'+mar[3]+'"></div><div class="size-link"><button type="button" id="linkMar" title="Link margin"><span>&harr;</span></button><span>Link</span></div></div></div><div class="menu-split"></div><div class="menu-section-title">Style</div><label>Border</label><input id="b">'+radiusHelpLabelHtml("vidRadiusHelp","Border radius")+'<div class="img-radius-panel"><button type="button" id="vidRadiusLink" class="img-radius-link'+(videoRadiusLinked?' linked':'')+'" title="Link corners"><i class="fas fa-link"></i></button><div class="img-radius-row"><input id="vidRadTl" type="number" value="'+rad[0]+'"><input id="vidRadTr" type="number" value="'+rad[1]+'"><input id="vidRadBr" type="number" value="'+rad[2]+'"><input id="vidRadBl" type="number" value="'+rad[3]+'"></div></div><label>Shadow</label><input id="sh"><div class="menu-split"></div><div class="menu-section-title">Behavior</div><label>Auto play</label><select id="vAutoplay"><option value="off">Off</option><option value="on">On</option></select><label>Controls</label><select id="vControls"><option value="on">On</option><option value="off">Off</option></select>'+moveControls+remove;
         var vidSourceType=document.getElementById("vidSourceType");
         if(vidSourceType)vidSourceType.onchange=()=>{saveToHistory();t.settings=t.settings||{};t.settings.videoSourceType=vidSourceType.value;renderSettings();};
         if(videoSourceType==="direct"){
@@ -3177,6 +3441,7 @@ function renderSettings(){
         bind("vControls",(t.settings&&typeof t.settings.controls==="boolean")?(t.settings.controls?"on":"off"):"on",v=>{t.settings=t.settings||{};t.settings.controls=(v!=="off");},{undo:true});
         bind("align",(t.settings&&t.settings.alignment)||"left",v=>{t.settings=t.settings||{};t.settings.alignment=v;},{undo:true});
         bind("w",(t.style&&t.style.width)||(t.settings&&t.settings.width)||"100%",v=>{sty().width=v;t.settings=t.settings||{};t.settings.width=v;},{px:true,undo:true});
+        bind("h",(t.style&&t.style.height)||"auto",v=>{sty().height=v;},{px:true,undo:true});
         var marginLinked=false;
         function syncMargin(){saveToHistory();var mt=Number(document.getElementById("mTop").value)||0,mr=Number(document.getElementById("mRight").value)||0,mb=Number(document.getElementById("mBottom").value)||0,ml=Number(document.getElementById("mLeft").value)||0;if(marginLinked){document.getElementById("mRight").value=mt;document.getElementById("mBottom").value=mt;document.getElementById("mLeft").value=mt;sty().margin=spacingToCss([mt,mt,mt,mt]);}else sty().margin=spacingToCss([mt,mr,mb,ml]);renderCanvas();}
         ["mTop","mRight","mBottom","mLeft"].forEach(id=>{var el=document.getElementById(id);if(el)el.addEventListener("input",syncMargin);});

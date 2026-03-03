@@ -381,6 +381,18 @@
                                                 $iconWrapStyle = ($type === 'icon' ? $alignStyle : '');
                                                 $mediaWrapStyle = ($style !== '' ? ($style . ';') : '') . $alignStyle;
                                                 $btnInnerStyle = $style . ($type === 'button' && $widthBehavior === 'fill' ? (($style !== '' ? ';' : '') . ' width:100%;display:block;box-sizing:border-box;text-align:center;') : '');
+                                                $offsetX = (int) ($settings['offsetX'] ?? 0);
+                                                if ($offsetX !== 0) {
+                                                    $mediaWrapStyle .= 'transform: translateX(' . $offsetX . 'px);';
+                                                }
+                                                $cropTop = max(0, (int) ($settings['cropTop'] ?? 0));
+                                                $cropRight = max(0, (int) ($settings['cropRight'] ?? 0));
+                                                $cropBottom = max(0, (int) ($settings['cropBottom'] ?? 0));
+                                                $cropLeft = max(0, (int) ($settings['cropLeft'] ?? 0));
+                                                $mediaClipStyle = ($cropTop || $cropRight || $cropBottom || $cropLeft)
+                                                    ? ('clip-path: inset(' . $cropTop . 'px ' . $cropRight . 'px ' . $cropBottom . 'px ' . $cropLeft . 'px);')
+                                                    : '';
+                                                $hasFixedHeight = !empty(trim((string) ($rawStyle['height'] ?? '')));
                                             @endphp
 
                                             <div class="builder-el" @if($type === 'image' || $type === 'video' || $type === 'button' || $type === 'icon') style="{{ $type === 'button' ? $btnWrapStyle : ($type === 'icon' ? $iconWrapStyle : $mediaWrapStyle) }}" @endif>
@@ -390,7 +402,13 @@
                                                     <p class="builder-text" style="{{ $style }}">{!! $content !!}</p>
                                                 @elseif($type === 'image')
                                                     @if($src !== '')
-                                                        <img class="builder-img" src="{{ $src }}" alt="{{ $alt !== '' ? $alt : 'Image' }}">
+                                                        @php
+                                                            $imgStyle = $mediaClipStyle;
+                                                            if ($hasFixedHeight) {
+                                                                $imgStyle .= ($imgStyle !== '' ? ';' : '') . 'width:100%;height:100%;object-fit:cover;';
+                                                            }
+                                                        @endphp
+                                                        <img class="builder-img" src="{{ $src }}" alt="{{ $alt !== '' ? $alt : 'Image' }}" @if($imgStyle !== '') style="{{ $imgStyle }}" @endif>
                                                     @endif
                                                 @elseif($type === 'button')
                                                     <a class="btn" href="{{ $link !== '' ? $link : '#' }}" style="{{ $btnInnerStyle }}">{!! $content !== '' ? $content : 'Button' !!}</a>
@@ -438,9 +456,13 @@
                                                             }
                                                             if (!empty($elStyle['height']) && preg_match('/^[#(),.%\-\sA-Za-z0-9]+$/u', trim((string) $elStyle['height']))) {
                                                                 $videoWrapStyle .= ($videoWrapStyle !== '' ? '; ' : '') . 'height: ' . trim((string) $elStyle['height']) . ' !important';
+                                                                $videoWrapStyle .= '; padding-top: 0 !important; min-height: 0 !important';
                                                             }
                                                             if (!empty($elStyle['maxWidth']) && preg_match('/^[#(),.%\-\sA-Za-z0-9]+$/u', trim((string) $elStyle['maxWidth']))) {
                                                                 $videoWrapStyle .= ($videoWrapStyle !== '' ? '; ' : '') . 'max-width: ' . trim((string) $elStyle['maxWidth']) . ' !important';
+                                                            }
+                                                            if ($mediaClipStyle !== '') {
+                                                                $videoWrapStyle .= ($videoWrapStyle !== '' ? '; ' : '') . $mediaClipStyle;
                                                             }
                                                         @endphp
                                                         <div class="builder-video-wrap" style="{{ $videoWrapStyle }}">
@@ -638,16 +660,30 @@
                                                                                                     @php
                                                                                                         $img = trim((string) ($ssc['src'] ?? ''));
                                                                                                         $alt = trim((string) ($ssc['alt'] ?? 'Image'));
+                                                                                                        $cropTop = max(0, (int) ($ssc['cropTop'] ?? 0));
+                                                                                                        $cropRight = max(0, (int) ($ssc['cropRight'] ?? 0));
+                                                                                                        $cropBottom = max(0, (int) ($ssc['cropBottom'] ?? 0));
+                                                                                                        $cropLeft = max(0, (int) ($ssc['cropLeft'] ?? 0));
+                                                                                                        $mediaClipStyle = ($cropTop || $cropRight || $cropBottom || $cropLeft)
+                                                                                                            ? ('clip-path: inset(' . $cropTop . 'px ' . $cropRight . 'px ' . $cropBottom . 'px ' . $cropLeft . 'px);')
+                                                                                                            : '';
                                                                                                     @endphp
                                                                                                     @if($img !== '')
-                                                                                                        <img class="builder-img" src="{{ $img }}" alt="{{ $alt }}" style="{{ $ss }}">
+                                                                                                        <img class="builder-img" src="{{ $img }}" alt="{{ $alt }}" style="{{ $ss }}{{ $ss !== '' && $mediaClipStyle !== '' ? ';' : '' }}{{ $mediaClipStyle }}">
                                                                                                     @endif
                                                                                                 @elseif($st === 'video')
                                                                                                     @php
                                                                                                         $videoSrc = trim((string) ($ssc['src'] ?? ''));
+                                                                                                        $cropTop = max(0, (int) ($ssc['cropTop'] ?? 0));
+                                                                                                        $cropRight = max(0, (int) ($ssc['cropRight'] ?? 0));
+                                                                                                        $cropBottom = max(0, (int) ($ssc['cropBottom'] ?? 0));
+                                                                                                        $cropLeft = max(0, (int) ($ssc['cropLeft'] ?? 0));
+                                                                                                        $mediaClipStyle = ($cropTop || $cropRight || $cropBottom || $cropLeft)
+                                                                                                            ? ('clip-path: inset(' . $cropTop . 'px ' . $cropRight . 'px ' . $cropBottom . 'px ' . $cropLeft . 'px);')
+                                                                                                            : '';
                                                                                                     @endphp
                                                                                                     @if($videoSrc !== '')
-                                                                                                        <div class="builder-video-wrap" style="{{ $ss }}">
+                                                                                                        <div class="builder-video-wrap" style="{{ $ss }}{{ $ss !== '' && $mediaClipStyle !== '' ? ';' : '' }}{{ $mediaClipStyle }}">
                                                                                                             <video src="{{ $videoSrc }}" controls playsinline preload="metadata"></video>
                                                                                                             <a href="{{ $videoSrc }}" target="_blank" rel="noopener" class="video-fallback-link">Open video</a>
                                                                                                         </div>
