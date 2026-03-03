@@ -394,7 +394,7 @@ class FunnelController extends Controller
                 $heroUrl = Storage::url($path);
             }
 
-            $funnel->steps()->create([
+            $step = $funnel->steps()->create([
                 'title' => $validated['title'],
                 'subtitle' => $validated['subtitle'] ?? null,
                 'slug' => $validated['slug'],
@@ -412,8 +412,33 @@ class FunnelController extends Controller
                 'is_active' => true,
             ]);
 
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Added Successfully',
+                    'step' => [
+                        'id' => $step->id,
+                        'title' => $step->title,
+                        'slug' => $step->slug,
+                        'type' => $step->type,
+                        'layout_json' => $step->layout_json,
+                        'background_color' => $step->background_color,
+                        'is_active' => (bool) $step->is_active,
+                        'position' => (int) $step->position,
+                        'layout_style' => $step->layout_style,
+                        'template' => $step->template,
+                        'subtitle' => $step->subtitle,
+                        'content' => $step->content,
+                        'cta_label' => $step->cta_label,
+                        'price' => $step->price,
+                    ],
+                ]);
+            }
+
             return redirect()->back()->with('success', 'Added Successfully');
         } catch (\Throwable $e) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Added Failed'], 422);
+            }
             return redirect()->back()->withInput()->with('error', 'Added Failed');
         }
     }
@@ -466,16 +491,41 @@ class FunnelController extends Controller
                 'template_data' => $validated['template_data'] ?? null,
                 'content' => $validated['content'] ?? null,
                 'hero_image_url' => $heroUrl,
-                'layout_style' => $validated['layout_style'] ?? 'centered',
-                'background_color' => $validated['background_color'] ?? null,
-                'button_color' => $validated['button_color'] ?? null,
+                'layout_style' => $validated['layout_style'] ?? ($step->layout_style ?: 'centered'),
+                'background_color' => $validated['background_color'] ?? $step->background_color,
+                'button_color' => $validated['button_color'] ?? $step->button_color,
                 'cta_label' => $validated['cta_label'] ?? null,
                 'price' => $validated['price'] ?? null,
-                'is_active' => (bool) ($validated['is_active'] ?? false),
+                'is_active' => (bool) ($validated['is_active'] ?? $step->is_active),
             ]);
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Edited Successfully',
+                    'step' => [
+                        'id' => $step->id,
+                        'title' => $step->title,
+                        'slug' => $step->slug,
+                        'type' => $step->type,
+                        'layout_json' => $step->layout_json,
+                        'background_color' => $step->background_color,
+                        'is_active' => (bool) $step->is_active,
+                        'position' => (int) $step->position,
+                        'layout_style' => $step->layout_style,
+                        'template' => $step->template,
+                        'subtitle' => $step->subtitle,
+                        'content' => $step->content,
+                        'cta_label' => $step->cta_label,
+                        'price' => $step->price,
+                    ],
+                ]);
+            }
 
             return redirect()->back()->with('success', 'Edited Successfully');
         } catch (\Throwable $e) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Edited Failed'], 422);
+            }
             return redirect()->back()->withInput()->with('error', 'Edited Failed');
         }
     }
@@ -487,10 +537,38 @@ class FunnelController extends Controller
             abort(404);
         }
 
+        $totalSteps = (int) $funnel->steps()->count();
+        if ($totalSteps <= 1) {
+            $msg = 'Cannot delete the last page.';
+            if (request()->expectsJson()) {
+                return response()->json(['message' => $msg], 422);
+            }
+            return redirect()->back()->with('error', $msg);
+        }
+
+        $requiredTypes = ['landing', 'opt_in', 'sales', 'checkout', 'thank_you'];
+        if (in_array((string) $step->type, $requiredTypes, true)) {
+            $typeCount = (int) $funnel->steps()->where('type', $step->type)->count();
+            if ($typeCount <= 1) {
+                $label = (string) ($step->title ?: ucfirst(str_replace('_', ' ', (string) $step->type)));
+                $msg = 'Cannot delete the last required page: ' . $label . '.';
+                if (request()->expectsJson()) {
+                    return response()->json(['message' => $msg], 422);
+                }
+                return redirect()->back()->with('error', $msg);
+            }
+        }
+
         try {
             $step->delete();
+            if (request()->expectsJson()) {
+                return response()->json(['message' => 'Deleted Successfully']);
+            }
             return redirect()->back()->with('success', 'Deleted Successfully');
         } catch (\Throwable $e) {
+            if (request()->expectsJson()) {
+                return response()->json(['message' => 'Deleted Failed'], 422);
+            }
             return redirect()->back()->with('error', 'Deleted Failed');
         }
     }
@@ -513,6 +591,13 @@ class FunnelController extends Controller
 
         foreach ($ids as $index => $id) {
             $funnel->steps()->where('id', $id)->update(['position' => $index + 1]);
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Edited Successfully',
+                'order' => $ids->values()->all(),
+            ]);
         }
 
         return redirect()->back()->with('success', 'Edited Successfully');

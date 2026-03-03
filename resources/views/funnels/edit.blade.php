@@ -95,6 +95,7 @@
 .el{border:0 !important;border-style:none !important;border-width:0 !important;border-radius:0 !important;padding:7px;background:#fff;margin-bottom:6px;min-width:0;overflow-wrap:break-word;word-break:break-word}
 .el.el--carousel{border:0 !important;background:transparent !important;padding:0 !important}
 .el.el--form{border:0 !important;background:transparent !important;padding:0 !important}
+#canvas .el.el--menu ul{flex-wrap:nowrap !important;white-space:nowrap}
 #canvas.canvas-outline-mode .sec,#canvas.canvas-outline-mode .row,#canvas.canvas-outline-mode .col,#canvas.canvas-outline-mode .el{position:relative;background:transparent;border:1px dashed #93c5fd !important;border-radius:0;box-shadow:none !important}
 #canvas.canvas-outline-mode .sec.sec--bare-wrap,#canvas.canvas-outline-mode .sec.sec--bare-carousel{border:0 !important;background:transparent !important;padding:0 !important;margin-bottom:0 !important}
 #canvas.canvas-outline-mode .sec{padding:5px !important;margin-bottom:6px}
@@ -204,6 +205,25 @@
 .icon-picker-item span{font-size:11px;color:#334155;text-align:center;line-height:1.2}
 .icon-picker-item:hover{background:#eff6ff;border-color:#93c5fd}
 .icon-picker-empty{padding:16px;color:#64748b;font-size:12px}
+.page-mgr-modal{position:fixed;inset:0;background:rgba(15,23,42,.45);display:none;align-items:center;justify-content:center;z-index:1450;padding:14px}
+.page-mgr-modal.open{display:flex}
+.page-mgr-card{width:min(920px,96vw);max-height:88vh;overflow:hidden;display:flex;flex-direction:column;background:#fff;border:1px solid #bfdbfe;border-radius:12px;box-shadow:0 16px 42px rgba(30,64,175,.22)}
+.page-mgr-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px;border-bottom:1px solid #e2e8f0}
+.page-mgr-head h4{margin:0;font-size:14px;color:#0f172a}
+.page-mgr-close{border:1px solid #cbd5e1;background:#f8fafc;border-radius:8px;padding:6px 10px;cursor:pointer}
+.page-mgr-body{padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:12px;overflow:auto}
+.page-mgr-col{border:1px solid #dbeafe;border-radius:10px;background:#f8fafc;padding:10px}
+.page-mgr-col h5{margin:0 0 8px;font-size:13px;color:#1e3a8a}
+.page-mgr-list{width:100%;height:280px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;padding:6px}
+.page-mgr-list option{padding:5px}
+.page-mgr-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.page-mgr-actions .fb-btn{min-height:36px}
+.page-mgr-section{margin-bottom:12px}
+.page-mgr-section:last-child{margin-bottom:0}
+.page-mgr-note{font-size:12px;color:#475569;font-weight:700}
+@media (max-width: 860px){
+    .page-mgr-body{grid-template-columns:1fr}
+}
 .setting-label-help{display:flex;align-items:center;gap:8px;margin:0 0 6px}
 .setting-help-icon{width:22px;height:22px;border-radius:999px;border:1px solid #93c5fd;background:#eaf2ff;color:#2563eb;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;line-height:1;cursor:pointer;padding:0}
 .setting-help-icon:hover{background:#dbeafe}
@@ -307,12 +327,52 @@
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
             <label for="stepSel" style="font-weight:800;">Step</label>
             <select id="stepSel"></select>
+            <button id="stepAddBtn" type="button" class="fb-btn" style="padding:6px 10px;min-height:32px;">+ Add Page</button>
             <label for="canvasBgColor" style="font-weight:800;">Canvas BG</label>
             <input id="canvasBgColor" type="color" value="#f8fafc" title="Canvas background color">
             <button id="canvasBgReset" type="button" class="fb-btn" style="padding:6px 10px;min-height:32px;">Reset BG</button>
             <span id="saveMsg" style="font-size:12px;color:#475569;font-weight:700;">Not saved yet</span>
         </div>
         <div id="canvas"></div>
+    </div>
+</div>
+<div class="page-mgr-modal" id="pageMgrModal" aria-hidden="true">
+    <div class="page-mgr-card" role="dialog" aria-modal="true" aria-labelledby="pageMgrTitle">
+        <div class="page-mgr-head">
+            <h4 id="pageMgrTitle">Page Manager</h4>
+            <button type="button" class="page-mgr-close" id="pageMgrClose" aria-label="Close">X</button>
+        </div>
+        <div class="page-mgr-body">
+            <div class="page-mgr-col">
+                <h5>Pages</h5>
+                <select id="pageMgrList" class="page-mgr-list" size="12"></select>
+                <div class="page-mgr-note" style="margin-top:8px;">Select a page to manage it.</div>
+            </div>
+            <div class="page-mgr-col">
+                <div class="page-mgr-section">
+                    <h5>Add Page</h5>
+                    <label for="pageMgrAddType" style="font-weight:800;">Type</label>
+                    <select id="pageMgrAddType">
+                        <option value="landing">Landing</option>
+                        <option value="opt_in">Opt-in</option>
+                        <option value="sales">Sales</option>
+                        <option value="checkout">Checkout</option>
+                        <option value="thank_you">Thank You</option>
+                        <option value="custom">Custom</option>
+                    </select>
+                    <button id="pageMgrCreateBtn" type="button" class="fb-btn primary" style="width:100%;margin-top:8px;">Create Page</button>
+                </div>
+                <div class="page-mgr-section">
+                    <h5>Manage Selected Page</h5>
+                    <div class="page-mgr-actions">
+                        <button id="pageMgrRenameBtn" type="button" class="fb-btn">Rename</button>
+                        <button id="pageMgrDeleteBtn" type="button" class="fb-btn danger">Delete</button>
+                        <button id="pageMgrUpBtn" type="button" class="fb-btn">Up</button>
+                        <button id="pageMgrDownBtn" type="button" class="fb-btn">Down</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 @endsection
@@ -323,9 +383,18 @@
         return [
             'id' => $step->id,
             'title' => $step->title,
+            'slug' => $step->slug,
             'type' => $step->type,
             'layout_json' => $step->layout_json,
             'background_color' => $step->background_color,
+            'position' => $step->position,
+            'is_active' => (bool) $step->is_active,
+            'layout_style' => $step->layout_style,
+            'template' => $step->template,
+            'subtitle' => $step->subtitle,
+            'content' => $step->content,
+            'cta_label' => $step->cta_label,
+            'price' => $step->price,
         ];
     })->all();
 @endphp
@@ -334,7 +403,12 @@
 const saveUrl="{{ route('funnels.builder.layout.save',$funnel) }}";
 const uploadUrl="{{ route('funnels.builder.image.upload',$funnel) }}";
 const previewTpl="{{ route('funnels.preview',['funnel'=>$funnel,'step'=>'__STEP__']) }}";
+const stepStoreUrl="{{ route('funnels.steps.store',$funnel) }}";
+const stepUpdateTpl="{{ route('funnels.steps.update',['funnel'=>$funnel,'step'=>'__STEP__']) }}";
+const stepDeleteTpl="{{ route('funnels.steps.destroy',['funnel'=>$funnel,'step'=>'__STEP__']) }}";
+const stepReorderUrl="{{ route('funnels.steps.reorder',$funnel) }}";
 const csrf="{{ csrf_token() }}";
+const funnelSlug=@json($funnel->slug);
 const steps=@json($builderSteps);
 const state={sid:{{ (int)($defaultStepId??0) }}||((steps[0]&&steps[0].id)||null),layout:null,sel:null,carouselSel:null,clipboard:null};
 const fonts=[
@@ -409,12 +483,32 @@ const iconCatalog=[
     {name:"linkedin-in",label:"LinkedIn",keywords:"social",styles:["brands"]},
 ];
 
-const stepSel=document.getElementById("stepSel"),canvas=document.getElementById("canvas"),settings=document.getElementById("settings"),saveMsg=document.getElementById("saveMsg"),settingsTitle=document.getElementById("settingsTitle"),canvasBgColor=document.getElementById("canvasBgColor"),canvasBgReset=document.getElementById("canvasBgReset");
+const stepSel=document.getElementById("stepSel"),stepAddBtn=document.getElementById("stepAddBtn"),pageMgrModal=document.getElementById("pageMgrModal"),pageMgrClose=document.getElementById("pageMgrClose"),pageMgrList=document.getElementById("pageMgrList"),pageMgrAddType=document.getElementById("pageMgrAddType"),pageMgrCreateBtn=document.getElementById("pageMgrCreateBtn"),pageMgrRenameBtn=document.getElementById("pageMgrRenameBtn"),pageMgrDeleteBtn=document.getElementById("pageMgrDeleteBtn"),pageMgrUpBtn=document.getElementById("pageMgrUpBtn"),pageMgrDownBtn=document.getElementById("pageMgrDownBtn"),canvas=document.getElementById("canvas"),settings=document.getElementById("settings"),saveMsg=document.getElementById("saveMsg"),settingsTitle=document.getElementById("settingsTitle"),canvasBgColor=document.getElementById("canvasBgColor"),canvasBgReset=document.getElementById("canvasBgReset");
 if(canvas)canvas.classList.add("canvas-outline-mode");
 if(!steps.length){canvas.textContent="No steps found.";return;}
-
-steps.forEach(s=>{const o=document.createElement("option");o.value=s.id;o.textContent=s.title;stepSel.appendChild(o);});
-stepSel.value=state.sid;
+function sortStepsByPosition(){
+    steps.sort(function(a,b){
+        var ap=Number(a&&a.position)||0;
+        var bp=Number(b&&b.position)||0;
+        if(ap!==bp)return ap-bp;
+        return (Number(a&&a.id)||0)-(Number(b&&b.id)||0);
+    });
+}
+function renderStepOptions(){
+    if(!stepSel)return;
+    sortStepsByPosition();
+    stepSel.innerHTML="";
+    steps.forEach(function(s){
+        var o=document.createElement("option");
+        o.value=String(s.id);
+        o.textContent=String(s.title||("Step "+String(s.id)));
+        stepSel.appendChild(o);
+    });
+    var hasCurrent=steps.some(function(s){return +s.id===+state.sid;});
+    if(!hasCurrent && steps.length)state.sid=steps[0].id;
+    stepSel.value=String(state.sid||"");
+}
+renderStepOptions();
 if(canvasBgColor){
     canvasBgColor.addEventListener("input",()=>{
         if(!state.layout)return;
@@ -468,6 +562,408 @@ const defaults=(stepType)=>{
     };
 };
 const cur=()=>steps.find(s=>+s.id===+state.sid);
+function escapeRegExp(v){return String(v||"").replace(/[.*+?^${}()|[\]\\]/g,"\\$&");}
+function slugifyPage(v){
+    var s=String(v||"").toLowerCase().trim().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");
+    return s||"page";
+}
+function pageTypeLabel(v){
+    var t=String(v||"").toLowerCase();
+    if(t==="opt_in")return "Opt-in";
+    if(t==="thank_you")return "Thank You";
+    if(t==="checkout")return "Checkout";
+    if(t==="sales")return "Sales";
+    if(t==="landing")return "Landing";
+    if(t==="custom")return "Custom";
+    return titleCase(t);
+}
+function stepUrlFromTpl(tpl,id){return String(tpl||"").replace("__STEP__",String(id));}
+function asFormUrlEncoded(obj){
+    var body=new URLSearchParams();
+    Object.keys(obj||{}).forEach(function(k){
+        var v=obj[k];
+        if(v===undefined||v===null)v="";
+        body.append(k,String(v));
+    });
+    return body;
+}
+function requestJson(url,method,data){
+    var payload=Object.assign({},data||{});
+    var reqMethod=String(method||"POST").toUpperCase();
+    if(reqMethod==="PUT"||reqMethod==="PATCH"||reqMethod==="DELETE"){
+        payload._method=reqMethod;
+        reqMethod="POST";
+    }
+    return fetch(url,{
+        method:reqMethod,
+        headers:{
+            "Content-Type":"application/x-www-form-urlencoded;charset=UTF-8",
+            "X-CSRF-TOKEN":csrf,
+            "Accept":"application/json"
+        },
+        body:asFormUrlEncoded(payload)
+    }).then(function(r){
+        return r.text().then(function(t){
+            var data={};
+            try{data=t?JSON.parse(t):{};}catch(_e){data={message:t||"Request failed"};}
+            if(!r.ok){
+                var msg=(data&&data.message)?data.message:("HTTP "+r.status);
+                throw new Error(msg);
+            }
+            return data||{};
+        });
+    });
+}
+function extractLinksFromLayout(layout){
+    var out=[];
+    function visit(node){
+        if(Array.isArray(node)){node.forEach(visit);return;}
+        if(!node||typeof node!=="object")return;
+        var s=node.settings;
+        if(s&&typeof s==="object"){
+            if(typeof s.link==="string"&&s.link.trim()!=="")out.push(s.link.trim());
+            if(Array.isArray(s.items)){
+                s.items.forEach(function(it){
+                    if(it&&typeof it.url==="string"&&it.url.trim()!=="")out.push(it.url.trim());
+                });
+            }
+        }
+        Object.keys(node).forEach(function(k){visit(node[k]);});
+    }
+    visit(layout||{});
+    return out;
+}
+function referencingStepsForSlug(targetSlug,excludeStepId){
+    var slug=String(targetSlug||"").trim().toLowerCase();
+    if(slug==="")return [];
+    var p1=new RegExp("/f/"+escapeRegExp(String(funnelSlug||""))+"/"+escapeRegExp(slug)+"(?:$|[?#])","i");
+    var p2=new RegExp("/funnel/"+escapeRegExp(String(funnelSlug||""))+"/"+escapeRegExp(slug)+"(?:$|[?#])","i");
+    var refs=[];
+    steps.forEach(function(s){
+        if(+s.id===+excludeStepId)return;
+        var links=extractLinksFromLayout(s.layout_json||{});
+        var hit=links.some(function(u){
+            var x=String(u||"").toLowerCase();
+            return p1.test(x)||p2.test(x);
+        });
+        if(hit)refs.push(String(s.title||("Step "+String(s.id))));
+    });
+    return refs;
+}
+function buildStepPayload(stepLike,overrides){
+    var s=Object.assign({},stepLike||{},overrides||{});
+    return {
+        title:String(s.title||"Untitled").trim()||"Untitled",
+        subtitle:String(s.subtitle||"").trim(),
+        slug:slugifyPage(String(s.slug||s.title||"page")),
+        type:String(s.type||"custom"),
+        template:String(s.template||"simple"),
+        layout_style:String(s.layout_style||"centered"),
+        content:String(s.content||""),
+        cta_label:String(s.cta_label||""),
+        price:(s.price==null||String(s.price)==="")?"":String(s.price),
+        background_color:String(s.background_color||""),
+        button_color:String(s.button_color||""),
+        is_active:((s.is_active===false||String(s.is_active)==="0")?0:1)
+    };
+}
+function defaultStepTitleForType(type){
+    var t=String(type||"custom").toLowerCase();
+    if(t==="opt_in")return "Opt-in";
+    if(t==="thank_you")return "Thank You";
+    if(t==="checkout")return "Checkout";
+    if(t==="sales")return "Sales";
+    if(t==="landing")return "Landing";
+    return "Custom Page";
+}
+function uniqueStepSlug(baseSlug,excludeStepId){
+    var base=slugifyPage(baseSlug||"page");
+    var used={};
+    steps.forEach(function(s){
+        if(+s.id===+excludeStepId)return;
+        used[String(s.slug||"").toLowerCase()]=true;
+    });
+    if(!used[base])return base;
+    var n=2;
+    while(used[base+"-"+n])n++;
+    return base+"-"+n;
+}
+function mergeStepData(raw){
+    var r=(raw&&typeof raw==="object")?raw:{};
+    return {
+        id:Number(r.id||0),
+        title:String(r.title||"Untitled"),
+        slug:String(r.slug||""),
+        type:String(r.type||"custom"),
+        layout_json:(r.layout_json&&typeof r.layout_json==="object")?r.layout_json:null,
+        background_color:(typeof r.background_color==="string"&&r.background_color.trim()!=="")?r.background_color.trim():null,
+        position:Number(r.position||0),
+        is_active:!(r.is_active===false||String(r.is_active)==="0"),
+        layout_style:String(r.layout_style||"centered"),
+        template:String(r.template||"simple"),
+        subtitle:String(r.subtitle||""),
+        content:String(r.content||""),
+        cta_label:String(r.cta_label||""),
+        price:(r.price==null||String(r.price)==="")?"":String(r.price),
+        button_color:(typeof r.button_color==="string"&&r.button_color.trim()!=="")?r.button_color.trim():null,
+    };
+}
+function applyStepUpdate(rawStep){
+    var merged=mergeStepData(rawStep);
+    var idx=steps.findIndex(function(s){return +s.id===+merged.id;});
+    if(idx>=0){
+        steps[idx]=Object.assign({},steps[idx],merged);
+    }else{
+        steps.push(merged);
+    }
+    return merged;
+}
+function isRequiredStepType(type){
+    var t=String(type||"").toLowerCase();
+    return t==="landing"||t==="opt_in"||t==="sales"||t==="checkout"||t==="thank_you";
+}
+function canDeleteStep(stepObj){
+    if(!stepObj)return {ok:false,message:"No step selected."};
+    if(steps.length<=1)return {ok:false,message:"Cannot delete the last page."};
+    var t=String(stepObj.type||"").toLowerCase();
+    if(isRequiredStepType(t)){
+        var count=steps.filter(function(s){return String(s.type||"").toLowerCase()===t;}).length;
+        if(count<=1)return {ok:false,message:"Cannot delete the last "+pageTypeLabel(t)+" page."};
+    }
+    return {ok:true,message:""};
+}
+function orderedStepIdsWithPositions(){
+    sortStepsByPosition();
+    return steps.map(function(s,idx){
+        s.position=idx+1;
+        return Number(s.id);
+    });
+}
+function persistStepOrder(orderIds){
+    return requestJson(stepReorderUrl,"POST",{order:orderIds}).then(function(){
+        orderIds.forEach(function(id,idx){
+            var s=steps.find(function(x){return +x.id===+id;});
+            if(s)s.position=idx+1;
+        });
+        renderStepOptions();
+    });
+}
+function moveSelectedStepBy(delta){
+    var current=cur();
+    if(!current)return Promise.resolve(false);
+    sortStepsByPosition();
+    var idx=steps.findIndex(function(s){return +s.id===+current.id;});
+    if(idx<0)return Promise.resolve(false);
+    var ni=idx+Number(delta||0);
+    if(ni<0||ni>=steps.length)return Promise.resolve(false);
+    var temp=steps[idx];
+    steps[idx]=steps[ni];
+    steps[ni]=temp;
+    return persistStepOrder(orderedStepIdsWithPositions()).then(function(){
+        state.sid=current.id;
+        renderStepOptions();
+        showBuilderToast("Page order updated.","success");
+        return true;
+    }).catch(function(err){
+        showBuilderToast((err&&err.message)||"Failed to reorder pages.","error");
+        throw err;
+    });
+}
+function getRenameInput(currentStep){
+    var curTitle=String(currentStep&&currentStep.title||"").trim()||defaultStepTitleForType(currentStep&&currentStep.type);
+    var nextTitle=window.prompt("Page title:",curTitle);
+    if(nextTitle===null)return null;
+    nextTitle=String(nextTitle||"").trim();
+    if(nextTitle===""){
+        alert("Page title is required.");
+        return null;
+    }
+    var curSlug=String(currentStep&&currentStep.slug||"").trim();
+    var suggested=slugifyPage(curSlug||nextTitle);
+    var nextSlug=window.prompt("Page slug (lowercase, numbers, hyphen):",suggested);
+    if(nextSlug===null)return null;
+    nextSlug=slugifyPage(nextSlug);
+    if(nextSlug===""){
+        alert("Page slug is required.");
+        return null;
+    }
+    nextSlug=uniqueStepSlug(nextSlug,currentStep.id);
+    return {title:nextTitle,slug:nextSlug};
+}
+function syncPageManagerList(){
+    if(!pageMgrList)return;
+    sortStepsByPosition();
+    pageMgrList.innerHTML="";
+    steps.forEach(function(s){
+        var o=document.createElement("option");
+        o.value=String(s.id);
+        o.textContent=String(s.title||("Step "+String(s.id)));
+        pageMgrList.appendChild(o);
+    });
+    if(state.sid!=null){
+        pageMgrList.value=String(state.sid);
+    }else if(steps.length){
+        pageMgrList.value=String(steps[0].id);
+    }
+}
+function closePageManagerModal(){
+    if(!pageMgrModal)return;
+    pageMgrModal.classList.remove("open");
+    pageMgrModal.setAttribute("aria-hidden","true");
+}
+function openPageManagerModal(){
+    if(!pageMgrModal)return;
+    syncPageManagerList();
+    pageMgrModal.classList.add("open");
+    pageMgrModal.setAttribute("aria-hidden","false");
+    if(pageMgrList)pageMgrList.focus();
+}
+function createPageFromManager(){
+    var type=String((pageMgrAddType&&pageMgrAddType.value)||"landing").toLowerCase();
+    var selected=cur();
+    var defaultTitle=defaultStepTitleForType(type);
+    var titleInput=window.prompt("New page title:",defaultTitle);
+    if(titleInput===null)return;
+    var title=String(titleInput||"").trim()||defaultTitle;
+    var slug=uniqueStepSlug(slugifyPage(title),null);
+    var payload=buildStepPayload({
+        title:title,
+        slug:slug,
+        type:type,
+        template:"simple",
+        layout_style:"centered",
+        is_active:true
+    });
+    requestJson(stepStoreUrl,"POST",payload).then(function(resp){
+        var created=applyStepUpdate((resp&&resp.step)||payload);
+        if(!created.layout_json)created.layout_json=defaults(created.type);
+        var order=orderedStepIdsWithPositions();
+        var newIdx=order.findIndex(function(x){return +x===+created.id;});
+        if(selected){
+            var currentIdx=order.findIndex(function(x){return +x===+selected.id;});
+            if(currentIdx>=0&&newIdx>=0){
+                order.splice(newIdx,1);
+                order.splice(currentIdx+1,0,created.id);
+            }
+        }
+        persistStepOrder(order).then(function(){
+            state.sid=created.id;
+            renderStepOptions();
+            loadStep(created.id);
+            syncPageManagerList();
+            showBuilderToast("Page added.","success");
+        }).catch(function(err){
+            showBuilderToast((err&&err.message)||"Page added, but reorder failed.","error");
+        });
+    }).catch(function(err){
+        showBuilderToast((err&&err.message)||"Failed to add page.","error");
+    });
+}
+function renamePageFromManager(){
+    var s=cur();
+    if(!s){alert("No page selected.");return;}
+    var input=getRenameInput(s);
+    if(!input)return;
+    var nextSlug=String(input.slug||"");
+    var refs=(nextSlug!==String(s.slug||"").toLowerCase())?referencingStepsForSlug(s.slug,s.id):[];
+    if(refs.length){
+        var msg="This page is linked from: "+refs.join(", ")+". Continue rename?";
+        if(!window.confirm(msg))return;
+    }
+    var payload=buildStepPayload(s,{title:input.title,slug:nextSlug});
+    requestJson(stepUrlFromTpl(stepUpdateTpl,s.id),"PUT",payload).then(function(resp){
+        var updated=applyStepUpdate((resp&&resp.step)||payload);
+        state.sid=updated.id;
+        renderStepOptions();
+        syncPageManagerList();
+        showBuilderToast("Page renamed.","success");
+    }).catch(function(err){
+        showBuilderToast((err&&err.message)||"Failed to rename page.","error");
+    });
+}
+function deletePageFromManager(){
+    var s=cur();
+    if(!s){alert("No page selected.");return;}
+    var guard=canDeleteStep(s);
+    if(!guard.ok){alert(guard.message);return;}
+    var refs=referencingStepsForSlug(s.slug,s.id);
+    if(refs.length){
+        var warn="This page is linked from: "+refs.join(", ")+". Delete anyway?";
+        if(!window.confirm(warn))return;
+    }
+    if(!window.confirm('Delete page "'+String(s.title||"Untitled")+'"?'))return;
+    requestJson(stepUrlFromTpl(stepDeleteTpl,s.id),"DELETE",{}).then(function(){
+        var wasId=s.id;
+        var idx=steps.findIndex(function(x){return +x.id===+wasId;});
+        if(idx>=0)steps.splice(idx,1);
+        if(!steps.length){
+            state.sid=null;
+            canvas.innerHTML="<p class='meta'>No steps found.</p>";
+            settings.innerHTML="<p class='meta'>Select a component to edit.</p>";
+            renderStepOptions();
+            syncPageManagerList();
+            showBuilderToast("Page deleted.","success");
+            return;
+        }
+        sortStepsByPosition();
+        var fallback=steps[Math.max(0,Math.min(idx,steps.length-1))];
+        state.sid=fallback.id;
+        persistStepOrder(orderedStepIdsWithPositions()).then(function(){
+            renderStepOptions();
+            loadStep(state.sid);
+            syncPageManagerList();
+            showBuilderToast("Page deleted.","success");
+        }).catch(function(err){
+            showBuilderToast((err&&err.message)||"Page deleted, but reorder failed.","error");
+        });
+    }).catch(function(err){
+        showBuilderToast((err&&err.message)||"Failed to delete page.","error");
+    });
+}
+function wireStepManagement(){
+    if(stepSel){
+        stepSel.onchange=function(){loadStep(stepSel.value);};
+    }
+    if(stepAddBtn){
+        stepAddBtn.onclick=function(){openPageManagerModal();};
+    }
+    if(pageMgrModal){
+        pageMgrModal.addEventListener("click",function(e){
+            if(e.target===pageMgrModal)closePageManagerModal();
+        });
+    }
+    if(pageMgrClose){
+        pageMgrClose.onclick=function(){closePageManagerModal();};
+    }
+    if(pageMgrList){
+        pageMgrList.onchange=function(){
+            var id=Number(pageMgrList.value||0);
+            if(!id)return;
+            state.sid=id;
+            renderStepOptions();
+            loadStep(id);
+        };
+    }
+    if(pageMgrCreateBtn){
+        pageMgrCreateBtn.onclick=function(){createPageFromManager();};
+    }
+    if(pageMgrRenameBtn){
+        pageMgrRenameBtn.onclick=function(){renamePageFromManager();};
+    }
+    if(pageMgrDeleteBtn){
+        pageMgrDeleteBtn.onclick=function(){deletePageFromManager();};
+    }
+    if(pageMgrUpBtn){
+        pageMgrUpBtn.onclick=function(){
+            moveSelectedStepBy(-1).then(function(){syncPageManagerList();}).catch(function(){});
+        };
+    }
+    if(pageMgrDownBtn){
+        pageMgrDownBtn.onclick=function(){
+            moveSelectedStepBy(1).then(function(){syncPageManagerList();}).catch(function(){});
+        };
+    }
+}
 const sec=id=>(state.layout.sections||[]).find(x=>x.id===id);
 const row=(s,r)=>(sec(s)?.rows||[]).find(x=>x.id===r);
 const col=(s,r,c)=>(row(s,r)?.columns||[]).find(x=>x.id===c);
@@ -1998,6 +2494,7 @@ function renderElement(item,ctx){
     w.setAttribute("data-outline-label",titleCase(String(item.type||"element")));
     if(item.type==="carousel")w.classList.add("el--carousel");
     if(item.type==="form")w.classList.add("el--form");
+    if(item.type==="menu")w.classList.add("el--menu");
     if(item.type==="image")w.classList.add("el--image");
     if(item.type==="video")w.classList.add("el--video");
     if(item.type!=="button")styleApply(w,item.style||{});
@@ -2136,7 +2633,7 @@ function renderElement(item,ctx){
         var st=item.style||{};
         const ul=document.createElement("ul");
         ul.style.listStyle="none";ul.style.margin="0";ul.style.padding="0";
-        ul.style.display="flex";ul.style.flexWrap="wrap";ul.style.gap=gap+"px";
+        ul.style.display="flex";ul.style.flexWrap="nowrap";ul.style.whiteSpace="nowrap";ul.style.gap=gap+"px";
         ul.style.justifyContent=align==="right"?"flex-end":align==="center"?"center":"flex-start";
         if(st.fontFamily)ul.style.fontFamily=st.fontFamily;
         if(st.fontSize)ul.style.fontSize=st.fontSize;
@@ -4452,7 +4949,7 @@ document.querySelectorAll(".fb-lib button").forEach(b=>{
     b.onclick=()=>{addComponent(b.dataset.c||"");render();};
 });
 
-stepSel.onchange=()=>loadStep(stepSel.value);
+wireStepManagement();
 var fbGrid=document.getElementById("fbGrid"),fbComponentsHide=document.getElementById("fbComponentsHide"),fbComponentsShow=document.getElementById("fbComponentsShow");
 var fbTabComponents=document.getElementById("fbTabComponents"),fbTabSettings=document.getElementById("fbTabSettings"),fbLeftPanelComponents=document.getElementById("fbLeftPanelComponents"),fbLeftPanelSettings=document.getElementById("fbLeftPanelSettings");
 function showLeftPanel(panel){
@@ -4523,6 +5020,7 @@ document.addEventListener("keydown",e=>{
     if(key==="escape"){
         closeRadiusHelpModal();
         closeSpacingHelpModal();
+        closePageManagerModal();
         hideContextMenu();
     }
 
