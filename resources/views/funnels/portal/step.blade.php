@@ -52,6 +52,7 @@
         .btn { overflow-wrap: break-word; word-break: break-word; }
         input, textarea { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; margin-bottom: 10px; }
         label { font-weight: 700; font-size: 13px; margin-bottom: 6px; display: block; }
+        .builder-form-input::placeholder { color: var(--fb-placeholder-color, #94a3b8); opacity: 1; }
         .price { font-size: 34px; font-weight: 800; color: #047857; margin: 0 0 12px; }
         .row { display: flex; gap: 10px; flex-wrap: wrap; }
         .builder-section { border-radius: 14px; margin-bottom: 14px; border: none; }
@@ -886,6 +887,31 @@
                                                         if ($formWidth === '' || !preg_match('/^[#(),.%\-\sA-Za-z0-9]+$/u', $formWidth)) {
                                                             $formWidth = '100%';
                                                         }
+                                                        $formLabelColor = trim((string) ($settings['labelColor'] ?? '#0f172a'));
+                                                        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $formLabelColor)) {
+                                                            $formLabelColor = '#0f172a';
+                                                        }
+                                                        $formPlaceholderColor = trim((string) ($settings['placeholderColor'] ?? '#94a3b8'));
+                                                        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $formPlaceholderColor)) {
+                                                            $formPlaceholderColor = '#94a3b8';
+                                                        }
+                                                        $formButtonBgColor = trim((string) ($settings['buttonBgColor'] ?? '#2563eb'));
+                                                        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $formButtonBgColor)) {
+                                                            $formButtonBgColor = '#2563eb';
+                                                        }
+                                                        $formButtonTextColor = trim((string) ($settings['buttonTextColor'] ?? '#ffffff'));
+                                                        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $formButtonTextColor)) {
+                                                            $formButtonTextColor = '#ffffff';
+                                                        }
+                                                        $formButtonAlign = strtolower(trim((string) ($settings['buttonAlign'] ?? 'left')));
+                                                        if (!in_array($formButtonAlign, ['left', 'center', 'right'], true)) {
+                                                            $formButtonAlign = 'left';
+                                                        }
+                                                        $formButtonJustify = $formButtonAlign === 'right' ? 'flex-end' : ($formButtonAlign === 'center' ? 'center' : 'flex-start');
+                                                        $formButtonBold = (bool) ($settings['buttonBold'] ?? false);
+                                                        $formButtonItalic = (bool) ($settings['buttonItalic'] ?? false);
+                                                        $formButtonFontWeight = $formButtonBold ? '700' : '400';
+                                                        $formButtonFontStyle = $formButtonItalic ? 'italic' : 'normal';
                                                         $formInlineStyle = 'display:block;width:' . $formWidth . ';max-width:100%;box-sizing:border-box;overflow:auto;';
                                                         if ($alignment === 'center') {
                                                             $formInlineStyle .= 'margin-left:auto;margin-right:auto;';
@@ -958,10 +984,12 @@
                                                                         $ph = $ft === 'phone_number' ? '09XXXXXXXXX' : $lbl;
                                                                     }
                                                                 @endphp
-                                                                <label style="display:block;margin-bottom:4px;">{{ $lbl }}</label>
-                                                                <input type="{{ $inputType }}" name="{{ $nm }}" {{ $req ? 'required' : '' }} {!! $pat !!} placeholder="{{ $ph }}" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:8px;box-sizing:border-box;">
+                                                                <label style="display:block;margin-bottom:4px;color:{{ $formLabelColor }};">{{ $lbl }}</label>
+                                                                <input class="builder-form-input" type="{{ $inputType }}" name="{{ $nm }}" {{ $req ? 'required' : '' }} {!! $pat !!} placeholder="{{ $ph }}" style="--fb-placeholder-color:{{ $formPlaceholderColor }};width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:8px;box-sizing:border-box;">
                                                             @endforeach
-                                                            <button type="submit" class="btn" style="margin-top:2px;">{{ $content !== '' ? $content : 'Submit' }}</button>
+                                                            <div style="display:flex;justify-content:{{ $formButtonJustify }};">
+                                                                <button type="submit" class="btn" style="margin-top:2px;background:{{ $formButtonBgColor }};color:{{ $formButtonTextColor }};font-weight:{{ $formButtonFontWeight }};font-style:{{ $formButtonFontStyle }};">{{ $content !== '' ? $content : 'Submit' }}</button>
+                                                            </div>
                                                         </form>
                                                     @else
                                                         <form onsubmit="return false;" style="{{ $formInlineStyle }}">
@@ -974,10 +1002,12 @@
                                                                         $ph = $ft === 'phone_number' ? '09XXXXXXXXX' : $lbl;
                                                                     }
                                                                 @endphp
-                                                                <label style="display:block;margin-bottom:4px;">{{ $lbl }}</label>
-                                                                <input type="text" placeholder="{{ $ph }}" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:8px;box-sizing:border-box;" @if($isPreview) disabled @endif>
+                                                                <label style="display:block;margin-bottom:4px;color:{{ $formLabelColor }};">{{ $lbl }}</label>
+                                                                <input class="builder-form-input" type="text" placeholder="{{ $ph }}" style="--fb-placeholder-color:{{ $formPlaceholderColor }};width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:8px;box-sizing:border-box;" @if($isPreview) disabled @endif>
                                                             @endforeach
-                                                            <button type="button" class="btn" style="margin-top:2px;" @if($isPreview) disabled @endif>{{ $content !== '' ? $content : 'Submit' }}</button>
+                                                            <div style="display:flex;justify-content:{{ $formButtonJustify }};">
+                                                                <button type="button" class="btn" style="margin-top:2px;background:{{ $formButtonBgColor }};color:{{ $formButtonTextColor }};font-weight:{{ $formButtonFontWeight }};font-style:{{ $formButtonFontStyle }};" @if($isPreview) disabled @endif>{{ $content !== '' ? $content : 'Submit' }}</button>
+                                                            </div>
                                                         </form>
                                                     @endif
                                                 @else

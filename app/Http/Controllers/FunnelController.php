@@ -775,6 +775,7 @@ class FunnelController extends Controller
             'color',
             'fontSize',
             'fontWeight',
+            'fontStyle',
             'fontFamily',
             'padding',
             'margin',
@@ -926,6 +927,7 @@ class FunnelController extends Controller
             'videoSourceType' => ['direct', 'upload'],
             'iconStyle' => ['solid', 'regular', 'brands'],
             'menuAlign' => ['left', 'center', 'right'],
+            'buttonAlign' => ['left', 'center', 'right'],
             'vAlign' => ['top', 'center', 'bottom'],
             'slideshowMode' => ['manual', 'auto'],
             'actionType' => ['next_step', 'step', 'link', 'checkout', 'offer_accept', 'offer_decline'],
@@ -963,7 +965,7 @@ class FunnelController extends Controller
             }
         }
 
-        foreach (['textColor', 'controlsColor', 'arrowColor', 'bodyBgColor', 'containerBgColor'] as $k) {
+        foreach (['textColor', 'controlsColor', 'arrowColor', 'bodyBgColor', 'containerBgColor', 'labelColor', 'placeholderColor', 'buttonBgColor', 'buttonTextColor'] as $k) {
             $v = $readColor($k);
             if ($v !== null) {
                 $safe[$k] = $v;
@@ -1008,16 +1010,28 @@ class FunnelController extends Controller
                             default => ucwords(str_replace('_', ' ', $type)),
                         };
                     }
-                    return ['type' => $type, 'label' => $label];
+                    $placeholder = mb_substr(trim((string) ($field['placeholder'] ?? '')), 0, 180);
+                    if ($placeholder === '') {
+                        $placeholder = match ($type) {
+                            'phone_number' => '09XXXXXXXXX',
+                            'email' => 'Email address',
+                            default => $label,
+                        };
+                    }
+                    $required = (bool) filter_var($field['required'] ?? false, FILTER_VALIDATE_BOOLEAN);
+                    if ($type === 'email') {
+                        $required = true;
+                    }
+                    return ['type' => $type, 'label' => $label, 'placeholder' => $placeholder, 'required' => $required];
                 })
                 ->values()
                 ->all();
             if (count($safe['fields']) === 0) {
                 $safe['fields'] = [
-                    ['type' => 'first_name', 'label' => 'First name'],
-                    ['type' => 'last_name', 'label' => 'Last name'],
-                    ['type' => 'email', 'label' => 'Email'],
-                    ['type' => 'phone_number', 'label' => 'Phone'],
+                    ['type' => 'first_name', 'label' => 'First name', 'placeholder' => 'First name', 'required' => false],
+                    ['type' => 'last_name', 'label' => 'Last name', 'placeholder' => 'Last name', 'required' => false],
+                    ['type' => 'email', 'label' => 'Email', 'placeholder' => 'Email address', 'required' => true],
+                    ['type' => 'phone_number', 'label' => 'Phone', 'placeholder' => '09XXXXXXXXX', 'required' => false],
                 ];
             }
         }

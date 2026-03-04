@@ -174,6 +174,7 @@
 .menu-style-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-bottom:8px}
 .menu-slider-row{display:grid;grid-template-columns:1fr 96px;gap:8px;align-items:center;margin-bottom:8px}
 .menu-slider-row input{margin-bottom:0}
+#canvas .fb-form-input::placeholder{color:var(--fb-ph-color,#94a3b8);opacity:1}
 .carousel-slide-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
 .carousel-slide-btn{flex:1;border:1px solid #cbd5e1;background:#f8fafc;border-radius:8px;padding:8px 10px;text-align:left;font-weight:700;color:#334155;cursor:pointer}
 .carousel-slide-btn.active{background:#0ea5e9;border-color:#0284c7;color:#fff}
@@ -536,7 +537,7 @@ if(canvasBgColor){
     canvasBgColor.addEventListener("input",()=>{
         if(!state.layout)return;
         saveToHistory();
-        editorPrefs().canvasBg=String(canvasBgColor.value||"").trim();
+        propagateCanvasBgToAllSteps(canvasBgColor.value);
         applyCanvasBgPreference();
         syncCanvasBgControls();
     });
@@ -545,8 +546,7 @@ if(canvasBgReset){
     canvasBgReset.addEventListener("click",()=>{
         if(!state.layout)return;
         saveToHistory();
-        var prefs=editorPrefs();
-        if(Object.prototype.hasOwnProperty.call(prefs,"canvasBg"))delete prefs.canvasBg;
+        propagateCanvasBgToAllSteps(null);
         applyCanvasBgPreference();
         syncCanvasBgControls();
     });
@@ -1245,6 +1245,31 @@ function editorPrefs(){
     state.layout=state.layout||{};
     state.layout.__editor=(state.layout.__editor&&typeof state.layout.__editor==="object")?state.layout.__editor:{};
     return state.layout.__editor;
+}
+function normalizeCanvasBgValue(v){
+    var bg=String(v||"").trim();
+    return /^#[0-9A-Fa-f]{6}$/.test(bg)?bg:null;
+}
+function withCanvasBgInLayout(layout,bg){
+    var out=(layout&&typeof layout==="object")?clone(layout):{root:[],sections:[]};
+    out.__editor=(out.__editor&&typeof out.__editor==="object")?out.__editor:{};
+    if(bg)out.__editor.canvasBg=bg;
+    else if(Object.prototype.hasOwnProperty.call(out.__editor,"canvasBg"))delete out.__editor.canvasBg;
+    return out;
+}
+function propagateCanvasBgToAllSteps(bg){
+    var norm=normalizeCanvasBgValue(bg);
+    steps.forEach(function(s){
+        if(!s)return;
+        s.background_color=norm;
+        var baseLayout=(s.layout_json&&typeof s.layout_json==="object")?s.layout_json:defaults(s.type);
+        s.layout_json=withCanvasBgInLayout(baseLayout,norm);
+    });
+    if(state.layout&&typeof state.layout==="object"){
+        var prefs=editorPrefs();
+        if(norm)prefs.canvasBg=norm;
+        else if(Object.prototype.hasOwnProperty.call(prefs,"canvasBg"))delete prefs.canvasBg;
+    }
 }
 function applyCanvasBgPreference(){
     if(!canvas)return;
@@ -2198,12 +2223,21 @@ function renderCarouselPreviewItem(item,onDelete,onSelect,isSelected){
     }else if(type==="form"){
         var fm=document.createElement("div");
         var formFields=normalizeFormFields(item&&item.settings&&item.settings.fields,false);
+        var fset=(item&&item.settings)||{};
+        var labelColor=String(fset.labelColor||"#0f172a");
+        var placeholderColor=String(fset.placeholderColor||"#94a3b8");
+        var buttonBg=String(fset.buttonBgColor||"#2563eb");
+        var buttonTextColor=String(fset.buttonTextColor||"#ffffff");
+        var buttonAlign=String(fset.buttonAlign||"left");
+        var buttonWeight=(fset.buttonBold===true)?"700":"400";
+        var buttonStyle=(fset.buttonItalic===true)?"italic":"normal";
+        var buttonJustify=(buttonAlign==="right")?"flex-end":(buttonAlign==="center"?"center":"flex-start");
         var html="";
         formFields.forEach(function(ff){
-            html+='<label style="display:block;margin-bottom:4px;">'+String(ff.label||"Field").replace(/</g,"&lt;").replace(/>/g,"&gt;")+'</label>';
-            html+='<input type="text" placeholder="'+String(ff.placeholder||ff.label||"Field").replace(/"/g,'&quot;')+'" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:8px;">';
+            html+='<label style="display:block;margin-bottom:4px;color:'+labelColor+';">'+String(ff.label||"Field").replace(/</g,"&lt;").replace(/>/g,"&gt;")+'</label>';
+            html+='<input class="fb-form-input" type="text" placeholder="'+String(ff.placeholder||ff.label||"Field").replace(/"/g,'&quot;')+'" style="--fb-ph-color:'+placeholderColor+';width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:8px;">';
         });
-        html+='<button type="button" style="padding:8px 12px;border:0;border-radius:8px;background:#2563eb;color:#fff;">'+(((item&&item.content)||"Submit"))+'</button>';
+        html+='<div style="display:flex;justify-content:'+buttonJustify+';"><button type="button" style="padding:8px 12px;border:0;border-radius:8px;background:'+buttonBg+';color:'+buttonTextColor+';font-weight:'+buttonWeight+';font-style:'+buttonStyle+';">'+(((item&&item.content)||"Submit"))+'</button></div>';
         fm.innerHTML=html;
         wrap.appendChild(fm);
     }else if(type==="carousel"){
@@ -2234,7 +2268,7 @@ function createRootItem(type){
     return it?Object.assign({kind:"el"},it):null;
 }
 function createDefaultElement(type){
-    const d={heading:{content:"Heading",style:{fontSize:"32px",color:"#000000"},settings:{}},text:{content:"Text",style:{fontSize:"16px",color:"#000000"},settings:{}},menu:{content:"",style:{fontSize:"16px"},settings:{items:[{label:"Home",url:"#",newWindow:false,hasSubmenu:false},{label:"Contact",url:"/contact",newWindow:false,hasSubmenu:false}],itemGap:13,activeIndex:0,menuAlign:"left",underlineColor:""}},carousel:{content:"",style:{padding:"10px 10px 10px 10px"},settings:{slides:[defaultCarouselSlide("Slide #1")],activeSlide:0,vAlign:"center",alignment:"left",showArrows:true,slideshowMode:"manual",controlsColor:"#64748b",arrowColor:"#ffffff",fixedWidth:500,fixedHeight:500}},image:{content:"",style:{width:"100%"},settings:{src:"",alt:"Image",alignment:"left"}},button:{content:"Click Me",style:{backgroundColor:"#2563eb",color:"#fff",borderRadius:"999px",padding:"10px 18px",textAlign:"center"},settings:{actionType:"next_step",actionStepSlug:"",link:"#"}},icon:{content:"",style:{fontSize:"36px",color:"#1d4ed8",padding:"0px",borderRadius:"0px"},settings:{iconName:"star",iconStyle:"solid",alignment:"center",link:""}},form:{content:"Submit",style:{},settings:{alignment:"left",width:"100%",fields:[{type:"text",label:"First name",placeholder:"First name",required:false}]}},video:{content:"",style:{},settings:{src:"",alignment:"left"}},spacer:{content:"",style:{height:"24px"},settings:{}}}[type]||null;
+    const d={heading:{content:"Heading",style:{fontSize:"32px",color:"#000000"},settings:{}},text:{content:"Text",style:{fontSize:"16px",color:"#000000"},settings:{}},menu:{content:"",style:{fontSize:"16px"},settings:{items:[{label:"Home",url:"#",newWindow:false,hasSubmenu:false},{label:"Contact",url:"/contact",newWindow:false,hasSubmenu:false}],itemGap:13,activeIndex:0,menuAlign:"left",underlineColor:""}},carousel:{content:"",style:{padding:"10px 10px 10px 10px"},settings:{slides:[defaultCarouselSlide("Slide #1")],activeSlide:0,vAlign:"center",alignment:"left",showArrows:true,slideshowMode:"manual",controlsColor:"#64748b",arrowColor:"#ffffff",fixedWidth:500,fixedHeight:500}},image:{content:"",style:{width:"100%"},settings:{src:"",alt:"Image",alignment:"left"}},button:{content:"Click Me",style:{backgroundColor:"#2563eb",color:"#fff",borderRadius:"999px",padding:"10px 18px",textAlign:"center"},settings:{actionType:"next_step",actionStepSlug:"",link:"#"}},icon:{content:"",style:{fontSize:"36px",color:"#1d4ed8",padding:"0px",borderRadius:"0px"},settings:{iconName:"star",iconStyle:"solid",alignment:"center",link:""}},form:{content:"Submit",style:{},settings:{alignment:"left",width:"100%",buttonAlign:"left",buttonBold:false,buttonItalic:false,labelColor:"#0f172a",placeholderColor:"#94a3b8",buttonBgColor:"#2563eb",buttonTextColor:"#ffffff",fields:[{type:"text",label:"First name",placeholder:"First name",required:false}]}},video:{content:"",style:{},settings:{src:"",alignment:"left"}},spacer:{content:"",style:{height:"24px"},settings:{}}}[type]||null;
     if(!d)return null;
     return {id:uid("el"),type:type,content:d.content,style:clone(d.style),settings:clone(d.settings)};
 }
@@ -2742,6 +2776,14 @@ function renderElement(item,ctx){
         item.settings=item.settings||{};
         var fal=(item.settings.alignment)||"left";
         var fw=(item.style&&item.style.width)||(item.settings&&item.settings.width)||"100%";
+        var flabelColor=String(item.settings.labelColor||"#0f172a");
+        var fplaceholderColor=String(item.settings.placeholderColor||"#94a3b8");
+        var fbtnBg=String(item.settings.buttonBgColor||"#2563eb");
+        var fbtnColor=String(item.settings.buttonTextColor||"#ffffff");
+        var fbtnAlign=String(item.settings.buttonAlign||"left");
+        var fbtnJustify=fbtnAlign==="right"?"flex-end":(fbtnAlign==="center"?"center":"flex-start");
+        var fbtnWeight=item.settings.buttonBold===true?"700":"400";
+        var fbtnStyle=item.settings.buttonItalic===true?"italic":"normal";
         var flist=normalizeFormFields(item.settings.fields,false);
         item.settings.fields=flist;
         w.style.display="block";
@@ -2762,10 +2804,13 @@ function renderElement(item,ctx){
             var lab=document.createElement("label");
             lab.style.display="block";
             lab.style.marginBottom="4px";
+            lab.style.color=flabelColor;
             lab.textContent=lbl;
             var inp=document.createElement("input");
             inp.disabled=true;
             inp.placeholder=String((f&&f.placeholder)||lbl);
+            inp.className="fb-form-input";
+            inp.style.setProperty("--fb-ph-color",fplaceholderColor);
             inp.style.width="100%";
             inp.style.padding="8px";
             inp.style.border="1px solid #cbd5e1";
@@ -2774,12 +2819,20 @@ function renderElement(item,ctx){
             formBox.appendChild(lab);
             formBox.appendChild(inp);
         });
+        var btnWrap=document.createElement("div");
+        btnWrap.style.display="flex";
+        btnWrap.style.justifyContent=fbtnJustify;
         var btn=document.createElement("button");
         btn.type="button";
         btn.className="fb-btn primary";
         btn.disabled=true;
         btn.textContent=(item.content||"Submit");
-        formBox.appendChild(btn);
+        btn.style.backgroundColor=fbtnBg;
+        btn.style.color=fbtnColor;
+        btn.style.fontWeight=fbtnWeight;
+        btn.style.fontStyle=fbtnStyle;
+        btnWrap.appendChild(btn);
+        formBox.appendChild(btnWrap);
         w.innerHTML="";
         w.appendChild(formBox);
     }
@@ -4795,7 +4848,7 @@ function renderSettings(){
     } else if(selKind==="el"&&t.type==="form"){
         t.settings=t.settings||{};
         t.settings.fields=normalizeFormFields(t.settings.fields,false);
-        settings.innerHTML='<div class="menu-section-title">Content</div><label>Submit button text</label><input id="formSubmitText" placeholder="Submit"><div class="menu-split"></div><div class="menu-section-title">Form inputs</div><div id="formFieldsEditor"></div><button type="button" id="addFormInput" class="fb-btn" style="width:100%;margin:6px 0 10px;">Add form-input</button><div class="menu-split"></div><div class="menu-section-title">Layout</div><label>Alignment</label><select id="formAlign"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select><label>Form width</label><input id="formWidth" placeholder="100%"><div class="meta" style="margin-top:8px;">Set width in % (example: 50%) and place using alignment only.</div><div class="menu-split"></div><div class="menu-section-title">Style</div><label>Background color</label><input id="bg" type="color"><label>Background image URL</label><input id="bgImg" placeholder="https://..."><label>Upload background image</label><input id="bgUp" type="file" accept="image/*">'+moveControls+remove;
+        settings.innerHTML='<div class="menu-section-title">Content</div><label>Submit button text</label><input id="formSubmitText" placeholder="Submit"><div class="menu-split"></div><div class="menu-section-title">Form inputs</div><div id="formFieldsEditor"></div><button type="button" id="addFormInput" class="fb-btn" style="width:100%;margin:6px 0 10px;">Add form-input</button><div class="menu-split"></div><div class="menu-section-title">Layout</div><label>Alignment</label><select id="formAlign"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select><label>Form width</label><input id="formWidth" placeholder="100%"><div class="meta" style="margin-top:8px;">Set width in % (example: 50%) and place using alignment only.</div><div class="menu-split"></div><div class="menu-section-title">Style</div><label>Label text color</label><input id="formLabelColor" type="color"><label>Placeholder text color</label><input id="formPlaceholderColor" type="color"><label>Submit button color</label><input id="formBtnBgColor" type="color"><label>Submit button text color</label><input id="formBtnTextColor" type="color"><label>Submit button text style</label><div class="menu-style-row"><button type="button" id="formBtnBold" class="menu-align-btn" title="Bold (Ctrl+B)"><i class="fas fa-bold"></i></button><button type="button" id="formBtnItalic" class="menu-align-btn" title="Italic (Ctrl+I)"><i class="fas fa-italic"></i></button></div><label>Submit button alignment</label><div class="menu-align-row"><button type="button" class="menu-align-btn form-btn-align" data-align="left"><i class="fas fa-align-left"></i></button><button type="button" class="menu-align-btn form-btn-align" data-align="center"><i class="fas fa-align-center"></i></button><button type="button" class="menu-align-btn form-btn-align" data-align="right"><i class="fas fa-align-right"></i></button></div><label>Background color</label><input id="bg" type="color"><label>Background image URL</label><input id="bgImg" placeholder="https://..."><label>Upload background image</label><input id="bgUp" type="file" accept="image/*">'+moveControls+remove;
         function renderFormFieldsEditor(){
             t.settings=t.settings||{};
             t.settings.fields=normalizeFormFields(t.settings.fields,false);
@@ -4888,6 +4941,46 @@ function renderSettings(){
         bind("formSubmitText",t.content||"Submit",v=>{t.content=v||"Submit";},{undo:true});
         bind("formAlign",(t.settings&&t.settings.alignment)||"left",v=>{t.settings=t.settings||{};t.settings.alignment=v||"left";var s=sty();if(s&&Object.prototype.hasOwnProperty.call(s,"textAlign"))delete s.textAlign;},{undo:true});
         bind("formWidth",(t.style&&t.style.width)||(t.settings&&t.settings.width)||"100%",v=>{var w=v||"100%";sty().width=w;sty().height="";sty().maxWidth="";sty().minHeight="";t.settings=t.settings||{};t.settings.width=w;t.settings.formWidth=w;t.settings.height="";t.settings.maxWidth="";t.settings.minHeight="";},{undo:true});
+        bind("formLabelColor",(t.settings&&t.settings.labelColor)||"#0f172a",v=>{t.settings=t.settings||{};t.settings.labelColor=v||"#0f172a";},{undo:true});
+        bind("formPlaceholderColor",(t.settings&&t.settings.placeholderColor)||"#94a3b8",v=>{t.settings=t.settings||{};t.settings.placeholderColor=v||"#94a3b8";},{undo:true});
+        bind("formBtnBgColor",(t.settings&&t.settings.buttonBgColor)||"#2563eb",v=>{t.settings=t.settings||{};t.settings.buttonBgColor=v||"#2563eb";},{undo:true});
+        bind("formBtnTextColor",(t.settings&&t.settings.buttonTextColor)||"#ffffff",v=>{t.settings=t.settings||{};t.settings.buttonTextColor=v||"#ffffff";},{undo:true});
+        var formBtnBold=document.getElementById("formBtnBold");
+        var formBtnItalic=document.getElementById("formBtnItalic");
+        function formBtnStyleState(){
+            t.settings=t.settings||{};
+            return {bold:t.settings.buttonBold===true,italic:t.settings.buttonItalic===true};
+        }
+        function syncFormBtnStyleControls(){
+            var st=formBtnStyleState();
+            if(formBtnBold)formBtnBold.classList.toggle("active",!!st.bold);
+            if(formBtnItalic)formBtnItalic.classList.toggle("active",!!st.italic);
+            var activeAlign=String((t.settings&&t.settings.buttonAlign)||"left");
+            settings.querySelectorAll(".form-btn-align").forEach(function(btn){
+                btn.classList.toggle("active",btn.getAttribute("data-align")===activeAlign);
+            });
+        }
+        if(formBtnBold)formBtnBold.onclick=function(){saveToHistory();t.settings=t.settings||{};t.settings.buttonBold=!(t.settings.buttonBold===true);syncFormBtnStyleControls();renderCanvas();};
+        if(formBtnItalic)formBtnItalic.onclick=function(){saveToHistory();t.settings=t.settings||{};t.settings.buttonItalic=!(t.settings.buttonItalic===true);syncFormBtnStyleControls();renderCanvas();};
+        settings.querySelectorAll(".form-btn-align").forEach(function(btn){
+            btn.addEventListener("click",function(){
+                saveToHistory();
+                t.settings=t.settings||{};
+                t.settings.buttonAlign=String(btn.getAttribute("data-align")||"left");
+                syncFormBtnStyleControls();
+                renderCanvas();
+            });
+        });
+        var formSubmitTextField=document.getElementById("formSubmitText");
+        if(formSubmitTextField){
+            formSubmitTextField.addEventListener("keydown",function(e){
+                if(!(e.ctrlKey||e.metaKey))return;
+                var k=String(e.key||"").toLowerCase();
+                if(k==="b"){e.preventDefault();if(formBtnBold)formBtnBold.click();}
+                if(k==="i"){e.preventDefault();if(formBtnItalic)formBtnItalic.click();}
+            });
+        }
+        syncFormBtnStyleControls();
         bind("bg",(t.style&&t.style.backgroundColor)||"#ffffff",v=>sty().backgroundColor=v,{undo:true});
         bind("bgImg",readBgImageUrl(),v=>{var s=sty();s.backgroundImage=(v&&String(v).trim()!=="")?('url('+String(v).trim()+')'):"";renderCanvas();},{undo:true});
         var bgUpForm=document.getElementById("bgUp");
@@ -5217,12 +5310,39 @@ function persistCurrentStep(){
         if(fa){var aval=(fa.value||"left");t.settings=t.settings||{};t.settings.alignment=aval;t.style=t.style||{};t.style.textAlign=aval;}
     }
     var prefs=(state.layout&&state.layout.__editor&&typeof state.layout.__editor==="object")?state.layout.__editor:{};
-    var canvasBg=String(prefs.canvasBg||"").trim();
-    if(!/^#[0-9A-Fa-f]{6}$/.test(canvasBg))canvasBg=null;
+    var canvasBg=normalizeCanvasBgValue(prefs.canvasBg||"");
+    var requestHeaders={"Content-Type":"application/json","X-CSRF-TOKEN":csrf,"Accept":"application/json"};
+    function saveStepLayout(stepId,layout,bg){
+        return fetch(saveUrl,{
+            method:"POST",
+            headers:requestHeaders,
+            body:JSON.stringify({step_id:stepId,layout_json:layout,background_color:bg})
+        }).then(function(r){
+            if(!r.ok)throw new Error("Save failed");
+            return r.json();
+        });
+    }
     saveMsg.textContent="Saving...";
-    return fetch(saveUrl,{method:"POST",headers:{"Content-Type":"application/json","X-CSRF-TOKEN":csrf,"Accept":"application/json"},body:JSON.stringify({step_id:s.id,layout_json:state.layout,background_color:canvasBg})})
-        .then(r=>{if(!r.ok)throw 1;return r.json();})
-        .then(p=>{s.layout_json=p.layout_json||clone(state.layout);s.background_color=(p&&typeof p.background_color==="string"&&p.background_color.trim()!=="")?p.background_color.trim():null;saveMsg.textContent="Saved "+new Date().toLocaleTimeString();});
+    return saveStepLayout(s.id,state.layout,canvasBg)
+        .then(function(p){
+            s.layout_json=p.layout_json||clone(state.layout);
+            s.background_color=(p&&typeof p.background_color==="string"&&p.background_color.trim()!=="")?p.background_color.trim():null;
+            var others=steps.filter(function(step){return +step.id!==+s.id;});
+            if(!others.length)return null;
+            var jobs=others.map(function(step){
+                var stepLayout=(step.layout_json&&typeof step.layout_json==="object")?step.layout_json:defaults(step.type);
+                stepLayout=withCanvasBgInLayout(stepLayout,canvasBg);
+                return saveStepLayout(step.id,stepLayout,canvasBg).then(function(resp){
+                    step.layout_json=resp.layout_json||clone(stepLayout);
+                    step.background_color=(resp&&typeof resp.background_color==="string"&&resp.background_color.trim()!=="")?resp.background_color.trim():null;
+                    return true;
+                });
+            });
+            return Promise.all(jobs);
+        })
+        .then(function(){
+            saveMsg.textContent="Saved all pages "+new Date().toLocaleTimeString();
+        });
 }
 document.getElementById("saveBtn").onclick=()=>{
     persistCurrentStep().catch(()=>{saveMsg.textContent="Save failed";alert("Save failed.");});
