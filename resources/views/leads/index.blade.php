@@ -71,23 +71,25 @@
 
     <div class="card" style="margin-bottom: 20px;">
         <h3>Leads List</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Phone</th>
-                    <th>Assigned To</th>
-                    <th>Tags</th>
-                    <th>Status</th>
-                    <th>Score</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody id="tableBody">
-                @include('leads._rows', ['leads' => $leads])
-            </tbody>
-        </table>
+        <div class="leads-table-wrap">
+            <table class="leads-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Assigned To</th>
+                        <th>Tags</th>
+                        <th>Status</th>
+                        <th>Score</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    @include('leads._rows', ['leads' => $leads])
+                </tbody>
+            </table>
+        </div>
 
         <div style="margin-top: 20px;" id="paginationLinks">
             {{ $leads->links('pagination::bootstrap-4') }}
@@ -379,5 +381,55 @@
         .custom-dropdown-menu::-webkit-scrollbar-track { background: #F1F5F9; border-radius: 4px; }
         .custom-dropdown-menu::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
         .custom-dropdown-menu::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+        .leads-table-wrap {
+            display: block;
+            width: 100%;
+            max-width: 100%;
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+        }
+        .leads-table {
+            table-layout: auto;
+            width: max-content;
+            min-width: 1200px;
+            margin-bottom: 0;
+        }
+        .leads-table th,
+        .leads-table td {
+            white-space: nowrap;
+            vertical-align: middle;
+            height: 64px;
+            line-height: 1.3;
+        }
+        .leads-table td .cell-text {
+            display: inline;
+            white-space: nowrap;
+        }
+        .leads-table td:nth-child(8) {
+            overflow: visible;
+        }
+        .leads-table .lead-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            white-space: nowrap;
+            flex-wrap: nowrap;
+        }
+        .leads-table .lead-tags {
+            display: flex;
+            gap: 4px;
+            flex-wrap: nowrap;
+            min-width: 0;
+        }
+        .leads-table .lead-tag {
+            white-space: nowrap;
+            flex: 0 0 auto;
+        }
+        @media (max-width: 768px) {
+            .leads-table {
+                min-width: 1280px;
+            }
+        }
     </style>
 @endsection
