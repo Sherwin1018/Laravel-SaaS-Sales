@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Lead;
 use App\Models\Payment;
+use App\Services\AutomationWebhookService;
 use Illuminate\Http\Request;
 
 class PaymentController extends Controller
@@ -48,7 +49,7 @@ class PaymentController extends Controller
         }
 
         try {
-            Payment::create([
+            $payment = Payment::create([
                 'tenant_id' => $user->tenant_id,
                 'lead_id' => $validated['lead_id'] ?? null,
                 'amount' => $validated['amount'],
@@ -56,9 +57,29 @@ class PaymentController extends Controller
                 'payment_date' => $validated['payment_date'],
             ]);
 
+            $this->dispatchPaymentWebhookIfLeadExists($payment, $validated['status']);
+
             return redirect()->route('payments.index')->with('success', 'Added Successfully');
         } catch (\Throwable $e) {
             return redirect()->back()->withInput()->with('error', 'Added Failed');
         }
+    }
+
+    private function dispatchPaymentWebhookIfLeadExists(Payment $payment, string $status): void
+    {
+        if (!in_array($status, ['paid', 'failed'], true)) {
+            return;
+        }
+        if (!$payment->lead_id) {
+            return;
+        }
+        $lead = Lead::where('id', $payment->lead_id)->where('tenant_id', $payment->tenant_id)->first();
+        if (!$lead) {
+            return;
+        }
+        $event = $status === 'paid' ? 'payment.paid' : 'payment.failed';
+        $service = app(AutomationWebhookService::class);
+        $payload = $service->buildPaymentPayload($event, $lead, $payment, []);
+        $service->dispatchEvent($event, $payload);
     }
 }
