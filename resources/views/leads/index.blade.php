@@ -18,8 +18,6 @@
                     <i class="fas fa-user-check"></i> Assign Lead
                 </button>
             </div>
-        @else
-            <div></div>
         @endif
 
         <div class="search-box" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
@@ -69,7 +67,7 @@
         </div>
     </div>
 
-    <div class="card" style="margin-bottom: 20px;">
+    <div class="card leads-list-card" style="margin-bottom: 20px;">
         <h3>Leads List</h3>
         <div class="leads-table-wrap">
             <table class="leads-table">
@@ -90,6 +88,7 @@
                 </tbody>
             </table>
         </div>
+        <p class="leads-scroll-hint">Swipe/scroll sideways to view all columns.</p>
 
         <div style="margin-top: 20px;" id="paginationLinks">
             {{ $leads->links('pagination::bootstrap-4') }}
@@ -164,6 +163,7 @@
             const pipelineContainer = document.getElementById('pipelineContainer');
             const togglePipelineBtn = document.getElementById('togglePipelineBtn');
             const toggleAssignBtn = document.getElementById('toggleAssignBtn');
+            const leadsTableWrap = document.querySelector('.leads-table-wrap');
 
             let timeout = null;
 
@@ -359,6 +359,11 @@
                     });
                 }
             }
+
+            if (leadsTableWrap) {
+                // Always start at the first column after page load.
+                leadsTableWrap.scrollLeft = 0;
+            }
         });
     </script>
     <style>
@@ -381,6 +386,11 @@
         .custom-dropdown-menu::-webkit-scrollbar-track { background: #F1F5F9; border-radius: 4px; }
         .custom-dropdown-menu::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
         .custom-dropdown-menu::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+        .actions .search-box {
+            margin-left: -14px !important;
+            justify-content: flex-start !important;
+            padding-right: 0 !important;
+        }
         .leads-table-wrap {
             display: block;
             width: 100%;
@@ -388,12 +398,22 @@
             overflow-x: auto;
             overflow-y: hidden;
             -webkit-overflow-scrolling: touch;
+            scrollbar-gutter: stable;
         }
         .leads-table {
             table-layout: auto;
             width: max-content;
-            min-width: 1200px;
+            min-width: 100%;
             margin-bottom: 0;
+        }
+        .leads-scroll-hint {
+            margin-top: 8px;
+            font-size: 12px;
+            color: #64748B;
+            font-weight: 600;
+        }
+        .leads-list-card {
+            overflow: visible;
         }
         .leads-table th,
         .leads-table td {
@@ -426,9 +446,34 @@
             white-space: nowrap;
             flex: 0 0 auto;
         }
-        @media (max-width: 768px) {
+        @media (max-width: 1100px) {
+            .actions {
+                flex-direction: column;
+                align-items: stretch !important;
+                gap: 10px;
+            }
+            .actions > div {
+                width: 100%;
+            }
+            .actions .search-box {
+                width: 100%;
+                display: flex;
+                flex-direction: column;
+                gap: 10px !important;
+                align-items: stretch !important;
+                margin-left: -14px !important;
+            }
+            .actions .search-box input,
+            .actions .search-box select {
+                width: 100% !important;
+                min-width: 0 !important;
+                max-width: 100%;
+            }
+            .actions .search-box {
+                flex-wrap: nowrap !important;
+            }
             .leads-table {
-                min-width: 1280px;
+                min-width: max-content;
             }
         }
     </style>
