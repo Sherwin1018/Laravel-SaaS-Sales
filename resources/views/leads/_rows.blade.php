@@ -18,16 +18,16 @@
 
 @forelse($leads as $lead)
     <tr>
-        <td>{{ $lead->name }}</td>
-        <td>{{ $lead->email }}</td>
-        <td>{{ $lead->phone }}</td>
-        <td>{{ $lead->assignedAgent->name ?? 'Unassigned' }}</td>
+        <td><span class="cell-text" title="{{ $lead->name }}">{{ $lead->name }}</span></td>
+        <td><span class="cell-text" title="{{ $lead->email }}">{{ $lead->email }}</span></td>
+        <td><span class="cell-text" title="{{ $lead->phone }}">{{ $lead->phone }}</span></td>
+        <td><span class="cell-text" title="{{ $lead->assignedAgent->name ?? 'Unassigned' }}">{{ $lead->assignedAgent->name ?? 'Unassigned' }}</span></td>
         <td>
             @php($leadTags = is_array($lead->tags) ? $lead->tags : [])
             @if(count($leadTags))
-                <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                <div class="lead-tags" title="{{ implode(', ', $leadTags) }}">
                     @foreach($leadTags as $tag)
-                        <span style="padding: 2px 8px; border-radius: 999px; background: #E0E7FF; color: #3730A3; font-size: 11px; font-weight: 700;">
+                        <span class="lead-tag" style="padding: 2px 8px; border-radius: 999px; background: #E0E7FF; color: #3730A3; font-size: 11px; font-weight: 700;">
                             {{ $tag }}
                         </span>
                     @endforeach
@@ -41,8 +41,9 @@
                 {{ $statusLabels[$lead->status] ?? ucfirst($lead->status) }}
             </span>
         </td>
-        <td>{{ $lead->score }}</td>
-        <td style="display: flex; gap: 10px;">
+        <td><span class="cell-text">{{ $lead->score }}</span></td>
+        <td>
+            <div class="lead-actions">
             <a href="{{ route('leads.edit', $lead->id) }}" style="color: #2563EB; text-decoration: none;">
                 <i class="fas fa-edit"></i> Edit
             </a>
@@ -56,6 +57,7 @@
                     </button>
                 </form>
             @endif
+            </div>
         </td>
     </tr>
 @empty

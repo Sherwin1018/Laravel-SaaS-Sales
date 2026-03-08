@@ -24,7 +24,12 @@
             --theme-sidebar-text: {{ $themeSidebarText }};
             --theme-body-bg: {{ $themeBodyBg }};
         }
-        body.builder-full-width .main-content { margin-left: 0; }
+        body.builder-full-width .main-content {
+            margin-left: 0;
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+        }
     </style>
     <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">

@@ -18,8 +18,6 @@
                     <i class="fas fa-user-check"></i> Assign Lead
                 </button>
             </div>
-        @else
-            <div></div>
         @endif
 
         <div class="search-box" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
@@ -69,26 +67,27 @@
         </div>
     </div>
 
-    <div class="card" style="margin-bottom: 20px;">
+    <div class="card leads-list-card" style="margin-bottom: 20px;">
         <h3>Leads List</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Phone</th>
-                    <th>Assigned To</th>
-                    <th>Tags</th>
-                    <th>Status</th>
-                    <th>Score</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody id="tableBody">
-                @include('leads._rows', ['leads' => $leads])
-            </tbody>
-        </table>
-
+        <div class="leads-table-wrap">
+            <table class="leads-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Assigned To</th>
+                        <th>Tags</th>
+                        <th>Status</th>
+                        <th>Score</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    @include('leads._rows', ['leads' => $leads])
+                </tbody>
+            </table>
+        </div>
         <div style="margin-top: 20px;" id="paginationLinks">
             {{ $leads->links('pagination::bootstrap-4') }}
         </div>
@@ -162,6 +161,7 @@
             const pipelineContainer = document.getElementById('pipelineContainer');
             const togglePipelineBtn = document.getElementById('togglePipelineBtn');
             const toggleAssignBtn = document.getElementById('toggleAssignBtn');
+            const leadsTableWrap = document.querySelector('.leads-table-wrap');
 
             let timeout = null;
 
@@ -197,11 +197,11 @@
                                     });
                                 }
                             }
-                            if (query.length > 0) {
+                            const hasFilter = (query || '').trim().length > 0 || (tagValue || '').trim().length > 0;
+                            if (hasFilter) {
                                 paginationLinks.style.display = 'none';
                             } else {
                                 paginationLinks.style.display = 'block';
-                                if (query === '') window.location.reload();
                             }
                         })
                         .catch(error => console.error('Search error:', error));
@@ -357,6 +357,11 @@
                     });
                 }
             }
+
+            if (leadsTableWrap) {
+                // Always start at the first column after page load.
+                leadsTableWrap.scrollLeft = 0;
+            }
         });
     </script>
     <style>
@@ -379,5 +384,140 @@
         .custom-dropdown-menu::-webkit-scrollbar-track { background: #F1F5F9; border-radius: 4px; }
         .custom-dropdown-menu::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
         .custom-dropdown-menu::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+        .actions .search-box {
+            margin-left: 0 !important;
+            justify-content: flex-start !important;
+            padding-right: 0 !important;
+            max-width: 100%;
+        }
+        .leads-table-wrap {
+            display: block;
+            width: 100%;
+            max-width: 100%;
+            overflow-x: auto;
+            overflow-y: visible;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-gutter: stable;
+        }
+        .leads-table {
+            table-layout: auto;
+            width: 100%;
+            min-width: 0;
+            margin-bottom: 0;
+        }
+        .leads-list-card {
+            overflow: visible;
+        }
+        .leads-table th,
+        .leads-table td {
+            white-space: normal;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            vertical-align: middle;
+            height: 64px;
+            line-height: 1.3;
+        }
+        .leads-table td .cell-text {
+            display: inline;
+            white-space: normal;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+        .leads-table th:nth-child(1),
+        .leads-table td:nth-child(1),
+        .leads-table th:nth-child(2),
+        .leads-table td:nth-child(2),
+        .leads-table th:nth-child(3),
+        .leads-table td:nth-child(3) {
+            white-space: nowrap;
+        }
+        .leads-table td:nth-child(1) .cell-text,
+        .leads-table td:nth-child(2) .cell-text,
+        .leads-table td:nth-child(3) .cell-text {
+            display: inline-block;
+            white-space: nowrap;
+            overflow-wrap: normal;
+            word-break: normal;
+        }
+        .leads-table td:nth-child(8) {
+            overflow: visible;
+            white-space: nowrap;
+            min-width: 140px;
+        }
+        .leads-table th:nth-child(8) {
+            white-space: nowrap;
+            min-width: 140px;
+        }
+        .leads-table .lead-actions {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            white-space: nowrap;
+            flex-wrap: nowrap;
+        }
+        .leads-table .lead-actions form {
+            margin: 0;
+            display: inline-flex;
+            align-items: center;
+        }
+        .leads-table .lead-actions a,
+        .leads-table .lead-actions button {
+            white-space: nowrap;
+        }
+        .leads-table .lead-tags {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+            min-width: 0;
+        }
+        .leads-table .lead-tag {
+            white-space: nowrap;
+            flex: 0 1 auto;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .leads-table th:nth-child(4),
+        .leads-table td:nth-child(4),
+        .leads-table th:nth-child(6),
+        .leads-table td:nth-child(6),
+        .leads-table th:nth-child(7),
+        .leads-table td:nth-child(7) {
+            white-space: nowrap;
+        }
+        .leads-table th:nth-child(4), .leads-table td:nth-child(4) { min-width: 110px; }
+        .leads-table th:nth-child(6), .leads-table td:nth-child(6) { min-width: 120px; }
+        .leads-table th:nth-child(7), .leads-table td:nth-child(7) { min-width: 70px; text-align: center; }
+        .leads-table td:nth-child(6) > span {
+            display: inline-flex;
+            align-items: center;
+            white-space: nowrap;
+        }
+        @media (max-width: 1100px) {
+            .actions {
+                flex-direction: column;
+                align-items: stretch !important;
+                gap: 10px;
+            }
+            .actions > div {
+                width: 100%;
+            }
+            .actions .search-box {
+                width: 100%;
+                display: flex;
+                flex-direction: column;
+                gap: 10px !important;
+                align-items: stretch !important;
+                margin-left: 0 !important;
+            }
+            .actions .search-box input,
+            .actions .search-box select {
+                width: 100% !important;
+                min-width: 0 !important;
+                max-width: 100%;
+            }
+            .actions .search-box { flex-wrap: nowrap !important; }
+            .leads-table th, .leads-table td { width: auto !important; }
+        }
     </style>
 @endsection

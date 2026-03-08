@@ -6,7 +6,6 @@ use App\Models\Funnel;
 use App\Models\FunnelStep;
 use App\Models\Lead;
 use App\Models\Payment;
-use App\Models\User;
 use App\Services\AutomationWebhookService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -69,12 +68,7 @@ class FunnelPortalController extends Controller
         ]);
 
         if (!$lead->exists) {
-            $defaultAgent = User::where('tenant_id', $funnel->tenant_id)
-                ->whereHas('roles', fn ($q) => $q->where('slug', 'sales-agent'))
-                ->orderBy('id')
-                ->first();
-
-            $lead->assigned_to = $defaultAgent?->id;
+            $lead->assigned_to = null;
             $lead->status = 'new';
             $lead->score = 0;
         }

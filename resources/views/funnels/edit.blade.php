@@ -59,8 +59,9 @@
 .fb-lib-group:last-child{margin-bottom:0;padding-bottom:0;border-bottom:0}
 .fb-lib-group-title{font-size:12px;font-weight:900;letter-spacing:.02em;text-transform:uppercase;color:#1e3a8a;margin:0 0 8px}
 #canvas{
-    width:min(100%,1200px);
-    margin:0 auto;
+    width:100%;
+    max-width:none;
+    margin:0;
     height:calc(100vh - 220px);
     min-height:520px;
     max-height:calc(100vh - 220px);
