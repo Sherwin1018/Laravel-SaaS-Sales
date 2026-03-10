@@ -685,19 +685,52 @@ table tr:hover {
 
 @media (max-width: 768px) {
     .sidebar {
-        position: absolute;
-        left: -250px;
+        --sidebar-mobile-expanded: min(250px, 82vw);
+        --sidebar-mobile-collapsed: 68px;
+        width: var(--sidebar-mobile-expanded);
+        left: 0;
+        position: fixed;
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.18);
     }
 
     .sidebar.collapsed {
-        left: 0;
-        width: 250px;
+        width: var(--sidebar-mobile-collapsed);
+    }
+
+    .sidebar.collapsed .sidebar-menu a {
+        justify-content: center;
+        padding: 12px 10px;
+    }
+
+    .toggle-btn {
+        position: fixed;
+        top: 50%;
+        left: calc(var(--sidebar-mobile-expanded) - 14px);
+        transform: translateY(-50%);
+        width: 28px;
+        height: 28px;
+        border-radius: 999px;
+        border: 1px solid var(--theme-accent, #3B82F6);
+        background: var(--theme-sidebar-bg, #ffffff);
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.16);
+        z-index: 1100;
+    }
+
+    .sidebar.collapsed .toggle-btn {
+        left: calc(var(--sidebar-mobile-collapsed) - 14px);
     }
 
     .main-content {
-        width: 100%;
-        max-width: 100%;
-        margin-left: 0;
+        width: calc(100vw - var(--sidebar-mobile-collapsed));
+        max-width: calc(100vw - var(--sidebar-mobile-collapsed));
+        margin-left: var(--sidebar-mobile-collapsed);
+        padding: 14px;
+    }
+
+    .sidebar:not(.collapsed) ~ .main-content {
+        width: calc(100vw - var(--sidebar-mobile-expanded));
+        max-width: calc(100vw - var(--sidebar-mobile-expanded));
+        margin-left: var(--sidebar-mobile-expanded);
     }
 
     .top-header {

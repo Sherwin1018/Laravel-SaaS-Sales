@@ -2,6 +2,20 @@
 
 @section('title', 'All Leads')
 
+@section('styles')
+    <style>
+        .sa-table-scroll {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .sa-table {
+            min-width: 900px;
+        }
+    </style>
+@endsection
+
 @section('content')
     <div class="actions" style="display: flex; justify-content: space-between; align-items: center;">
         <div></div> <!-- Placeholder for layout consistency -->
@@ -15,7 +29,8 @@
 
     <div class="card">
         <h3>Leads List</h3>
-        <table>
+        <div class="sa-table-scroll">
+        <table class="sa-table">
             <thead>
                 <tr>
                     <th>Name</th>
@@ -30,6 +45,7 @@
                 @include('admin.leads._rows', ['leads' => $leads])
             </tbody>
         </table>
+        </div>
 
          <div style="margin-top: 20px;" id="paginationLinks">
             {{ $leads->links('pagination::bootstrap-4') }}

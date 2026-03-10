@@ -2,6 +2,20 @@
 
 @section('title', 'Funnel Builder')
 
+@section('styles')
+    <style>
+        .funnels-table-scroll {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .funnels-table {
+            min-width: 760px;
+        }
+    </style>
+@endsection
+
 @section('content')
     <div class="top-header">
         <h1>Funnel Builder</h1>
@@ -14,7 +28,8 @@
 
     <div class="card">
         <h3>Funnels</h3>
-        <table>
+        <div class="funnels-table-scroll">
+        <table class="funnels-table">
             <thead>
                 <tr>
                     <th>Name</th>
@@ -59,6 +74,7 @@
                 @endforelse
             </tbody>
         </table>
+        </div>
 
         <div style="margin-top: 18px;">
             {{ $funnels->links('pagination::bootstrap-4') }}

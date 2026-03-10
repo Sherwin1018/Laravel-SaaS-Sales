@@ -191,11 +191,34 @@
         function toggleAccountMenu(event) {
             event.stopPropagation(); // Prevent window click from firing
             const dropdown = document.getElementById("accountDropdown");
+            const triggerBtn = event.currentTarget;
+
+            if (!dropdown || !triggerBtn) return;
+
+            const placeAccountDropdown = () => {
+                const rect = triggerBtn.getBoundingClientRect();
+                const dropdownWidth = 160;
+                const gap = 10;
+                const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+                const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+                const preferredLeft = rect.right + gap;
+                const fitsRight = preferredLeft + dropdownWidth <= viewportWidth - 8;
+                const left = fitsRight ? preferredLeft : Math.max(8, rect.left - dropdownWidth - gap);
+                const top = Math.min(Math.max(8, rect.bottom - 12), Math.max(8, viewportHeight - dropdown.offsetHeight - 8));
+
+                dropdown.style.position = "fixed";
+                dropdown.style.left = `${left}px`;
+                dropdown.style.top = `${top}px`;
+                dropdown.style.right = "auto";
+                dropdown.style.bottom = "auto";
+                dropdown.style.zIndex = "2100";
+            };
 
             if (dropdown.style.display === "block") {
                 dropdown.style.display = "none";
             } else {
                 dropdown.style.display = "block";
+                placeAccountDropdown();
             }
         }
 
@@ -204,7 +227,9 @@
             const dropdown = document.getElementById("accountDropdown");
             const menu = document.querySelector(".account-menu");
 
-            if (!menu.contains(event.target)) {
+            if (!dropdown || !menu) return;
+
+            if (!menu.contains(event.target) && !dropdown.contains(event.target)) {
                 dropdown.style.display = "none";
             }
         });
@@ -214,8 +239,31 @@
         const toggleBtn = document.getElementById('sidebarToggle');
         
         if (sidebar && toggleBtn) {
+            const mobileSidebarMedia = window.matchMedia('(max-width: 768px)');
+            const syncSidebarResponsiveState = () => {
+                if (mobileSidebarMedia.matches) {
+                    if (!sidebar.dataset.mobileInit) {
+                        sidebar.classList.add('collapsed');
+                        sidebar.dataset.mobileInit = '1';
+                    }
+                } else {
+                    sidebar.classList.remove('collapsed');
+                    delete sidebar.dataset.mobileInit;
+                }
+            };
+
+            syncSidebarResponsiveState();
+            if (typeof mobileSidebarMedia.addEventListener === 'function') {
+                mobileSidebarMedia.addEventListener('change', syncSidebarResponsiveState);
+            } else if (typeof mobileSidebarMedia.addListener === 'function') {
+                mobileSidebarMedia.addListener(syncSidebarResponsiveState);
+            }
+
             toggleBtn.addEventListener('click', () => {
                 sidebar.classList.toggle('collapsed');
+                if (mobileSidebarMedia.matches) {
+                    sidebar.dataset.mobileInit = '1';
+                }
             });
         }
     </script>

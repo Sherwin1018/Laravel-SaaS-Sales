@@ -2,6 +2,20 @@
 
 @section('title', 'Manage Tenants')
 
+@section('styles')
+    <style>
+        .sa-table-scroll {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .sa-table {
+            min-width: 860px;
+        }
+    </style>
+@endsection
+
 @section('content')
     <div class="top-header">
         <h1>Manage Tenants</h1>
@@ -25,7 +39,8 @@
 
     <div class="card">
         <h3>Tenant List</h3>
-        <table>
+        <div class="sa-table-scroll">
+        <table class="sa-table">
             <thead>
                 <tr>
                     <th>ID</th>
@@ -40,6 +55,7 @@
                 @include('admin.tenants._rows', ['tenants' => $tenants])
             </tbody>
         </table>
+        </div>
 
         <!-- Pagination -->
         <div style="margin-top: 20px;" id="paginationLinks">

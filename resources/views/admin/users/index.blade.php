@@ -2,6 +2,20 @@
 
 @section('title', 'All System Users')
 
+@section('styles')
+    <style>
+        .sa-table-scroll {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .sa-table {
+            min-width: 980px;
+        }
+    </style>
+@endsection
+
 @section('content')
     <div class="actions" style="display: flex; justify-content: space-between; align-items: center;">
         <div></div> <!-- Placeholder for layout consistency -->
@@ -15,7 +29,8 @@
 
     <div class="card">
         <h3>Users List</h3>
-        <table>
+        <div class="sa-table-scroll">
+        <table class="sa-table">
             <thead>
                 <tr>
                     <th>Name</th>
@@ -31,6 +46,7 @@
                 @include('admin.users._rows', ['users' => $users])
             </tbody>
         </table>
+        </div>
         
         <div style="margin-top: 20px;" id="paginationLinks">
             {{ $users->links('pagination::bootstrap-4') }}
