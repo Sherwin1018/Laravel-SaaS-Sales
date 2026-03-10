@@ -10,9 +10,11 @@
         $tenant = $authUser?->tenant;
         $themePrimary = $tenant->theme_primary_color ?? '#2563EB';
         $themeAccent = $tenant->theme_accent_color ?? '#0EA5E9';
-        $themeSidebarBg = $tenant->theme_sidebar_bg ?? '#FFFFFF';
-        $themeSidebarText = $tenant->theme_sidebar_text ?? '#1E40AF';
+        $themeSidebarBg = $tenant->theme_sidebar_bg ?? '#4169E1';
+        $themeSidebarText = $tenant->theme_sidebar_text ?? '#F8FAFF';
+        $themeSidebarIcon = '#E6F0FF';
         $themeBodyBg = '#EFF6FF';
+        $themeBodyText = '#0F172A';
         $themePrimaryDark = '#1E40AF';
     @endphp
     <style>
@@ -22,7 +24,9 @@
             --theme-accent: {{ $themeAccent }};
             --theme-sidebar-bg: {{ $themeSidebarBg }};
             --theme-sidebar-text: {{ $themeSidebarText }};
+            --theme-sidebar-icon: {{ $themeSidebarIcon }};
             --theme-body-bg: {{ $themeBodyBg }};
+            --theme-body-text: {{ $themeBodyText }};
         }
         body.builder-full-width .main-content {
             margin-left: 0;
