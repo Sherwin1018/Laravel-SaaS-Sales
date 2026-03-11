@@ -115,7 +115,7 @@
 
             <div style="margin-bottom: 16px; padding: 12px; border: 1px solid var(--theme-border, #E6E1EF); border-radius: 8px;">
                 <div style="display: flex; align-items: center; justify-content: space-between;">
-                    <span style="font-weight: 700;">Notification Toggle (Static)</span>
+                    <span style="font-weight: 700;">Notification Toggle</span>
                     <label style="display:inline-block;position:relative;width:44px;height:24px;">
                         <input type="checkbox" checked disabled style="opacity:0;width:0;height:0;">
                         <span style="position:absolute;inset:0;background:var(--theme-primary, #240E35);border-radius:999px;"></span>

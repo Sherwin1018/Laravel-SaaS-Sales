@@ -76,14 +76,33 @@
 
             <div style="margin-bottom: 20px;">
                 <label for="admin_password_confirmation" style="display: block; margin-bottom: 8px; font-weight: bold;">Confirm Admin Password</label>
-                <input type="password" name="admin_password_confirmation" id="admin_password_confirmation" required
-                    style="width: 100%; padding: 10px; border: 1px solid var(--theme-border, #E6E1EF); border-radius: 6px;">
+                <div style="position: relative;">
+                    <input type="password" name="admin_password_confirmation" id="admin_password_confirmation" required
+                        style="width: 100%; padding: 10px; padding-right: 40px; border: 1px solid var(--theme-border, #E6E1EF); border-radius: 6px;">
+                    <i class="fas fa-eye" id="toggleAdminPasswordConfirm"
+                        style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #6B7280;"
+                        onclick="toggleAdminPasswordConfirm()"></i>
+                </div>
             </div>
 
             <script>
                 function toggleAdminPassword() {
                     const passwordInput = document.getElementById('admin_password');
                     const icon = document.getElementById('toggleAdminPassword');
+                    if (passwordInput.type === 'password') {
+                        passwordInput.type = 'text';
+                        icon.classList.remove('fa-eye');
+                        icon.classList.add('fa-eye-slash');
+                    } else {
+                        passwordInput.type = 'password';
+                        icon.classList.remove('fa-eye-slash');
+                        icon.classList.add('fa-eye');
+                    }
+                }
+
+                function toggleAdminPasswordConfirm() {
+                    const passwordInput = document.getElementById('admin_password_confirmation');
+                    const icon = document.getElementById('toggleAdminPasswordConfirm');
                     if (passwordInput.type === 'password') {
                         passwordInput.type = 'text';
                         icon.classList.remove('fa-eye');
