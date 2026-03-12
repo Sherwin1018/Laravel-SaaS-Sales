@@ -2,6 +2,20 @@
 
 @section('title', 'Manage Tenants')
 
+@section('styles')
+    <style>
+        .sa-table-scroll {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .sa-table {
+            min-width: 860px;
+        }
+    </style>
+@endsection
+
 @section('content')
     <div class="top-header">
         <h1>Manage Tenants</h1>
@@ -19,13 +33,14 @@
         <!-- Live Search Input -->
         <div class="search-box">
             <input type="text" id="searchInput" placeholder="Search tenants..." 
-                   style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; width: 300px;">
+                   style="padding: 8px 12px; border: 1px solid var(--theme-border, #E6E1EF); border-radius: 6px; width: 300px;">
         </div>
     </div>
 
     <div class="card">
         <h3>Tenant List</h3>
-        <table>
+        <div class="sa-table-scroll">
+        <table class="sa-table">
             <thead>
                 <tr>
                     <th>ID</th>
@@ -40,6 +55,7 @@
                 @include('admin.tenants._rows', ['tenants' => $tenants])
             </tbody>
         </table>
+        </div>
 
         <!-- Pagination -->
         <div style="margin-top: 20px;" id="paginationLinks">

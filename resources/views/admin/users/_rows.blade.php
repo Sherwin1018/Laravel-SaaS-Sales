@@ -13,7 +13,7 @@
         </td>
         <td>
             @foreach($user->roles as $role)
-                <span style="background-color: #EFF6FF; color: #1E40AF; padding: 2px 6px; border-radius: 4px; font-size: 12px; margin-right: 4px; font-weight: 700;">
+                <span style="background-color: var(--theme-surface-soft, #F3EEF7); color: var(--theme-primary-dark, #2E1244); padding: 2px 6px; border-radius: 4px; font-size: 12px; margin-right: 4px; font-weight: 700;">
                     {{ $role->name }}
                 </span>
             @endforeach
@@ -36,7 +36,7 @@
                     {{ $user->status === 'active' ? 'Suspend' : 'Activate' }}
                 </button>
             @else
-                <span style="color: #64748B; font-size: 12px; font-weight: 700;">N/A</span>
+                <span style="color: var(--theme-muted, #6B7280); font-size: 12px; font-weight: 700;">N/A</span>
             @endif
         </td>
     </tr>

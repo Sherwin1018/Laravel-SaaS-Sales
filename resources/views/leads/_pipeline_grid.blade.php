@@ -6,7 +6,7 @@
         @forelse($pipelineLeads[$status]['leads'] as $pipelineLead)
             <div class="pipeline-lead-card" data-lead-name="{{ strtolower($pipelineLead->name) }}" data-lead-agent="{{ strtolower($pipelineLead->assignedAgent->name ?? 'unassigned') }}">
                 <strong style="display: block; font-size: 13px;">{{ $pipelineLead->name }}</strong>
-                <small style="color: #64748B; font-weight: 700;">{{ $pipelineLead->assignedAgent->name ?? 'Unassigned' }}</small>
+                <small style="color: var(--theme-muted, #6B7280); font-weight: 700;">{{ $pipelineLead->assignedAgent->name ?? 'Unassigned' }}</small>
                 @php($pipeTags = is_array($pipelineLead->tags) ? $pipelineLead->tags : [])
                 @if(count($pipeTags))
                     <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px;">

@@ -11,43 +11,14 @@
     <!-- Custom CSS -->
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="{{ asset('css/new_login.css') }}">
+    <link rel="stylesheet" href="http://127.0.0.1:8000/css/new_login.css">
 </head>
 <body>
-    @if(session('success') || session('error'))
-        <div id="statusToastContainer" style="position:fixed;top:18px;right:18px;z-index:9999;">
-            <div style="display:flex;gap:12px;align-items:center;background:#fff;border-radius:14px;width:min(90vw,380px);padding:12px 38px 12px 12px;border:1px solid var(--theme-border, #E6E1EF);box-shadow:0 18px 38px rgba(15,23,42,.2);position:relative;">
-                <i class="fas {{ session('success') ? 'fa-check' : 'fa-times' }}" style="font-size:24px;color:{{ session('success') ? '#65A30D' : '#B91C1C' }};"></i>
-                <div>
-                    <h4 style="margin:0 0 6px 0;font-size:15px;font-weight:800;color:{{ session('success') ? '#65A30D' : '#B91C1C' }};">
-                        {{ session('success') ? 'Success!' : 'Error!' }}
-                    </h4>
-                    <p style="margin:0;color:#334155;font-size:14px;font-weight:500;line-height:1.2;">
-                        {{ session('success') ?? session('error') }}
-                    </p>
-                </div>
-                <button type="button" onclick="closeStatusToast()" aria-label="Close notification"
-                    style="position:absolute;top:8px;right:8px;border:none;background:transparent;color:#334155;font-size:16px;cursor:pointer;line-height:1;">
-                    <i class="fas fa-times-circle"></i>
-                </button>
-            </div>
-        </div>
-        <script>
-            function closeStatusToast() {
-                const toastContainer = document.getElementById('statusToastContainer');
-                if (toastContainer) {
-                    toastContainer.style.display = 'none';
-                }
-            }
-
-            setTimeout(closeStatusToast, 3000);
-        </script>
-    @endif
-
+    
     <div class="login-container">
         <!-- Left Info Panel -->
         <div class="info-panel">
-            <img src="{{ asset('images/logo3.png') }}" alt="Funnel System Logo" class="info-logo">
+            <img src="http://127.0.0.1:8000/images/logo3.png" alt="Funnel System Logo" class="info-logo">
             <h1>Grow Your Sales Efficiently</h1>
             <p class="info-subtitle">Manage leads, automate marketing campaigns, and track performance in one platform.</p>
 
@@ -60,14 +31,13 @@
 
         <!-- Right Login Panel -->
         <div class="login-card">
-            <img src="{{ asset('images/logo2.png') }}" alt="Funnel System Logo" class="login-logo">
+            <img src="http://127.0.0.1:8000/images/logo2.png" alt="Funnel System Logo" class="login-logo">
 
             <h1>Login to Funnel System</h1>
             <p class="subtitle">Access your sales and marketing dashboard</p>
 
-            <form method="POST" action="{{ route('login.post') }}">
-                @csrf
-                <label for="email">Email Address</label>
+            <form method="POST" action="http://127.0.0.1:8000/login">
+                <input type="hidden" name="_token" value="0dbSX0YPSb85VdJdrDgt1g3tQ3WJmYmD6agMvpTc" autocomplete="off">                <label for="email">Email Address</label>
                 <input type="email" name="email" placeholder="Email" required>
 
                 <label for="password">Password</label>

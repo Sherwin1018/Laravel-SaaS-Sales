@@ -1,6 +1,6 @@
 @php
     $statusStyles = [
-        'new' => 'background-color: #DBEAFE; color: #1E40AF;',
+        'new' => 'background-color: var(--theme-border, #E6E1EF); color: var(--theme-primary-dark, #2E1244);',
         'contacted' => 'background-color: #FEF3C7; color: #92400E;',
         'proposal_sent' => 'background-color: #EDE9FE; color: #5B21B6;',
         'closed_won' => 'background-color: #D1FAE5; color: #065F46;',

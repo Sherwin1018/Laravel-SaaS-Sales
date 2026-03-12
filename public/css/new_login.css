@@ -1,7 +1,7 @@
 :root {
-    --primary-color: #2563EB;
-    --primary-hover: #1D4ED8;
-    --bg-gradient: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+    --primary-color: #240E35;
+    --primary-hover: #2E1244;
+    --bg-gradient: linear-gradient(135deg, #F3EEF7 0%, #E7D8F0 100%);
     --text-color: #1F2937;
     --text-light: #6B7280;
     --white: #FFFFFF;
@@ -33,7 +33,7 @@ body {
 /* Left Panel */
 .info-panel {
     flex: 1;
-    background: linear-gradient(135deg, #1E40AF 0%, #3B82F6 100%);
+    background: #240E35;
     padding: 60px 40px;
     display: flex;
     flex-direction: column;

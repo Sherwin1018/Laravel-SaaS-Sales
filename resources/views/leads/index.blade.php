@@ -11,10 +11,10 @@
         @if(auth()->user()->hasRole('account-owner') || auth()->user()->hasRole('marketing-manager'))
             <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                 <a href="{{ route('leads.create') }}" class="btn-create"><i class="fas fa-plus"></i> Add New Lead</a>
-                <button type="button" id="togglePipelineBtn" class="btn-create" style="background-color: var(--theme-accent, #0EA5E9); color: #fff; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                <button type="button" id="togglePipelineBtn" class="btn-create" style="background-color: var(--theme-accent, var(--theme-accent, #6B4A7A)); color: #fff; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: 600;">
                     <i class="fas fa-columns"></i> View Lead Pipeline
                 </button>
-                <button type="button" id="toggleAssignBtn" class="btn-create" style="background-color: var(--theme-primary, #2563EB); color: #fff; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                <button type="button" id="toggleAssignBtn" class="btn-create" style="background-color: var(--theme-primary, var(--theme-primary, #240E35)); color: #fff; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: 600;">
                     <i class="fas fa-user-check"></i> Assign Lead
                 </button>
             </div>
@@ -22,8 +22,8 @@
 
         <div class="search-box" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
             <input type="text" id="searchInput" placeholder="Search leads..."
-                style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; width: 240px;">
-            <select id="tagFilterInput" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; min-width: 180px;">
+                style="padding: 8px 12px; border: 1px solid var(--theme-border, #E6E1EF); border-radius: 6px; width: 240px;">
+            <select id="tagFilterInput" style="padding: 8px 12px; border: 1px solid var(--theme-border, #E6E1EF); border-radius: 6px; min-width: 180px;">
                 <option value="">All tags</option>
                 @foreach(($availableTags ?? []) as $tagOption)
                     <option value="{{ $tagOption }}" {{ ($tagFilter ?? '') === $tagOption ? 'selected' : '' }}>{{ $tagOption }}</option>
@@ -45,8 +45,8 @@
             <span style="font-weight: 600;">Filter by lead or agent</span>
             <div style="display:flex;gap:8px;flex-wrap:wrap;">
                 <input type="text" id="pipelineSearchInput" placeholder="Search pipeline..."
-                    style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; width: 220px;">
-                <select id="pipelineTagFilterInput" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; min-width: 180px;">
+                    style="padding: 8px 12px; border: 1px solid var(--theme-border, #E6E1EF); border-radius: 6px; width: 220px;">
+                <select id="pipelineTagFilterInput" style="padding: 8px 12px; border: 1px solid var(--theme-border, #E6E1EF); border-radius: 6px; min-width: 180px;">
                     <option value="">All tags</option>
                     @foreach(($availableTags ?? []) as $tagOption)
                         <option value="{{ $tagOption }}" {{ ($pipelineTagFilter ?? '') === $tagOption ? 'selected' : '' }}>{{ $tagOption }}</option>
@@ -55,7 +55,7 @@
             </div>
         </div>
 
-        <p style="font-size: 12px; color: #64748B; margin-bottom: 12px; font-weight: 600;">
+        <p style="font-size: 12px; color: var(--theme-muted, #6B7280); margin-bottom: 12px; font-weight: 600;">
             Showing the latest 12 leads per stage. Search above to find any lead (searches all data).
         </p>
 
@@ -107,22 +107,22 @@
                         <label for="leadSelect" style="display: block; margin-bottom: 6px; font-weight: 600;">Lead</label>
                         <div class="custom-dropdown" id="leadDropdownWrapper" style="position: relative;">
                             <input type="hidden" name="lead_id" id="leadSelectHidden" value="">
-                            <div class="custom-dropdown-toggle" id="leadDropdownToggle" style="width: 100%; padding: 10px; border: 1px solid #DBEAFE; border-radius: 6px; background: #fff; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
-                                <span id="leadDropdownText" style="color: #64748B;">Select a lead...</span>
-                                <i class="fas fa-chevron-down" style="color: #64748B; font-size: 12px;"></i>
+                            <div class="custom-dropdown-toggle" id="leadDropdownToggle" style="width: 100%; padding: 10px; border: 1px solid var(--theme-border, #E6E1EF); border-radius: 6px; background: var(--theme-surface, #FFFFFF); cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+                                <span id="leadDropdownText" style="color: var(--theme-muted, #6B7280);">Select a lead...</span>
+                                <i class="fas fa-chevron-down" style="color: var(--theme-muted, #6B7280); font-size: 12px;"></i>
                             </div>
-                            <div class="custom-dropdown-menu" id="leadDropdownMenu" style="display: none; position: absolute; width: 100%; background: #fff; border: 1px solid #DBEAFE; border-radius: 6px; margin-top: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 10000; max-height: 300px; overflow-y: auto;">
-                                <div style="padding: 8px; border-bottom: 1px solid #E2E8F0; position: sticky; top: 0; background: #fff; z-index: 10;">
-                                    <input type="text" id="leadDropdownSearch" placeholder="Search leads..." style="width: 100%; padding: 8px; border: 1px solid #DBEAFE; border-radius: 4px; font-size: 14px;">
+                            <div class="custom-dropdown-menu" id="leadDropdownMenu" style="display: none; position: absolute; width: 100%; background: var(--theme-surface, #FFFFFF); border: 1px solid var(--theme-border, #E6E1EF); border-radius: 6px; margin-top: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 10000; max-height: 300px; overflow-y: auto;">
+                                <div style="padding: 8px; border-bottom: 1px solid var(--theme-border, #E6E1EF); position: sticky; top: 0; background: var(--theme-surface, #FFFFFF); z-index: 10;">
+                                    <input type="text" id="leadDropdownSearch" placeholder="Search leads..." style="width: 100%; padding: 8px; border: 1px solid var(--theme-border, #E6E1EF); border-radius: 4px; font-size: 14px;">
                                 </div>
                                 <div id="leadDropdownOptions" style="max-height: 250px; overflow-y: auto;">
                                     @forelse($leadsForDropdown ?? $leads as $lead)
-                                        <div class="custom-dropdown-option" data-value="{{ $lead->id }}" data-text="{{ $lead->name }} ({{ $lead->assignedAgent->name ?? 'Unassigned' }})" style="padding: 10px; cursor: pointer; border-bottom: 1px solid #F1F5F9; transition: background 0.2s;">
-                                            <strong style="display: block; font-size: 14px; color: #1E40AF;">{{ $lead->name }}</strong>
-                                            <small style="color: #64748B; font-size: 12px;">{{ $lead->assignedAgent->name ?? 'Unassigned' }}</small>
+                                        <div class="custom-dropdown-option" data-value="{{ $lead->id }}" data-text="{{ $lead->name }} ({{ $lead->assignedAgent->name ?? 'Unassigned' }})" style="padding: 10px; cursor: pointer; border-bottom: 1px solid var(--theme-surface-softer, #F7F7FB); transition: background 0.2s;">
+                                            <strong style="display: block; font-size: 14px; color: var(--theme-primary-dark, #2E1244);">{{ $lead->name }}</strong>
+                                            <small style="color: var(--theme-muted, #6B7280); font-size: 12px;">{{ $lead->assignedAgent->name ?? 'Unassigned' }}</small>
                                         </div>
                                     @empty
-                                        <div style="padding: 12px; text-align: center; color: #94A3B8;">No leads available</div>
+                                        <div style="padding: 12px; text-align: center; color: var(--theme-muted, #6B7280);">No leads available</div>
                                     @endforelse
                                 </div>
                             </div>
@@ -130,7 +130,7 @@
                     </div>
                     <div style="margin-bottom: 10px;">
                         <label for="agentSelect">Sales Agent</label>
-                        <select id="agentSelect" name="assigned_to" style="width: 100%; padding: 10px; border: 1px solid #DBEAFE; border-radius: 6px;">
+                        <select id="agentSelect" name="assigned_to" style="width: 100%; padding: 10px; border: 1px solid var(--theme-border, #E6E1EF); border-radius: 6px;">
                             <option value="">Unassigned</option>
                             @foreach($assignableAgents as $agent)
                                 <option value="{{ $agent->id }}">{{ $agent->name }}</option>
@@ -138,7 +138,7 @@
                         </select>
                     </div>
                     <button type="submit"
-                        style="padding: 8px 16px; background-color: var(--theme-primary, #2563EB); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                        style="padding: 8px 16px; background-color: var(--theme-primary, var(--theme-primary, #240E35)); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
                         Save Assignment
                     </button>
                 </form>
@@ -183,15 +183,15 @@
                                 leadDropdownOptions.innerHTML = '';
                                 allLeadOptions = [];
                                 if (data.leads.length === 0) {
-                                    leadDropdownOptions.innerHTML = '<div style="padding: 12px; text-align: center; color: #94A3B8;">No leads available</div>';
+                                    leadDropdownOptions.innerHTML = '<div style="padding: 12px; text-align: center; color: var(--theme-muted, #6B7280);">No leads available</div>';
                                 } else {
                                     data.leads.forEach(function(lead) {
                                         var opt = document.createElement('div');
                                         opt.className = 'custom-dropdown-option';
                                         opt.setAttribute('data-value', lead.id);
                                         opt.setAttribute('data-text', lead.name + ' (' + lead.assigned + ')');
-                                        opt.style.cssText = 'padding: 10px; cursor: pointer; border-bottom: 1px solid #F1F5F9; transition: background 0.2s;';
-                                        opt.innerHTML = '<strong style="display: block; font-size: 14px; color: #1E40AF;">' + lead.name + '</strong><small style="color: #64748B; font-size: 12px;">' + lead.assigned + '</small>';
+                                        opt.style.cssText = 'padding: 10px; cursor: pointer; border-bottom: 1px solid var(--theme-surface-softer, #F7F7FB); transition: background 0.2s;';
+                                        opt.innerHTML = '<strong style="display: block; font-size: 14px; color: var(--theme-primary-dark, #2E1244);">' + lead.name + '</strong><small style="color: var(--theme-muted, #6B7280); font-size: 12px;">' + lead.assigned + '</small>';
                                         leadDropdownOptions.appendChild(opt);
                                         allLeadOptions.push(opt);
                                     });
@@ -240,7 +240,7 @@
                     if (match) visible++;
                 });
                 if (visible === 0 && q) {
-                    leadDropdownOptions.innerHTML = '<div style="padding: 12px; text-align: center; color: #94A3B8;">No leads found</div>';
+                    leadDropdownOptions.innerHTML = '<div style="padding: 12px; text-align: center; color: var(--theme-muted, #6B7280);">No leads found</div>';
                 } else if (visible === 0 && !q && allLeadOptions.length > 0) {
                     leadDropdownOptions.innerHTML = '';
                     allLeadOptions.forEach(function(opt) { leadDropdownOptions.appendChild(opt); });
@@ -271,7 +271,7 @@
                             var text = opt.getAttribute('data-text');
                             if (leadSelectHidden) leadSelectHidden.value = value;
                             if (leadDropdownText) leadDropdownText.textContent = text;
-                            if (leadDropdownText) leadDropdownText.style.color = '#1E40AF';
+                            if (leadDropdownText) leadDropdownText.style.color = 'var(--theme-primary-dark, #2E1244)';
                             leadDropdownMenu.style.display = 'none';
                             if (leadDropdownSearch) leadDropdownSearch.value = '';
                             filterLeadOptions('');
@@ -366,24 +366,24 @@
     </script>
     <style>
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center; padding: 20px; }
-        .modal-box { background: #fff; border-radius: 8px; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); }
-        .modal-close-btn { background: none; border: none; font-size: 28px; cursor: pointer; color: #64748B; line-height: 1; padding: 0 4px; }
-        .modal-close-btn:hover { color: #1E293B; }
+        .modal-box { background: var(--theme-surface, #FFFFFF); border-radius: 8px; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); }
+        .modal-close-btn { background: none; border: none; font-size: 28px; cursor: pointer; color: var(--theme-muted, #6B7280); line-height: 1; padding: 0 4px; }
+        .modal-close-btn:hover { color: var(--theme-body-text, #111827); }
         .pipeline-modal-box { width: 1200px; max-width: 95vw; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; }
         .pipeline-modal-body { flex: 1; overflow-y: auto; overflow-x: hidden; }
         .pipeline-card { margin-bottom: 0; overflow: visible; }
         .pipeline-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
-        .pipeline-column { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 10px; max-height: 460px; overflow-y: auto; }
-        .pipeline-lead-card { padding: 8px; border-radius: 6px; border: 1px solid #E5E7EB; background: white; margin-bottom: 8px; }
-        .pipeline-empty { font-size: 12px; color: #94A3B8; margin: 0; font-weight: 700; }
+        .pipeline-column { background: var(--theme-surface-softer, #F7F7FB); border: 1px solid var(--theme-border, #E6E1EF); border-radius: 8px; padding: 10px; max-height: 460px; overflow-y: auto; }
+        .pipeline-lead-card { padding: 8px; border-radius: 6px; border: 1px solid var(--theme-border, #E6E1EF); background: var(--theme-surface, #FFFFFF); margin-bottom: 8px; }
+        .pipeline-empty { font-size: 12px; color: var(--theme-muted, #6B7280); margin: 0; font-weight: 700; }
         .assign-modal-box { max-width: 600px; width: 100%; }
         .custom-dropdown { position: relative; }
-        .custom-dropdown-toggle:hover { border-color: #93C5FD; background: #F8FAFC; }
-        .custom-dropdown-option:hover { background: #F1F5F9 !important; }
+        .custom-dropdown-toggle:hover { border-color: var(--theme-border, #E6E1EF); background: var(--theme-surface-softer, #F7F7FB); }
+        .custom-dropdown-option:hover { background: var(--theme-surface-softer, #F7F7FB) !important; }
         .custom-dropdown-menu::-webkit-scrollbar { width: 8px; }
-        .custom-dropdown-menu::-webkit-scrollbar-track { background: #F1F5F9; border-radius: 4px; }
-        .custom-dropdown-menu::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
-        .custom-dropdown-menu::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+        .custom-dropdown-menu::-webkit-scrollbar-track { background: var(--theme-surface-softer, #F7F7FB); border-radius: 4px; }
+        .custom-dropdown-menu::-webkit-scrollbar-thumb { background: var(--theme-border, #E6E1EF); border-radius: 4px; }
+        .custom-dropdown-menu::-webkit-scrollbar-thumb:hover { background: var(--theme-muted, #6B7280); }
         .actions .search-box {
             margin-left: 0 !important;
             justify-content: flex-start !important;

@@ -133,7 +133,7 @@
                 datasets: [{
                     label: 'Leads',
                     data: @json(array_values($pipelineDistribution)),
-                    backgroundColor: '#2563EB'
+                    backgroundColor: '#240E35'
                 }]
             },
             options: {
@@ -150,7 +150,7 @@
                 labels: @json(array_keys($pipelineAging)),
                 datasets: [{
                     data: @json(array_values($pipelineAging)),
-                    backgroundColor: ['#3B82F6', '#0EA5E9', '#F59E0B']
+                    backgroundColor: ['#240E35', '#6B4A7A', '#9E7BB5']
                 }]
             },
             options: {

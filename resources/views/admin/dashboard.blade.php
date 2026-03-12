@@ -2,6 +2,20 @@
 
 @section('title', 'Super Admin Dashboard')
 
+@section('styles')
+    <style>
+        .sa-table-scroll {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .sa-table {
+            min-width: 640px;
+        }
+    </style>
+@endsection
+
 @section('content')
     <div class="top-header">
         <h1>Welcome, Super Admin</h1>
@@ -47,7 +61,8 @@
 
     <div class="card" style="margin-bottom: 20px;">
         <h3>Payment Status Totals</h3>
-        <table>
+        <div class="sa-table-scroll">
+        <table class="sa-table">
             <thead>
                 <tr>
                     <th>Status</th>
@@ -68,11 +83,13 @@
                 @endforeach
             </tbody>
         </table>
+        </div>
     </div>
 
     <div class="card">
         <h3>Needs Action Now</h3>
-        <table>
+        <div class="sa-table-scroll">
+        <table class="sa-table">
             <thead>
                 <tr>
                     <th>Company</th>
@@ -96,6 +113,7 @@
                 @endforelse
             </tbody>
         </table>
+        </div>
         <div style="margin-top: 16px;">
             {{ $actionableTenants->links('pagination::bootstrap-4') }}
         </div>
@@ -112,8 +130,8 @@
                 datasets: [{
                     label: 'Leads',
                     data: @json($leadTrendValues),
-                    borderColor: '#2563EB',
-                    backgroundColor: 'rgba(37, 99, 235, 0.18)',
+                    borderColor: '#240E35',
+                    backgroundColor: 'rgba(36, 14, 53, 0.18)',
                     fill: true,
                     tension: 0.35
                 }]
@@ -132,7 +150,7 @@
                 datasets: [{
                     label: 'Users',
                     data: @json($usersByRole->pluck('users_count')->values()),
-                    backgroundColor: '#3B82F6'
+                    backgroundColor: '#6B4A7A'
                 }]
             },
             options: {

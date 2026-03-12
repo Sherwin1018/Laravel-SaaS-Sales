@@ -22,9 +22,12 @@
             border: none;
             border-radius: 0;
             box-shadow: none;
-            overflow: hidden;
+            overflow-x: auto;
+            overflow-y: visible;
         }
         body.is-published .step-content--full { padding-top: 0; }
+        body.is-preview .step-content--full { padding: 10px; overflow-x: hidden; }
+        body.is-preview .builder-section--freeform { margin: 0; width: 100%; }
         .step-content--full .builder-section,
         .step-content--full .builder-row,
         .step-content--full .builder-col { max-width: none !important; }
@@ -56,9 +59,15 @@
         .price { font-size: 34px; font-weight: 800; color: #047857; margin: 0 0 12px; }
         .row { display: flex; gap: 10px; flex-wrap: wrap; }
         .builder-section { border-radius: 14px; margin-bottom: 14px; border: none; }
-        .builder-section-inner { width: 100%; box-sizing: border-box; }
+        .builder-section--freeform { border-radius: 0; padding: 0; margin: 0 -2rem; background: transparent; border: none; width: calc(100% + 4rem); max-width: none; }
+        .builder-section--freeform .builder-row { padding: 0; gap: 0; margin: 0; display: block; }
+        .builder-section--freeform .builder-row-inner { display: block; gap: 0; }
+        .builder-section--freeform .builder-col { overflow: visible; background: transparent; min-width: 0; min-height: 0; padding: 0; margin: 0 auto; }
+        .builder-section--freeform .builder-col-inner { overflow: visible; position: relative; }
+        .builder-section--freeform .builder-el { margin-top: 0 !important; }
+        .builder-section-inner { width: 100%; box-sizing: border-box; position: relative; }
         .builder-row-inner { width: 100%; box-sizing: border-box; display: flex; flex-wrap: wrap; gap: 8px; }
-        .builder-col-inner { width: 100%; box-sizing: border-box; max-width: 100%; overflow: hidden; }
+        .builder-col-inner { width: 100%; box-sizing: border-box; max-width: 100%; overflow: hidden; position: relative; }
         .builder-row { display: flex; gap: 8px; flex-wrap: wrap; padding: 6px; }
         .builder-col { min-width: 240px; min-height: 24px; flex: 1 1 0; position: relative; overflow: hidden; background: #ffffff; }
         .builder-col > .builder-col-inner > .builder-el { max-width: 100%; overflow: hidden; }
@@ -124,6 +133,19 @@
             display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px;
             border-radius: 999px; font-size: 12px; font-weight: 800; color: #1d4ed8; background: #dbeafe;
         }
+        .preview-toolbar {
+            position: relative;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            z-index: 10;
+            margin: 12px;
+            padding: 10px 12px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+        }
     </style>
 </head>
 <body class="{{ ($isPreview ?? false) ? 'is-preview' : 'is-published' }}">
@@ -140,6 +162,7 @@
             }
         }
         $renderSections = [];
+        $freeformEls = [];
         foreach ($rootItems as $ri => $rootItem) {
             if (!is_array($rootItem)) {
                 continue;
@@ -174,15 +197,36 @@
                 ];
                 continue;
             }
+            $freeformEls[] = $rootItem;
+        }
+        if (count($freeformEls) > 0) {
             $renderSections[] = [
-                'id' => 'sec_root_el_' . $ri,
+                'id' => 'sec_freeform_canvas',
                 'style' => [],
                 'settings' => ['contentWidth' => 'full'],
-                'elements' => [$rootItem],
+                'elements' => $freeformEls,
                 'rows' => [],
-                'isBareCarouselWrap' => strtolower((string) ($rootItem['type'] ?? '')) === 'carousel',
+                'isFreeformCanvas' => true,
             ];
         }
+        $editorMeta = is_array($layout['__editor'] ?? null) ? $layout['__editor'] : [];
+        $canvasWidthRaw = (int) ($editorMeta['canvasWidth'] ?? 0);
+        $canvasInnerWidthRaw = (int) ($editorMeta['canvasInnerWidth'] ?? 0);
+        $editorCanvasWidth = $canvasInnerWidthRaw > 0 ? $canvasInnerWidthRaw : ($canvasWidthRaw > 0 ? max(0, $canvasWidthRaw - 22) : 0);
+        $derivedCanvasWidth = 0;
+        foreach ($freeformEls as $ffEl) {
+            if (!is_array($ffEl)) continue;
+            $ffStyle = is_array($ffEl['style'] ?? null) ? $ffEl['style'] : [];
+            $ffSettings = is_array($ffEl['settings'] ?? null) ? $ffEl['settings'] : [];
+            $ffLeft = (int) ($ffSettings['freeX'] ?? 0);
+            if ($ffLeft <= 0) $ffLeft = (int) str_replace('px', '', (string) ($ffStyle['left'] ?? '0'));
+            $ffWidth = (int) str_replace('px', '', (string) ($ffStyle['width'] ?? '0'));
+            if ($ffWidth <= 0) $ffWidth = (int) ($ffSettings['fixedWidth'] ?? 0);
+            if ($ffWidth <= 0) $ffWidth = 120;
+            $ffRight = $ffLeft + $ffWidth + 20;
+            if ($ffRight > $derivedCanvasWidth) $derivedCanvasWidth = $ffRight;
+        }
+        if ($derivedCanvasWidth > $editorCanvasWidth) $editorCanvasWidth = $derivedCanvasWidth;
         $hasBuilderLayout = count($renderSections) > 0;
         $activeSteps = collect($allSteps ?? [])->values()->filter(fn ($s) => isset($s->id, $s->slug));
         $activeStepsBySlug = $activeSteps->keyBy(fn ($s) => strtolower(trim((string) $s->slug)));
@@ -301,12 +345,30 @@
                 'text-decoration-color' => 'text-decoration-color',
                 'textDecoration' => 'text-decoration',
                 'text-decoration' => 'text-decoration',
+                'position' => 'position',
+                'left' => 'left',
+                'top' => 'top',
+                'zIndex' => 'z-index',
+                'z-index' => 'z-index',
             ];
 
             $out = [];
             foreach ($allowed as $key => $cssProp) {
                 $value = trim((string) ($style[$key] ?? ''));
                 if ($value === '') {
+                    continue;
+                }
+                if ($key === 'position') {
+                    if (in_array($value, ['absolute', 'relative'], true)) {
+                        $out[] = $cssProp . ':' . $value;
+                    }
+                    continue;
+                }
+                if ($key === 'zIndex' || $key === 'z-index') {
+                    $n = (int) $value;
+                    if ($n >= 0 && $n <= 9999) {
+                        $out[] = 'z-index:' . $n;
+                    }
                     continue;
                 }
                 if ($key === 'backgroundImage') {
@@ -322,13 +384,25 @@
                 $out[] = $cssProp . ':' . $value;
             }
 
-            return implode(';', $out);
+            $result = implode(';', $out);
+            return $result !== '' ? $result . ';' : '';
+        };
+
+        $layoutKeys = ['position','left','top','right','bottom','width','height','minWidth','min-width','maxWidth','max-width','minHeight','min-height','maxHeight','max-height','zIndex','z-index','margin','marginTop','marginRight','marginBottom','marginLeft','flex'];
+        $contentStyleToString = function (array $style) use ($styleToString, $layoutKeys): string {
+            $filtered = [];
+            foreach ($style as $k => $v) {
+                if (!in_array($k, $layoutKeys, true)) {
+                    $filtered[$k] = $v;
+                }
+            }
+            return $styleToString($filtered);
         };
     @endphp
 
     <div class="wrap">
         @if($isPreview)
-        <div style="margin-bottom: 10px; padding: 0 2rem; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+        <div class="preview-toolbar">
             <a class="btn secondary" href="{{ route('funnels.edit', $funnel) }}" style="padding:8px 14px; box-shadow:none;">
                 <i class="fas fa-arrow-left"></i> Back to Builder
             </a>
@@ -348,12 +422,13 @@
                             $sectionAnchorId = mb_substr($sectionAnchorId, 0, 80);
                         }
                         $isBareCarouselWrap = (bool) ($section['isBareCarouselWrap'] ?? false);
+                        $isFreeformCanvas = (bool) ($section['isFreeformCanvas'] ?? false);
                         $contentWidth = trim((string) ($sectionSettings['contentWidth'] ?? 'full'));
                         $widthMap = ['full' => '', 'wide' => '1200px', 'medium' => '992px', 'small' => '768px', 'xsmall' => '576px'];
                         $innerMax = $widthMap[$contentWidth] ?? '';
                         $sectionElements = is_array($section['elements'] ?? null) ? $section['elements'] : [];
                         $rows = is_array($section['rows'] ?? null) ? $section['rows'] : [];
-                        if (!$isBareCarouselWrap && count($rows) === 0 && count($sectionElements) === 1) {
+                        if (!$isBareCarouselWrap && !$isFreeformCanvas && count($rows) === 0 && count($sectionElements) === 1) {
                             $onlyType = strtolower((string) (($sectionElements[0]['type'] ?? '')));
                             if ($onlyType === 'carousel') {
                                 $isBareCarouselWrap = true;
@@ -386,7 +461,7 @@
                         }
                         $sectionInnerStyleString = implode('; ', $sectionInnerStyle);
                     @endphp
-                    <section class="builder-section" @if($sectionAnchorId !== '') id="{{ $sectionAnchorId }}" @endif style="{{ $sectionInlineStyle }}">
+                    <section class="builder-section{{ $isFreeformCanvas ? ' builder-section--freeform' : '' }}" @if($sectionAnchorId !== '') id="{{ $sectionAnchorId }}" @endif style="{{ $sectionInlineStyle }}">
                         <div class="builder-section-inner" @if($sectionInnerStyleString !== '') style="{{ $sectionInnerStyleString }}" @endif>
                         @foreach($rows as $row)
                             @php
@@ -421,8 +496,31 @@
                                         $colContentWidth = trim((string) ($colSettings['contentWidth'] ?? 'full'));
                                         $colInnerMax = $widthMap[$colContentWidth] ?? '';
                                         $elements = is_array($column['elements'] ?? null) ? $column['elements'] : [];
+                                        $colMinHeight = 0;
+                                        $colMinWidth = 0;
+                                        foreach ($elements as $_el) {
+                                            $_elSettings = is_array($_el['settings'] ?? null) ? $_el['settings'] : [];
+                                            $_elStyle = is_array($_el['style'] ?? null) ? $_el['style'] : [];
+                                            if (trim((string) ($_elSettings['positionMode'] ?? '')) === 'absolute' || trim((string) ($_elStyle['position'] ?? '')) === 'absolute') {
+                                                $_ey = (int) ($_elSettings['freeY'] ?? 0);
+                                                if ($_ey <= 0) $_ey = (int) str_replace('px', '', (string) ($_elStyle['top'] ?? '0'));
+                                                $_eh = (int) str_replace('px', '', (string) ($_elStyle['height'] ?? '0'));
+                                                if ($_eh <= 0) $_eh = (int) ($_elSettings['fixedHeight'] ?? 80);
+                                                $_colBot = $_ey + max(40, $_eh) + 20;
+                                                if ($_colBot > $colMinHeight) $colMinHeight = $_colBot;
+                                                $_ex = (int) ($_elSettings['freeX'] ?? 0);
+                                                if ($_ex <= 0) $_ex = (int) str_replace('px', '', (string) ($_elStyle['left'] ?? '0'));
+                                                $_ew = (int) str_replace('px', '', (string) ($_elStyle['width'] ?? '0'));
+                                                if ($_ew <= 0) $_ew = (int) ($_elSettings['fixedWidth'] ?? 120);
+                                                $_colRight = $_ex + $_ew + 20;
+                                                if ($_colRight > $colMinWidth) $colMinWidth = $_colRight;
+                                            }
+                                        }
+                                        $colHeightStyle = $colMinHeight > 0 ? 'min-height:' . $colMinHeight . 'px;' : '';
+                                        $freeformWidth = ($isFreeformCanvas && $editorCanvasWidth > 0) ? $editorCanvasWidth : (($isFreeformCanvas && $colMinWidth > 0) ? $colMinWidth : 0);
+                                        $colWidthStyle = $freeformWidth > 0 ? 'width:' . $freeformWidth . 'px;' : '';
                                     @endphp
-                                    <div class="builder-col" style="{{ $colStyle }}">
+                                    <div class="builder-col" style="{{ $colStyle }}{{ $colHeightStyle }}{{ $colWidthStyle }}">
                                         <div class="builder-col-inner" @if($colInnerMax !== '') style="max-width: {{ $colInnerMax }}; margin: 0 auto;" @endif>
                                         @foreach($elements as $element)
                                             @php
@@ -430,6 +528,7 @@
                                                 $content = (string) ($element['content'] ?? '');
                                                 $rawStyle = is_array($element['style'] ?? null) ? $element['style'] : [];
                                                 $style = $styleToString($rawStyle);
+                                                $contentStyle = $contentStyleToString($rawStyle);
                                                 $settings = is_array($element['settings'] ?? null) ? $element['settings'] : [];
                                                 $link = trim((string) ($settings['link'] ?? '#'));
                                                 $src = trim((string) ($settings['src'] ?? ''));
@@ -453,7 +552,7 @@
                                                 $btnWrapStyle = ($type === 'button' ? ($alignStyle . ($buttonContainerBg !== '' ? 'background-color:' . $buttonContainerBg . ';' : '')) : '');
                                                 $iconWrapStyle = ($type === 'icon' ? $alignStyle : '');
                                                 $mediaWrapStyle = ($style !== '' ? ($style . ';') : '') . $alignStyle;
-                                                $btnInnerStyle = $style . ($type === 'button' && $widthBehavior === 'fill' ? (($style !== '' ? ';' : '') . ' width:100%;display:block;box-sizing:border-box;text-align:center;') : '');
+                                                $btnInnerStyle = $contentStyle . ($type === 'button' && $widthBehavior === 'fill' ? (($contentStyle !== '' ? ';' : '') . ' width:100%;display:block;box-sizing:border-box;text-align:center;') : '');
                                                 $offsetX = (int) ($settings['offsetX'] ?? 0);
                                                 if ($offsetX !== 0) {
                                                     $mediaWrapStyle .= 'transform: translateX(' . $offsetX . 'px);';
@@ -466,13 +565,44 @@
                                                     ? ('clip-path: inset(' . $cropTop . 'px ' . $cropRight . 'px ' . $cropBottom . 'px ' . $cropLeft . 'px);')
                                                     : '';
                                                 $hasFixedHeight = !empty(trim((string) ($rawStyle['height'] ?? '')));
+                                                $isAbsPos = (trim((string) ($settings['positionMode'] ?? '')) === 'absolute') || (trim((string) ($rawStyle['position'] ?? '')) === 'absolute');
+                                                $absPosStyle = '';
+                                                if ($isAbsPos) {
+                                                    $absFreeX = (int) ($settings['freeX'] ?? 0);
+                                                    $absFreeY = (int) ($settings['freeY'] ?? 0);
+                                                    $absLeft = trim((string) ($rawStyle['left'] ?? ''));
+                                                    $absTop = trim((string) ($rawStyle['top'] ?? ''));
+                                                    if ($absLeft === '' && $absFreeX > 0) $absLeft = $absFreeX . 'px';
+                                                    if ($absTop === '' && $absFreeY > 0) $absTop = $absFreeY . 'px';
+                                                    $absWidth = trim((string) ($rawStyle['width'] ?? ''));
+                                                    $absHeight = trim((string) ($rawStyle['height'] ?? ''));
+                                                    $absPosStyle = 'position:absolute;left:' . ($absLeft !== '' ? $absLeft : '0px') . ';top:' . ($absTop !== '' ? $absTop : '0px') . ';margin:0;box-sizing:border-box;';
+                                                    if ($absWidth !== '') $absPosStyle .= 'width:' . preg_replace('/[^#(),.%\-\sA-Za-z0-9]/', '', $absWidth) . ';';
+                                                    if ($absHeight !== '') $absPosStyle .= 'height:' . preg_replace('/[^#(),.%\-\sA-Za-z0-9]/', '', $absHeight) . ';';
+                                                    $hasZIndex = array_key_exists('zIndex', $rawStyle) || array_key_exists('z-index', $rawStyle);
+                                                    if ($hasZIndex) {
+                                                        $absZIndex = max(0, (int) ($rawStyle['zIndex'] ?? ($rawStyle['z-index'] ?? 0)));
+                                                        $absPosStyle .= 'z-index:' . $absZIndex . ';';
+                                                    }
+                                                }
                                             @endphp
 
-                                            <div class="builder-el" @if($type === 'image' || $type === 'video' || $type === 'button' || $type === 'icon') style="{{ $type === 'button' ? $btnWrapStyle : ($type === 'icon' ? $iconWrapStyle : $mediaWrapStyle) }}" @endif>
+                                            @php
+                                                $elWrapStyle = '';
+                                                if ($isAbsPos) {
+                                                    $elWrapStyle = $absPosStyle;
+                                                } else {
+                                                    if ($type === 'button') { $elWrapStyle .= $btnWrapStyle; }
+                                                    elseif ($type === 'icon') { $elWrapStyle .= $iconWrapStyle; }
+                                                    elseif ($type === 'image' || $type === 'video') { $elWrapStyle .= $mediaWrapStyle; }
+                                                    elseif ($type === 'form') { $elWrapStyle .= $alignStyle; }
+                                                }
+                                            @endphp
+                                            <div class="builder-el" @if($elWrapStyle !== '') style="{{ $elWrapStyle }}" @endif>
                                                 @if($type === 'heading')
-                                                    <h2 class="builder-heading" style="{{ $style }}">{!! $content !!}</h2>
+                                                    <h2 class="builder-heading" style="{{ $contentStyle }}">{!! $content !!}</h2>
                                                 @elseif($type === 'text')
-                                                    <div class="builder-text" style="{{ $style }}">{!! $content !!}</div>
+                                                    <div class="builder-text" style="{{ $contentStyle }}">{!! $content !!}</div>
                                                 @elseif($type === 'image')
                                                     @if($src !== '')
                                                         @php
@@ -482,6 +612,8 @@
                                                             }
                                                         @endphp
                                                         <img class="builder-img" src="{{ $src }}" alt="{{ $alt !== '' ? $alt : 'Image' }}" @if($imgStyle !== '') style="{{ $imgStyle }}" @endif>
+                                                    @else
+                                                        <div style="padding:12px;border:1px dashed #94a3b8;border-radius:8px;text-align:center;color:#94a3b8;font-size:13px;min-height:60px;display:flex;align-items:center;justify-content:center;width:100%;box-sizing:border-box;">Image placeholder</div>
                                                     @endif
                                                 @elseif($type === 'button')
                                                     @php
@@ -519,40 +651,43 @@
                                                         <span style="{{ $style !== '' ? $style : 'font-size:36px;color:#1d4ed8;' }}"><i class="{{ $iconClass }}" aria-hidden="true"></i></span>
                                                     @endif
                                                 @elseif($type === 'video')
-                                                    @if($src !== '')
+                                                    @php
+                                                        $videoSrcRaw = trim((string) ($settings['src'] ?? ''));
+                                                        $elStyle = is_array($element['style'] ?? null) ? $element['style'] : [];
+                                                        $elSettings = is_array($element['settings'] ?? null) ? $element['settings'] : [];
+                                                        $videoWrapStyle = $contentStyle;
+                                                        $widthVal = !empty($elStyle['width']) ? trim((string) $elStyle['width']) : (!empty($elSettings['width']) ? trim((string) $elSettings['width']) : '');
+                                                        if ($widthVal !== '' && preg_match('/^[#(),.%\-\sA-Za-z0-9]+$/u', $widthVal)) {
+                                                            $videoWrapStyle .= ($videoWrapStyle !== '' ? '; ' : '') . 'width: ' . $widthVal . ' !important';
+                                                        }
+                                                        if (!empty($elStyle['height']) && preg_match('/^[#(),.%\-\sA-Za-z0-9]+$/u', trim((string) $elStyle['height']))) {
+                                                            $videoWrapStyle .= ($videoWrapStyle !== '' ? '; ' : '') . 'height: ' . trim((string) $elStyle['height']) . ' !important';
+                                                            $videoWrapStyle .= '; padding-top: 0 !important; min-height: 0 !important';
+                                                        }
+                                                        if (!empty($elStyle['maxWidth']) && preg_match('/^[#(),.%\-\sA-Za-z0-9]+$/u', trim((string) $elStyle['maxWidth']))) {
+                                                            $videoWrapStyle .= ($videoWrapStyle !== '' ? '; ' : '') . 'max-width: ' . trim((string) $elStyle['maxWidth']) . ' !important';
+                                                        }
+                                                        if ($mediaClipStyle !== '') {
+                                                            $videoWrapStyle .= ($videoWrapStyle !== '' ? '; ' : '') . $mediaClipStyle;
+                                                        }
+                                                    @endphp
+                                                    @if($videoSrcRaw !== '')
                                                         @php
-                                                            $src = trim($src);
-                                                            if (!str_starts_with($src, 'http')) {
-                                                                $src = 'https://' . ltrim($src, '/');
+                                                            $vSrc = $videoSrcRaw;
+                                                            if (!str_starts_with($vSrc, 'http')) {
+                                                                $vSrc = 'https://' . ltrim($vSrc, '/');
                                                             }
-                                                            $videoEmbedUrl = $src;
-                                                            $isYoutubeVimeo = str_contains($src, 'youtube.com') || str_contains($src, 'youtu.be') || str_contains($src, 'vimeo.com');
-                                                            if (str_contains($src, 'youtube.com/watch')) {
-                                                                parse_str(parse_url($src, PHP_URL_QUERY) ?: '', $yt);
-                                                                $videoEmbedUrl = isset($yt['v']) ? 'https://www.youtube.com/embed/' . $yt['v'] : $src;
-                                                            } elseif (preg_match('#youtu\.be/([a-zA-Z0-9_-]+)#', $src, $m)) {
+                                                            $videoEmbedUrl = $vSrc;
+                                                            $isYoutubeVimeo = str_contains($vSrc, 'youtube.com') || str_contains($vSrc, 'youtu.be') || str_contains($vSrc, 'vimeo.com');
+                                                            if (str_contains($vSrc, 'youtube.com/watch')) {
+                                                                parse_str(parse_url($vSrc, PHP_URL_QUERY) ?: '', $yt);
+                                                                $videoEmbedUrl = isset($yt['v']) ? 'https://www.youtube.com/embed/' . $yt['v'] : $vSrc;
+                                                            } elseif (preg_match('#youtu\.be/([a-zA-Z0-9_-]+)#', $vSrc, $m)) {
                                                                 $videoEmbedUrl = 'https://www.youtube.com/embed/' . $m[1];
-                                                            } elseif (preg_match('#vimeo\.com/(?:video/)?(\d+)#', $src, $m)) {
+                                                            } elseif (preg_match('#vimeo\.com/(?:video/)?(\d+)#', $vSrc, $m)) {
                                                                 $videoEmbedUrl = 'https://player.vimeo.com/video/' . $m[1];
                                                             }
-                                                            $videoSrc = $isYoutubeVimeo ? $videoEmbedUrl : (str_starts_with($src, 'http') ? $src : asset(ltrim($src, '/')));
-                                                            $videoWrapStyle = $style;
-                                                            $elStyle = is_array($element['style'] ?? null) ? $element['style'] : [];
-                                                            $elSettings = is_array($element['settings'] ?? null) ? $element['settings'] : [];
-                                                            $widthVal = !empty($elStyle['width']) ? trim((string) $elStyle['width']) : (!empty($elSettings['width']) ? trim((string) $elSettings['width']) : '');
-                                                            if ($widthVal !== '' && preg_match('/^[#(),.%\-\sA-Za-z0-9]+$/u', $widthVal)) {
-                                                                $videoWrapStyle .= ($videoWrapStyle !== '' ? '; ' : '') . 'width: ' . $widthVal . ' !important';
-                                                            }
-                                                            if (!empty($elStyle['height']) && preg_match('/^[#(),.%\-\sA-Za-z0-9]+$/u', trim((string) $elStyle['height']))) {
-                                                                $videoWrapStyle .= ($videoWrapStyle !== '' ? '; ' : '') . 'height: ' . trim((string) $elStyle['height']) . ' !important';
-                                                                $videoWrapStyle .= '; padding-top: 0 !important; min-height: 0 !important';
-                                                            }
-                                                            if (!empty($elStyle['maxWidth']) && preg_match('/^[#(),.%\-\sA-Za-z0-9]+$/u', trim((string) $elStyle['maxWidth']))) {
-                                                                $videoWrapStyle .= ($videoWrapStyle !== '' ? '; ' : '') . 'max-width: ' . trim((string) $elStyle['maxWidth']) . ' !important';
-                                                            }
-                                                            if ($mediaClipStyle !== '') {
-                                                                $videoWrapStyle .= ($videoWrapStyle !== '' ? '; ' : '') . $mediaClipStyle;
-                                                            }
+                                                            $videoFinalSrc = $isYoutubeVimeo ? $videoEmbedUrl : (str_starts_with($vSrc, 'http') ? $vSrc : asset(ltrim($vSrc, '/')));
                                                         @endphp
                                                         <div class="builder-video-wrap" style="{{ $videoWrapStyle }}">
                                                             @if($isYoutubeVimeo)
@@ -569,9 +704,16 @@
                                                                 @endphp
                                                                 <iframe src="{{ $embedSrc }}" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" loading="lazy"></iframe>
                                                             @else
-                                                                <video src="{{ $videoSrc }}" @if(($settings['controls'] ?? true) !== false) controls @endif @if(($settings['autoplay'] ?? false) === true) autoplay muted @endif playsinline preload="metadata"></video>
+                                                                <video src="{{ $videoFinalSrc }}" @if(($settings['controls'] ?? true) !== false) controls @endif @if(($settings['autoplay'] ?? false) === true) autoplay muted @endif playsinline preload="metadata"></video>
                                                             @endif
-                                                            <a href="{{ $videoSrc }}" target="_blank" rel="noopener" class="video-fallback-link">Open video</a>
+                                                            <a href="{{ $videoFinalSrc }}" target="_blank" rel="noopener" class="video-fallback-link">Open video</a>
+                                                        </div>
+                                                    @else
+                                                        <div class="builder-video-wrap" style="{{ $videoWrapStyle }}">
+                                                            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:rgba(255,255,255,0.8);padding:12px;">
+                                                                <span style="font-size:28px;margin-bottom:6px;">&#9654;</span>
+                                                                <span style="font-size:12px;">Video placeholder</span>
+                                                            </div>
                                                         </div>
                                                     @endif
                                                 @elseif($type === 'menu')
@@ -659,17 +801,17 @@
                                                         $controlsColor = trim((string) ($settings['controlsColor'] ?? '#64748b'));
                                                         $arrowColor = trim((string) ($settings['arrowColor'] ?? '#ffffff'));
                                                         $bodyBgColor = trim((string) ($settings['bodyBgColor'] ?? ''));
-                                                        $fixedWidth = (int) ($settings['fixedWidth'] ?? 500);
-                                                        $fixedHeight = (int) ($settings['fixedHeight'] ?? 500);
+                                                        $fixedWidth = (int) ($settings['fixedWidth'] ?? 200);
+                                                        $fixedHeight = (int) ($settings['fixedHeight'] ?? 200);
                                                         $carouselAlign = trim((string) ($settings['alignment'] ?? 'left'));
                                                         if (!in_array($carouselAlign, ['left', 'center', 'right'], true)) {
                                                             $carouselAlign = 'left';
                                                         }
                                                         if ($fixedWidth < 50 || $fixedWidth > 2400) {
-                                                            $fixedWidth = 500;
+                                                            $fixedWidth = 200;
                                                         }
                                                         if ($fixedHeight < 50 || $fixedHeight > 1600) {
-                                                            $fixedHeight = 500;
+                                                            $fixedHeight = 200;
                                                         }
                                                         $carouselSizeStyle = '';
                                                         $carouselSizeStyle .= 'display:block !important;box-sizing:border-box !important;';
@@ -785,7 +927,7 @@
                                                                                                     @endphp
                                                                                                     @if(($buttonAction['kind'] ?? 'link') === 'post')
                                                                                                         <form method="POST" action="{{ $buttonAction['action'] }}" style="margin:0;">
-                                                                                                            @csrf
+                    @csrf
                                                                                                             @foreach(($buttonAction['fields'] ?? []) as $fieldName => $fieldValue)
                                                                                                                 <input type="hidden" name="{{ $fieldName }}" value="{{ $fieldValue }}">
                                                                                                             @endforeach
@@ -846,12 +988,12 @@
                                                                                                     </nav>
                                                                                                 @elseif($st === 'form')
                                                                                                     <form onsubmit="return false;" style="{{ $ss }}">
-                                                                                                        <label>Name</label>
+                    <label>Name</label>
                                                                                                         <input type="text" placeholder="Your name">
-                                                                                                        <label>Email</label>
+                    <label>Email</label>
                                                                                                         <input type="email" placeholder="you@email.com">
                                                                                                         <button type="button" class="btn">{{ $scontent !== '' ? $scontent : 'Submit' }}</button>
-                                                                                                    </form>
+                </form>
                                                                                                 @elseif($st === 'carousel')
                                                                                                     <div style="padding:12px;border:1px dashed #93c5fd;border-radius:8px;color:#1e40af;font-weight:700;">Nested Carousel</div>
                                                                                                 @endif
@@ -967,7 +1109,7 @@
                                                     @endphp
                                                     @if($step->type === 'opt_in' && !$isPreview)
                                                         <form method="POST" action="{{ route('funnels.portal.optin', ['funnelSlug' => $funnel->slug, 'stepSlug' => $step->slug]) }}" style="{{ $formInlineStyle }}">
-                                                            @csrf
+                    @csrf
                                                             @foreach($formFields as $f)
                                                                 @php
                                                                     $ft = strtolower(trim((string) ($f['type'] ?? 'text')));
@@ -1004,7 +1146,7 @@
                                                             <div style="display:flex;justify-content:{{ $formButtonJustify }};">
                                                                 <button type="submit" class="btn" style="margin-top:2px;background:{{ $formButtonBgColor }};color:{{ $formButtonTextColor }};font-weight:{{ $formButtonFontWeight }};font-style:{{ $formButtonFontStyle }};">{{ $content !== '' ? $content : 'Submit' }}</button>
                                                             </div>
-                                                        </form>
+                </form>
                                                     @else
                                                         <form onsubmit="return false;" style="{{ $formInlineStyle }}">
                                                             @foreach($formFields as $f)
@@ -1022,7 +1164,7 @@
                                                             <div style="display:flex;justify-content:{{ $formButtonJustify }};">
                                                                 <button type="button" class="btn" style="margin-top:2px;background:{{ $formButtonBgColor }};color:{{ $formButtonTextColor }};font-weight:{{ $formButtonFontWeight }};font-style:{{ $formButtonFontStyle }};" @if($isPreview) disabled @endif>{{ $content !== '' ? $content : 'Submit' }}</button>
                                                             </div>
-                                                        </form>
+                    </form>
                                                     @endif
                                                 @else
                                                     <p class="builder-text" style="{{ $style }}">{{ $content }}</p>
@@ -1035,7 +1177,7 @@
                                 </div>
                             </div>
                         @endforeach
-                        </div>
+                </div>
                     </section>
                 @endforeach
 
@@ -1103,6 +1245,31 @@
             paint();
             restartAuto();
         });
+        var isPreview={{ ($isPreview ?? false) ? 'true' : 'false' }};
+        var editorCanvasWidth={{ (int) ($editorCanvasWidth ?? 0) }};
+        if(isPreview&&editorCanvasWidth>0){
+            var applyPreviewScale=function(){
+                var content=document.querySelector(".step-content--full");
+                if(!content)return;
+                content.style.transform="none";
+                content.style.width=editorCanvasWidth+"px";
+                content.style.maxWidth="none";
+                var targetPad=10;
+                var vw=document.documentElement?document.documentElement.clientWidth:window.innerWidth;
+                var availW=vw-(targetPad*2);
+                if(availW<200)availW=window.innerWidth;
+                var scale=availW/editorCanvasWidth;
+                if(scale<=0)scale=1;
+                content.style.padding=(targetPad/scale)+"px";
+                var h=content.scrollHeight||content.offsetHeight||0;
+                content.style.transformOrigin="top left";
+                content.style.transform="scale("+scale+")";
+                content.style.height=(h*scale)+"px";
+                document.body.style.overflowX="hidden";
+            };
+            applyPreviewScale();
+            window.addEventListener("resize",function(){applyPreviewScale();});
+        }
     })();
     </script>
 </body>

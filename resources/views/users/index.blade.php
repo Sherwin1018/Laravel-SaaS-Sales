@@ -2,6 +2,20 @@
 
 @section('title', 'Team Management')
 
+@section('styles')
+    <style>
+        .team-table-scroll {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .team-table {
+            min-width: 760px;
+        }
+    </style>
+@endsection
+
 @section('content')
     <div class="top-header">
         <h1>Team Management</h1>
@@ -13,13 +27,14 @@
         <!-- Live Search Input -->
         <div class="search-box">
             <input type="text" id="searchInput" placeholder="Search team members..." 
-                   style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; width: 300px;">
+                   style="padding: 8px 12px; border: 1px solid var(--theme-border, #E6E1EF); border-radius: 6px; width: 300px;">
         </div>
     </div>
 
     <div class="card">
         <h3>Team Members</h3>
-        <table>
+        <div class="team-table-scroll">
+        <table class="team-table">
             <thead>
                 <tr>
                     <th>Name</th>
@@ -33,6 +48,7 @@
                 @include('users._rows', ['users' => $users])
             </tbody>
         </table>
+        </div>
         
         <div style="margin-top: 20px;" id="paginationLinks">
             {{ $users->links('pagination::bootstrap-4') }}

@@ -127,7 +127,7 @@
                 datasets: [{
                     label: 'Leads',
                     data: @json(array_values($pipelineStageCounts)),
-                    backgroundColor: '#2563EB'
+                    backgroundColor: '#240E35'
                 }]
             },
             options: {

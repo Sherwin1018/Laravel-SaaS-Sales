@@ -8,21 +8,37 @@
     @php
         $authUser = auth()->user();
         $tenant = $authUser?->tenant;
-        $themePrimary = $tenant->theme_primary_color ?? '#2563EB';
-        $themeAccent = $tenant->theme_accent_color ?? '#0EA5E9';
-        $themeSidebarBg = $tenant->theme_sidebar_bg ?? '#FFFFFF';
-        $themeSidebarText = $tenant->theme_sidebar_text ?? '#1E40AF';
-        $themeBodyBg = '#EFF6FF';
-        $themePrimaryDark = '#1E40AF';
+        $themePrimary = $tenant->theme_primary_color ?? '#240E35';
+        $themeAccent = $tenant->theme_accent_color ?? '#6B4A7A';
+        $themeSidebarBg = $tenant->theme_sidebar_bg ?? '#240E35';
+        $themeSidebarText = $tenant->theme_sidebar_text ?? '#F8F4FB';
+        $themeSidebarIcon = '#E7D8F0';
+        $themeBodyBg = '#F7F7FB';
+        $themeBodyText = '#111827';
+        $themePrimaryDark = '#2E1244';
+        $themeSurface = '#FFFFFF';
+        $themeSurfaceSoft = '#F3EEF7';
+        $themeSurfaceSofter = '#F7F7FB';
+        $themeBorder = '#E6E1EF';
+        $themeAccentStrong = '#9E7BB5';
+        $themeMuted = '#6B7280';
     @endphp
     <style>
         :root {
             --theme-primary: {{ $themePrimary }};
             --theme-primary-dark: {{ $themePrimaryDark }};
             --theme-accent: {{ $themeAccent }};
+            --theme-accent-strong: {{ $themeAccentStrong }};
             --theme-sidebar-bg: {{ $themeSidebarBg }};
             --theme-sidebar-text: {{ $themeSidebarText }};
+            --theme-sidebar-icon: {{ $themeSidebarIcon }};
             --theme-body-bg: {{ $themeBodyBg }};
+            --theme-body-text: {{ $themeBodyText }};
+            --theme-surface: {{ $themeSurface }};
+            --theme-surface-soft: {{ $themeSurfaceSoft }};
+            --theme-surface-softer: {{ $themeSurfaceSofter }};
+            --theme-border: {{ $themeBorder }};
+            --theme-muted: {{ $themeMuted }};
         }
         body.builder-full-width .main-content {
             margin-left: 0;
@@ -191,11 +207,34 @@
         function toggleAccountMenu(event) {
             event.stopPropagation(); // Prevent window click from firing
             const dropdown = document.getElementById("accountDropdown");
+            const triggerBtn = event.currentTarget;
+
+            if (!dropdown || !triggerBtn) return;
+
+            const placeAccountDropdown = () => {
+                const rect = triggerBtn.getBoundingClientRect();
+                const dropdownWidth = 160;
+                const gap = 10;
+                const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+                const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+                const preferredLeft = rect.right + gap;
+                const fitsRight = preferredLeft + dropdownWidth <= viewportWidth - 8;
+                const left = fitsRight ? preferredLeft : Math.max(8, rect.left - dropdownWidth - gap);
+                const top = Math.min(Math.max(8, rect.bottom - 12), Math.max(8, viewportHeight - dropdown.offsetHeight - 8));
+
+                dropdown.style.position = "fixed";
+                dropdown.style.left = `${left}px`;
+                dropdown.style.top = `${top}px`;
+                dropdown.style.right = "auto";
+                dropdown.style.bottom = "auto";
+                dropdown.style.zIndex = "2100";
+            };
 
             if (dropdown.style.display === "block") {
                 dropdown.style.display = "none";
             } else {
                 dropdown.style.display = "block";
+                placeAccountDropdown();
             }
         }
 
@@ -204,7 +243,9 @@
             const dropdown = document.getElementById("accountDropdown");
             const menu = document.querySelector(".account-menu");
 
-            if (!menu.contains(event.target)) {
+            if (!dropdown || !menu) return;
+
+            if (!menu.contains(event.target) && !dropdown.contains(event.target)) {
                 dropdown.style.display = "none";
             }
         });
@@ -214,8 +255,31 @@
         const toggleBtn = document.getElementById('sidebarToggle');
         
         if (sidebar && toggleBtn) {
+            const mobileSidebarMedia = window.matchMedia('(max-width: 768px)');
+            const syncSidebarResponsiveState = () => {
+                if (mobileSidebarMedia.matches) {
+                    if (!sidebar.dataset.mobileInit) {
+                        sidebar.classList.add('collapsed');
+                        sidebar.dataset.mobileInit = '1';
+                    }
+                } else {
+                    sidebar.classList.remove('collapsed');
+                    delete sidebar.dataset.mobileInit;
+                }
+            };
+
+            syncSidebarResponsiveState();
+            if (typeof mobileSidebarMedia.addEventListener === 'function') {
+                mobileSidebarMedia.addEventListener('change', syncSidebarResponsiveState);
+            } else if (typeof mobileSidebarMedia.addListener === 'function') {
+                mobileSidebarMedia.addListener(syncSidebarResponsiveState);
+            }
+
             toggleBtn.addEventListener('click', () => {
                 sidebar.classList.toggle('collapsed');
+                if (mobileSidebarMedia.matches) {
+                    sidebar.dataset.mobileInit = '1';
+                }
             });
         }
     </script>

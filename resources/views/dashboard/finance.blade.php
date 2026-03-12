@@ -102,8 +102,8 @@
                 datasets: [{
                     label: 'Collected Amount',
                     data: @json($trendValues),
-                    borderColor: '#16A34A',
-                    backgroundColor: 'rgba(22, 163, 74, 0.15)',
+                    borderColor: '#240E35',
+                    backgroundColor: 'rgba(36, 14, 53, 0.15)',
                     fill: true,
                     tension: 0.35
                 }]
@@ -122,7 +122,7 @@
                         {{ (int) ($statusCounts['pending'] ?? 0) }},
                         {{ (int) ($statusCounts['failed'] ?? 0) }}
                     ],
-                    backgroundColor: ['#16A34A', '#F59E0B', '#DC2626']
+                    backgroundColor: ['#240E35', '#6B4A7A', '#9E7BB5']
                 }]
             },
             options: { responsive: true, maintainAspectRatio: false }

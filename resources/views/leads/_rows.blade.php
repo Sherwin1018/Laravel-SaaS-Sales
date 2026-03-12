@@ -1,6 +1,6 @@
 @php
     $statusStyles = [
-        'new' => 'background-color: #DBEAFE; color: #1E40AF;',
+        'new' => 'background-color: var(--theme-border, #E6E1EF); color: var(--theme-primary-dark, #2E1244);',
         'contacted' => 'background-color: #FEF3C7; color: #92400E;',
         'proposal_sent' => 'background-color: #EDE9FE; color: #5B21B6;',
         'closed_won' => 'background-color: #D1FAE5; color: #065F46;',
@@ -27,13 +27,13 @@
             @if(count($leadTags))
                 <div class="lead-tags" title="{{ implode(', ', $leadTags) }}">
                     @foreach($leadTags as $tag)
-                        <span class="lead-tag" style="padding: 2px 8px; border-radius: 999px; background: #E0E7FF; color: #3730A3; font-size: 11px; font-weight: 700;">
+                        <span class="lead-tag" style="padding: 2px 8px; border-radius: 999px; background: #E7D8F0; color: #240E35; font-size: 11px; font-weight: 700;">
                             {{ $tag }}
                         </span>
                     @endforeach
                 </div>
             @else
-                <span style="font-size: 12px; color: #94A3B8;">No tags</span>
+                <span style="font-size: 12px; color: var(--theme-muted, #6B7280);">No tags</span>
             @endif
         </td>
         <td>
@@ -44,7 +44,7 @@
         <td><span class="cell-text">{{ $lead->score }}</span></td>
         <td>
             <div class="lead-actions">
-            <a href="{{ route('leads.edit', $lead->id) }}" style="color: #2563EB; text-decoration: none;">
+            <a href="{{ route('leads.edit', $lead->id) }}" style="color: var(--theme-primary, #240E35); text-decoration: none;">
                 <i class="fas fa-edit"></i> Edit
             </a>
 

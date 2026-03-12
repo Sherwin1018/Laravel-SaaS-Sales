@@ -4,7 +4,7 @@
         <td>{{ $user->email }}</td>
         <td>
             @foreach($user->roles as $role)
-                <span style="background-color: #EFF6FF; color: #1E40AF; padding: 2px 6px; border-radius: 4px; font-size: 12px; margin-right: 4px; font-weight: 700;">
+                <span style="background-color: var(--theme-surface-soft, #F3EEF7); color: var(--theme-primary-dark, #2E1244); padding: 2px 6px; border-radius: 4px; font-size: 12px; margin-right: 4px; font-weight: 700;">
                     {{ $role->name }}
                 </span>
             @endforeach

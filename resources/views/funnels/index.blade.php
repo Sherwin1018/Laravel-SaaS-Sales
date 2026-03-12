@@ -2,6 +2,20 @@
 
 @section('title', 'Funnel Builder')
 
+@section('styles')
+    <style>
+        .funnels-table-scroll {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .funnels-table {
+            min-width: 760px;
+        }
+    </style>
+@endsection
+
 @section('content')
     <div class="top-header">
         <h1>Funnel Builder</h1>
@@ -9,12 +23,12 @@
 
     <div class="actions" style="justify-content: space-between; align-items: center;">
         <a href="{{ route('funnels.create') }}" class="btn-create"><i class="fas fa-plus"></i> New Funnel</a>
-        <p style="font-size: 12px; font-weight: 700; color: #475569;">Build landing -> opt-in -> sales -> checkout -> upsell/downsell flows.</p>
     </div>
 
     <div class="card">
         <h3>Funnels</h3>
-        <table>
+        <div class="funnels-table-scroll">
+        <table class="funnels-table">
             <thead>
                 <tr>
                     <th>Name</th>
@@ -36,11 +50,11 @@
                                     {{ route('funnels.portal.step', ['funnelSlug' => $funnel->slug]) }}
                                 </a>
                             @else
-                                <span style="color: #64748B;">Publish to enable</span>
+                                <span style="color: var(--theme-muted, #6B7280);">Publish to enable</span>
                             @endif
                         </td>
                         <td style="display:flex; gap: 10px;">
-                            <a href="{{ route('funnels.edit', $funnel) }}" style="color:#2563EB; text-decoration:none; font-weight:700;">
+                            <a href="{{ route('funnels.edit', $funnel) }}" style="color:var(--theme-primary, #240E35); text-decoration:none; font-weight:700;">
                                 <i class="fas fa-pen"></i> Builder
                             </a>
                             <form method="POST" action="{{ route('funnels.destroy', $funnel) }}" onsubmit="return confirm('Delete this funnel?')">
@@ -59,6 +73,7 @@
                 @endforelse
             </tbody>
         </table>
+        </div>
 
         <div style="margin-top: 18px;">
             {{ $funnels->links('pagination::bootstrap-4') }}

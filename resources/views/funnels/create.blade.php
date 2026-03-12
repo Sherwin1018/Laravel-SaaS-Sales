@@ -13,7 +13,7 @@
             <div style="margin-bottom: 16px;">
                 <label for="name" style="display:block; margin-bottom:8px; font-weight:700;">Funnel Name</label>
                 <input id="name" name="name" type="text" required value="{{ old('name') }}"
-                    style="width:100%; padding:10px; border:1px solid #DBEAFE; border-radius:6px;">
+                    style="width:100%; padding:10px; border:1px solid var(--theme-border, #E6E1EF); border-radius:6px;">
                 @error('name')
                     <span style="color:red; font-size:12px;">{{ $message }}</span>
                 @enderror
@@ -22,7 +22,7 @@
             <div style="margin-bottom: 16px;">
                 <label for="description" style="display:block; margin-bottom:8px; font-weight:700;">Description</label>
                 <textarea id="description" name="description" rows="4"
-                    style="width:100%; padding:10px; border:1px solid #DBEAFE; border-radius:6px;">{{ old('description') }}</textarea>
+                    style="width:100%; padding:10px; border:1px solid var(--theme-border, #E6E1EF); border-radius:6px;">{{ old('description') }}</textarea>
                 @error('description')
                     <span style="color:red; font-size:12px;">{{ $message }}</span>
                 @enderror
@@ -35,7 +35,7 @@
 
             <div style="display:flex; gap:10px;">
                 <button type="submit" class="btn-create">Create Funnel</button>
-                <a href="{{ route('funnels.index') }}" style="padding:10px 16px; border-radius:6px; text-decoration:none; background:#1E40AF; color:#fff; font-weight:700;">Cancel</a>
+                <a href="{{ route('funnels.index') }}" style="padding:10px 16px; border-radius:6px; text-decoration:none; background:var(--theme-primary-dark, #2E1244); color:#fff; font-weight:700;">Cancel</a>
             </div>
         </form>
     </div>

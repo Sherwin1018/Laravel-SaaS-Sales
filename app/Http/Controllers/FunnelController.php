@@ -759,7 +759,25 @@ class FunnelController extends Controller
             ->values()
             ->all();
 
-        return ['root' => $root, 'sections' => $sections];
+        $result = ['root' => $root, 'sections' => $sections];
+
+        if (is_array($layout['__editor'] ?? null)) {
+            $editor = [];
+            if (isset($layout['__editor']['canvasBg']) && is_string($layout['__editor']['canvasBg'])) {
+                $bg = trim($layout['__editor']['canvasBg']);
+                if (preg_match('/^#[0-9A-Fa-f]{6}$/', $bg)) {
+                    $editor['canvasBg'] = $bg;
+                }
+            }
+            if (isset($layout['__editor']['canvasWidth']) && is_numeric($layout['__editor']['canvasWidth'])) {
+                $editor['canvasWidth'] = (int) $layout['__editor']['canvasWidth'];
+            }
+            if (! empty($editor)) {
+                $result['__editor'] = $editor;
+            }
+        }
+
+        return $result;
     }
 
     private function sanitizeId(mixed $value, string $prefix): string
@@ -812,6 +830,10 @@ class FunnelController extends Controller
             'letterSpacing',
             'textDecorationColor',
             'textDecoration',
+            'position',
+            'left',
+            'top',
+            'zIndex',
         ];
 
         $safe = [];
@@ -834,7 +856,22 @@ class FunnelController extends Controller
             }
 
             // Persist CSS size values (50%, 100%, 400px, etc.) so editor width/height survive refresh
-            $sizeKeys = ['width', 'height', 'maxWidth', 'minWidth', 'maxHeight', 'minHeight'];
+            if ($key === 'position') {
+                if (in_array($value, ['absolute', 'relative'], true)) {
+                    $safe[$key] = $value;
+                }
+                continue;
+            }
+
+            if ($key === 'zIndex') {
+                $n = (int) $value;
+                if ($n >= 0 && $n <= 9999) {
+                    $safe[$key] = (string) $n;
+                }
+                continue;
+            }
+
+            $sizeKeys = ['width', 'height', 'maxWidth', 'minWidth', 'maxHeight', 'minHeight', 'left', 'top'];
             if (in_array($key, $sizeKeys, true)) {
                 $len = mb_strlen($value);
                 if ($len > 0 && $len <= 60) {
@@ -942,6 +979,7 @@ class FunnelController extends Controller
             'vAlign' => ['top', 'center', 'bottom'],
             'slideshowMode' => ['manual', 'auto'],
             'actionType' => ['next_step', 'step', 'link', 'checkout', 'offer_accept', 'offer_decline'],
+            'positionMode' => ['absolute', 'relative', 'flow'],
         ] as $k => $allowed) {
             $v = $readEnum($k, $allowed);
             if ($v !== null) {
@@ -965,6 +1003,8 @@ class FunnelController extends Controller
             'fixedWidth' => [50, 2400],
             'fixedHeight' => [50, 1600],
             'offsetX' => [-2400, 2400],
+            'freeX' => [0, 9999],
+            'freeY' => [0, 9999],
             'cropTop' => [0, 1800],
             'cropRight' => [0, 2400],
             'cropBottom' => [0, 1800],

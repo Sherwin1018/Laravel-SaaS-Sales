@@ -100,8 +100,8 @@
                 datasets: [{
                     label: 'MQL Leads',
                     data: @json($trendValues),
-                    borderColor: '#0EA5E9',
-                    backgroundColor: 'rgba(14, 165, 233, 0.15)',
+                    borderColor: '#240E35',
+                    backgroundColor: 'rgba(36, 14, 53, 0.15)',
                     fill: true,
                     tension: 0.35
                 }]
@@ -117,7 +117,7 @@
                 datasets: [{
                     label: 'Leads',
                     data: @json($sourceBreakdownChart->pluck('total')->values()),
-                    backgroundColor: '#2563EB'
+                    backgroundColor: '#6B4A7A'
                 }]
             },
             options: {

@@ -14,7 +14,7 @@
         </td>
         <td>{{ $tenant->created_at->format('Y-m-d') }}</td>
         <td style="display: flex; gap: 10px;">
-            <a href="{{ route('admin.tenants.edit', $tenant->id) }}" style="color: #2563EB; text-decoration: none;">
+            <a href="{{ route('admin.tenants.edit', $tenant->id) }}" style="color: var(--theme-primary, #240E35); text-decoration: none;">
                 <i class="fas fa-edit"></i> Edit
             </a>
             <form action="{{ route('admin.tenants.destroy', $tenant->id) }}" method="POST" onsubmit="return confirm('Are you sure?');">

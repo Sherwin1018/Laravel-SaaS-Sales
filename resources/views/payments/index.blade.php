@@ -15,7 +15,7 @@
 
                 <div style="margin-bottom: 12px;">
                     <label for="lead_id" style="display: block; margin-bottom: 6px;">Lead</label>
-                    <select name="lead_id" id="lead_id" style="width: 100%; padding: 10px; border: 1px solid #DBEAFE; border-radius: 6px;">
+                    <select name="lead_id" id="lead_id" style="width: 100%; padding: 10px; border: 1px solid var(--theme-border, #E6E1EF); border-radius: 6px;">
                         <option value="">No lead linked</option>
                         @foreach($leadOptions as $lead)
                             <option value="{{ $lead->id }}">{{ $lead->name }}</option>
@@ -26,12 +26,12 @@
                 <div style="margin-bottom: 12px;">
                     <label for="amount" style="display: block; margin-bottom: 6px;">Amount</label>
                     <input type="number" step="0.01" min="0.01" name="amount" id="amount" required
-                        style="width: 100%; padding: 10px; border: 1px solid #DBEAFE; border-radius: 6px;">
+                        style="width: 100%; padding: 10px; border: 1px solid var(--theme-border, #E6E1EF); border-radius: 6px;">
                 </div>
 
                 <div style="margin-bottom: 12px;">
                     <label for="status" style="display: block; margin-bottom: 6px;">Status</label>
-                    <select name="status" id="status" required style="width: 100%; padding: 10px; border: 1px solid #DBEAFE; border-radius: 6px;">
+                    <select name="status" id="status" required style="width: 100%; padding: 10px; border: 1px solid var(--theme-border, #E6E1EF); border-radius: 6px;">
                         <option value="pending">Pending</option>
                         <option value="paid">Paid</option>
                         <option value="failed">Failed</option>
@@ -42,11 +42,11 @@
                     <label for="payment_date" style="display: block; margin-bottom: 6px;">Date</label>
                     <input type="date" name="payment_date" id="payment_date" required
                         value="{{ now()->toDateString() }}"
-                        style="width: 100%; padding: 10px; border: 1px solid #DBEAFE; border-radius: 6px;">
+                        style="width: 100%; padding: 10px; border: 1px solid var(--theme-border, #E6E1EF); border-radius: 6px;">
                 </div>
 
                 <button type="submit"
-                    style="padding: 10px 18px; background-color: #2563EB; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                    style="padding: 10px 18px; background-color: var(--theme-primary, #240E35); color: white; border: none; border-radius: 6px; cursor: pointer;">
                     Save Payment
                 </button>
             </form>
