@@ -52,6 +52,7 @@
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     @yield('styles')
+    @stack('styles')
 </head>
 <body class="@if(request()->routeIs('funnels.edit')) builder-full-width @endif">
     @php
@@ -145,7 +146,7 @@
             {{-- Funnels & Automation (Owner, Marketing) --}}
             @if(auth()->user()->hasRole('account-owner') || auth()->user()->hasRole('marketing-manager'))
                 <a href="{{ route('funnels.index') }}" class="{{ request()->routeIs('funnels.*') ? 'active' : '' }}"><i class="fas fa-filter"></i> <span>Funnels</span></a>
-                <a href="#"><i class="fas fa-clipboard-list"></i> <span>Automation</span></a>
+                <a href="{{ route('automation.overview') }}" class="{{ request()->routeIs('automation.*') ? 'active' : '' }}"><i class="fas fa-clipboard-list"></i> <span>Automation</span></a>
             @endif
 
             {{-- Billing (Owner, Finance) --}}
@@ -309,5 +310,6 @@
         </script>
     @endif
     @yield('scripts')
+    @stack('scripts')
 </body>
 </html>
