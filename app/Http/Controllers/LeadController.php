@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Lead;
 use App\Models\User;
+use App\Services\AutomationWebhookService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -152,7 +153,7 @@ class LeadController extends Controller
         try {
             $assignedTo = $this->normalizeAssignee($validated['assigned_to'] ?? null, $user);
 
-            Lead::create([
+            $lead = Lead::create([
                 'tenant_id' => $user->tenant_id,
                 'assigned_to' => $assignedTo,
                 'name' => $validated['name'],
@@ -163,6 +164,8 @@ class LeadController extends Controller
                 'status' => $validated['status'],
                 'score' => 0,
             ]);
+
+            $this->dispatchLeadCreatedWebhook($lead);
 
             return redirect()->route('leads.index')->with('success', 'Added Successfully');
         } catch (\Throwable $e) {
@@ -207,7 +210,12 @@ class LeadController extends Controller
             } else {
                 unset($validated['tags']);
             }
+            $oldStatus = $lead->status;
             $lead->update($validated);
+
+            if ($oldStatus !== $lead->status) {
+                $this->dispatchLeadStatusChangedWebhook($lead, $oldStatus, $lead->status);
+            }
 
             return redirect()->route('leads.index')->with('success', 'Edited Successfully');
         } catch (\Throwable $e) {
@@ -479,5 +487,19 @@ class LeadController extends Controller
             ->all();
 
         return $tags;
+    }
+
+    private function dispatchLeadCreatedWebhook(Lead $lead): void
+    {
+        $service = app(AutomationWebhookService::class);
+        $payload = $service->buildLeadCreatedPayload($lead, [], auth()->user());
+        $service->dispatchEvent('lead.created', $payload);
+    }
+
+    private function dispatchLeadStatusChangedWebhook(Lead $lead, string $oldStatus, string $newStatus): void
+    {
+        $service = app(AutomationWebhookService::class);
+        $payload = $service->buildLeadStatusChangedPayload($lead, $oldStatus, $newStatus, []);
+        $service->dispatchEvent('lead.status_changed', $payload);
     }
 }
