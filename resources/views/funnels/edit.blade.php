@@ -74,6 +74,7 @@
     padding:10px;
     background:#ffffff;
     box-shadow:0 14px 36px rgba(15,23,42,.08);
+    position:relative;
     overflow-x:hidden;
     overflow-y:auto
 }
@@ -154,6 +155,15 @@
 .settings input[type="checkbox"]{width:auto;padding:0;margin:0;border:1px solid #E6E1EF;border-radius:4px}
 .settings label.inline-check{display:flex;align-items:center;gap:8px;font-weight:700;color:#240E35;margin:0 0 10px}
 .settings .meta{font-size:12px;color:#475569;font-weight:700;margin-bottom:8px}
+.fb-link-row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.fb-link-row select{flex:1;min-width:0;margin-bottom:0}
+.fb-link-actions{display:flex;gap:8px;margin-bottom:8px}
+.fb-link-banner{position:sticky;top:8px;z-index:120;display:flex;align-items:center;justify-content:space-between;gap:10px;background:#240E35;color:#fff;border-radius:999px;padding:8px 12px;margin:6px auto 10px;max-width:360px;font-size:12px;font-weight:700;box-shadow:0 10px 24px rgba(36,14,53,.25)}
+.fb-link-banner button{background:#fff;color:#240E35;border:0;border-radius:999px;padding:4px 10px;font-size:11px;font-weight:800;cursor:pointer}
+.fb-link-layer{position:absolute;left:0;top:0;pointer-events:none;z-index:70;overflow:visible}
+#canvas.fb-link-pick .el[data-el-type="pricing"]{outline:2px dashed #9E7BB5;outline-offset:2px}
+.el.el--link-target:not(.sel){outline:2px solid #240E35;outline-offset:1px;box-shadow:0 0 0 2px rgba(36,14,53,.15)}
+.el.el--link-source:not(.sel){outline:2px dashed #240E35;outline-offset:1px}
 .settings-delete-wrap{margin-top:14px;padding-top:12px;border-top:1px solid #E6E1EF}
 .settings-delete-wrap .fb-btn{width:100%;justify-content:center;gap:6px}
 .px-wrap{display:flex;align-items:center;gap:6px;margin-bottom:8px}
@@ -220,6 +230,32 @@
 .carousel-comp-btn:hover{background:#F3EEF7}
 .carousel-comp-btn[draggable="true"]{cursor:grab}
 .carousel-group-title{font-size:11px;font-weight:900;color:#475569;letter-spacing:.02em;text-transform:uppercase;margin:6px 0}
+.fb-testimonial{display:grid;gap:10px}
+.fb-testimonial-quote{font-style:italic;color:#334155;line-height:1.5}
+.fb-testimonial-author{display:flex;align-items:center;gap:10px}
+.fb-testimonial-avatar{width:40px;height:40px;border-radius:999px;object-fit:cover;background:#E6E1EF;flex-shrink:0}
+.fb-testimonial-name{font-weight:800;color:#240E35}
+.fb-testimonial-role{font-size:12px;color:#64748b}
+.fb-faq{display:grid;gap:10px}
+.fb-faq-item{border-bottom:1px solid #E6E1EF;padding-bottom:8px}
+.fb-faq-item:last-child{border-bottom:0;padding-bottom:0}
+.fb-faq-q{font-weight:800;color:#240E35}
+.fb-faq-a{color:#475569;font-size:13px;margin-top:4px;white-space:pre-wrap}
+.fb-pricing{display:grid;gap:10px}
+.fb-pricing-badge{align-self:flex-start;background:#E7D8F0;color:#2E1244;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em}
+.fb-pricing-title{font-size:18px;font-weight:900;color:#240E35}
+.fb-pricing-price{font-size:30px;font-weight:900;color:#16a34a}
+.fb-pricing-period{font-size:12px;color:#64748b;margin-left:4px}
+.fb-pricing-subtitle{font-size:12px;color:#64748b}
+.fb-pricing-features{list-style:none;padding:0;margin:0;display:grid;gap:6px}
+.fb-pricing-features li{display:flex;align-items:flex-start;gap:6px;font-size:12px;color:#334155}
+.fb-pricing-cta{display:inline-flex;align-items:center;justify-content:center;padding:8px 12px;border-radius:8px;font-weight:700;text-decoration:none;border:0;cursor:pointer}
+.fb-countdown{display:grid;gap:8px}
+.fb-countdown-label{font-size:12px;font-weight:800;color:#334155;text-transform:uppercase;letter-spacing:.08em}
+.fb-countdown-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.fb-countdown-box{background:#F3EEF7;border-radius:10px;padding:8px;text-align:center}
+.fb-countdown-num{font-size:20px;font-weight:900;color:#240E35}
+.fb-countdown-unit{font-size:10px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.08em}
 .rt-box{border:1px solid #E6E1EF;border-radius:8px;background:#fff;margin-bottom:8px}
 .rt-tools{display:flex;gap:6px;padding:6px;border-bottom:1px solid #E6E1EF}
 .rt-tools button{padding:5px 8px;border:1px solid #E6E1EF;border-radius:6px;background:#F3EEF7;font-weight:800;cursor:pointer}
@@ -377,6 +413,13 @@
                     <div class="fb-lib-group-title">Interaction & Navigation</div>
                     <button draggable="true" data-c="menu"><i class="fas fa-bars"></i>Menu</button>
                     <button draggable="true" data-c="form"><i class="fas fa-file-lines"></i>Form</button>
+                </div>
+                <div class="fb-lib-group">
+                    <div class="fb-lib-group-title">Advanced Blocks</div>
+                    <button draggable="true" data-c="testimonial"><i class="fas fa-quote-right"></i>Testimonial</button>
+                    <button draggable="true" data-c="faq"><i class="fas fa-circle-question"></i>FAQ</button>
+                    <button draggable="true" data-c="pricing"><i class="fas fa-tags"></i>Pricing</button>
+                    <button draggable="true" data-c="countdown"><i class="fas fa-stopwatch"></i>Countdown</button>
                 </div>
             </div>
         </div>
@@ -764,6 +807,7 @@ function extractLinksFromLayout(layout){
         var s=node.settings;
         if(s&&typeof s==="object"){
             if(typeof s.link==="string"&&s.link.trim()!=="")out.push(s.link.trim());
+            if(typeof s.ctaLink==="string"&&s.ctaLink.trim()!=="")out.push(s.ctaLink.trim());
             if(Array.isArray(s.items)){
                 s.items.forEach(function(it){
                     if(it&&typeof it.url==="string"&&it.url.trim()!=="")out.push(it.url.trim());
@@ -1359,6 +1403,53 @@ function normalizeFormFields(raw,preferEmailDefault){
     }
     return out;
 }
+function normalizeFaqItems(raw){
+    var list=Array.isArray(raw)?raw:[];
+    var out=list.map(function(item,idx){
+        var it=(item&&typeof item==="object")?item:{};
+        var q=String(it.q||it.question||"").trim();
+        var a=String(it.a||it.answer||"").trim();
+        if(q==="")q="Question "+(idx+1);
+        if(a==="")a="Answer "+(idx+1);
+        return {q:q,a:a};
+    }).filter(function(it){return String(it.q||"").trim()!=="";});
+    if(!out.length){
+        out.push({q:"What is included?",a:"Everything you need to get started."});
+    }
+    return out;
+}
+function normalizeFeatureList(raw){
+    var list=[];
+    if(Array.isArray(raw))list=raw;
+    else if(typeof raw==="string")list=raw.split("\n");
+    var out=list.map(function(it){return String(it||"").trim();}).filter(function(it){return it!=="";});
+    if(!out.length){
+        out=["Feature one","Feature two","Feature three"];
+    }
+    return out;
+}
+function formatDateTimeLocal(v){
+    var raw=String(v||"").trim();
+    if(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(raw))return raw.slice(0,16);
+    var d=new Date(raw);
+    if(isNaN(d.getTime()))return "";
+    var pad=n=>String(n).padStart(2,"0");
+    return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())+"T"+pad(d.getHours())+":"+pad(d.getMinutes());
+}
+function countdownParts(endAt){
+    var t=Date.parse(String(endAt||""));
+    if(isNaN(t))return null;
+    var diff=Math.max(0,t-Date.now());
+    var total=Math.floor(diff/1000);
+    var days=Math.floor(total/86400);
+    total%=86400;
+    var hours=Math.floor(total/3600);
+    total%=3600;
+    var minutes=Math.floor(total/60);
+    var seconds=total%60;
+    return {days:days,hours:hours,minutes:minutes,seconds:seconds};
+}
+function pad2(n){return String(n).padStart(2,"0");}
 function editorPrefs(){
     state.layout=state.layout||{};
     state.layout.__editor=(state.layout.__editor&&typeof state.layout.__editor==="object")?state.layout.__editor:{};
@@ -1595,6 +1686,227 @@ function selectedTarget(){
         return el(x.s,x.r,x.c,x.e);
     }
     return null;
+}
+function findElementById(id){
+    var targetId=String(id||"");
+    if(targetId==="")return null;
+    var found=null;
+    function scanElements(list){
+        if(!Array.isArray(list))return false;
+        for(var i=0;i<list.length;i++){
+            var el=list[i];
+            if(!el||typeof el!=="object")continue;
+            if(String(el.id||"")===targetId){found=el;return true;}
+            if(el.type==="carousel"){
+                var slides=ensureCarouselSlides(el.settings||{});
+                for(var si=0;si<slides.length;si++){
+                    var rwList=slides[si]&&slides[si].rows;
+                    if(!Array.isArray(rwList))continue;
+                    for(var ri=0;ri<rwList.length;ri++){
+                        var cols=rwList[ri]&&rwList[ri].columns;
+                        if(!Array.isArray(cols))continue;
+                        for(var ci=0;ci<cols.length;ci++){
+                            if(scanElements(cols[ci]&&cols[ci].elements))return true;
+                        }
+                    }
+                }
+            }
+        }
+        return false;
+    }
+    (state.layout.sections||[]).some(function(sec){
+        if(scanElements(sec.elements))return true;
+        var rows=sec.rows||[];
+        for(var r=0;r<rows.length;r++){
+            var cols=rows[r]&&rows[r].columns;
+            if(!Array.isArray(cols))continue;
+            for(var c=0;c<cols.length;c++){
+                if(scanElements(cols[c]&&cols[c].elements))return true;
+            }
+        }
+        return false;
+    });
+    return found;
+}
+function collectElementsByType(type){
+    var out=[];
+    var want=String(type||"");
+    function scanElements(list){
+        if(!Array.isArray(list))return;
+        list.forEach(function(el){
+            if(!el||typeof el!=="object")return;
+            if(String(el.type||"")===want)out.push(el);
+            if(el.type==="carousel"){
+                var slides=ensureCarouselSlides(el.settings||{});
+                slides.forEach(function(sl){
+                    (sl.rows||[]).forEach(function(rw){
+                        (rw.columns||[]).forEach(function(col){
+                            scanElements(col.elements);
+                        });
+                    });
+                });
+            }
+        });
+    }
+    (state.layout.sections||[]).forEach(function(sec){
+        scanElements(sec.elements);
+        (sec.rows||[]).forEach(function(rw){
+            (rw.columns||[]).forEach(function(col){
+                scanElements(col.elements);
+            });
+        });
+    });
+    return out;
+}
+function getLinkedPricingIdForSelection(){
+    var t=selectedTarget();
+    if(t&&t.type==="countdown"&&t.settings&&t.settings.linkedPricingId){
+        return String(t.settings.linkedPricingId||"");
+    }
+    if(state.linkPick&&state.linkPick.sourceId){
+        var src=findElementById(state.linkPick.sourceId);
+        if(src&&src.type==="countdown"&&src.settings&&src.settings.linkedPricingId){
+            return String(src.settings.linkedPricingId||"");
+        }
+    }
+    return "";
+}
+function startPricingLink(sourceId){
+    var src=findElementById(sourceId);
+    if(!src||src.type!=="countdown"){
+        showBuilderToast("Select a countdown first.","error");
+        return false;
+    }
+    if(collectElementsByType("pricing").length===0){
+        showBuilderToast("Add a pricing component first.","error");
+        return false;
+    }
+    state.linkPick={type:"pricing",sourceId:String(src.id||"")};
+    renderCanvas();
+    renderSettings();
+    showBuilderToast("Click a pricing component to link.","success");
+    return true;
+}
+function collectCountdownLinks(){
+    var links=[];
+    function scanElements(list){
+        if(!Array.isArray(list))return;
+        list.forEach(function(el){
+            if(!el||typeof el!=="object")return;
+            if(el.type==="countdown"&&el.settings&&el.settings.linkedPricingId){
+                var fromId=String(el.id||"");
+                var toId=String(el.settings.linkedPricingId||"");
+                if(fromId!==""&&toId!=="")links.push({from:fromId,to:toId});
+            }
+            if(el.type==="carousel"){
+                var slides=ensureCarouselSlides(el.settings||{});
+                slides.forEach(function(sl){
+                    (sl.rows||[]).forEach(function(rw){
+                        (rw.columns||[]).forEach(function(col){
+                            scanElements(col.elements);
+                        });
+                    });
+                });
+            }
+        });
+    }
+    (state.layout.sections||[]).forEach(function(sec){
+        scanElements(sec.elements);
+        (sec.rows||[]).forEach(function(rw){
+            (rw.columns||[]).forEach(function(col){
+                scanElements(col.elements);
+            });
+        });
+    });
+    return links;
+}
+function ensureLinkLayer(){
+    if(!canvas)return null;
+    var svg=canvas.__linkLayer;
+    if(!svg||!svg.parentNode){
+        svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
+        svg.setAttribute("id","fbLinkLayer");
+        svg.classList.add("fb-link-layer");
+        canvas.appendChild(svg);
+        canvas.__linkLayer=svg;
+    }
+    var w=Math.max(canvas.scrollWidth,canvas.clientWidth);
+    var h=Math.max(canvas.scrollHeight,canvas.clientHeight);
+    svg.setAttribute("width",w);
+    svg.setAttribute("height",h);
+    svg.setAttribute("viewBox","0 0 "+w+" "+h);
+    return svg;
+}
+function drawLinkWires(){
+    if(!canvas)return;
+    var links=collectCountdownLinks();
+    var svg=canvas.__linkLayer;
+    if(!links.length){
+        if(svg)svg.innerHTML="";
+        return;
+    }
+    svg=ensureLinkLayer();
+    if(!svg)return;
+    svg.innerHTML="";
+    var crect=canvas.getBoundingClientRect();
+    function toCanvasPoint(x,y){
+        return {
+            x:(x-crect.left)+canvas.scrollLeft,
+            y:(y-crect.top)+canvas.scrollTop
+        };
+    }
+    links.forEach(function(link){
+        var fromNode=canvas.querySelector('.el[data-el-id="'+link.from+'"]');
+        var toNode=canvas.querySelector('.el[data-el-id="'+link.to+'"]');
+        if(!fromNode||!toNode)return;
+        var fr=fromNode.getBoundingClientRect();
+        var tr=toNode.getBoundingClientRect();
+        var fcx=fr.left+fr.width/2, fcy=fr.top+fr.height/2;
+        var tcx=tr.left+tr.width/2, tcy=tr.top+tr.height/2;
+        var horizontal=Math.abs(tcx-fcx)>=Math.abs(tcy-fcy);
+        var sx,sy,ex,ey;
+        if(horizontal){
+            if(tcx>=fcx){sx=fr.right;sy=fcy;ex=tr.left;ey=tcy;}
+            else{sx=fr.left;sy=fcy;ex=tr.right;ey=tcy;}
+        }else{
+            if(tcy>=fcy){sx=fcx;sy=fr.bottom;ex=tcx;ey=tr.top;}
+            else{sx=fcx;sy=fr.top;ex=tcx;ey=tr.bottom;}
+        }
+        var sp=toCanvasPoint(sx,sy);
+        var ep=toCanvasPoint(ex,ey);
+        var dx=ep.x-sp.x;
+        var dy=ep.y-sp.y;
+        var curve;
+        var c1x,c1y,c2x,c2y;
+        if(horizontal){
+            curve=Math.min(140,Math.max(40,Math.abs(dx)*0.35));
+            c1x=sp.x+(dx>0?curve:-curve);c1y=sp.y;
+            c2x=ep.x-(dx>0?curve:-curve);c2y=ep.y;
+        }else{
+            curve=Math.min(140,Math.max(40,Math.abs(dy)*0.35));
+            c1x=sp.x;c1y=sp.y+(dy>0?curve:-curve);
+            c2x=ep.x;c2y=ep.y-(dy>0?curve:-curve);
+        }
+        var path=document.createElementNS("http://www.w3.org/2000/svg","path");
+        path.setAttribute("d","M "+sp.x+" "+sp.y+" C "+c1x+" "+c1y+" "+c2x+" "+c2y+" "+ep.x+" "+ep.y);
+        path.setAttribute("stroke","#6B4A7A");
+        path.setAttribute("stroke-width","2");
+        path.setAttribute("fill","none");
+        path.setAttribute("opacity","0.9");
+        svg.appendChild(path);
+        var c1=document.createElementNS("http://www.w3.org/2000/svg","circle");
+        c1.setAttribute("cx",sp.x);
+        c1.setAttribute("cy",sp.y);
+        c1.setAttribute("r","4");
+        c1.setAttribute("fill","#6B4A7A");
+        var c2=document.createElementNS("http://www.w3.org/2000/svg","circle");
+        c2.setAttribute("cx",ep.x);
+        c2.setAttribute("cy",ep.y);
+        c2.setAttribute("r","4");
+        c2.setAttribute("fill","#6B4A7A");
+        svg.appendChild(c1);
+        svg.appendChild(c2);
+    });
 }
 function inferNodeKind(node){
     if(!node||typeof node!=="object")return "";
@@ -1905,17 +2217,18 @@ function pasteFromClipboard(){
     }
     return pasteNodeInMain(node,nodeKind);
 }
-const ctxMenu={node:null,copyBtn:null,pasteBtn:null,open:false};
+const ctxMenu={node:null,copyBtn:null,pasteBtn:null,connectBtn:null,open:false};
 function ensureContextMenu(){
     if(ctxMenu.node&&ctxMenu.node.parentNode)return ctxMenu.node;
     var menu=document.createElement("div");
     menu.className="fb-ctx-menu";
     menu.id="fbCtxMenu";
-    menu.innerHTML='<button type="button" id="fbCtxCopy" class="fb-ctx-item">Copy</button><button type="button" id="fbCtxPaste" class="fb-ctx-item">Paste</button>';
+    menu.innerHTML='<button type="button" id="fbCtxCopy" class="fb-ctx-item">Copy</button><button type="button" id="fbCtxPaste" class="fb-ctx-item">Paste</button><button type="button" id="fbCtxConnect" class="fb-ctx-item">Connect to pricing</button>';
     document.body.appendChild(menu);
     ctxMenu.node=menu;
     ctxMenu.copyBtn=menu.querySelector("#fbCtxCopy");
     ctxMenu.pasteBtn=menu.querySelector("#fbCtxPaste");
+    ctxMenu.connectBtn=menu.querySelector("#fbCtxConnect");
     if(ctxMenu.copyBtn){
         ctxMenu.copyBtn.addEventListener("click",function(e){
             e.preventDefault();
@@ -1941,6 +2254,20 @@ function ensureContextMenu(){
             }
         });
     }
+    if(ctxMenu.connectBtn){
+        ctxMenu.connectBtn.addEventListener("click",function(e){
+            e.preventDefault();
+            e.stopPropagation();
+            if(ctxMenu.connectBtn.disabled)return;
+            hideContextMenu();
+            var t=selectedTarget();
+            if(!t||t.type!=="countdown"){
+                showBuilderToast("Select a countdown to connect.","error");
+                return;
+            }
+            startPricingLink(t.id);
+        });
+    }
     menu.addEventListener("contextmenu",function(e){e.preventDefault();});
     return menu;
 }
@@ -1948,8 +2275,14 @@ function syncContextMenuState(){
     ensureContextMenu();
     var hasSelection=!!selectedTarget();
     var hasClipboard=!!(state.clipboard&&state.clipboard.node);
+    var t=selectedTarget();
+    var canConnect=!!(t&&t.type==="countdown");
     if(ctxMenu.copyBtn)ctxMenu.copyBtn.disabled=!hasSelection;
     if(ctxMenu.pasteBtn)ctxMenu.pasteBtn.disabled=!hasClipboard;
+    if(ctxMenu.connectBtn){
+        ctxMenu.connectBtn.disabled=!canConnect;
+        ctxMenu.connectBtn.style.display=canConnect?"block":"none";
+    }
 }
 function hideContextMenu(){
     if(!ctxMenu.node)return;
@@ -2036,7 +2369,136 @@ function selectedType(){
     if(x.k==="col")return "column";
     return "None";
 }
-function titleCase(v){return (v||"").replace(/[_-]/g," ").replace(/\b\w/g,m=>m.toUpperCase());}
+function titleCase(v){
+    var raw=String(v||"").toLowerCase();
+    if(raw==="faq")return "FAQ";
+    return (v||"").replace(/[_-]/g," ").replace(/\b\w/g,m=>m.toUpperCase());
+}
+function isAdvancedScaleComponent(t){
+    var type=String(t||"").toLowerCase();
+    return type==="testimonial"||type==="faq"||type==="pricing"||type==="countdown";
+}
+function parsePxVal(v){
+    var n=Number(String(v||"0").replace("px","").trim());
+    return isNaN(n)?0:n;
+}
+function clampVal(n,min,max){return Math.max(min,Math.min(max,n));}
+function scalePaddingValue(pad,scale){
+    var raw=String(pad||"").trim();
+    if(!raw)return "";
+    var parts=raw.split(/\s+/).filter(Boolean);
+    if(!parts.length)return "";
+    var nums=parts.map(parsePxVal);
+    var t=0,r=0,b=0,l=0;
+    if(nums.length===1){t=r=b=l=nums[0];}
+    else if(nums.length===2){t=b=nums[0];r=l=nums[1];}
+    else if(nums.length===3){t=nums[0];r=l=nums[1];b=nums[2];}
+    else{t=nums[0];r=nums[1];b=nums[2];l=nums[3];}
+    return Math.round(t*scale)+"px "+Math.round(r*scale)+"px "+Math.round(b*scale)+"px "+Math.round(l*scale)+"px";
+}
+function getContentScale(item){
+    var s=Number(item&&item.settings&&item.settings.contentScale);
+    if(isNaN(s)||s<=0)return 1;
+    return clampVal(s,0.5,3);
+}
+function applyAdvancedScaleToNode(node,item,scale){
+    if(!node||!item||!isAdvancedScaleComponent(item.type))return;
+    var s=(scale!==undefined)?scale:getContentScale(item);
+    s=clampVal(s,0.5,3);
+    if(item.style){
+        if(item.style.padding){
+            var sp=scalePaddingValue(item.style.padding,s);
+            if(sp)node.style.padding=sp;
+        }
+        if(item.style.borderRadius){
+            var br=parsePxVal(item.style.borderRadius);
+            if(br>0)node.style.borderRadius=Math.round(br*s)+"px";
+        }
+    }
+    var type=String(item.type||"").toLowerCase();
+    if(type==="testimonial"){
+        var card=node.querySelector(".fb-testimonial");
+        var quote=node.querySelector(".fb-testimonial-quote");
+        var author=node.querySelector(".fb-testimonial-author");
+        var avatar=node.querySelector(".fb-testimonial-avatar");
+        var name=node.querySelector(".fb-testimonial-name");
+        var role=node.querySelector(".fb-testimonial-role");
+        if(card)card.style.gap=Math.round(10*s)+"px";
+        if(author)author.style.gap=Math.round(10*s)+"px";
+        if(avatar){var av=Math.round(40*s);avatar.style.width=av+"px";avatar.style.height=av+"px";}
+        if(quote)quote.style.fontSize=Math.round(16*s)+"px";
+        if(name)name.style.fontSize=Math.round(16*s)+"px";
+        if(role)role.style.fontSize=Math.round(12*s)+"px";
+    }
+    if(type==="faq"){
+        var faq=node.querySelector(".fb-faq");
+        var q=node.querySelectorAll(".fb-faq-q");
+        var a=node.querySelectorAll(".fb-faq-a");
+        if(faq){
+            var gap=Number(item.settings&&item.settings.itemGap);if(isNaN(gap)||gap<0)gap=10;
+            faq.style.gap=Math.round(gap*s)+"px";
+        }
+        q.forEach(function(el){el.style.fontSize=Math.round(16*s)+"px";});
+        a.forEach(function(el){el.style.fontSize=Math.round(13*s)+"px";});
+    }
+    if(type==="pricing"){
+        var pricing=node.querySelector(".fb-pricing");
+        var badge=node.querySelector(".fb-pricing-badge");
+        var title=node.querySelector(".fb-pricing-title");
+        var price=node.querySelector(".fb-pricing-price");
+        var period=node.querySelector(".fb-pricing-period");
+        var subtitle=node.querySelector(".fb-pricing-subtitle");
+        var features=node.querySelector(".fb-pricing-features");
+        var feats=node.querySelectorAll(".fb-pricing-features li");
+        var cta=node.querySelector(".fb-pricing-cta");
+        if(pricing)pricing.style.gap=Math.round(10*s)+"px";
+        if(badge){
+            badge.style.fontSize=Math.round(11*s)+"px";
+            badge.style.padding=Math.round(4*s)+"px "+Math.round(10*s)+"px";
+        }
+        if(title)title.style.fontSize=Math.round(18*s)+"px";
+        if(price)price.style.fontSize=Math.round(30*s)+"px";
+        if(period)period.style.fontSize=Math.round(12*s)+"px";
+        if(subtitle)subtitle.style.fontSize=Math.round(12*s)+"px";
+        if(features)features.style.gap=Math.round(6*s)+"px";
+        feats.forEach(function(el){el.style.fontSize=Math.round(12*s)+"px";});
+        if(cta){
+            cta.style.fontSize=Math.round(16*s)+"px";
+            cta.style.padding=Math.round(8*s)+"px "+Math.round(12*s)+"px";
+        }
+    }
+    if(type==="countdown"){
+        var cd=node.querySelector(".fb-countdown");
+        var label=node.querySelector(".fb-countdown-label");
+        var grid=node.querySelector(".fb-countdown-grid");
+        var boxes=node.querySelectorAll(".fb-countdown-box");
+        var nums=node.querySelectorAll(".fb-countdown-num");
+        var units=node.querySelectorAll(".fb-countdown-unit");
+        if(cd){}
+        if(label)label.style.fontSize=Math.round(12*s)+"px";
+        if(grid){
+            var gap=Number(item.settings&&item.settings.itemGap);if(isNaN(gap)||gap<0)gap=8;
+            grid.style.gap=Math.round(gap*s)+"px";
+        }
+        boxes.forEach(function(el){el.style.padding=Math.round(8*s)+"px";});
+        nums.forEach(function(el){el.style.fontSize=Math.round(20*s)+"px";});
+        units.forEach(function(el){el.style.fontSize=Math.round(10*s)+"px";});
+    }
+}
+function syncAdvancedElementHeight(node,item){
+    if(!node||!item||!isAdvancedScaleComponent(item.type))return;
+    item.style=item.style||{};
+    node.style.height="auto";
+    var needed=Math.ceil(node.scrollHeight||0);
+    if(!needed){
+        var rect=node.getBoundingClientRect();
+        needed=Math.ceil(rect.height||0);
+    }
+    if(needed>0){
+        item.style.height=Math.max(20,needed)+"px";
+        node.style.height=item.style.height;
+    }
+}
 function isSelectedElementMedia(){
     const t=selectedTarget();
     if(!t)return false;
@@ -2399,7 +2861,10 @@ function createRootItem(type){
     return it?Object.assign({kind:"el"},it):null;
 }
 function createDefaultElement(type){
-    const d={heading:{content:"Heading",style:{fontSize:"32px",color:"#000000",position:"absolute"},settings:{positionMode:"absolute"}},text:{content:"Text",style:{fontSize:"16px",color:"#000000",position:"absolute"},settings:{positionMode:"absolute"}},menu:{content:"",style:{fontSize:"16px",width:"400px",position:"absolute"},settings:{positionMode:"absolute",items:[{label:"Home",url:"#",newWindow:false,hasSubmenu:false},{label:"Contact",url:"/contact",newWindow:false,hasSubmenu:false}],itemGap:13,activeIndex:0,menuAlign:"left",underlineColor:""}},carousel:{content:"",style:{width:"200px",height:"200px",padding:"0px",position:"absolute"},settings:{positionMode:"absolute",slides:[defaultCarouselSlide("Slide #1")],activeSlide:0,vAlign:"center",alignment:"left",showArrows:true,slideshowMode:"manual",controlsColor:"#64748b",arrowColor:"#ffffff",fixedWidth:200,fixedHeight:200}},image:{content:"",style:{width:"300px",position:"absolute"},settings:{positionMode:"absolute",src:"",alt:"Image",alignment:"left"}},button:{content:"Click Me",style:{backgroundColor:"#240E35",color:"#fff",borderRadius:"999px",padding:"10px 18px",textAlign:"center",position:"absolute"},settings:{positionMode:"absolute",actionType:"next_step",actionStepSlug:"",link:"#"}},icon:{content:"",style:{fontSize:"36px",color:"#2E1244",padding:"0px",borderRadius:"0px",position:"absolute"},settings:{positionMode:"absolute",iconName:"star",iconStyle:"solid",alignment:"center",link:""}},form:{content:"Submit",style:{width:"350px",position:"absolute"},settings:{positionMode:"absolute",alignment:"left",width:"350px",buttonAlign:"left",buttonBold:false,buttonItalic:false,labelColor:"#240E35",placeholderColor:"#94a3b8",buttonBgColor:"#240E35",buttonTextColor:"#ffffff",fields:[{type:"text",label:"First name",placeholder:"First name",required:false}]}},video:{content:"",style:{width:"400px",position:"absolute"},settings:{positionMode:"absolute",src:"",alignment:"left"}},spacer:{content:"",style:{height:"24px",width:"200px",position:"absolute"},settings:{positionMode:"absolute"}}}[type]||null;
+    var _cd=new Date(Date.now()+7*24*60*60*1000);
+    var _pad=n=>String(n).padStart(2,"0");
+    var countdownEndVal=_cd.getFullYear()+"-"+_pad(_cd.getMonth()+1)+"-"+_pad(_cd.getDate())+"T"+_pad(_cd.getHours())+":"+_pad(_cd.getMinutes());
+    const d={heading:{content:"Heading",style:{fontSize:"32px",color:"#000000",position:"absolute"},settings:{positionMode:"absolute"}},text:{content:"Text",style:{fontSize:"16px",color:"#000000",position:"absolute"},settings:{positionMode:"absolute"}},menu:{content:"",style:{fontSize:"16px",width:"400px",position:"absolute"},settings:{positionMode:"absolute",items:[{label:"Home",url:"#",newWindow:false,hasSubmenu:false},{label:"Contact",url:"/contact",newWindow:false,hasSubmenu:false}],itemGap:13,activeIndex:0,menuAlign:"left",underlineColor:""}},carousel:{content:"",style:{width:"200px",height:"200px",padding:"0px",position:"absolute"},settings:{positionMode:"absolute",slides:[defaultCarouselSlide("Slide #1")],activeSlide:0,vAlign:"center",alignment:"left",showArrows:true,slideshowMode:"manual",controlsColor:"#64748b",arrowColor:"#ffffff",fixedWidth:200,fixedHeight:200}},image:{content:"",style:{width:"300px",position:"absolute"},settings:{positionMode:"absolute",src:"",alt:"Image",alignment:"left"}},button:{content:"Click Me",style:{backgroundColor:"#240E35",color:"#fff",borderRadius:"999px",padding:"10px 18px",textAlign:"center",position:"absolute"},settings:{positionMode:"absolute",actionType:"next_step",actionStepSlug:"",link:"#"}},icon:{content:"",style:{fontSize:"36px",color:"#2E1244",padding:"0px",borderRadius:"0px",position:"absolute"},settings:{positionMode:"absolute",iconName:"star",iconStyle:"solid",alignment:"center",link:""}},form:{content:"Submit",style:{width:"350px",position:"absolute"},settings:{positionMode:"absolute",alignment:"left",width:"350px",buttonAlign:"left",buttonBold:false,buttonItalic:false,labelColor:"#240E35",placeholderColor:"#94a3b8",buttonBgColor:"#240E35",buttonTextColor:"#ffffff",fields:[{type:"text",label:"First name",placeholder:"First name",required:false}]}},video:{content:"",style:{width:"400px",position:"absolute"},settings:{positionMode:"absolute",src:"",alignment:"left"}},spacer:{content:"",style:{height:"24px",width:"200px",position:"absolute"},settings:{positionMode:"absolute"}},testimonial:{content:"",style:{width:"320px",padding:"16px",backgroundColor:"#ffffff",border:"1px solid #E6E1EF",borderRadius:"16px",boxShadow:"0 12px 24px rgba(15,23,42,.08)",position:"absolute"},settings:{positionMode:"absolute",quote:"This product changed how we work.",name:"Alex Johnson",role:"Founder, Startify",avatar:""}},faq:{content:"",style:{width:"420px",padding:"16px",backgroundColor:"#ffffff",border:"1px solid #E6E1EF",borderRadius:"16px",boxShadow:"0 12px 24px rgba(15,23,42,.08)",position:"absolute"},settings:{positionMode:"absolute",items:[{q:"How does it work?",a:"Choose a template, customize, and publish."},{q:"Is there a free trial?",a:"Yes, you can start with a 14-day trial."}],itemGap:10,questionColor:"#240E35",answerColor:"#475569"}},pricing:{content:"",style:{width:"320px",padding:"18px",backgroundColor:"#ffffff",border:"1px solid #E6E1EF",borderRadius:"18px",boxShadow:"0 12px 24px rgba(15,23,42,.08)",position:"absolute"},settings:{positionMode:"absolute",plan:"Pro",price:"$49",period:"/month",subtitle:"Best for growing teams",features:["Unlimited pages","Custom domains","Priority support"],ctaLabel:"Get Started",ctaLink:"#",ctaBgColor:"#240E35",ctaTextColor:"#ffffff",badge:"Popular"}},countdown:{content:"",style:{width:"300px",padding:"16px",backgroundColor:"#ffffff",border:"1px solid #E6E1EF",borderRadius:"16px",boxShadow:"0 12px 24px rgba(15,23,42,.08)",position:"absolute"},settings:{positionMode:"absolute",endAt:countdownEndVal,label:"Offer ends in",expiredText:"Offer ended",numberColor:"#240E35",labelColor:"#64748b",itemGap:8}}}[type]||null;
     if(!d)return null;
     return {id:uid("el"),type:type,content:d.content,style:clone(d.style),settings:clone(d.settings)};
 }
@@ -2723,19 +3188,31 @@ function attachElResizeHandles(w,item){
     function clamp(n,mn,mx){return Math.max(mn,Math.min(mx,n));}
     var isCorner=function(h){return h==="nw"||h==="ne"||h==="sw"||h==="se";};
     var isScalable=function(){return item.type==="heading"||item.type==="text"||item.type==="button"||item.type==="icon";};
+    var scaleAdvanced=isAdvancedScaleComponent(item.type);
     function startResize(handle,e){
         e.preventDefault();
         e.stopPropagation();
         _autoSavePaused=true;
         var host=w.parentElement;
-        var hostRect=host?host.getBoundingClientRect():null;
+        if(!host)return;
+        var hostRect=host.getBoundingClientRect();
         var hostW=hostRect?hostRect.width:0;
         var hostH=hostRect?hostRect.height:0;
-        var startW=w.offsetWidth||parsePx(item.style.width)||200;
-        var startH=w.offsetHeight||parsePx(item.style.height)||100;
-        var startX=parsePx(item.style.left)||Number(item.settings&&item.settings.freeX)||0;
-        var startY=parsePx(item.style.top)||Number(item.settings&&item.settings.freeY)||0;
+        var rect=w.getBoundingClientRect();
+        var hadWidth=!!(item.style&&String(item.style.width||"").trim()!=="");
+        var hadHeight=!!(item.style&&String(item.style.height||"").trim()!=="");
+        var startW=Math.max(30,rect.width||parsePx(item.style.width)||200);
+        var startH=Math.max(20,rect.height||parsePx(item.style.height)||100);
+        var hasLeft=!!(item.style&&String(item.style.left||"").trim()!=="");
+        var hasTop=!!(item.style&&String(item.style.top||"").trim()!=="");
+        var startX=hasLeft?parsePx(item.style.left):(Number(item.settings&&item.settings.freeX)||0);
+        var startY=hasTop?parsePx(item.style.top):(Number(item.settings&&item.settings.freeY)||0);
+        if((!hasLeft || !hasTop) && hostRect){
+            if(!hasLeft)startX=Math.round(rect.left-hostRect.left);
+            if(!hasTop)startY=Math.round(rect.top-hostRect.top);
+        }
         var ratio=(startH>0)?(startW/startH):1;
+        var startScale=scaleAdvanced?getContentScale(item):1;
         var startFontSize=parsePx(item.style&&item.style.fontSize)||32;
         var startPadT=0,startPadR=0,startPadB=0,startPadL=0;
         var startBR=parsePx(item.style&&item.style.borderRadius)||0;
@@ -2748,15 +3225,30 @@ function attachElResizeHandles(w,item){
         var contentEl=w.querySelector("[data-editable],i.fa,i.fas,i.far,i.fab,svg");
         var sx=e.clientX,sy=e.clientY;
         var didSave=false;
+        var lockRatio=isCorner(handle)&&(isScalable()||item.type==="image"||item.type==="video"||item.type==="carousel");
         var doScale=isCorner(handle)&&isScalable();
+        var affectsW=(handle==="e"||handle==="w"||isCorner(handle));
+        var affectsH=(handle==="n"||handle==="s"||isCorner(handle));
         function onMove(ev){
             if(!didSave){saveToHistory();didSave=true;}
             var dx=ev.clientX-sx,dy=ev.clientY-sy;
             var nw=startW,nh=startH,nx=startX,ny=startY;
-            if(handle==="se"){nw=clamp(startW+dx,30,2400);nh=clamp(nw/ratio,20,1800);}
-            else if(handle==="ne"){nw=clamp(startW+dx,30,2400);nh=clamp(nw/ratio,20,1800);ny=startY+(startH-nh);}
-            else if(handle==="sw"){nw=clamp(startW-dx,30,2400);nh=clamp(nw/ratio,20,1800);nx=startX+(startW-nw);}
-            else if(handle==="nw"){nw=clamp(startW-dx,30,2400);nh=clamp(nw/ratio,20,1800);nx=startX+(startW-nw);ny=startY+(startH-nh);}
+            if(handle==="se"){
+                if(lockRatio){nw=clamp(startW+dx,30,2400);nh=clamp(nw/ratio,20,1800);}
+                else{nw=clamp(startW+dx,30,2400);nh=clamp(startH+dy,20,1800);}
+            }
+            else if(handle==="ne"){
+                if(lockRatio){nw=clamp(startW+dx,30,2400);nh=clamp(nw/ratio,20,1800);ny=startY+(startH-nh);}
+                else{nw=clamp(startW+dx,30,2400);nh=clamp(startH-dy,20,1800);ny=startY+(startH-nh);}
+            }
+            else if(handle==="sw"){
+                if(lockRatio){nw=clamp(startW-dx,30,2400);nh=clamp(nw/ratio,20,1800);nx=startX+(startW-nw);}
+                else{nw=clamp(startW-dx,30,2400);nh=clamp(startH+dy,20,1800);nx=startX+(startW-nw);}
+            }
+            else if(handle==="nw"){
+                if(lockRatio){nw=clamp(startW-dx,30,2400);nh=clamp(nw/ratio,20,1800);nx=startX+(startW-nw);ny=startY+(startH-nh);}
+                else{nw=clamp(startW-dx,30,2400);nh=clamp(startH-dy,20,1800);nx=startX+(startW-nw);ny=startY+(startH-nh);}
+            }
             else if(handle==="e"){nw=clamp(startW+dx,30,2400);}
             else if(handle==="w"){nw=clamp(startW-dx,30,2400);nx=startX+(startW-nw);}
             else if(handle==="s"){nh=clamp(startH+dy,20,1800);}
@@ -2772,16 +3264,33 @@ function attachElResizeHandles(w,item){
                 if(nh<20)nh=Math.min(20,hostH);
             }
             item.style=item.style||{};item.settings=item.settings||{};
-            item.style.width=Math.round(nw)+"px";
-            item.style.height=Math.round(nh)+"px";
+            if(scaleAdvanced&&startW>0&&startH>0){
+                var wr=nw/startW;
+                var hr=nh/startH;
+                var scaleFactor=1;
+                if(handle==="e"||handle==="w")scaleFactor=wr;
+                else if(handle==="n"||handle==="s")scaleFactor=hr;
+                else scaleFactor=Math.max(wr,hr);
+                item.settings.contentScale=clamp(startScale*scaleFactor,0.5,3);
+                applyAdvancedScaleToNode(w,item,item.settings.contentScale);
+            }
+            item.style.position="absolute";
+            item.settings.positionMode="absolute";
             item.style.left=Math.round(nx)+"px";
             item.style.top=Math.round(ny)+"px";
             item.settings.freeX=Math.round(nx);
             item.settings.freeY=Math.round(ny);
-            w.style.width=item.style.width;
-            w.style.height=item.style.height;
+            w.style.position="absolute";
             w.style.left=item.style.left;
             w.style.top=item.style.top;
+            if(affectsW || hadWidth){
+                item.style.width=Math.round(nw)+"px";
+                w.style.width=item.style.width;
+            }
+            if(affectsH || hadHeight){
+                item.style.height=Math.round(nh)+"px";
+                w.style.height=item.style.height;
+            }
             if(doScale&&startW>0){
                 var scale=nw/startW;
                 var newFs=Math.max(8,Math.round(startFontSize*scale*10)/10);
@@ -2796,6 +3305,8 @@ function attachElResizeHandles(w,item){
                     if(contentEl)contentEl.style.borderRadius=newBR+"px";
                 }
             }
+            if(scaleAdvanced)syncAdvancedElementHeight(w,item);
+            drawLinkWires();
         }
         function onUp(){
             document.removeEventListener("mousemove",onMove);
@@ -2905,6 +3416,7 @@ function computeSnap(newX,newY,elW,elH,hostW,hostH,siblings){
 }
 
 function startElDrag(e,w,item,ctx){
+    if(state.linkPick && state.linkPick.type==="pricing") return;
     if(e.button!==0)return;
     if(e.target.closest&&e.target.closest(".carousel-live-editor")&&e.target.closest("button"))return;
     if(e.target.closest&&e.target.closest(".el-rh"))return;
@@ -3018,6 +3530,7 @@ document.addEventListener("mousemove",function(e){
     item.style.top=Math.round(finalY)+"px";
     item.settings.freeX=Math.round(finalX);
     item.settings.freeY=Math.round(finalY);
+    drawLinkWires();
 });
 
 document.addEventListener("mouseup",function(e){
@@ -3311,8 +3824,56 @@ function renderElement(item,ctx){
     var isEditing=!!(state.editingEl&&state.editingEl===item.id);
     if(isSelected){w.classList.add("sel");}
     if(isEditing)w.classList.add("el--editing");
+    var linkedTargetId=String(state._linkTargetId||"");
+    if(item.type==="pricing"){
+        if(state.linkPick&&state.linkPick.type==="pricing")w.classList.add("el--link-candidate");
+        if(linkedTargetId!==""&&String(item.id||"")===linkedTargetId)w.classList.add("el--link-target");
+    }
+    if(item.type==="countdown"&&state.linkPick&&String(item.id||"")===String(state.linkPick.sourceId||""))w.classList.add("el--link-source");
     w.onmousedown=function(e){e.stopPropagation();startElDrag(e,w,item,ctx);};
-    w.onclick=e=>{e.stopPropagation();if(!elDrag.active&&!elDrag.justFinished){if(state.editingEl&&state.editingEl!==item.id){state.editingEl=null;var oe=document.querySelector(".el--editing");if(oe){oe.classList.remove("el--editing");var ce=oe.querySelector("[data-editable]");if(ce){ce.contentEditable="false";ce.style.cursor="move";}}}state.carouselSel=null;state.sel=ctx.scope==="section"?{k:"el",scope:"section",s:ctx.s,e:item.id}:{k:"el",s:ctx.s,r:ctx.r,c:ctx.c,e:item.id};renderSettings();if(state.sel)showLeftPanel("settings");}};
+    w.onclick=e=>{
+        e.stopPropagation();
+        if(state.linkPick&&state.linkPick.type==="pricing"){
+            e.preventDefault();
+            if(item.type!=="pricing"){
+                showBuilderToast("Select a pricing component to link.","error");
+                return;
+            }
+            var src=findElementById(state.linkPick.sourceId);
+            if(!src||src.type!=="countdown"){
+                state.linkPick=null;
+                renderCanvas();
+                showBuilderToast("Countdown link source not found.","error");
+                return;
+            }
+            saveToHistory();
+            src.settings=src.settings||{};
+            src.settings.linkedPricingId=item.id;
+            state.linkPick=null;
+            renderCanvas();
+            renderSettings();
+            showBuilderToast("Linked countdown to pricing.","success");
+            return;
+        }
+        if(!elDrag.active&&!elDrag.justFinished){
+            if(state.editingEl&&state.editingEl!==item.id){
+                state.editingEl=null;
+                var oe=document.querySelector(".el--editing");
+                if(oe){
+                    oe.classList.remove("el--editing");
+                    var ce=oe.querySelector("[data-editable]");
+                    if(ce){
+                        ce.contentEditable="false";
+                        ce.style.cursor="move";
+                    }
+                }
+            }
+            state.carouselSel=null;
+            state.sel=ctx.scope==="section"?{k:"el",scope:"section",s:ctx.s,e:item.id}:{k:"el",s:ctx.s,r:ctx.r,c:ctx.c,e:item.id};
+            renderSettings();
+            if(state.sel)showLeftPanel("settings");
+        }
+    };
     w.ondblclick=function(e){
         e.stopPropagation();
         if(item.type==="heading"||item.type==="text"||item.type==="button"){
@@ -3496,6 +4057,183 @@ function renderElement(item,ctx){
         formBox.appendChild(btnWrap);
         w.innerHTML="";
         w.appendChild(formBox);
+    }
+    else if(item.type==="testimonial"){
+        item.settings=item.settings||{};
+        var quote=String(item.settings.quote||item.content||"Testimonial quote");
+        var name=String(item.settings.name||"Customer name");
+        var role=String(item.settings.role||"");
+        var avatar=String(item.settings.avatar||"");
+        var customColor=(item.style&&item.style.color)?String(item.style.color):"";
+        var card=document.createElement("div");
+        card.className="fb-testimonial";
+        var q=document.createElement("div");
+        q.className="fb-testimonial-quote";
+        q.textContent=quote;
+        if(customColor)q.style.color=customColor;
+        card.appendChild(q);
+        var author=document.createElement("div");
+        author.className="fb-testimonial-author";
+        if(avatar){
+            var img=document.createElement("img");
+            img.className="fb-testimonial-avatar";
+            img.src=avatar;
+            img.alt=name||"Avatar";
+            author.appendChild(img);
+        }
+        var meta=document.createElement("div");
+        var nm=document.createElement("div");
+        nm.className="fb-testimonial-name";
+        nm.textContent=name||"Customer name";
+        if(customColor)nm.style.color=customColor;
+        meta.appendChild(nm);
+        if(role){
+            var rl=document.createElement("div");
+            rl.className="fb-testimonial-role";
+            rl.textContent=role;
+            if(customColor){rl.style.color=customColor;rl.style.opacity="0.7";}
+            meta.appendChild(rl);
+        }
+        author.appendChild(meta);
+        card.appendChild(author);
+        w.appendChild(card);
+    }
+    else if(item.type==="faq"){
+        item.settings=item.settings||{};
+        item.settings.items=normalizeFaqItems(item.settings.items);
+        var list=item.settings.items||[];
+        var gap=Number(item.settings.itemGap);if(isNaN(gap)||gap<0)gap=10;
+        var faqWrap=document.createElement("div");
+        faqWrap.className="fb-faq";
+        faqWrap.style.gap=gap+"px";
+        list.forEach(function(it){
+            var row=document.createElement("div");
+            row.className="fb-faq-item";
+            var qn=document.createElement("div");
+            qn.className="fb-faq-q";
+            qn.textContent=String(it.q||"Question");
+            if(item.settings.questionColor)qn.style.color=String(item.settings.questionColor);
+            var an=document.createElement("div");
+            an.className="fb-faq-a";
+            an.textContent=String(it.a||"Answer");
+            if(item.settings.answerColor)an.style.color=String(item.settings.answerColor);
+            row.appendChild(qn);
+            row.appendChild(an);
+            faqWrap.appendChild(row);
+        });
+        w.appendChild(faqWrap);
+    }
+    else if(item.type==="pricing"){
+        item.settings=item.settings||{};
+        item.settings.features=normalizeFeatureList(item.settings.features);
+        var plan=String(item.settings.plan||"Plan");
+        var salePrice=String(item.settings.price||"");
+        var regularPrice=String(item.settings.regularPrice||"");
+        var price=(salePrice!==""?salePrice:(regularPrice!==""?regularPrice:"$0"));
+        var period=String(item.settings.period||"");
+        var subtitle=String(item.settings.subtitle||"");
+        var badge=String(item.settings.badge||"");
+        var ctaLabel=String(item.settings.ctaLabel||"Get Started");
+        var ctaLink=String(item.settings.ctaLink||"#");
+        var ctaBg=String(item.settings.ctaBgColor||"#240E35");
+        var ctaText=String(item.settings.ctaTextColor||"#ffffff");
+        var customColor2=(item.style&&item.style.color)?String(item.style.color):"";
+        var pricing=document.createElement("div");
+        pricing.className="fb-pricing";
+        if(badge){
+            var bd=document.createElement("div");
+            bd.className="fb-pricing-badge";
+            bd.textContent=badge;
+            pricing.appendChild(bd);
+        }
+        var title=document.createElement("div");
+        title.className="fb-pricing-title";
+        title.textContent=plan;
+        if(customColor2)title.style.color=customColor2;
+        pricing.appendChild(title);
+        var priceRow=document.createElement("div");
+        var priceVal=document.createElement("span");
+        priceVal.className="fb-pricing-price";
+        priceVal.textContent=price;
+        if(customColor2)priceVal.style.color=customColor2;
+        priceRow.appendChild(priceVal);
+        if(period){
+            var per=document.createElement("span");
+            per.className="fb-pricing-period";
+            per.textContent=period;
+            if(customColor2){per.style.color=customColor2;per.style.opacity="0.7";}
+            priceRow.appendChild(per);
+        }
+        pricing.appendChild(priceRow);
+        if(subtitle){
+            var sub=document.createElement("div");
+            sub.className="fb-pricing-subtitle";
+            sub.textContent=subtitle;
+            if(customColor2){sub.style.color=customColor2;sub.style.opacity="0.7";}
+            pricing.appendChild(sub);
+        }
+        var listWrap=document.createElement("ul");
+        listWrap.className="fb-pricing-features";
+        item.settings.features.forEach(function(f){
+            var li=document.createElement("li");
+            li.textContent=String(f||"Feature");
+            if(customColor2)li.style.color=customColor2;
+            listWrap.appendChild(li);
+        });
+        pricing.appendChild(listWrap);
+        var cta=document.createElement(ctaLink?"a":"button");
+        if(ctaLink){
+            cta.href=ctaLink;
+            cta.addEventListener("click",function(e){e.preventDefault();});
+        }else{
+            cta.type="button";
+        }
+        cta.className="fb-pricing-cta";
+        cta.textContent=ctaLabel;
+        cta.style.background=ctaBg;
+        cta.style.color=ctaText;
+        pricing.appendChild(cta);
+        w.appendChild(pricing);
+    }
+    else if(item.type==="countdown"){
+        item.settings=item.settings||{};
+        var endAt=String(item.settings.endAt||"");
+        var label=String(item.settings.label||"Offer ends in");
+        var numberColor=String(item.settings.numberColor||"#240E35");
+        var labelColor=String(item.settings.labelColor||"#64748b");
+        var gap=Number(item.settings.itemGap);if(isNaN(gap)||gap<0)gap=8;
+        var parts=countdownParts(endAt)||{days:0,hours:0,minutes:0,seconds:0};
+        var cd=document.createElement("div");
+        cd.className="fb-countdown";
+        var cdLabel=document.createElement("div");
+        cdLabel.className="fb-countdown-label";
+        cdLabel.textContent=label;
+        cdLabel.style.color=labelColor;
+        cd.appendChild(cdLabel);
+        var grid=document.createElement("div");
+        grid.className="fb-countdown-grid";
+        grid.style.gap=gap+"px";
+        function addBox(val,unit){
+            var box=document.createElement("div");
+            box.className="fb-countdown-box";
+            var num=document.createElement("div");
+            num.className="fb-countdown-num";
+            num.textContent=pad2(val);
+            num.style.color=numberColor;
+            var un=document.createElement("div");
+            un.className="fb-countdown-unit";
+            un.textContent=unit;
+            un.style.color=labelColor;
+            box.appendChild(num);
+            box.appendChild(un);
+            grid.appendChild(box);
+        }
+        addBox(parts.days,"Days");
+        addBox(parts.hours,"Hours");
+        addBox(parts.minutes,"Mins");
+        addBox(parts.seconds,"Secs");
+        cd.appendChild(grid);
+        w.appendChild(cd);
     }
     else if(item.type==="menu"){
         var ms=item.settings||{};
@@ -4187,6 +4925,7 @@ function renderElement(item,ctx){
         w.appendChild(wrap);
     }
     else if(item.type==="spacer"){const h=((item.style&&item.style.height)||"24px");const isSel=!!(state.sel&&state.sel.k==="el"&&state.sel.e===item.id);const bg=isSel?'repeating-linear-gradient(90deg,#F3EEF7,#F3EEF7 8px,#E6E1EF 8px,#E6E1EF 16px)':'transparent';w.innerHTML='<div style="height:'+h+';background:'+bg+'"></div>';}
+    if(isAdvancedScaleComponent(item.type))applyAdvancedScaleToNode(w,item);
     if(item.type==="image"||item.type==="video"||item.type==="icon"){
         var a=(item.settings&&item.settings.alignment)||(item.type==="icon"?"center":"left");
         w.style.setProperty("display","flex");
@@ -4497,6 +5236,8 @@ function renderCanvas(){
     }
     state._carAutoTimers=[];
     ensureRootModel();
+    if(canvas)canvas.classList.toggle("fb-link-pick",!!state.linkPick);
+    state._linkTargetId=getLinkedPricingIdForSelection();
     canvas.innerHTML="";
     var widthMap={full:"",wide:"1200px",medium:"992px",small:"768px",xsmall:"576px"};
     (state.layout.sections||[]).forEach(s=>{
@@ -4571,7 +5312,11 @@ function renderCanvas(){
             if(ok)render();
         };
         s.elements=Array.isArray(s.elements)?s.elements:[];
-        (s.elements||[]).forEach(it=>inner.appendChild(renderElement(it,{s:s.id,scope:"section"})));
+        (s.elements||[]).forEach(function(it){
+            var elNode=renderElement(it,{s:s.id,scope:"section"});
+            inner.appendChild(elNode);
+            if(isAdvancedScaleComponent(it.type))syncAdvancedElementHeight(elNode,it);
+        });
         if(s.__freeformCanvas){
             var secMaxBot=0;
             (s.elements||[]).forEach(function(it){
@@ -4663,10 +5408,12 @@ function renderCanvas(){
                 };
                 var colMaxBot=0;
                 (c.elements||[]).forEach(function(it){
-                    colInner.appendChild(renderElement(it,{s:s.id,r:r.id,c:c.id}));
+                    var elNode=renderElement(it,{s:s.id,r:r.id,c:c.id});
+                    colInner.appendChild(elNode);
+                    if(isAdvancedScaleComponent(it.type))syncAdvancedElementHeight(elNode,it);
                     if(it.settings&&it.settings.positionMode==="absolute"){
                         var ey=Number(it.settings.freeY)||0;
-                        var eh=parseInt(it.style&&it.style.height)||80;
+                        var eh=parseInt(it.style&&it.style.height)||Math.round(elNode.getBoundingClientRect().height)||80;
                         var bot=ey+Math.max(40,eh)+10;
                         if(bot>colMaxBot)colMaxBot=bot;
                     }
@@ -4687,6 +5434,25 @@ function renderCanvas(){
         canvas.appendChild(sn);
     });
     if(!(state.layout.sections||[]).length)canvas.innerHTML='<p style="font-size:13px;color:#475569;">Drag any component to start.</p>';
+    if(state.linkPick && state.linkPick.type==="pricing"){
+        var banner=document.createElement("div");
+        banner.className="fb-link-banner";
+        banner.innerHTML='<span>Click a pricing component to link. Press Esc to cancel.</span><button type="button" id="fbLinkCancel">Cancel</button>';
+        canvas.insertBefore(banner,canvas.firstChild||null);
+        var cancelBtn=banner.querySelector("#fbLinkCancel");
+        if(cancelBtn){
+            cancelBtn.onclick=function(){
+                state.linkPick=null;
+                renderCanvas();
+                renderSettings();
+            };
+        }
+    }
+    drawLinkWires();
+    if(canvas && !canvas.__linkScrollBound){
+        canvas.__linkScrollBound=true;
+        canvas.addEventListener("scroll",function(){drawLinkWires();});
+    }
     canvas.ondragover=e=>{e.preventDefault();clearFreeDropGuides();};
     canvas.ondrop=e=>{e.preventDefault();clearFreeDropGuides();if(e.target&&e.target.closest&&e.target.closest(".carousel-live-editor"))return;const t=e.dataTransfer.getData("c");if(t){var freePos=computeFreeDropPosition(e,canvas);var ok=(!isStructureComponent(t))?addComponentAt(t,null,{mode:"free",x:freePos.x,y:freePos.y}):addComponentAt(t,null,"after");if(ok)render();}};
 }
@@ -4908,6 +5674,12 @@ function renderSettings(){
     const inCarousel=!!state.carouselSel;
     const selKind=inCarousel?(state.carouselSel&&state.carouselSel.k):(state.sel&&state.sel.k);
     const t=selectedTarget();
+    if(state.linkPick){
+        var src=findElementById(state.linkPick.sourceId);
+        if(!src||src.type!=="countdown"){
+            state.linkPick=null;
+        }
+    }
     if((!state.sel&&!inCarousel)||!t){settings.innerHTML='<p class="meta">Select a component to edit.</p>';return;}
     settingsTitle.textContent=titleCase(selectedType())+" Settings";
     const sty=()=>{t.style=t.style||{};return t.style;};
@@ -5029,6 +5801,19 @@ function renderSettings(){
             openSpacingHelpModal();
         });
         anchor.appendChild(b);
+    }
+    function spacingControlsHtml(pad,mar){
+        return '<div class="menu-split"></div><div class="menu-section-title">Spacing</div><div class="size-position"><div class="size-label">Size and position</div><label class="size-label">Padding</label><div class="size-grid"><div class="fld"><label>T</label><input id="pTop" type="number" value="'+pad[0]+'"></div><div class="fld"><label>R</label><input id="pRight" type="number" value="'+pad[1]+'"></div><div class="fld"><label>B</label><input id="pBottom" type="number" value="'+pad[2]+'"></div><div class="fld"><label>L</label><input id="pLeft" type="number" value="'+pad[3]+'"></div><div class="size-link"><button type="button" id="linkPad" title="Link padding"><span>&harr;</span></button><span>Link</span></div></div><label class="size-label">Margin</label><div class="size-grid"><div class="fld"><label>T</label><input id="mTop" type="number" value="'+mar[0]+'"></div><div class="fld"><label>R</label><input id="mRight" type="number" value="'+mar[1]+'"></div><div class="fld"><label>B</label><input id="mBottom" type="number" value="'+mar[2]+'"></div><div class="fld"><label>L</label><input id="mLeft" type="number" value="'+mar[3]+'"></div><div class="size-link"><button type="button" id="linkMar" title="Link margin"><span>&harr;</span></button><span>Link</span></div></div></div>';
+    }
+    function mountSpacingControls(){
+        var paddingLinked=false,marginLinked=false;
+        function syncPadding(){saveToHistory();var pt=Number(document.getElementById("pTop").value)||0,pr=Number(document.getElementById("pRight").value)||0,pb=Number(document.getElementById("pBottom").value)||0,pl=Number(document.getElementById("pLeft").value)||0;if(paddingLinked){document.getElementById("pRight").value=pt;document.getElementById("pBottom").value=pt;document.getElementById("pLeft").value=pt;sty().padding=spacingToCss([pt,pt,pt,pt]);}else sty().padding=spacingToCss([pt,pr,pb,pl]);renderCanvas();}
+        function syncMargin(){saveToHistory();var mt=Number(document.getElementById("mTop").value)||0,mr=Number(document.getElementById("mRight").value)||0,mb=Number(document.getElementById("mBottom").value)||0,ml=Number(document.getElementById("mLeft").value)||0;if(marginLinked){document.getElementById("mRight").value=mt;document.getElementById("mBottom").value=mt;document.getElementById("mLeft").value=mt;sty().margin=spacingToCss([mt,mt,mt,mt]);}else sty().margin=spacingToCss([mt,mr,mb,ml]);renderCanvas();}
+        ["pTop","pRight","pBottom","pLeft"].forEach(id=>{var el=document.getElementById(id);if(el)el.addEventListener("input",syncPadding);});
+        ["mTop","mRight","mBottom","mLeft"].forEach(id=>{var el=document.getElementById(id);if(el)el.addEventListener("input",syncMargin);});
+        var linkPad=document.getElementById("linkPad"),linkMar=document.getElementById("linkMar");
+        if(linkPad)linkPad.onclick=()=>{saveToHistory();paddingLinked=!paddingLinked;linkPad.classList.toggle("linked",paddingLinked);if(paddingLinked){var v=document.getElementById("pTop").value;document.getElementById("pRight").value=v;document.getElementById("pBottom").value=v;document.getElementById("pLeft").value=v;sty().padding=spacingToCss([Number(v)||0,Number(v)||0,Number(v)||0,Number(v)||0]);renderCanvas();}};
+        if(linkMar)linkMar.onclick=()=>{saveToHistory();marginLinked=!marginLinked;linkMar.classList.toggle("linked",marginLinked);if(marginLinked){var v=document.getElementById("mTop").value;document.getElementById("mRight").value=v;document.getElementById("mBottom").value=v;document.getElementById("mLeft").value=v;sty().margin=spacingToCss([Number(v)||0,Number(v)||0,Number(v)||0,Number(v)||0]);renderCanvas();}};
     }
     if(selKind==="sec"){
         t.settings=t.settings||{};
@@ -5823,6 +6608,294 @@ function renderSettings(){
             });
         };
         renderIconPreview();
+    } else if(selKind==="el"&&t.type==="testimonial"){
+        t.settings=t.settings||{};
+        var padDef=[16,16,16,16],marDef=[0,0,0,0];
+        var pad=parseSpacing(t.style&&t.style.padding,padDef),mar=parseSpacing(t.style&&t.style.margin,marDef);
+        settings.innerHTML='<div class="menu-section-title">Content</div><label>Quote</label><textarea id="tsQuote" rows="4"></textarea><label>Name</label><input id="tsName"><label>Role</label><input id="tsRole"><label>Avatar URL</label><input id="tsAvatar" placeholder="https://...">'+spacingControlsHtml(pad,mar)+'<div class="menu-split"></div><div class="menu-section-title">Style</div><label>Alignment</label><select id="tsAlign"><option value="">Default</option><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select><label>Text color</label><input id="tsColor" type="color"><label>Background color</label><input id="tsBg" type="color"><label>Border</label><input id="tsBorder">'+radiusHelpLabelHtml("tsRadiusHelp","Border radius")+'<div class="px-wrap"><input id="tsRadius" type="number" min="0" step="1"><span class="px-unit">px</span></div><label>Shadow</label><input id="tsShadow">'+posControls+moveControls+remove;
+        bind("tsQuote",(t.settings&&t.settings.quote)||"",v=>{t.settings=t.settings||{};t.settings.quote=v;},{undo:true});
+        bind("tsName",(t.settings&&t.settings.name)||"",v=>{t.settings=t.settings||{};t.settings.name=v;},{undo:true});
+        bind("tsRole",(t.settings&&t.settings.role)||"",v=>{t.settings=t.settings||{};t.settings.role=v;},{undo:true});
+        bind("tsAvatar",(t.settings&&t.settings.avatar)||"",v=>{t.settings=t.settings||{};t.settings.avatar=v;},{undo:true});
+        bind("tsAlign",(t.style&&t.style.textAlign)||"",v=>sty().textAlign=v,{undo:true});
+        bind("tsColor",(t.style&&t.style.color)||"#240E35",v=>sty().color=v,{undo:true});
+        bind("tsBg",(t.style&&t.style.backgroundColor)||"#ffffff",v=>sty().backgroundColor=v,{undo:true});
+        bind("tsBorder",(t.style&&t.style.border)||"1px solid #E6E1EF",v=>sty().border=v,{undo:true});
+        bindPx("tsRadius",(t.style&&t.style.borderRadius)||"16px",v=>sty().borderRadius=v,{undo:true});
+        bind("tsShadow",(t.style&&t.style.boxShadow)||"0 12px 24px rgba(15,23,42,.08)",v=>sty().boxShadow=v,{undo:true});
+        mountSpacingControls();
+        bindRadiusHelpButton("tsRadiusHelp");
+    } else if(selKind==="el"&&t.type==="faq"){
+        t.settings=t.settings||{};
+        t.settings.items=normalizeFaqItems(t.settings.items);
+        var padDef=[16,16,16,16],marDef=[0,0,0,0];
+        function renderFaqEditor(){
+            var pad=parseSpacing(t.style&&t.style.padding,padDef),mar=parseSpacing(t.style&&t.style.margin,marDef);
+            var items=t.settings.items||[];
+            var cards=items.map(function(it,idx){
+                var q=String((it&&it.q)||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+                var a=String((it&&it.a)||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+                return '<div class="menu-item-card" data-idx="'+idx+'"><div class="menu-item-head"><strong>FAQ '+(idx+1)+'</strong><div class="menu-item-actions"><button type="button" class="faqMoveUp" data-idx="'+idx+'" title="Move up"><i class="fas fa-arrow-up"></i></button><button type="button" class="faqMoveDown" data-idx="'+idx+'" title="Move down"><i class="fas fa-arrow-down"></i></button><button type="button" class="faqDelete menu-del" data-idx="'+idx+'" title="Delete"><i class="fas fa-trash"></i></button></div></div><label>Question</label><input class="faqQ" data-idx="'+idx+'" value="'+q+'"><label>Answer</label><textarea class="faqA" data-idx="'+idx+'" rows="3">'+a+'</textarea></div>';
+            }).join("");
+            settings.innerHTML='<div class="menu-section-title">Content</div><div id="faqItems">'+cards+'</div><button type="button" id="addFaqItem" class="fb-btn primary" style="width:100%;margin:6px 0 10px;">Add FAQ item</button>'+spacingControlsHtml(pad,mar)+'<div class="menu-split"></div><div class="menu-section-title">Style</div><label>Question color</label><input id="faqQColor" type="color"><label>Answer color</label><input id="faqAColor" type="color"><label>Item spacing</label><div class="px-wrap"><input id="faqGap" type="number" step="1"><span class="px-unit">px</span></div><label>Background color</label><input id="faqBg" type="color"><label>Border</label><input id="faqBorder">'+radiusHelpLabelHtml("faqRadiusHelp","Border radius")+'<div class="px-wrap"><input id="faqRadius" type="number" min="0" step="1"><span class="px-unit">px</span></div><label>Shadow</label><input id="faqShadow">'+posControls+moveControls+remove;
+            settings.querySelectorAll(".faqQ").forEach(function(inp){
+                inp.addEventListener("input",function(){
+                    var idx=Number(inp.getAttribute("data-idx"));
+                    if(isNaN(idx)||!t.settings.items[idx])return;
+                    saveToHistory();
+                    t.settings.items[idx].q=String(inp.value||"").trim()||("Question "+(idx+1));
+                    renderCanvas();
+                });
+            });
+            settings.querySelectorAll(".faqA").forEach(function(inp){
+                inp.addEventListener("input",function(){
+                    var idx=Number(inp.getAttribute("data-idx"));
+                    if(isNaN(idx)||!t.settings.items[idx])return;
+                    saveToHistory();
+                    t.settings.items[idx].a=String(inp.value||"").trim()||("Answer "+(idx+1));
+                    renderCanvas();
+                });
+            });
+            settings.querySelectorAll(".faqDelete").forEach(function(btn){
+                btn.addEventListener("click",function(){
+                    var idx=Number(btn.getAttribute("data-idx"));
+                    if(isNaN(idx)||!Array.isArray(t.settings.items))return;
+                    if(t.settings.items.length<=1)return;
+                    saveToHistory();
+                    t.settings.items.splice(idx,1);
+                    t.settings.items=normalizeFaqItems(t.settings.items);
+                    renderFaqEditor();
+                    renderCanvas();
+                });
+            });
+            settings.querySelectorAll(".faqMoveUp").forEach(function(btn){
+                btn.addEventListener("click",function(){
+                    var idx=Number(btn.getAttribute("data-idx"));
+                    if(isNaN(idx)||idx<=0||!Array.isArray(t.settings.items))return;
+                    saveToHistory();
+                    var tmp=t.settings.items[idx-1];
+                    t.settings.items[idx-1]=t.settings.items[idx];
+                    t.settings.items[idx]=tmp;
+                    renderFaqEditor();
+                    renderCanvas();
+                });
+            });
+            settings.querySelectorAll(".faqMoveDown").forEach(function(btn){
+                btn.addEventListener("click",function(){
+                    var idx=Number(btn.getAttribute("data-idx"));
+                    if(isNaN(idx)||!Array.isArray(t.settings.items)||idx>=t.settings.items.length-1)return;
+                    saveToHistory();
+                    var tmp=t.settings.items[idx+1];
+                    t.settings.items[idx+1]=t.settings.items[idx];
+                    t.settings.items[idx]=tmp;
+                    renderFaqEditor();
+                    renderCanvas();
+                });
+            });
+            var addFaqItem=document.getElementById("addFaqItem");
+            if(addFaqItem)addFaqItem.onclick=function(){
+                saveToHistory();
+                t.settings.items=t.settings.items||[];
+                var nextIndex=t.settings.items.length+1;
+                t.settings.items.push({q:"Question "+nextIndex,a:"Answer "+nextIndex});
+                renderFaqEditor();
+                renderCanvas();
+            };
+            bind("faqQColor",(t.settings&&t.settings.questionColor)||"#240E35",v=>{t.settings=t.settings||{};t.settings.questionColor=v;renderCanvas();},{undo:true});
+            bind("faqAColor",(t.settings&&t.settings.answerColor)||"#475569",v=>{t.settings=t.settings||{};t.settings.answerColor=v;renderCanvas();},{undo:true});
+            bind("faqGap",(t.settings&&t.settings.itemGap)!=null?String(t.settings.itemGap):"10",v=>{t.settings=t.settings||{};var n=Number(v);t.settings.itemGap=isNaN(n)?10:Math.max(0,n);renderCanvas();},{undo:true});
+            bind("faqBg",(t.style&&t.style.backgroundColor)||"#ffffff",v=>sty().backgroundColor=v,{undo:true});
+            bind("faqBorder",(t.style&&t.style.border)||"1px solid #E6E1EF",v=>sty().border=v,{undo:true});
+            bindPx("faqRadius",(t.style&&t.style.borderRadius)||"16px",v=>sty().borderRadius=v,{undo:true});
+            bind("faqShadow",(t.style&&t.style.boxShadow)||"0 12px 24px rgba(15,23,42,.08)",v=>sty().boxShadow=v,{undo:true});
+            mountSpacingControls();
+            bindRadiusHelpButton("faqRadiusHelp");
+        }
+        renderFaqEditor();
+    } else if(selKind==="el"&&t.type==="pricing"){
+        t.settings=t.settings||{};
+        t.settings.features=normalizeFeatureList(t.settings.features);
+        var padDef=[18,18,18,18],marDef=[0,0,0,0];
+        function renderPricingEditor(){
+            var pad=parseSpacing(t.style&&t.style.padding,padDef),mar=parseSpacing(t.style&&t.style.margin,marDef);
+            var feats=t.settings.features||[];
+            var featCards=feats.map(function(f,idx){
+                var val=String(f||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+                return '<div class="menu-item-card" data-idx="'+idx+'"><div class="menu-item-head"><strong>Feature '+(idx+1)+'</strong><div class="menu-item-actions"><button type="button" class="priceMoveUp" data-idx="'+idx+'" title="Move up"><i class="fas fa-arrow-up"></i></button><button type="button" class="priceMoveDown" data-idx="'+idx+'" title="Move down"><i class="fas fa-arrow-down"></i></button><button type="button" class="priceDelete menu-del" data-idx="'+idx+'" title="Delete"><i class="fas fa-trash"></i></button></div></div><label>Text</label><input class="priceFeature" data-idx="'+idx+'" value="'+val+'"></div>';
+            }).join("");
+            settings.innerHTML='<div class="menu-section-title">Content</div><label>Plan name</label><input id="pricePlan"><label>Sale price</label><input id="priceValue"><label>Regular price (after countdown)</label><input id="priceRegular" placeholder="$79"><label>Period</label><input id="pricePeriod" placeholder="/month"><label>Subtitle</label><input id="priceSubtitle"><label>Badge</label><input id="priceBadge" placeholder="Popular"><label>Promo key (legacy)</label><input id="pricePromo" placeholder="spring-sale"><div class="menu-split"></div><div class="menu-section-title">Features</div>'+featCards+'<button type="button" id="addPriceFeature" class="fb-btn primary" style="width:100%;margin:6px 0 10px;">Add feature</button>'+spacingControlsHtml(pad,mar)+'<div class="menu-split"></div><div class="menu-section-title">CTA</div><label>Button label</label><input id="priceCtaLabel"><label>Button link</label><input id="priceCtaLink" placeholder="https://..."><label>Button color</label><input id="priceCtaBg" type="color"><label>Button text color</label><input id="priceCtaText" type="color"><div class="menu-split"></div><div class="menu-section-title">Style</div><label>Text color</label><input id="priceTextColor" type="color"><label>Background color</label><input id="priceBg" type="color"><label>Border</label><input id="priceBorder">'+radiusHelpLabelHtml("priceRadiusHelp","Border radius")+'<div class="px-wrap"><input id="priceRadius" type="number" min="0" step="1"><span class="px-unit">px</span></div><label>Shadow</label><input id="priceShadow">'+posControls+moveControls+remove;
+            bind("pricePlan",(t.settings&&t.settings.plan)||"",v=>{t.settings=t.settings||{};t.settings.plan=v;renderCanvas();},{undo:true});
+            bind("priceValue",(t.settings&&t.settings.price)||"",v=>{t.settings=t.settings||{};t.settings.price=v;renderCanvas();},{undo:true});
+            bind("priceRegular",(t.settings&&t.settings.regularPrice)||"",v=>{t.settings=t.settings||{};t.settings.regularPrice=v;renderCanvas();},{undo:true});
+            bind("pricePeriod",(t.settings&&t.settings.period)||"",v=>{t.settings=t.settings||{};t.settings.period=v;renderCanvas();},{undo:true});
+            bind("priceSubtitle",(t.settings&&t.settings.subtitle)||"",v=>{t.settings=t.settings||{};t.settings.subtitle=v;renderCanvas();},{undo:true});
+            bind("priceBadge",(t.settings&&t.settings.badge)||"",v=>{t.settings=t.settings||{};t.settings.badge=v;renderCanvas();},{undo:true});
+            bind("pricePromo",(t.settings&&t.settings.promoKey)||"",v=>{t.settings=t.settings||{};t.settings.promoKey=v;renderCanvas();},{undo:true});
+            settings.querySelectorAll(".priceFeature").forEach(function(inp){
+                inp.addEventListener("input",function(){
+                    var idx=Number(inp.getAttribute("data-idx"));
+                    if(isNaN(idx)||!t.settings.features[idx])return;
+                    saveToHistory();
+                    t.settings.features[idx]=String(inp.value||"").trim()||("Feature "+(idx+1));
+                    renderCanvas();
+                });
+            });
+            settings.querySelectorAll(".priceDelete").forEach(function(btn){
+                btn.addEventListener("click",function(){
+                    var idx=Number(btn.getAttribute("data-idx"));
+                    if(isNaN(idx)||!Array.isArray(t.settings.features))return;
+                    if(t.settings.features.length<=1)return;
+                    saveToHistory();
+                    t.settings.features.splice(idx,1);
+                    t.settings.features=normalizeFeatureList(t.settings.features);
+                    renderPricingEditor();
+                    renderCanvas();
+                });
+            });
+            settings.querySelectorAll(".priceMoveUp").forEach(function(btn){
+                btn.addEventListener("click",function(){
+                    var idx=Number(btn.getAttribute("data-idx"));
+                    if(isNaN(idx)||idx<=0||!Array.isArray(t.settings.features))return;
+                    saveToHistory();
+                    var tmp=t.settings.features[idx-1];
+                    t.settings.features[idx-1]=t.settings.features[idx];
+                    t.settings.features[idx]=tmp;
+                    renderPricingEditor();
+                    renderCanvas();
+                });
+            });
+            settings.querySelectorAll(".priceMoveDown").forEach(function(btn){
+                btn.addEventListener("click",function(){
+                    var idx=Number(btn.getAttribute("data-idx"));
+                    if(isNaN(idx)||!Array.isArray(t.settings.features)||idx>=t.settings.features.length-1)return;
+                    saveToHistory();
+                    var tmp=t.settings.features[idx+1];
+                    t.settings.features[idx+1]=t.settings.features[idx];
+                    t.settings.features[idx]=tmp;
+                    renderPricingEditor();
+                    renderCanvas();
+                });
+            });
+            var addPriceFeature=document.getElementById("addPriceFeature");
+            if(addPriceFeature)addPriceFeature.onclick=function(){
+                saveToHistory();
+                t.settings.features=t.settings.features||[];
+                var nextIndex=t.settings.features.length+1;
+                t.settings.features.push("Feature "+nextIndex);
+                renderPricingEditor();
+                renderCanvas();
+            };
+            bind("priceCtaLabel",(t.settings&&t.settings.ctaLabel)||"",v=>{t.settings=t.settings||{};t.settings.ctaLabel=v;renderCanvas();},{undo:true});
+            bind("priceCtaLink",(t.settings&&t.settings.ctaLink)||"#",v=>{t.settings=t.settings||{};t.settings.ctaLink=v;renderCanvas();},{undo:true});
+            bind("priceCtaBg",(t.settings&&t.settings.ctaBgColor)||"#240E35",v=>{t.settings=t.settings||{};t.settings.ctaBgColor=v;renderCanvas();},{undo:true});
+            bind("priceCtaText",(t.settings&&t.settings.ctaTextColor)||"#ffffff",v=>{t.settings=t.settings||{};t.settings.ctaTextColor=v;renderCanvas();},{undo:true});
+            bind("priceTextColor",(t.style&&t.style.color)||"#240E35",v=>sty().color=v,{undo:true});
+            bind("priceBg",(t.style&&t.style.backgroundColor)||"#ffffff",v=>sty().backgroundColor=v,{undo:true});
+            bind("priceBorder",(t.style&&t.style.border)||"1px solid #E6E1EF",v=>sty().border=v,{undo:true});
+            bindPx("priceRadius",(t.style&&t.style.borderRadius)||"18px",v=>sty().borderRadius=v,{undo:true});
+            bind("priceShadow",(t.style&&t.style.boxShadow)||"0 12px 24px rgba(15,23,42,.08)",v=>sty().boxShadow=v,{undo:true});
+            mountSpacingControls();
+            bindRadiusHelpButton("priceRadiusHelp");
+        }
+        renderPricingEditor();
+    } else if(selKind==="el"&&t.type==="countdown"){
+        t.settings=t.settings||{};
+        var padDef=[16,16,16,16],marDef=[0,0,0,0];
+        function escHtml(v){return String(v||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;");}
+        function pricingLabel(item,idx){
+            var plan=String((item.settings&&item.settings.plan)||"").trim();
+            var price=String((item.settings&&item.settings.price)||"").trim();
+            if(price==="")price=String((item.settings&&item.settings.regularPrice)||"").trim();
+            var label=plan!==""?plan:("Pricing "+(idx+1));
+            if(price!=="")label+=" - "+price;
+            return label;
+        }
+        function buildPricingOptions(){
+            var list=collectElementsByType("pricing");
+            var linkedId=String((t.settings&&t.settings.linkedPricingId)||"").trim();
+            var found=false;
+            var currentLabel="Not linked";
+            var options="";
+            if(list.length===0){
+                options='<option value="">No pricing components found</option>';
+            }else{
+                options='<option value="">Not linked</option>' + list.map(function(el,idx){
+                    var id=String((el&&el.id)||"");
+                    if(id===linkedId)found=true;
+                    var label=pricingLabel(el,idx);
+                    return '<option value="'+escHtml(id)+'"'+(id===linkedId?' selected':'')+'>'+escHtml(label)+'</option>';
+                }).join("");
+            }
+            if(linkedId!==""&&!found){
+                options='<option value="'+escHtml(linkedId)+'" selected>Missing: '+escHtml(linkedId)+'</option>'+options;
+            }
+            if(linkedId!==""){
+                if(found){
+                    list.forEach(function(el,idx){
+                        if(String((el&&el.id)||"")===linkedId)currentLabel=pricingLabel(el,idx);
+                    });
+                }else{
+                    currentLabel="Missing: "+linkedId;
+                }
+            }
+            return {options:options,hasPricing:list.length>0,linkedId:linkedId,currentLabel:currentLabel};
+        }
+        function renderCountdownEditor(){
+            var pad=parseSpacing(t.style&&t.style.padding,padDef),mar=parseSpacing(t.style&&t.style.margin,marDef);
+            var pricingData=buildPricingOptions();
+            var isPicking=!!(state.linkPick&&String(state.linkPick.sourceId||"")===String(t.id||""));
+            var linkMeta=pricingData.hasPricing?"Linked to: <strong>"+escHtml(pricingData.currentLabel)+"</strong>.":"Linked to: <strong>Not linked</strong>. Add a pricing component.";
+            var linkHtml='<div class="menu-section-title">Connection</div><div class="meta">'+linkMeta+'</div><div class="fb-link-row"><select id="cdPricingLink"'+(pricingData.hasPricing?'':' disabled')+'>'+pricingData.options+'</select><button type="button" id="cdPickPricing" class="fb-btn'+(isPicking?' danger':'')+'"'+(pricingData.hasPricing?'':' disabled')+'>'+(isPicking?'Cancel pick':'Pick on canvas')+'</button></div><div class="fb-link-actions"><button type="button" id="cdClearPricing" class="fb-btn"'+(pricingData.linkedId!==""?'':' disabled')+'>Clear link</button></div>';
+            settings.innerHTML='<div class="menu-section-title">Content</div><label>End date/time</label><input id="cdEnd" type="datetime-local"><label>Label</label><input id="cdLabel"><label>Expired message</label><input id="cdExpired">'+linkHtml+'<div class="menu-split"></div><div class="menu-section-title">Legacy (optional)</div><label>Promo key</label><input id="cdPromo" placeholder="spring-sale">'+spacingControlsHtml(pad,mar)+'<div class="menu-split"></div><div class="menu-section-title">Style</div><label>Number color</label><input id="cdNumberColor" type="color"><label>Label color</label><input id="cdLabelColor" type="color"><label>Item spacing</label><div class="px-wrap"><input id="cdGap" type="number" step="1"><span class="px-unit">px</span></div><label>Background color</label><input id="cdBg" type="color"><label>Border</label><input id="cdBorder">'+radiusHelpLabelHtml("cdRadiusHelp","Border radius")+'<div class="px-wrap"><input id="cdRadius" type="number" min="0" step="1"><span class="px-unit">px</span></div><label>Shadow</label><input id="cdShadow">'+posControls+moveControls+remove;
+            bind("cdEnd",formatDateTimeLocal((t.settings&&t.settings.endAt)||""),v=>{t.settings=t.settings||{};t.settings.endAt=v;renderCanvas();},{undo:true});
+            bind("cdLabel",(t.settings&&t.settings.label)||"Offer ends in",v=>{t.settings=t.settings||{};t.settings.label=v;renderCanvas();},{undo:true});
+            bind("cdExpired",(t.settings&&t.settings.expiredText)||"Offer ended",v=>{t.settings=t.settings||{};t.settings.expiredText=v;renderCanvas();},{undo:true});
+            bind("cdPromo",(t.settings&&t.settings.promoKey)||"",v=>{t.settings=t.settings||{};t.settings.promoKey=v;renderCanvas();},{undo:true});
+            bind("cdNumberColor",(t.settings&&t.settings.numberColor)||"#240E35",v=>{t.settings=t.settings||{};t.settings.numberColor=v;renderCanvas();},{undo:true});
+            bind("cdLabelColor",(t.settings&&t.settings.labelColor)||"#64748b",v=>{t.settings=t.settings||{};t.settings.labelColor=v;renderCanvas();},{undo:true});
+            bind("cdGap",(t.settings&&t.settings.itemGap)!=null?String(t.settings.itemGap):"8",v=>{t.settings=t.settings||{};var n=Number(v);t.settings.itemGap=isNaN(n)?8:Math.max(0,n);renderCanvas();},{undo:true});
+            bind("cdBg",(t.style&&t.style.backgroundColor)||"#ffffff",v=>sty().backgroundColor=v,{undo:true});
+            bind("cdBorder",(t.style&&t.style.border)||"1px solid #E6E1EF",v=>sty().border=v,{undo:true});
+            bindPx("cdRadius",(t.style&&t.style.borderRadius)||"16px",v=>sty().borderRadius=v,{undo:true});
+            bind("cdShadow",(t.style&&t.style.boxShadow)||"0 12px 24px rgba(15,23,42,.08)",v=>sty().boxShadow=v,{undo:true});
+            var linkSel=document.getElementById("cdPricingLink");
+            if(linkSel){
+                linkSel.addEventListener("change",function(){
+                    saveToHistory();
+                    t.settings=t.settings||{};
+                    var v=String(linkSel.value||"").trim();
+                    if(v==="")delete t.settings.linkedPricingId;
+                    else t.settings.linkedPricingId=v;
+                    renderCanvas();
+                });
+            }
+            var pickBtn=document.getElementById("cdPickPricing");
+            if(pickBtn){
+                pickBtn.onclick=function(){
+                    if(state.linkPick&&String(state.linkPick.sourceId||"")===String(t.id||"")){
+                        state.linkPick=null;
+                        renderCanvas();
+                        renderSettings();
+                        return;
+                    }
+                    startPricingLink(t.id);
+                };
+            }
+            var clearBtn=document.getElementById("cdClearPricing");
+            if(clearBtn){
+                clearBtn.onclick=function(){
+                    if(!t.settings||!t.settings.linkedPricingId)return;
+                    saveToHistory();
+                    delete t.settings.linkedPricingId;
+                    state.linkPick=null;
+                    renderCanvas();
+                    renderCountdownEditor();
+                };
+            }
+            mountSpacingControls();
+            bindRadiusHelpButton("cdRadiusHelp");
+        }
+        renderCountdownEditor();
     } else if(selKind==="el"){
         const rich=(t.type==="text"||t.type==="heading");
         var padDef=[0,0,0,0],marDef=[0,0,0,0];
@@ -6082,6 +7155,7 @@ window.addEventListener("resize",()=>{
         else{
             if(canvas){canvas.style.width="100%";canvas.style.maxWidth="none";}
         }
+        drawLinkWires();
     },150);
 });
 if(fbComponentsHide)fbComponentsHide.onclick=()=>{if(fbGrid){fbGrid.classList.add("components-hidden");if(canvas){canvas.style.width="100%";canvas.style.maxWidth="none";}}};
@@ -6177,6 +7251,7 @@ document.addEventListener("keydown",e=>{
     const ae=document.activeElement;
     const isTextField=!!(ae && (ae.tagName==="INPUT" || ae.tagName==="TEXTAREA" || ae.isContentEditable));
     if(key==="escape"){
+        if(state.linkPick){state.linkPick=null;renderCanvas();renderSettings();return;}
         if(state.editingEl){state.editingEl=null;renderCanvas();return;}
         closeRadiusHelpModal();
         closeSpacingHelpModal();

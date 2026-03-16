@@ -634,6 +634,7 @@ class FunnelController extends Controller
             $type = (string) ($element['type'] ?? 'text');
             $type = in_array($type, [
                 'heading', 'text', 'image', 'button', 'icon', 'form', 'video', 'countdown', 'spacer', 'menu', 'carousel',
+                'testimonial', 'faq', 'pricing',
             ], true) ? $type : 'text';
 
             $rawContent = (string) ($element['content'] ?? '');
@@ -902,6 +903,12 @@ class FunnelController extends Controller
             }
             return mb_substr(trim((string) $settings[$key]), 0, $max);
         };
+        $readStringAllowEmpty = function (string $key, int $max = 1024) use (&$settings): ?string {
+            if (!array_key_exists($key, $settings) || (!is_scalar($settings[$key]) && $settings[$key] !== null)) {
+                return null;
+            }
+            return mb_substr(trim((string) $settings[$key]), 0, $max);
+        };
         $readEnum = function (string $key, array $allowed, ?string $default = null) use (&$settings): ?string {
             if (!array_key_exists($key, $settings) || !is_scalar($settings[$key])) {
                 return null;
@@ -926,6 +933,22 @@ class FunnelController extends Controller
                 return null;
             }
             $n = (int) $settings[$key];
+            if ($n < $min) {
+                $n = $min;
+            }
+            if ($n > $max) {
+                $n = $max;
+            }
+            return $n;
+        };
+        $readFloat = function (string $key, float $min, float $max) use (&$settings): ?float {
+            if (!array_key_exists($key, $settings)) {
+                return null;
+            }
+            if (!is_scalar($settings[$key]) || !is_numeric($settings[$key])) {
+                return null;
+            }
+            $n = (float) $settings[$key];
             if ($n < $min) {
                 $n = $min;
             }
@@ -960,6 +983,30 @@ class FunnelController extends Controller
         ] as $k => $maxLen) {
             $v = $readString($k, $maxLen);
             if ($v !== null && $v !== '') {
+                $safe[$k] = $v;
+            }
+        }
+        foreach ([
+            'quote' => 2000,
+            'name' => 200,
+            'role' => 200,
+            'avatar' => 2048,
+            'plan' => 200,
+            'price' => 200,
+            'regularPrice' => 200,
+            'period' => 60,
+            'subtitle' => 300,
+            'badge' => 80,
+            'ctaLabel' => 120,
+            'ctaLink' => 2048,
+            'endAt' => 120,
+            'label' => 120,
+            'expiredText' => 200,
+            'promoKey' => 120,
+            'linkedPricingId' => 120,
+        ] as $k => $maxLen) {
+            $v = $readStringAllowEmpty($k, $maxLen);
+            if ($v !== null) {
                 $safe[$k] = $v;
             }
         }
@@ -1015,8 +1062,12 @@ class FunnelController extends Controller
                 $safe[$k] = $v;
             }
         }
+        $scale = $readFloat('contentScale', 0.5, 3.0);
+        if ($scale !== null) {
+            $safe['contentScale'] = $scale;
+        }
 
-        foreach (['textColor', 'controlsColor', 'arrowColor', 'bodyBgColor', 'containerBgColor', 'labelColor', 'placeholderColor', 'buttonBgColor', 'buttonTextColor'] as $k) {
+        foreach (['textColor', 'controlsColor', 'arrowColor', 'bodyBgColor', 'containerBgColor', 'labelColor', 'placeholderColor', 'buttonBgColor', 'buttonTextColor', 'questionColor', 'answerColor', 'numberColor', 'ctaBgColor', 'ctaTextColor'] as $k) {
             $v = $readColor($k);
             if ($v !== null) {
                 $safe[$k] = $v;
@@ -1028,17 +1079,46 @@ class FunnelController extends Controller
         }
 
         if (isset($settings['items']) && is_array($settings['items'])) {
-            $safe['items'] = collect($settings['items'])
+            $isFaq = collect($settings['items'])
                 ->filter(fn ($item) => is_array($item))
-                ->take(50)
-                ->map(function (array $item) {
-                    return [
-                        'label' => mb_substr(trim((string) ($item['label'] ?? '')), 0, 200),
-                        'url' => mb_substr(trim((string) ($item['url'] ?? '')), 0, 2048),
-                        'newWindow' => (bool) filter_var($item['newWindow'] ?? false, FILTER_VALIDATE_BOOLEAN),
-                        'hasSubmenu' => (bool) filter_var($item['hasSubmenu'] ?? false, FILTER_VALIDATE_BOOLEAN),
-                    ];
-                })
+                ->contains(function (array $item) {
+                    return array_key_exists('q', $item) || array_key_exists('a', $item) || array_key_exists('question', $item) || array_key_exists('answer', $item);
+                });
+
+            if ($isFaq) {
+                $safe['items'] = collect($settings['items'])
+                    ->filter(fn ($item) => is_array($item))
+                    ->take(50)
+                    ->map(function (array $item) {
+                        $q = mb_substr(trim((string) ($item['q'] ?? ($item['question'] ?? ''))), 0, 500);
+                        $a = mb_substr(trim((string) ($item['a'] ?? ($item['answer'] ?? ''))), 0, 1000);
+                        return ['q' => $q, 'a' => $a];
+                    })
+                    ->values()
+                    ->all();
+            } else {
+                $safe['items'] = collect($settings['items'])
+                    ->filter(fn ($item) => is_array($item))
+                    ->take(50)
+                    ->map(function (array $item) {
+                        return [
+                            'label' => mb_substr(trim((string) ($item['label'] ?? '')), 0, 200),
+                            'url' => mb_substr(trim((string) ($item['url'] ?? '')), 0, 2048),
+                            'newWindow' => (bool) filter_var($item['newWindow'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                            'hasSubmenu' => (bool) filter_var($item['hasSubmenu'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                        ];
+                    })
+                    ->values()
+                    ->all();
+            }
+        }
+
+        if (isset($settings['features']) && is_array($settings['features'])) {
+            $safe['features'] = collect($settings['features'])
+                ->filter(fn ($item) => is_scalar($item))
+                ->take(40)
+                ->map(fn ($item) => mb_substr(trim((string) $item), 0, 200))
+                ->filter(fn ($item) => $item !== '')
                 ->values()
                 ->all();
         }
@@ -1125,6 +1205,7 @@ class FunnelController extends Controller
                                         $type = (string) ($element['type'] ?? 'text');
                                         $type = in_array($type, [
                                             'heading', 'text', 'image', 'button', 'icon', 'form', 'video', 'countdown', 'spacer', 'menu', 'carousel',
+                                            'testimonial', 'faq', 'pricing',
                                         ], true) ? $type : 'text';
 
                                         $rawContent = (string) ($element['content'] ?? '');
