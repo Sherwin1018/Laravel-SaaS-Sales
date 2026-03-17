@@ -1206,7 +1206,21 @@
                                                         $ctaText = trim((string) ($settings['ctaTextColor'] ?? '#ffffff'));
                                                         if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $ctaText)) $ctaText = '#ffffff';
                                                         $promoKey = trim((string) ($settings['promoKey'] ?? ''));
-                                                        $linkedPricingId = trim((string) ($settings['linkedPricingId'] ?? ''));
+                                                        $linkedPricingIdsRaw = $settings['linkedPricingIds'] ?? [];
+                                                        $linkedPricingIds = [];
+                                                        if (is_array($linkedPricingIdsRaw)) {
+                                                            foreach ($linkedPricingIdsRaw as $lp) {
+                                                                $lp = trim((string) $lp);
+                                                                if ($lp !== '' && !in_array($lp, $linkedPricingIds, true)) $linkedPricingIds[] = $lp;
+                                                            }
+                                                        } elseif (is_string($linkedPricingIdsRaw)) {
+                                                            $lp = trim($linkedPricingIdsRaw);
+                                                            if ($lp !== '') $linkedPricingIds[] = $lp;
+                                                        }
+                                                        $legacyLinked = trim((string) ($settings['linkedPricingId'] ?? ''));
+                                                        if (!$linkedPricingIds && $legacyLinked !== '') $linkedPricingIds = [$legacyLinked];
+                                                        $linkedPricingId = $linkedPricingIds[0] ?? '';
+                                                        $linkedPricingIdsAttr = implode(',', $linkedPricingIds);
                                                         $scale = $clampScale($settings['contentScale'] ?? 1);
                                                         $scaledContentStyle = $contentStyle;
                                                         if ($scaledContentStyle !== '' && substr($scaledContentStyle, -1) !== ';') {
@@ -1270,6 +1284,21 @@
                                                         $cdGap = (int) ($settings['itemGap'] ?? 8);
                                                         if ($cdGap < 0) $cdGap = 0;
                                                         $promoKey = trim((string) ($settings['promoKey'] ?? ''));
+                                                        $linkedPricingIdsRaw = $settings['linkedPricingIds'] ?? [];
+                                                        $linkedPricingIds = [];
+                                                        if (is_array($linkedPricingIdsRaw)) {
+                                                            foreach ($linkedPricingIdsRaw as $lp) {
+                                                                $lp = trim((string) $lp);
+                                                                if ($lp !== '' && !in_array($lp, $linkedPricingIds, true)) $linkedPricingIds[] = $lp;
+                                                            }
+                                                        } elseif (is_string($linkedPricingIdsRaw)) {
+                                                            $lp = trim($linkedPricingIdsRaw);
+                                                            if ($lp !== '') $linkedPricingIds[] = $lp;
+                                                        }
+                                                        $legacyLinked = trim((string) ($settings['linkedPricingId'] ?? ''));
+                                                        if (!$linkedPricingIds && $legacyLinked !== '') $linkedPricingIds = [$legacyLinked];
+                                                        $linkedPricingId = $linkedPricingIds[0] ?? '';
+                                                        $linkedPricingIdsAttr = implode(',', $linkedPricingIds);
                                                         $scale = $clampScale($settings['contentScale'] ?? 1);
                                                         $scaledContentStyle = $contentStyle;
                                                         if ($scaledContentStyle !== '' && substr($scaledContentStyle, -1) !== ';') {
@@ -1292,10 +1321,7 @@
                                                         $unitStyle = 'font-size:' . (int) round(10 * $scale) . 'px;color:' . $cdLabelColor . ';';
                                                         $boxStyle = 'padding:' . (int) round(8 * $scale) . 'px;';
                                                     @endphp
-                                                    @php
-                                                        if (!isset($linkedPricingId)) { $linkedPricingId = ''; }
-                                                    @endphp
-                                                    <div class="builder-countdown" data-countdown="{{ $cdEnd }}" data-expired="{{ $cdExpired }}" data-promo-key="{{ $promoKey }}" data-linked-pricing-id="{{ $linkedPricingId }}" style="{{ $scaledContentStyle }}">
+                                                    <div class="builder-countdown" data-countdown="{{ $cdEnd }}" data-expired="{{ $cdExpired }}" data-promo-key="{{ $promoKey }}" data-linked-pricing-id="{{ $linkedPricingId }}" data-linked-pricing-ids="{{ $linkedPricingIdsAttr }}" style="{{ $scaledContentStyle }}">
                                                         <div class="builder-countdown-status" data-countdown-status style="{{ $labelStyle }}">{{ $cdLabel }}</div>
                                                         <div class="builder-countdown-grid" style="{{ $cdGapStyle }}">
                                                             <div class="builder-countdown-box" style="{{ $boxStyle }}">
@@ -1541,6 +1567,12 @@
         var countdowns=document.querySelectorAll("[data-countdown]");
         if(countdowns && countdowns.length){
             function pad2(n){return String(n).padStart(2,"0");}
+            function escapeCssIdent(v){
+                var raw=String(v||"");
+                if(window.CSS && typeof window.CSS.escape==="function")return window.CSS.escape(raw);
+                // Minimal fallback: escape quotes/backslashes.
+                return raw.replace(/\\/g,"\\\\").replace(/"/g,'\\"');
+            }
             function parseCountdownDate(raw){
                 var s=String(raw||"").trim();
                 if(!s)return null;
@@ -1548,13 +1580,30 @@
                 if(isNaN(d.getTime()))return null;
                 return d;
             }
+            function collectLinkedPricingIds(node){
+                var linkedRaw=(node.getAttribute("data-linked-pricing-ids")||"").trim();
+                var linkedIds=linkedRaw?linkedRaw.split(",").map(function(v){return String(v||"").trim();}).filter(Boolean):[];
+                if(!linkedIds.length){
+                    var linked=(node.getAttribute("data-linked-pricing-id")||"").trim();
+                    if(linked!=="")linkedIds=[linked];
+                }
+                // De-dupe while preserving order.
+                var seen=new Set();
+                return linkedIds.filter(function(id){
+                    if(!id)return false;
+                    if(seen.has(id))return false;
+                    seen.add(id);
+                    return true;
+                });
+            }
             function collectPricingTargets(node){
-                var linked=(node.getAttribute("data-linked-pricing-id")||"").trim();
+                var linkedIds=collectLinkedPricingIds(node);
                 var targets=[];
-                if(linked!==""){
-                    var byId=document.querySelectorAll("[data-pricing-id]");
-                    byId.forEach(function(p){
-                        if((p.getAttribute("data-pricing-id")||"").trim()===linked)targets.push(p);
+                if(linkedIds.length){
+                    // Preserve the same order as the saved linked IDs.
+                    linkedIds.forEach(function(id){
+                        var p=document.querySelector('[data-pricing-id="'+escapeCssIdent(id)+'"]');
+                        if(p)targets.push(p);
                     });
                     return targets;
                 }
@@ -1565,21 +1614,6 @@
                     if((p.getAttribute("data-pricing-key")||"").trim()===key)targets.push(p);
                 });
                 return targets;
-            }
-            function syncPricingForCountdown(node,isExpired){
-                var targets=collectPricingTargets(node);
-                if(!targets.length)return;
-                targets.forEach(function(p){
-                    var sale=(p.getAttribute("data-pricing-sale")||"");
-                    var regular=(p.getAttribute("data-pricing-regular")||"");
-                    var target=p.querySelector("[data-pricing-price]");
-                    if(!target)return;
-                    if(isExpired){
-                        if(regular!=="")target.textContent=regular;
-                    }else{
-                        if(sale!=="")target.textContent=sale;
-                    }
-                });
             }
             function setCountdownValue(node,key,val){
                 var el=node.querySelector('[data-countdown-val="'+key+'"]');
@@ -1601,8 +1635,7 @@
                     setCountdownValue(node,"minutes",0);
                     setCountdownValue(node,"seconds",0);
                     if(status)status.textContent=expiredText;
-                    syncPricingForCountdown(node,true);
-                    return;
+                    return {expired:true,linkedIds:collectLinkedPricingIds(node),targets:collectPricingTargets(node)};
                 }
                 var diff=end.getTime()-Date.now();
                 if(diff<=0){
@@ -1611,8 +1644,7 @@
                     setCountdownValue(node,"minutes",0);
                     setCountdownValue(node,"seconds",0);
                     if(status)status.textContent=expiredText;
-                    syncPricingForCountdown(node,true);
-                    return;
+                    return {expired:true,linkedIds:collectLinkedPricingIds(node),targets:collectPricingTargets(node)};
                 }
                 if(status)status.textContent=status.getAttribute("data-label")||"";
                 var total=Math.floor(diff/1000);
@@ -1626,9 +1658,55 @@
                 setCountdownValue(node,"hours",hours);
                 setCountdownValue(node,"minutes",minutes);
                 setCountdownValue(node,"seconds",seconds);
-                syncPricingForCountdown(node,false);
+                return {expired:false,linkedIds:collectLinkedPricingIds(node),targets:collectPricingTargets(node)};
             }
-            var tick=function(){countdowns.forEach(updateCountdown);};
+            var tick=function(){
+                var targetState=new Map();
+                var visibilityState=new Map();
+                countdowns.forEach(function(node){
+                    var info=updateCountdown(node);
+                    if(!info||!info.targets||!info.targets.length)return;
+                    // If a countdown is linked to exactly 2 pricing cards, treat the first as "before expiry"
+                    // and the second as "after expiry", and toggle visibility accordingly.
+                    if(info.linkedIds && info.linkedIds.length===2){
+                        var activeId=info.expired?info.linkedIds[1]:info.linkedIds[0];
+                        info.targets.forEach(function(p){
+                            var pid=(p.getAttribute("data-pricing-id")||"").trim();
+                            if(!pid)return;
+                            var vs=visibilityState.get(p);
+                            if(!vs)vs={hasRule:true,visible:false};
+                            vs.hasRule=true;
+                            if(pid===activeId)vs.visible=true;
+                            visibilityState.set(p,vs);
+                        });
+                    }
+                    info.targets.forEach(function(p){
+                        var st=targetState.get(p);
+                        if(!st)st={hasLink:true,active:false};
+                        st.hasLink=true;
+                        if(!info.expired)st.active=true;
+                        targetState.set(p,st);
+                    });
+                });
+                visibilityState.forEach(function(vs,p){
+                    if(!vs||!vs.hasRule)return;
+                    p.style.display=vs.visible?"":"none";
+                });
+                targetState.forEach(function(st,p){
+                    if(!st||!st.hasLink)return;
+                    var sale=(p.getAttribute("data-pricing-sale")||"");
+                    var regular=(p.getAttribute("data-pricing-regular")||"");
+                    var target=p.querySelector("[data-pricing-price]");
+                    if(!target)return;
+                    if(st.active){
+                        if(sale!=="")target.textContent=sale;
+                        else if(regular!=="")target.textContent=regular;
+                    }else{
+                        if(regular!=="")target.textContent=regular;
+                        else if(sale!=="")target.textContent=sale;
+                    }
+                });
+            };
             tick();
             setInterval(tick,1000);
         }
