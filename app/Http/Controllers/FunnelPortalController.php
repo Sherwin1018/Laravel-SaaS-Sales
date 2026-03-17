@@ -6,6 +6,7 @@ use App\Models\Funnel;
 use App\Models\FunnelStep;
 use App\Models\Lead;
 use App\Models\Payment;
+use App\Services\AutomationWebhookService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -89,6 +90,8 @@ class FunnelPortalController extends Controller
 
         session()->put($this->leadSessionKey($funnel->id), $lead->id);
 
+        $this->dispatchFunnelOptInWebhook($lead, $funnel->id, $funnel->name ?? null);
+
         $next = $this->nextStep($steps, $step->id);
         abort_if(!$next, 422, 'No next step configured.');
 
@@ -106,13 +109,16 @@ class FunnelPortalController extends Controller
         $amount = $validated['amount'] ?? (float) ($step->price ?? 0);
         abort_if($amount <= 0, 422, 'Checkout amount is not configured.');
 
-        Payment::create([
+        $leadId = $this->currentLeadId($funnel->id);
+        $payment = Payment::create([
             'tenant_id' => $funnel->tenant_id,
-            'lead_id' => $this->currentLeadId($funnel->id),
+            'lead_id' => $leadId,
             'amount' => $amount,
             'status' => 'paid',
             'payment_date' => now()->toDateString(),
         ]);
+
+        $this->dispatchPaymentWebhookIfLeadExists($payment, 'payment.paid');
 
         $next = $this->nextStep($steps, $step->id);
         if (!$next) {
@@ -133,13 +139,14 @@ class FunnelPortalController extends Controller
 
         $accept = $validated['decision'] === 'accept';
         if ($accept && (float) $step->price > 0) {
-            Payment::create([
+            $payment = Payment::create([
                 'tenant_id' => $funnel->tenant_id,
                 'lead_id' => $this->currentLeadId($funnel->id),
                 'amount' => (float) $step->price,
                 'status' => 'paid',
                 'payment_date' => now()->toDateString(),
             ]);
+            $this->dispatchPaymentWebhookIfLeadExists($payment, 'payment.paid');
         }
 
         $ordered = $steps->values();
@@ -215,5 +222,26 @@ class FunnelPortalController extends Controller
             ->take(30)
             ->values()
             ->all();
+    }
+
+    private function dispatchFunnelOptInWebhook(Lead $lead, int $funnelId, ?string $funnelName): void
+    {
+        $service = app(AutomationWebhookService::class);
+        $payload = $service->buildFunnelOptInPayload($lead, $funnelId, $funnelName, []);
+        $service->dispatchEvent('funnel.opt_in', $payload);
+    }
+
+    private function dispatchPaymentWebhookIfLeadExists(Payment $payment, string $event): void
+    {
+        if (!$payment->lead_id) {
+            return;
+        }
+        $lead = Lead::withoutGlobalScope('tenant')->where('id', $payment->lead_id)->where('tenant_id', $payment->tenant_id)->first();
+        if (!$lead) {
+            return;
+        }
+        $service = app(AutomationWebhookService::class);
+        $payload = $service->buildPaymentPayload($event, $lead, $payment, []);
+        $service->dispatchEvent($event, $payload);
     }
 }

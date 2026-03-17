@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\AutomationController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FunnelController;
 use App\Http\Controllers\FunnelPortalController;
@@ -130,6 +131,26 @@ Route::middleware(['auth', 'role:sales-agent,marketing-manager,account-owner,fin
 
     Route::middleware(['role:account-owner,marketing-manager'])->group(function () {
         Route::get('/funnels', [FunnelController::class, 'index'])->name('funnels.index');
+
+        Route::get('/automation', [AutomationController::class, 'overview'])->name('automation.overview');
+        Route::get('/automation/sequences', [AutomationController::class, 'sequences'])->name('automation.sequences.index');
+        Route::get('/automation/sequences/create', [AutomationController::class, 'createSequenceBuilder'])->name('automation.sequences.create');
+        Route::post('/automation/sequences', [AutomationController::class, 'storeSequence'])->name('automation.sequences.store');
+        Route::get('/automation/sequences/{sequence}/edit', [AutomationController::class, 'editSequenceBuilder'])->name('automation.sequences.edit');
+        Route::put('/automation/sequences/{sequence}', [AutomationController::class, 'updateSequence'])->name('automation.sequences.update');
+        Route::post('/automation/sequences/{sequence}/toggle', [AutomationController::class, 'toggleSequence'])->name('automation.sequences.toggle');
+        Route::delete('/automation/sequences/{sequence}', [AutomationController::class, 'destroySequence'])->name('automation.sequences.destroy');
+        Route::get('/automation/workflows', [AutomationController::class, 'workflows'])->name('automation.workflows.index');
+        Route::get('/automation/workflows/create', [AutomationController::class, 'createWorkflow'])->name('automation.workflows.create');
+        Route::post('/automation/workflows', [AutomationController::class, 'storeWorkflow'])->name('automation.workflows.store');
+        Route::get('/automation/workflows/{workflow}/edit', [AutomationController::class, 'editWorkflow'])->name('automation.workflows.edit');
+        Route::put('/automation/workflows/{workflow}', [AutomationController::class, 'updateWorkflow'])->name('automation.workflows.update');
+        Route::post('/automation/workflows/{workflow}/toggle', [AutomationController::class, 'toggleWorkflow'])->name('automation.workflows.toggle');
+        Route::post('/automation/workflows/{workflow}/duplicate', [AutomationController::class, 'duplicateWorkflow'])->name('automation.workflows.duplicate');
+        Route::delete('/automation/workflows/{workflow}', [AutomationController::class, 'destroyWorkflow'])->name('automation.workflows.destroy');
+        Route::get('/automation/logs', [AutomationController::class, 'logs'])->name('automation.logs.index');
+        Route::get('/automation/logs/{id}', [AutomationController::class, 'showLog'])->name('automation.logs.show');
+
         Route::get('/funnels/create', [FunnelController::class, 'create'])->name('funnels.create');
         Route::post('/funnels', [FunnelController::class, 'store'])->name('funnels.store');
         Route::get('/funnels/{funnel}/edit', [FunnelController::class, 'edit'])->name('funnels.edit');
