@@ -2223,7 +2223,7 @@ function carouselAllowsDropType(type){
 function normalizeCarouselDropType(type){
     var t=String(type||"").toLowerCase();
     if(t==="col")return "column";
-    if(t==="countdown"||t==="carousel")return "";
+    if(t==="carousel")return "";
     return t;
 }
 function renderCarouselPreviewItem(item,onDelete,onSelect,isSelected){
@@ -2403,6 +2403,7 @@ function createDefaultElement(type){
     if(!d)return null;
     return {id:uid("el"),type:type,content:d.content,style:clone(d.style),settings:clone(d.settings)};
 }
+
 
 function addComponent(type){
     saveToHistory();
@@ -6088,7 +6089,7 @@ if(fbComponentsHide)fbComponentsHide.onclick=()=>{if(fbGrid){fbGrid.classList.ad
 if(fbComponentsShow)fbComponentsShow.onclick=()=>{if(fbGrid){fbGrid.classList.remove("components-hidden");if(_canvasLockedWidth>0&&canvas){canvas.style.width=_canvasLockedWidth+"px";canvas.style.maxWidth=_canvasLockedWidth+"px";}unlockAndRelockCanvas();}};
 function persistCurrentStep(){
     const s=cur();if(!s)return;
-    if(document.activeElement&&typeof document.activeElement.blur==="function")document.activeElement.blur();
+    if(!_autoSaveMode && document.activeElement&&typeof document.activeElement.blur==="function")document.activeElement.blur();
     var t=selectedTarget();
     if(t && state.sel && (state.sel.k==="sec"||state.sel.k==="row"||state.sel.k==="col")){
         var bgIn=document.getElementById("bg");
