@@ -1827,6 +1827,23 @@ function startPricingLink(sourceId){
 }
 function collectCountdownLinks(){
     var links=[];
+    var allPricings=[];
+    function scanForPricings(list){
+        if(!Array.isArray(list))return;
+        list.forEach(function(el){
+            if(!el||typeof el!=="object")return;
+            if(el.type==="pricing")allPricings.push(el);
+            if(el.type==="carousel"){
+                var slides=ensureCarouselSlides(el.settings||{});
+                slides.forEach(function(sl){(sl.rows||[]).forEach(function(rw){(rw.columns||[]).forEach(function(col){scanForPricings(col.elements);});});});
+            }
+        });
+    }
+    (state.layout.sections||[]).forEach(function(sec){
+        scanForPricings(sec.elements);
+        (sec.rows||[]).forEach(function(rw){(rw.columns||[]).forEach(function(col){scanForPricings(col.elements);});});
+    });
+
     function scanElements(list){
         if(!Array.isArray(list))return;
         list.forEach(function(el){
@@ -1837,6 +1854,17 @@ function collectCountdownLinks(){
                 ids.forEach(function(toId){
                     if(fromId!==""&&toId!=="")links.push({from:fromId,to:toId});
                 });
+                var cPromo=String((el.settings&&el.settings.promoKey)||"").trim();
+                if(cPromo!==""){
+                    allPricings.forEach(function(p){
+                        var pPromo=String((p.settings&&p.settings.promoKey)||"").trim();
+                        if(pPromo===cPromo){
+                            var pId=String(p.id||"");
+                            var exists=links.find(function(l){return l.from===fromId&&l.to===pId;});
+                            if(!exists&&fromId!==""&&pId!=="")links.push({from:fromId,to:pId});
+                        }
+                    });
+                }
             }
             if(el.type==="carousel"){
                 var slides=ensureCarouselSlides(el.settings||{});
@@ -1877,8 +1905,40 @@ function ensureLinkLayer(){
     svg.setAttribute("viewBox","0 0 "+w+" "+h);
     return svg;
 }
+function updateWireVisibility(hoveredId){
+    var svg=canvas&&canvas.__linkLayer;
+    if(!svg)return;
+    var showAll=!!state.linkPick;
+    var wires=svg.querySelectorAll('.wire');
+    wires.forEach(function(w){
+        if(showAll){
+            w.setAttribute("opacity","0.9");
+        }else{
+            if(hoveredId&&w.classList.contains("component-wire-"+hoveredId)){
+                w.setAttribute("opacity","0.9");
+            }else{
+                w.setAttribute("opacity","0");
+            }
+        }
+    });
+}
 function drawLinkWires(){
     if(!canvas)return;
+    if(!canvas.__wireHoverBound){
+        canvas.__wireHoverBound=true;
+        canvas.addEventListener("mousemove",function(e){
+            var el=e.target.closest&&e.target.closest('.el[data-el-id]');
+            var id=el?el.getAttribute('data-el-id'):null;
+            if(canvas.__wireHoverId!==id){
+                canvas.__wireHoverId=id;
+                updateWireVisibility(id);
+            }
+        });
+        canvas.addEventListener("mouseleave",function(){
+            canvas.__wireHoverId=null;
+            updateWireVisibility(null);
+        });
+    }
     var links=collectCountdownLinks();
     var svg=canvas.__linkLayer;
     if(!links.length){
@@ -1927,26 +1987,37 @@ function drawLinkWires(){
             c1x=sp.x;c1y=sp.y+(dy>0?curve:-curve);
             c2x=ep.x;c2y=ep.y-(dy>0?curve:-curve);
         }
+        var pClass="wire component-wire-"+link.from+" component-wire-"+link.to;
+        var initOp=(state.linkPick?"0.9":"0");
         var path=document.createElementNS("http://www.w3.org/2000/svg","path");
         path.setAttribute("d","M "+sp.x+" "+sp.y+" C "+c1x+" "+c1y+" "+c2x+" "+c2y+" "+ep.x+" "+ep.y);
         path.setAttribute("stroke","#6B4A7A");
         path.setAttribute("stroke-width","2");
         path.setAttribute("fill","none");
-        path.setAttribute("opacity","0.9");
+        path.setAttribute("class",pClass);
+        path.setAttribute("opacity",initOp);
+        path.style.transition="opacity 0.2s";
         svg.appendChild(path);
         var c1=document.createElementNS("http://www.w3.org/2000/svg","circle");
         c1.setAttribute("cx",sp.x);
         c1.setAttribute("cy",sp.y);
         c1.setAttribute("r","4");
         c1.setAttribute("fill","#6B4A7A");
+        c1.setAttribute("class",pClass);
+        c1.setAttribute("opacity",initOp);
+        c1.style.transition="opacity 0.2s";
         var c2=document.createElementNS("http://www.w3.org/2000/svg","circle");
         c2.setAttribute("cx",ep.x);
         c2.setAttribute("cy",ep.y);
         c2.setAttribute("r","4");
         c2.setAttribute("fill","#6B4A7A");
+        c2.setAttribute("class",pClass);
+        c2.setAttribute("opacity",initOp);
+        c2.style.transition="opacity 0.2s";
         svg.appendChild(c1);
         svg.appendChild(c2);
     });
+    updateWireVisibility(canvas.__wireHoverId);
 }
 function inferNodeKind(node){
     if(!node||typeof node!=="object")return "";
@@ -2317,30 +2388,18 @@ function duplicateSelected(){
     }
     return pasteNodeInMain(node,nodeKind);
 }
-const ctxMenu={node:null,copyBtn:null,dupBtn:null,pasteBtn:null,connectBtn:null,open:false};
+const ctxMenu={node:null,dupBtn:null,connectBtn:null,deleteBtn:null,open:false};
 function ensureContextMenu(){
     if(ctxMenu.node&&ctxMenu.node.parentNode)return ctxMenu.node;
     var menu=document.createElement("div");
     menu.className="fb-ctx-menu";
     menu.id="fbCtxMenu";
-    menu.innerHTML='<button type="button" id="fbCtxCopy" class="fb-ctx-item">Copy</button><button type="button" id="fbCtxDuplicate" class="fb-ctx-item">Duplicate</button><button type="button" id="fbCtxPaste" class="fb-ctx-item">Paste</button><button type="button" id="fbCtxConnect" class="fb-ctx-item">Connect to pricing</button>';
+    menu.innerHTML='<button type="button" id="fbCtxDuplicate" class="fb-ctx-item">Duplicate</button><button type="button" id="fbCtxConnect" class="fb-ctx-item">Connect to pricing</button><button type="button" id="fbCtxDelete" class="fb-ctx-item" style="color:#ef4444;">Delete</button>';
     document.body.appendChild(menu);
     ctxMenu.node=menu;
-    ctxMenu.copyBtn=menu.querySelector("#fbCtxCopy");
     ctxMenu.dupBtn=menu.querySelector("#fbCtxDuplicate");
-    ctxMenu.pasteBtn=menu.querySelector("#fbCtxPaste");
     ctxMenu.connectBtn=menu.querySelector("#fbCtxConnect");
-    if(ctxMenu.copyBtn){
-        ctxMenu.copyBtn.addEventListener("click",function(e){
-            e.preventDefault();
-            e.stopPropagation();
-            if(ctxMenu.copyBtn.disabled)return;
-            if(copySelectedToClipboard()){
-                hideContextMenu();
-                showBuilderToast("Copied component.","success");
-            }
-        });
-    }
+    ctxMenu.deleteBtn=menu.querySelector("#fbCtxDelete");
     if(ctxMenu.dupBtn){
         ctxMenu.dupBtn.addEventListener("click",function(e){
             e.preventDefault();
@@ -2352,20 +2411,6 @@ function ensureContextMenu(){
                 showBuilderToast("Duplicated component.","success");
             }else{
                 showBuilderToast("Duplicate failed for this target.","error");
-            }
-        });
-    }
-    if(ctxMenu.pasteBtn){
-        ctxMenu.pasteBtn.addEventListener("click",function(e){
-            e.preventDefault();
-            e.stopPropagation();
-            if(ctxMenu.pasteBtn.disabled)return;
-            if(pasteFromClipboard()){
-                hideContextMenu();
-                render();
-                showBuilderToast("Pasted component.","success");
-            }else{
-                showBuilderToast("Paste failed for this target.","error");
             }
         });
     }
@@ -2383,6 +2428,17 @@ function ensureContextMenu(){
             startPricingLink(t.id);
         });
     }
+    if(ctxMenu.deleteBtn){
+        ctxMenu.deleteBtn.addEventListener("click",function(e){
+            e.preventDefault();
+            e.stopPropagation();
+            if(ctxMenu.deleteBtn.disabled)return;
+            hideContextMenu();
+            removeSelected();
+            render();
+            showBuilderToast("Deleted component.","success");
+        });
+    }
     menu.addEventListener("contextmenu",function(e){e.preventDefault();});
     return menu;
 }
@@ -2395,6 +2451,7 @@ function syncContextMenuState(){
     if(ctxMenu.copyBtn)ctxMenu.copyBtn.disabled=!hasSelection;
     if(ctxMenu.dupBtn)ctxMenu.dupBtn.disabled=!hasSelection;
     if(ctxMenu.pasteBtn)ctxMenu.pasteBtn.disabled=!hasClipboard;
+    if(ctxMenu.deleteBtn)ctxMenu.deleteBtn.disabled=!hasSelection;
     if(ctxMenu.connectBtn){
         ctxMenu.connectBtn.disabled=!canConnect;
         ctxMenu.connectBtn.style.display=canConnect?"block":"none";
@@ -4082,15 +4139,18 @@ function renderElement(item,ctx){
             }else{
                 ids.push(idStr);
                 setLinkedPricingIds(src,ids);
-                // Auto-fill pricing promo key from countdown promo key (legacy behavior),
-                // so price updates can work without manually setting both.
+                // Auto-fill pricing promo key from countdown promo key.
+                // If countdown has no promo key, generate one automatically.
                 var srcPromo=String((src.settings&&src.settings.promoKey)||"").trim();
-                if(srcPromo!==""){
-                    item.settings=item.settings||{};
-                    var curPromo=String(item.settings.promoKey||"").trim();
-                    if(curPromo===""){
-                        item.settings.promoKey=srcPromo;
-                    }
+                if(srcPromo===""){
+                    srcPromo="AUTO-" + Math.random().toString(36).substr(2, 8).toUpperCase();
+                    src.settings=src.settings||{};
+                    src.settings.promoKey=srcPromo;
+                }
+                item.settings=item.settings||{};
+                var curPromo=String(item.settings.promoKey||"").trim();
+                if(curPromo===""){
+                    item.settings.promoKey=srcPromo;
                 }
                 showBuilderToast("Linked countdown to pricing.","success");
             }
@@ -5846,7 +5906,17 @@ function initContextMenu(){
         canvas.addEventListener("contextmenu",function(e){
             if(!(e&&e.target&&canvas.contains(e.target)))return;
             e.preventDefault();
-            selectFromCanvasTarget(e.target);
+            if(!selectFromCanvasTarget(e.target)){
+                state.sel=null;
+                state.carouselSel=null;
+                renderSettings();
+                hideContextMenu();
+                return;
+            }
+            if(state.sel && state.sel.k !== 'el') {
+                hideContextMenu();
+                return;
+            }
             showContextMenuAt(e.clientX,e.clientY);
         });
     }
