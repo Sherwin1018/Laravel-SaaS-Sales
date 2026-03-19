@@ -136,6 +136,8 @@ Route::middleware(['auth', 'role:sales-agent,marketing-manager,account-owner,fin
         Route::get('/funnels/{funnel}/preview/{step?}', [FunnelController::class, 'preview'])->name('funnels.preview');
         Route::put('/funnels/{funnel}', [FunnelController::class, 'update'])->name('funnels.update');
         Route::post('/funnels/{funnel}/builder/layout', [FunnelController::class, 'saveLayout'])->name('funnels.builder.layout.save');
+        Route::get('/funnels/{funnel}/builder/assets', [FunnelController::class, 'builderAssets'])->name('funnels.builder.assets.index');
+        Route::post('/funnels/{funnel}/builder/assets/delete', [FunnelController::class, 'destroyBuilderAssets'])->name('funnels.builder.assets.destroy');
         Route::post('/funnels/{funnel}/builder/upload-image', [FunnelController::class, 'uploadBuilderImage'])->name('funnels.builder.image.upload');
         Route::post('/funnels/{funnel}/publish', [FunnelController::class, 'publish'])->name('funnels.publish');
         Route::post('/funnels/{funnel}/unpublish', [FunnelController::class, 'unpublish'])->name('funnels.unpublish');

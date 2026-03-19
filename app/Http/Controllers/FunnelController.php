@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Funnel;
+use App\Models\FunnelBuilderAsset;
 use App\Models\FunnelStep;
 use App\Models\FunnelStepRevision;
 use Illuminate\Http\Request;
@@ -358,12 +359,29 @@ class FunnelController extends Controller
                 'image.max' => 'File is too large (max 100 MB).',
             ]);
 
-            $path = $validated['image']->store('funnel-builder', 'public');
-            $relativeUrl = Storage::url($path);
-            $fullUrl = str_starts_with($relativeUrl, 'http') ? $relativeUrl : url($relativeUrl);
+            $path = $validated['image']->store('funnel-builder/tenant-' . $funnel->tenant_id, 'public');
+            $relativeUrl = $this->builderPublicAssetUrl($path);
+            $assetKind = $this->builderAssetKindFromPath($path);
+
+            $asset = FunnelBuilderAsset::updateOrCreate(
+                [
+                    'disk' => 'public',
+                    'path' => $path,
+                ],
+                [
+                    'tenant_id' => $funnel->tenant_id,
+                    'funnel_id' => $funnel->id,
+                    'user_id' => auth()->id(),
+                    'original_name' => $validated['image']->getClientOriginalName(),
+                    'mime_type' => $validated['image']->getMimeType(),
+                    'kind' => $assetKind ?? 'image',
+                    'size' => (int) ($validated['image']->getSize() ?? 0),
+                ]
+            );
 
             return response()->json([
-                'url' => $fullUrl,
+                'asset' => $this->builderAssetPayload($asset),
+                'url' => $relativeUrl,
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             $errors = $e->errors();
@@ -386,6 +404,97 @@ class FunnelController extends Controller
                 'message' => $message !== '' ? $message : 'Upload failed. Please check file type and size (max 100 MB).',
             ], 500);
         }
+    }
+
+    public function builderAssets(Request $request, Funnel $funnel)
+    {
+        $this->ensureTenantFunnelAccess($funnel);
+
+        $kind = strtolower(trim((string) $request->query('kind', '')));
+        if (! in_array($kind, ['', 'image', 'video'], true)) {
+            $kind = '';
+        }
+
+        $assets = FunnelBuilderAsset::query()
+            ->where('tenant_id', $funnel->tenant_id)
+            ->when($kind !== '', fn ($query) => $query->where('kind', $kind))
+            ->latest('id')
+            ->get()
+            ->map(fn (FunnelBuilderAsset $asset) => $this->builderAssetPayload($asset))
+            ->filter()
+            ->keyBy('path');
+
+        foreach ($this->legacyBuilderAssetPayload($funnel, $kind) as $legacyAsset) {
+            if (! $assets->has($legacyAsset['path'])) {
+                $assets->put($legacyAsset['path'], $legacyAsset);
+            }
+        }
+
+        $assets = $assets
+            ->sortByDesc('modified_at_ts')
+            ->take(200)
+            ->values()
+            ->map(function (array $asset) {
+                unset($asset['modified_at_ts']);
+                return $asset;
+            })
+            ->all();
+
+        return response()->json([
+            'assets' => $assets,
+        ]);
+    }
+
+    public function destroyBuilderAssets(Request $request, Funnel $funnel)
+    {
+        $this->ensureTenantFunnelAccess($funnel);
+
+        $validated = $request->validate([
+            'paths' => ['required', 'array', 'min:1', 'max:200'],
+            'paths.*' => ['required', 'string', 'max:2048'],
+        ]);
+
+        $tenantId = (int) $funnel->tenant_id;
+        $deleted = 0;
+
+        $paths = collect($validated['paths'] ?? [])
+            ->map(fn ($path) => ltrim(str_replace('\\', '/', (string) $path), '/'))
+            ->filter()
+            ->unique()
+            ->values();
+
+        foreach ($paths as $path) {
+            if (! $this->builderAssetVisibleToTenant($path, $tenantId)) {
+                continue;
+            }
+
+            $asset = FunnelBuilderAsset::query()
+                ->where('tenant_id', $tenantId)
+                ->where('path', $path)
+                ->first();
+
+            $diskName = (string) ($asset?->disk ?: 'public');
+            $disk = Storage::disk($diskName);
+            $removed = false;
+
+            if ($disk->exists($path)) {
+                $removed = (bool) $disk->delete($path);
+            }
+
+            if ($asset) {
+                $asset->delete();
+                $removed = true;
+            }
+
+            if ($removed) {
+                $deleted++;
+            }
+        }
+
+        return response()->json([
+            'deleted' => $deleted,
+            'message' => $deleted === 1 ? 'Deleted 1 file.' : 'Deleted ' . $deleted . ' files.',
+        ]);
     }
 
     public function publish(Funnel $funnel)
@@ -672,6 +781,118 @@ class FunnelController extends Controller
         if ((int) $funnel->tenant_id !== (int) auth()->user()->tenant_id) {
             abort(403, 'Unauthorized action.');
         }
+    }
+
+    private function builderAssetKindFromPath(string $path): ?string
+    {
+        $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+
+        if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'], true)) {
+            return 'image';
+        }
+
+        if (in_array($ext, ['mp4', 'mov', 'avi', 'wmv', 'mkv', 'webm', 'm4v', '3gp', 'ogv'], true)) {
+            return 'video';
+        }
+
+        return null;
+    }
+
+    private function builderAssetPayload(FunnelBuilderAsset $asset): ?array
+    {
+        $disk = Storage::disk((string) ($asset->disk ?: 'public'));
+
+        if (! $disk->exists($asset->path)) {
+            return null;
+        }
+
+        $relativeUrl = $this->builderPublicAssetUrl($asset->path, (string) ($asset->disk ?: 'public'));
+        $modifiedAt = $asset->created_at?->getTimestamp() ?: $asset->updated_at?->getTimestamp() ?: now()->getTimestamp();
+
+        return [
+            'id' => $asset->id,
+            'name' => trim((string) ($asset->original_name ?? '')) !== '' ? trim((string) $asset->original_name) : basename($asset->path),
+            'path' => $asset->path,
+            'url' => $relativeUrl,
+            'kind' => (string) ($asset->kind ?: $this->builderAssetKindFromPath($asset->path) ?: 'image'),
+            'size' => (int) ($asset->size ?? 0),
+            'modified_at' => $asset->created_at?->toIso8601String() ?: date(DATE_ATOM, $modifiedAt),
+            'modified_at_ts' => $modifiedAt,
+        ];
+    }
+
+    private function legacyBuilderAssetPayload(Funnel $funnel, string $kind = ''): array
+    {
+        $disk = Storage::disk('public');
+
+        return collect($disk->allFiles('funnel-builder'))
+            ->filter(fn (string $path) => $this->builderAssetVisibleToTenant($path, (int) $funnel->tenant_id))
+            ->map(function (string $path) use ($disk) {
+                $assetKind = $this->builderAssetKindFromPath($path);
+                if ($assetKind === null) {
+                    return null;
+                }
+
+                $relativeUrl = $this->builderPublicAssetUrl($path, 'public');
+                $modifiedAt = $disk->lastModified($path);
+
+                return [
+                    'name' => basename($path),
+                    'path' => $path,
+                    'url' => $relativeUrl,
+                    'kind' => $assetKind,
+                    'size' => (int) $disk->size($path),
+                    'modified_at' => date(DATE_ATOM, $modifiedAt),
+                    'modified_at_ts' => $modifiedAt,
+                ];
+            })
+            ->filter()
+            ->when($kind !== '', fn ($items) => $items->where('kind', $kind))
+            ->values()
+            ->all();
+    }
+
+    private function builderAssetVisibleToTenant(string $path, int $tenantId): bool
+    {
+        $normalized = ltrim(str_replace('\\', '/', $path), '/');
+        if (! str_starts_with($normalized, 'funnel-builder/')) {
+            return false;
+        }
+
+        $relative = substr($normalized, strlen('funnel-builder/'));
+        if ($relative === false || $relative === '') {
+            return false;
+        }
+
+        if (! str_starts_with($relative, 'tenant-')) {
+            return true;
+        }
+
+        return str_starts_with($relative, 'tenant-' . $tenantId . '/');
+    }
+
+    private function builderPublicAssetUrl(string $path, string $disk = 'public'): string
+    {
+        $rawUrl = Storage::disk($disk)->url($path);
+
+        if (! is_string($rawUrl) || trim($rawUrl) === '') {
+            return '/storage/' . ltrim($path, '/');
+        }
+
+        if (str_starts_with($rawUrl, '/')) {
+            return $rawUrl;
+        }
+
+        $parts = parse_url($rawUrl);
+        $pathPart = is_array($parts) ? (string) ($parts['path'] ?? '') : '';
+        $queryPart = is_array($parts) && isset($parts['query']) ? ('?' . $parts['query']) : '';
+        $fragmentPart = is_array($parts) && isset($parts['fragment']) ? ('#' . $parts['fragment']) : '';
+
+        if ($pathPart !== '') {
+            return $pathPart . $queryPart . $fragmentPart;
+        }
+
+        return '/storage/' . ltrim($path, '/');
     }
 
     private function builderStepPayload(FunnelStep $step): array
