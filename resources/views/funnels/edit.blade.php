@@ -388,6 +388,7 @@
         <div class="fb-left-tabs">
             <button type="button" class="fb-tab active" id="fbTabComponents" title="Components"><i class="fas fa-th-large"></i></button>
             <button type="button" class="fb-tab" id="fbTabSettings" title="Settings"><i class="fas fa-cog"></i></button>
+            <button type="button" class="fb-tab" id="fbTabHistory" title="History"><i class="fas fa-history"></i></button>
         </div>
         <div class="fb-left-panel" id="fbLeftPanelComponents">
             <div class="fb-card fb-lib">
@@ -424,6 +425,12 @@
                     <button draggable="true" data-c="pricing"><i class="fas fa-tags"></i>Pricing</button>
                     <button draggable="true" data-c="countdown"><i class="fas fa-stopwatch"></i>Countdown</button>
                 </div>
+            </div>
+        </div>
+        <div class="fb-left-panel hidden" id="fbLeftPanelHistory">
+            <div class="fb-card settings">
+                <h3 class="fb-h">History Drawer</h3>
+                <div id="fbHistoryContainer"></div>
             </div>
         </div>
         <div class="fb-left-panel hidden" id="fbLeftPanelSettings">
@@ -1308,9 +1315,186 @@ function sectionRootContext(sectionId){
     return {section:s,root:idx>=0?rootItems()[idx]:null,index:idx,isWrap:false};
 }
 
-const undoHistory=[];const maxUndo=40;
-function saveToHistory(){if(!state.layout)return;undoHistory.push(clone(state.layout));if(undoHistory.length>maxUndo)undoHistory.shift();queueAutoSave();}
-function undo(){if(!undoHistory.length)return;state.layout=undoHistory.pop();render();}
+const undoHistory=[];const redoHistory=[];const maxUndo=40;
+var realLayoutData=null;
+var previewState=null;
+function formatHistoryTime(ts){
+    var d=new Date(ts);
+    var t=new Date();
+    var isToday=d.getDate()===t.getDate()&&d.getMonth()===t.getMonth()&&d.getFullYear()===t.getFullYear();
+    var hm=d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    if(isToday)return "Today, "+hm;
+    return d.toLocaleDateString([],{month:'short',day:'numeric'})+", "+hm;
+}
+function saveToHistory(){
+    if(!state.layout||state.isPreviewingHistory)return;
+    undoHistory.push({time:Date.now(),layout:clone(state.layout)});
+    if(undoHistory.length>maxUndo)undoHistory.shift();
+    redoHistory.length=0;
+    queueAutoSave();
+    if(typeof renderHistoryDrawer==='function')renderHistoryDrawer();
+}
+function undo(){
+    if(state.isPreviewingHistory||!undoHistory.length)return;
+    redoHistory.push({time:Date.now(),layout:clone(state.layout)});
+    var popped=undoHistory.pop();
+    state.layout=popped.layout;
+    render();
+    if(typeof renderHistoryDrawer==='function')renderHistoryDrawer();
+}
+function redo(){
+    if(state.isPreviewingHistory||!redoHistory.length)return;
+    undoHistory.push({time:Date.now(),layout:clone(state.layout)});
+    var popped=redoHistory.pop();
+    state.layout=popped.layout;
+    render();
+    if(typeof renderHistoryDrawer==='function')renderHistoryDrawer();
+}
+function previewHistory(index,isRedo){
+    if(!state.isPreviewingHistory){
+        realLayoutData=clone(state.layout);
+        state.isPreviewingHistory=true;
+    }
+    previewState={index:index,isRedo:isRedo};
+    var target=isRedo?redoHistory[index]:undoHistory[index];
+    if(target){
+        state.layout=clone(target.layout);
+        render();
+    }
+    renderHistoryDrawer();
+    renderHistoryBanner();
+}
+function exitPreviewHistory(){
+    if(!state.isPreviewingHistory)return;
+    state.layout=realLayoutData;
+    realLayoutData=null;
+    state.isPreviewingHistory=false;
+    previewState=null;
+    render();
+    renderHistoryDrawer();
+    renderHistoryBanner();
+}
+function restorePreviewHistory(){
+    if(!state.isPreviewingHistory||!previewState)return;
+    var idx=previewState.index;var rdo=previewState.isRedo;
+    state.layout=realLayoutData;
+    state.isPreviewingHistory=false;
+    realLayoutData=null;
+    previewState=null;
+    jumpToHistory(idx,rdo);
+    renderHistoryBanner();
+}
+function renderHistoryBanner(){
+    var banner=document.getElementById("fbHistoryBanner");
+    if(!banner){
+        banner=document.createElement("div");
+        banner.id="fbHistoryBanner";
+        banner.style.position="fixed";
+        banner.style.top="12px";
+        banner.style.left="50%";
+        banner.style.transform="translateX(-50%)";
+        banner.style.zIndex="2000";
+        document.body.appendChild(banner);
+    }
+    if(state.isPreviewingHistory){
+        banner.style.display="flex";
+        banner.style.alignItems="center";
+        banner.style.gap="12px";
+        banner.style.background="#0f172a";
+        banner.style.padding="8px 16px";
+        banner.style.borderRadius="999px";
+        banner.style.color="#fff";
+        banner.style.boxShadow="0 10px 25px rgba(15,23,42,0.4)";
+        banner.innerHTML="<div style='font-size:13px;font-weight:700;'><i class='fas fa-eye' style='margin-right:6px;'></i> Previewing Version</div>" +
+            "<button class='fb-btn' style='background:#10b981;border:none;color:#fff;border-radius:999px;padding:6px 14px;' onclick='restorePreviewHistory()'>Restore Version</button>" +
+            "<button class='fb-btn' style='background:rgba(255,255,255,0.15);border:none;color:#fff;border-radius:999px;padding:6px 14px;' onclick='exitPreviewHistory()'>Back</button>";
+    }else{
+        banner.style.display="none";
+    }
+}
+window.historyExpanded = window.historyExpanded || {};
+window.toggleHistoryGroup = function(lbl){
+    window.historyExpanded[lbl] = !window.historyExpanded[lbl];
+    renderHistoryDrawer();
+};
+function renderHistoryDrawer(){
+    var container=document.getElementById("fbHistoryContainer");
+    if(!container)return;
+    if(undoHistory.length===0&&redoHistory.length===0){
+        container.innerHTML="<div style='padding:10px;color:#64748b;font-size:12px;'>No version history yet.</div>";
+        return;
+    }
+    
+    function groupHist(arr, isRedo) {
+        var g = [];
+        for(var i=0; i<arr.length; i++){
+            var tStr = formatHistoryTime(arr[i].time);
+            if(g.length===0 || g[g.length-1].label !== tStr) g.push({ label: tStr, items: [] });
+            g[g.length-1].items.push({ index: i, isRedo: isRedo });
+        }
+        return g;
+    }
+    var rGroups = groupHist(redoHistory, true);
+    var uGroups = groupHist(undoHistory, false);
+
+    var html="<div class='history-list' style='display:flex;flex-direction:column;gap:6px;max-height:80vh;overflow-y:auto;padding-right:4px;'>";
+    
+    for(var g=rGroups.length-1;g>=0;g--){
+        var grp=rGroups[g];
+        var gLbl="r_"+grp.label;
+        var exp=window.historyExpanded[gLbl];
+        var hasActive = state.isPreviewingHistory&&previewState&&previewState.isRedo&&grp.items.some(x=>x.index===previewState.index);
+        if(hasActive) exp=true;
+        
+        html+="<div style='border:1px solid #E6E1EF;border-radius:8px;background:#f8fafc;overflow:hidden;'>";
+        html+="<button class='fb-btn' style='width:100%;border:none;background:transparent;color:#334155;justify-content:space-between;padding:8px 10px;' onclick='window.toggleHistoryGroup(\""+gLbl+"\")'><span style='font-weight:800;'><i class='fas fa-folder-open' style='color:#6B4A7A;'></i> "+grp.label+"</span> <span style='font-size:11px;background:#e2e8f0;padding:2px 6px;border-radius:99px;'>"+grp.items.length+" revisions</span></button>";
+        if(exp){
+            for(var i=grp.items.length-1;i>=0;i--){
+                var it=grp.items[i];
+                var active=(state.isPreviewingHistory&&previewState&&previewState.isRedo&&previewState.index===it.index);
+                var bSty=active?"background:#2E1244;color:#fff;":"background:#fff;color:#64748b;";
+                html+="<button class='fb-btn' style='width:100%;border:none;border-radius:0;border-top:1px solid #E6E1EF;"+bSty+"justify-content:flex-start;padding-left:24px;' onclick='previewHistory("+it.index+", true)'><i class='"+(active?"fas fa-check":"fas fa-arrow-right")+"'></i> Snapshot "+(it.index+1)+"</button>";
+            }
+        }
+        html+="</div>";
+    }
+    
+    var activeCur=!state.isPreviewingHistory;
+    var bCur=activeCur?"background:#10b981;color:#fff;border-color:#10b981;":"background:#fff;color:#240E35;border:1px solid #E6E1EF;";
+    html+="<button class='fb-btn' style='width:100%;"+bCur+"justify-content:flex-start;padding:10px;' "+(activeCur?"disabled":"onclick='exitPreviewHistory()'") +"><i class='fas fa-star'></i> Current Live Version</button>";
+
+    for(var g=uGroups.length-1;g>=0;g--){
+        var grp=uGroups[g];
+        var gLbl="u_"+grp.label;
+        var exp=window.historyExpanded[gLbl];
+        var hasActive = state.isPreviewingHistory&&previewState&&!previewState.isRedo&&grp.items.some(x=>x.index===previewState.index);
+        if(hasActive) exp=true;
+        
+        html+="<div style='border:1px solid #E6E1EF;border-radius:8px;background:#f8fafc;overflow:hidden;'>";
+        html+="<button class='fb-btn' style='width:100%;border:none;background:transparent;color:#334155;justify-content:space-between;padding:8px 10px;' onclick='window.toggleHistoryGroup(\""+gLbl+"\")'><span style='font-weight:800;'><i class='fas fa-folder' style='color:#6B4A7A;'></i> "+grp.label+"</span> <span style='font-size:11px;background:#e2e8f0;padding:2px 6px;border-radius:99px;'>"+grp.items.length+" revisions</span></button>";
+        if(exp){
+            for(var i=grp.items.length-1;i>=0;i--){
+                var it=grp.items[i];
+                var active=(state.isPreviewingHistory&&previewState&&!previewState.isRedo&&previewState.index===it.index);
+                var bSty=active?"background:#2E1244;color:#fff;":"background:#fff;color:#64748b;";
+                html+="<button class='fb-btn' style='width:100%;border:none;border-radius:0;border-top:1px solid #E6E1EF;"+bSty+"justify-content:flex-start;padding-left:24px;' onclick='previewHistory("+it.index+", false)'><i class='"+(active?"fas fa-check":"fas fa-arrow-left")+"'></i> Snapshot "+(it.index+1)+"</button>";
+            }
+        }
+        html+="</div>";
+    }
+    
+    html+="</div>";
+    container.innerHTML=html;
+}
+function jumpToHistory(index,isRedo){
+    if(isRedo){
+        var c1=redoHistory.length-index;
+        for(var i=0;i<c1;i++)redo();
+    }else{
+        var c2=undoHistory.length-index;
+        for(var i=0;i<c2;i++)undo();
+    }
+}
 
 function syncSectionsFromRoot(){
     state.layout=state.layout||{};
@@ -1638,6 +1822,8 @@ function loadStep(id){
     state.sel=null;
     state.carouselSel=null;
     undoHistory.length=0;
+    redoHistory.length=0;
+    if(typeof renderHistoryDrawer==='function')renderHistoryDrawer();
     saveMsg.textContent="Loaded "+s.title;
     applyCanvasBgPreference();
     syncCanvasBgControls();
@@ -1927,6 +2113,8 @@ function drawLinkWires(){
     if(!canvas.__wireHoverBound){
         canvas.__wireHoverBound=true;
         canvas.addEventListener("mousemove",function(e){
+            // Block hovers locally during preview
+            if(state.isPreviewingHistory) return;
             var el=e.target.closest&&e.target.closest('.el[data-el-id]');
             var id=el?el.getAttribute('data-el-id'):null;
             if(canvas.__wireHoverId!==id){
@@ -7506,20 +7694,31 @@ document.querySelectorAll(".fb-lib button").forEach(b=>{
 
 wireStepManagement();
 var fbGrid=document.getElementById("fbGrid"),fbComponentsHide=document.getElementById("fbComponentsHide"),fbComponentsShow=document.getElementById("fbComponentsShow");
-var fbTabComponents=document.getElementById("fbTabComponents"),fbTabSettings=document.getElementById("fbTabSettings"),fbLeftPanelComponents=document.getElementById("fbLeftPanelComponents"),fbLeftPanelSettings=document.getElementById("fbLeftPanelSettings");
+var fbTabComponents=document.getElementById("fbTabComponents"),fbTabSettings=document.getElementById("fbTabSettings"),fbTabHistory=document.getElementById("fbTabHistory"),
+    fbLeftPanelComponents=document.getElementById("fbLeftPanelComponents"),fbLeftPanelSettings=document.getElementById("fbLeftPanelSettings"),fbLeftPanelHistory=document.getElementById("fbLeftPanelHistory");
 function showLeftPanel(panel){
+    if(fbLeftPanelSettings)fbLeftPanelSettings.classList.add("hidden");
+    if(fbLeftPanelComponents)fbLeftPanelComponents.classList.add("hidden");
+    if(fbLeftPanelHistory)fbLeftPanelHistory.classList.add("hidden");
+    if(fbTabComponents)fbTabComponents.classList.remove("active");
+    if(fbTabSettings)fbTabSettings.classList.remove("active");
+    if(fbTabHistory)fbTabHistory.classList.remove("active");
+
     if(panel==="settings"){
         if(fbLeftPanelSettings)fbLeftPanelSettings.classList.remove("hidden");
-        if(fbLeftPanelComponents)fbLeftPanelComponents.classList.add("hidden");
-        if(fbTabComponents)fbTabComponents.classList.remove("active");if(fbTabSettings)fbTabSettings.classList.add("active");
+        if(fbTabSettings)fbTabSettings.classList.add("active");
+    }else if(panel==="history"){
+        if(fbLeftPanelHistory)fbLeftPanelHistory.classList.remove("hidden");
+        if(fbTabHistory)fbTabHistory.classList.add("active");
+        if(typeof renderHistoryDrawer==="function")renderHistoryDrawer();
     }else{
-        if(fbLeftPanelSettings)fbLeftPanelSettings.classList.add("hidden");
         if(fbLeftPanelComponents)fbLeftPanelComponents.classList.remove("hidden");
-        if(fbTabComponents)fbTabComponents.classList.add("active");if(fbTabSettings)fbTabSettings.classList.remove("active");
+        if(fbTabComponents)fbTabComponents.classList.add("active");
     }
 }
 if(fbTabComponents)fbTabComponents.onclick=()=>showLeftPanel("components");
 if(fbTabSettings)fbTabSettings.onclick=()=>showLeftPanel("settings");
+if(fbTabHistory)fbTabHistory.onclick=()=>showLeftPanel("history");
 var _canvasLockedWidth=0;
 var _canvasInnerWidth=0;
 function lockCanvasWidth(){
@@ -7716,6 +7915,10 @@ document.addEventListener("keydown",e=>{
     if(key==="z"&&(e.ctrlKey||e.metaKey)&&!e.shiftKey&&!isTextField){
         e.preventDefault();
         undo();
+    }
+    if((key==="y"||(key==="z"&&e.shiftKey))&&(e.ctrlKey||e.metaKey)&&!isTextField){
+        e.preventDefault();
+        redo();
     }
 });
 document.addEventListener("dragend",function(){clearFreeDropGuides();clearDropPreview();});
