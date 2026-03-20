@@ -419,8 +419,8 @@
 .setting-label-help .menu-section-title{margin:0}
 .fb-help-modal{position:fixed;inset:0;background:rgba(37,99,235,.16);display:none;align-items:center;justify-content:center;z-index:1200;padding:16px}
 .fb-help-modal.open{display:flex}
-.fb-help-card{width:min(560px,92vw);background:#ffffff;color:#334155;border:1px solid #E7D8F0;border-radius:14px;box-shadow:0 18px 44px rgba(30,64,175,.18);padding:16px;position:relative}
-.fb-help-close{position:absolute;top:8px;right:8px;border:1px solid #E6E1EF;background:#F3EEF7;color:#2E1244;width:28px;height:28px;border-radius:8px;cursor:pointer}
+.fb-help-card{width:min(520px,92vw);background:#ffffff;color:#334155;border:1px solid #D9D2F3;border-radius:14px;box-shadow:0 18px 44px rgba(64,64,120,.18);padding:16px;position:relative}
+.fb-help-close{position:absolute;top:10px;right:10px;border:1px solid #D9D2F3;background:#F3EEF7;color:#2E1244;width:28px;height:28px;border-radius:999px;cursor:pointer}
 .fb-help-close:hover{background:#E7D8F0}
 .fb-help-title{margin:0 0 8px;font-size:16px;font-weight:900;color:#240E35}
 .fb-help-text{font-size:13px;line-height:1.55;color:#334155;margin-bottom:10px}
