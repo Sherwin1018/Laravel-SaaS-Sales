@@ -1348,17 +1348,17 @@
                                                         if ($formWidth === '' || !preg_match('/^[#(),.%\-\sA-Za-z0-9]+$/u', $formWidth)) {
                                                             $formWidth = '100%';
                                                         }
-                                                        $formLabelColor = trim((string) ($settings['labelColor'] ?? '#0f172a'));
+                                                        $formLabelColor = trim((string) ($settings['labelColor'] ?? '#240E35'));
                                                         if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $formLabelColor)) {
-                                                            $formLabelColor = '#0f172a';
+                                                            $formLabelColor = '#240E35';
                                                         }
                                                         $formPlaceholderColor = trim((string) ($settings['placeholderColor'] ?? '#94a3b8'));
                                                         if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $formPlaceholderColor)) {
                                                             $formPlaceholderColor = '#94a3b8';
                                                         }
-                                                        $formButtonBgColor = trim((string) ($settings['buttonBgColor'] ?? '#2563eb'));
+                                                        $formButtonBgColor = trim((string) ($settings['buttonBgColor'] ?? '#240E35'));
                                                         if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $formButtonBgColor)) {
-                                                            $formButtonBgColor = '#2563eb';
+                                                            $formButtonBgColor = '#240E35';
                                                         }
                                                         $formButtonTextColor = trim((string) ($settings['buttonTextColor'] ?? '#ffffff'));
                                                         if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $formButtonTextColor)) {
@@ -1373,7 +1373,7 @@
                                                         $formButtonItalic = (bool) ($settings['buttonItalic'] ?? false);
                                                         $formButtonFontWeight = $formButtonBold ? '700' : '400';
                                                         $formButtonFontStyle = $formButtonItalic ? 'italic' : 'normal';
-                                                        $formInlineStyle = 'display:block;width:' . $formWidth . ';max-width:100%;box-sizing:border-box;overflow:auto;';
+                                                        $formInlineStyle = 'display:block;width:' . $formWidth . ';max-width:100%;box-sizing:border-box;overflow:auto;text-align:left;';
                                                         if ($alignment === 'center') {
                                                             $formInlineStyle .= 'margin-left:auto;margin-right:auto;';
                                                         } elseif ($alignment === 'right') {
@@ -1459,11 +1459,11 @@
                                                                         $ph = $ft === 'phone_number' ? '09XXXXXXXXX' : $lbl;
                                                                     }
                                                                 @endphp
-                                                                <label style="display:block;margin-bottom:4px;color:{{ $formLabelColor }};">{{ $lbl }}</label>
-                                                                <input class="builder-form-input" type="{{ $inputType }}" name="{{ $nm }}" {{ $req ? 'required' : '' }} {!! $pat !!} placeholder="{{ $ph }}" style="--fb-placeholder-color:{{ $formPlaceholderColor }};width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:8px;box-sizing:border-box;">
+                                                                <label style="display:block;margin-bottom:4px;color:{{ $formLabelColor }};text-align:left;">{{ $lbl }}</label>
+                                                                <input class="builder-form-input" type="{{ $inputType }}" name="{{ $nm }}" {{ $req ? 'required' : '' }} {!! $pat !!} placeholder="{{ $ph }}" style="--fb-placeholder-color:{{ $formPlaceholderColor }};width:100%;padding:8px;border:1px solid #E6E1EF;border-radius:8px;margin-bottom:8px;box-sizing:border-box;text-align:left;">
                                                             @endforeach
                                                             <div style="display:flex;justify-content:{{ $formButtonJustify }};">
-                                                                <button type="submit" class="btn" style="margin-top:2px;background:{{ $formButtonBgColor }};color:{{ $formButtonTextColor }};font-weight:{{ $formButtonFontWeight }};font-style:{{ $formButtonFontStyle }};">{{ $content !== '' ? $content : 'Submit' }}</button>
+                                                                <button type="submit" class="builder-form-btn" style="margin-top:2px;background:{{ $formButtonBgColor }};color:{{ $formButtonTextColor }};font-weight:{{ $formButtonFontWeight }};font-style:{{ $formButtonFontStyle }};border-radius:8px;padding:8px 12px;border:1px solid {{ $formButtonBgColor }};line-height:1;">{{ $content !== '' ? $content : 'Submit' }}</button>
                                                             </div>
                 </form>
                                                     @else
@@ -1477,11 +1477,11 @@
                                                                         $ph = $ft === 'phone_number' ? '09XXXXXXXXX' : $lbl;
                                                                     }
                                                                 @endphp
-                                                                <label style="display:block;margin-bottom:4px;color:{{ $formLabelColor }};">{{ $lbl }}</label>
-                                                                <input class="builder-form-input" type="text" placeholder="{{ $ph }}" style="--fb-placeholder-color:{{ $formPlaceholderColor }};width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:8px;box-sizing:border-box;" @if($isPreview) disabled @endif>
+                                                                <label style="display:block;margin-bottom:4px;color:{{ $formLabelColor }};text-align:left;">{{ $lbl }}</label>
+                                                                <input class="builder-form-input" type="text" placeholder="{{ $ph }}" style="--fb-placeholder-color:{{ $formPlaceholderColor }};width:100%;padding:8px;border:1px solid #E6E1EF;border-radius:8px;margin-bottom:8px;box-sizing:border-box;text-align:left;" @if($isPreview) disabled @endif>
                                                             @endforeach
                                                             <div style="display:flex;justify-content:{{ $formButtonJustify }};">
-                                                                <button type="button" class="btn" style="margin-top:2px;background:{{ $formButtonBgColor }};color:{{ $formButtonTextColor }};font-weight:{{ $formButtonFontWeight }};font-style:{{ $formButtonFontStyle }};" @if($isPreview) disabled @endif>{{ $content !== '' ? $content : 'Submit' }}</button>
+                                                                <button type="button" class="builder-form-btn" style="margin-top:2px;background:{{ $formButtonBgColor }};color:{{ $formButtonTextColor }};font-weight:{{ $formButtonFontWeight }};font-style:{{ $formButtonFontStyle }};border-radius:8px;padding:8px 12px;border:1px solid {{ $formButtonBgColor }};line-height:1;" @if($isPreview) disabled @endif>{{ $content !== '' ? $content : 'Submit' }}</button>
                                                             </div>
                     </form>
                                                     @endif

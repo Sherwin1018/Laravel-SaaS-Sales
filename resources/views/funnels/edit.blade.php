@@ -43,6 +43,11 @@
 #fbLeftPanelComponents .fb-card::-webkit-scrollbar-track{background:#F3EEF7;border-radius:4px}
 #fbLeftPanelComponents .fb-card::-webkit-scrollbar-thumb{background:#E6E1EF;border-radius:4px}
 #fbLeftPanelComponents .fb-card::-webkit-scrollbar-thumb:hover{background:#94a3b8}
+#fbLeftPanelTemplates .fb-card{max-height:calc(100vh - 120px);overflow-y:auto;overflow-x:hidden}
+#fbLeftPanelTemplates .fb-card::-webkit-scrollbar{width:8px}
+#fbLeftPanelTemplates .fb-card::-webkit-scrollbar-track{background:#F3EEF7;border-radius:4px}
+#fbLeftPanelTemplates .fb-card::-webkit-scrollbar-thumb{background:#E6E1EF;border-radius:4px}
+#fbLeftPanelTemplates .fb-card::-webkit-scrollbar-thumb:hover{background:#94a3b8}
 .fb-grid > *{min-width:0}
 .fb-grid .fb-card{overflow-x:hidden}
 .fb-canvas-col > .fb-card{overflow-x:visible}
@@ -86,10 +91,28 @@
 .fb-history-pill{display:inline-flex;align-items:center;justify-content:center;padding:6px 10px;border-radius:999px;background:#F3EEF7;color:#240E35;font-size:11px;font-weight:800;white-space:nowrap;border:1px solid #E6E1EF}
 .fb-h{font-size:16px;font-weight:900;color:#240E35;margin:2px 0 10px}
 .fb-lib button{display:block;width:100%;text-align:left;margin-bottom:7px;padding:9px;border:1px solid #E7D8F0;border-radius:8px;background:#F3EEF7;font-weight:700;cursor:grab}
+.fb-lib button.fb-template-btn{cursor:pointer;background:#ffffff;border-style:dashed}
+.fb-lib button.fb-template-btn:hover{background:#F8F5FB}
 .fb-lib i{width:18px;margin-right:6px;color:#2E1244}
 .fb-lib-group{margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #E6E1EF}
 .fb-lib-group:last-child{margin-bottom:0;padding-bottom:0;border-bottom:0}
 .fb-lib-group-title{font-size:12px;font-weight:900;letter-spacing:.02em;text-transform:uppercase;color:#2E1244;margin:0 0 8px}
+.fb-template-grid{display:grid;grid-template-columns:1fr;gap:10px}
+.fb-template-card{border:1px solid #E6E1EF;border-radius:12px;background:#fff;padding:10px;display:flex;flex-direction:column;gap:8px;box-shadow:0 10px 20px rgba(36,14,53,.06)}
+.fb-template-preview{height:92px;border-radius:10px;border:1px dashed #E6E1EF;background:linear-gradient(135deg,#F8F5FB,#F3EEF7);position:relative;overflow:hidden}
+.fb-template-title{font-size:13px;font-weight:800;color:#240E35;margin:0}
+.fb-template-desc{font-size:12px;color:#64748b;line-height:1.4;margin:0}
+.fb-template-actions{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.fb-template-tags{display:flex;flex-wrap:wrap;gap:6px}
+.fb-template-tag{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:800;color:#6B4A7A;background:#F3EEF7;border:1px solid #E6E1EF;border-radius:999px;padding:2px 6px;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}
+.fb-template-preview .tp-line{height:6px;background:#E6E1EF;border-radius:999px;margin:6px 8px}
+.fb-template-preview .tp-line-lg{height:10px;width:70%;background:#D6C6E2}
+.fb-template-preview .tp-line-md{width:88%}
+.fb-template-preview .tp-line-sm{width:56%}
+.fb-template-preview .tp-btn{height:10px;width:38%;background:#240E35;border-radius:999px;margin:8px 8px}
+.fb-template-preview .tp-img{position:absolute;right:8px;top:10px;width:40%;height:72%;border-radius:10px;background:linear-gradient(135deg,#E7D8F0,#F8F5FB);border:1px solid #E6E1EF}
+.fb-template-preview .tp-form{margin:6px 8px;border-radius:8px;background:#ffffff;border:1px solid #E6E1EF;height:48px}
+.fb-template-preview .tp-card{margin:8px;border-radius:10px;background:#ffffff;border:1px solid #E6E1EF;height:62px;box-shadow:0 6px 16px rgba(36,14,53,.08)}
 #canvas{
     width:100%;
     max-width:1400px;
@@ -308,6 +331,12 @@
 .page-mgr-modal{position:fixed;inset:0;background:rgba(15,23,42,.56);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;z-index:1450;padding:18px}
 .page-mgr-modal.open{display:flex}
 .page-mgr-card{width:min(980px,96vw);max-height:90vh;overflow:hidden;display:flex;flex-direction:column;background:#fff;border:1px solid #E7D8F0;border-radius:18px;box-shadow:0 24px 56px rgba(15,23,42,.34)}
+.fb-modal{position:fixed;inset:0;background:rgba(15,23,42,.56);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;z-index:1500;padding:18px}
+.fb-modal.open{display:flex}
+.fb-modal-card{width:min(520px,92vw);background:#fff;border-radius:16px;border:1px solid #E6E1EF;box-shadow:0 24px 60px rgba(15,23,42,.2);padding:18px}
+.fb-modal-title{font-size:16px;font-weight:900;color:#240E35;margin:0 0 8px}
+.fb-modal-desc{font-size:13px;color:#475569;line-height:1.5;margin:0 0 16px}
+.fb-modal-actions{display:flex;justify-content:flex-end;gap:8px}
 .page-mgr-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:18px 20px;border-bottom:1px solid #E6E1EF;background:linear-gradient(180deg,#ffffff,#F3EEF7)}
 .page-mgr-head h4{margin:0;font-size:21px;line-height:1.2;font-weight:900;color:#240E35;letter-spacing:-.01em}
 .page-mgr-close{width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;border:1px solid #E6E1EF;background:#F3EEF7;border-radius:12px;padding:0;font-weight:800;color:#334155;cursor:pointer}
@@ -463,6 +492,7 @@
         <div class="fb-left-tabs">
             <button type="button" class="fb-tab active" id="fbTabComponents" title="Components"><i class="fas fa-th-large"></i></button>
             <button type="button" class="fb-tab" id="fbTabSettings" title="Settings"><i class="fas fa-cog"></i></button>
+            <button type="button" class="fb-tab" id="fbTabTemplates" title="Templates"><i class="fas fa-layer-group"></i></button>
             <button type="button" class="fb-tab" id="fbTabHistory" title="History"><i class="fas fa-history"></i></button>
         </div>
         <div class="fb-left-panel" id="fbLeftPanelComponents">
@@ -500,6 +530,13 @@
                     <button draggable="true" data-c="pricing"><i class="fas fa-tags"></i>Pricing</button>
                     <button draggable="true" data-c="countdown"><i class="fas fa-stopwatch"></i>Countdown</button>
                 </div>
+            </div>
+        </div>
+        <div class="fb-left-panel hidden" id="fbLeftPanelTemplates">
+            <div class="fb-card settings">
+                <h3 class="fb-h">Templates</h3>
+                <p class="meta" style="margin:0 0 10px;">Replace the current page with a starter layout.</p>
+                <div id="fbTemplateGrid" class="fb-template-grid"></div>
             </div>
         </div>
         <div class="fb-left-panel hidden" id="fbLeftPanelHistory">
@@ -598,6 +635,16 @@
                 <button type="button" class="fb-btn" id="versionModalCancel">Cancel</button>
                 <button type="button" class="fb-btn primary" id="versionModalSave">Save Version</button>
             </div>
+        </div>
+    </div>
+</div>
+<div class="fb-modal" id="fbTemplateConfirm" aria-hidden="true">
+    <div class="fb-modal-card" role="dialog" aria-modal="true" aria-labelledby="fbTemplateConfirmTitle">
+        <div class="fb-modal-title" id="fbTemplateConfirmTitle">Apply template</div>
+        <p class="fb-modal-desc" id="fbTemplateConfirmDesc">This will replace the current layout.</p>
+        <div class="fb-modal-actions">
+            <button type="button" class="fb-btn" id="fbTemplateConfirmCancel">Cancel</button>
+            <button type="button" class="fb-btn primary" id="fbTemplateConfirmOk">Apply</button>
         </div>
     </div>
 </div>
@@ -844,6 +891,492 @@ const defaults=(stepType)=>{
         sections:[]
     };
 };
+const makeSection=(opts)=>{
+    var o=opts&&typeof opts==="object"?opts:{};
+    return {
+        kind:"section",
+        id:uid("sec"),
+        style:o.style||{padding:"64px 24px",backgroundColor:"#ffffff"},
+        settings:Object.assign({contentWidth:"wide"},o.settings||{}),
+        elements:Array.isArray(o.elements)?o.elements:[],
+        rows:Array.isArray(o.rows)?o.rows:[]
+    };
+};
+const makeRow=(columns,style,settings)=>({
+    id:uid("row"),
+    style:style||{gap:"16px"},
+    settings:settings||{},
+    columns:Array.isArray(columns)?columns:[]
+});
+const makeColumn=(elements,style,settings)=>({
+    id:uid("col"),
+    style:style||{},
+    settings:settings||{},
+    elements:Array.isArray(elements)?elements:[]
+});
+const makeEl=(type,content,style,settings)=>({
+    id:uid("el"),
+    type:type,
+    content:content||"",
+    style:style||{},
+    settings:settings||{}
+});
+function futureCountdownValue(days){
+    var d=new Date(Date.now()+((Number(days)||7)*24*60*60*1000));
+    var pad=n=>String(n).padStart(2,"0");
+    return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())+"T"+pad(d.getHours())+":"+pad(d.getMinutes());
+}
+const makeFeatureCardColumn=(iconName,title,body)=>makeColumn([
+    makeEl("icon","",{fontSize:"28px",color:"#6B4A7A",margin:"0 0 10px"},{iconName:iconName||"star",iconStyle:"solid",alignment:"left",link:""}),
+    makeEl("heading",title||"Feature title",{fontSize:"18px",color:"#240E35",fontWeight:"800",margin:"0 0 6px"},{}),
+    makeEl("text",body||"Short feature description goes here.",{fontSize:"14px",color:"#64748b",lineHeight:"1.6",margin:"0"},{})
+],{padding:"18px",backgroundColor:"#ffffff",border:"1px solid #E6E1EF",borderRadius:"16px",boxShadow:"0 12px 24px rgba(15,23,42,.08)"});
+const makeStatColumn=(stat,label)=>makeColumn([
+    makeEl("heading",stat||"10x",{fontSize:"28px",color:"#240E35",fontWeight:"800",margin:"0 0 4px",textAlign:"center"},{}),
+    makeEl("text",label||"Metric",{fontSize:"12px",color:"#64748b",textTransform:"uppercase",letterSpacing:"0.12em",textAlign:"center",margin:"0"},{})
+],{textAlign:"center",padding:"10px 8px"});
+const makeLogoColumn=(label)=>makeColumn([
+    makeEl("text",label||"Logo",{fontSize:"12px",color:"#64748b",fontWeight:"800",textTransform:"uppercase",letterSpacing:"0.18em",textAlign:"center",margin:"0"},{})
+],{textAlign:"center",padding:"8px 12px",backgroundColor:"#ffffff",border:"1px solid #E6E1EF",borderRadius:"999px"});
+function templateHeroLayout(){
+    var leftCol=makeColumn([
+        makeEl("heading","Grow your audience fast",{fontSize:"42px",color:"#240E35",fontWeight:"800",margin:"0 0 12px",lineHeight:"1.15"},{}),
+        makeEl("text","Build high-converting pages in minutes with our funnel builder.",{fontSize:"18px",color:"#475569",lineHeight:"1.6",margin:"0 0 18px"},{}),
+        makeEl("button","Get Started",{backgroundColor:"#240E35",color:"#ffffff",borderRadius:"999px",padding:"12px 24px",fontWeight:"700"},{actionType:"next_step",actionStepSlug:"",link:"#",alignment:"left"})
+    ],{flex:"1"});
+    var rightCol=makeColumn([
+        makeEl("image","",{width:"100%"},{src:"",alt:"Product preview",alignment:"center"})
+    ],{flex:"1"});
+    var heroSection=makeSection({
+        style:{padding:"72px 24px",backgroundColor:"#ffffff"},
+        rows:[makeRow([leftCol,rightCol],{gap:"20px",alignItems:"center"})]
+    });
+    return {root:[heroSection],sections:[],__editor:{canvasBg:"#F3EEF7"}};
+}
+function templateLeadCaptureLayout(){
+    var formEl=makeEl("form","",{width:"100%",maxWidth:"520px"},{alignment:"center",width:"520px",buttonAlign:"center",buttonBold:true,fields:[
+        {type:"text",label:"First name",placeholder:"First name",required:false},
+        {type:"email",label:"Email",placeholder:"Email address",required:true}
+    ]});
+    var section=makeSection({
+        style:{padding:"64px 24px",backgroundColor:"#ffffff"},
+        settings:{contentWidth:"medium"},
+        rows:[makeRow([makeColumn([
+            makeEl("heading","Get the free playbook",{fontSize:"36px",color:"#240E35",fontWeight:"800",textAlign:"center",margin:"0 0 10px"},{}),
+            makeEl("text","Join 12,000+ founders getting weekly growth tips.",{fontSize:"16px",color:"#64748b",lineHeight:"1.6",textAlign:"center",margin:"0 0 20px"},{}),
+            formEl
+        ],{alignItems:"center",textAlign:"center"})],{gap:"12px"})]
+    });
+    return {root:[section],sections:[],__editor:{canvasBg:"#F8F5FB"}};
+}
+function templatePricingFaqLayout(){
+    var intro=makeSection({
+        style:{padding:"56px 24px 28px",backgroundColor:"#ffffff"},
+        settings:{contentWidth:"medium"},
+        rows:[makeRow([makeColumn([
+            makeEl("heading","Choose a plan that grows with you",{fontSize:"32px",color:"#240E35",fontWeight:"800",textAlign:"center",margin:"0 0 10px"},{}),
+            makeEl("text","Start today and upgrade anytime.",{fontSize:"16px",color:"#64748b",lineHeight:"1.6",textAlign:"center"},{})
+        ],{textAlign:"center"})],{gap:"10px"})]
+    });
+    var pricing=makeEl("pricing","",{width:"100%"},{plan:"Pro",price:"$49",period:"/month",subtitle:"Best for growing teams",features:["Unlimited pages","Custom domains","Priority support"],ctaLabel:"Get Started",ctaLink:"#",ctaBgColor:"#240E35",ctaTextColor:"#ffffff",badge:"Popular"});
+    var faq=makeEl("faq","",{width:"100%"},{items:[{q:"Can I cancel anytime?",a:"Yes, cancel anytime from your account settings."},{q:"Do you offer a free trial?",a:"Yes, you get a 14-day free trial."}],itemGap:10,questionColor:"#240E35",answerColor:"#475569"});
+    var gridSection=makeSection({
+        style:{padding:"28px 24px 64px",backgroundColor:"#ffffff"},
+        settings:{contentWidth:"wide"},
+        rows:[makeRow([makeColumn([pricing],{flex:"1"}),makeColumn([faq],{flex:"1"})],{gap:"20px",alignItems:"flex-start"})]
+    });
+    return {root:[intro,gridSection],sections:[],__editor:{canvasBg:"#F3EEF7"}};
+}
+function templateHeroVideoLayout(){
+    var leftCol=makeColumn([
+        makeEl("heading","Launch your next webinar",{fontSize:"40px",color:"#240E35",fontWeight:"800",margin:"0 0 12px",lineHeight:"1.15"},{}),
+        makeEl("text","Turn visitors into attendees with a clear offer and instant signup.",{fontSize:"18px",color:"#475569",lineHeight:"1.6",margin:"0 0 18px"},{}),
+        makeEl("button","Reserve My Seat",{backgroundColor:"#240E35",color:"#ffffff",borderRadius:"999px",padding:"12px 24px",fontWeight:"700"},{actionType:"next_step",actionStepSlug:"",link:"#",alignment:"left"})
+    ],{flex:"1"});
+    var rightCol=makeColumn([
+        makeEl("video","",{width:"100%"},{src:"",alignment:"center"})
+    ],{flex:"1"});
+    var heroSection=makeSection({
+        style:{padding:"72px 24px",backgroundColor:"#ffffff"},
+        rows:[makeRow([leftCol,rightCol],{gap:"24px",alignItems:"center"})]
+    });
+    var logos=makeSection({
+        style:{padding:"22px 24px 40px",backgroundColor:"#ffffff"},
+        settings:{contentWidth:"wide"},
+        rows:[makeRow([makeLogoColumn("Nova"),makeLogoColumn("Bright"),makeLogoColumn("Flux"),makeLogoColumn("Pulse")],{gap:"10px",alignItems:"center"})]
+    });
+    return {root:[heroSection,logos],sections:[],__editor:{canvasBg:"#F8F5FB"}};
+}
+function templateFeatureGridLayout(){
+    var intro=makeSection({
+        style:{padding:"64px 24px 28px",backgroundColor:"#ffffff"},
+        settings:{contentWidth:"medium"},
+        rows:[makeRow([makeColumn([
+            makeEl("heading","All-in-one funnel builder",{fontSize:"34px",color:"#240E35",fontWeight:"800",textAlign:"center",margin:"0 0 10px"},{}),
+            makeEl("text","Launch fast with templates, drag-and-drop blocks, and instant previews.",{fontSize:"16px",color:"#64748b",lineHeight:"1.6",textAlign:"center"},{})
+        ],{textAlign:"center"})],{gap:"10px"})]
+    });
+    var features=makeSection({
+        style:{padding:"0 24px 64px",backgroundColor:"#ffffff"},
+        settings:{contentWidth:"wide"},
+        rows:[makeRow([
+            makeFeatureCardColumn("bolt","Fast setup","Get a working page in minutes with prebuilt blocks."),
+            makeFeatureCardColumn("star","Beautiful layouts","Modern spacing, typography, and responsive grids."),
+            makeFeatureCardColumn("chart-line","Track results","Measure clicks and conversions in real time.")
+        ],{gap:"18px"})]
+    });
+    return {root:[intro,features],sections:[],__editor:{canvasBg:"#F3EEF7"}};
+}
+function templateWebinarLayout(){
+    var countdown=makeEl("countdown","",{width:"100%"},{endAt:futureCountdownValue(5),label:"Webinar starts in",expiredText:"Webinar ended",numberColor:"#240E35",labelColor:"#64748b",itemGap:8});
+    var formEl=makeEl("form","",{width:"100%",maxWidth:"520px"},{alignment:"center",width:"520px",buttonAlign:"center",buttonBold:true,fields:[
+        {type:"text",label:"Full name",placeholder:"Full name",required:false},
+        {type:"email",label:"Email",placeholder:"Email address",required:true}
+    ]});
+    var section=makeSection({
+        style:{padding:"72px 24px",backgroundColor:"#ffffff"},
+        settings:{contentWidth:"medium"},
+        rows:[makeRow([makeColumn([
+            makeEl("heading","Live training: Build a funnel in 30 minutes",{fontSize:"34px",color:"#240E35",fontWeight:"800",textAlign:"center",margin:"0 0 10px"},{}),
+            makeEl("text","Save your seat and get the replay. We will walk you through each step.",{fontSize:"16px",color:"#64748b",lineHeight:"1.6",textAlign:"center",margin:"0 0 16px"},{}),
+            countdown,
+            formEl
+        ],{alignItems:"center",textAlign:"center"})],{gap:"12px"})]
+    });
+    return {root:[section],sections:[],__editor:{canvasBg:"#F8F5FB"}};
+}
+function templateCheckoutLayout(){
+    var pricing=makeEl("pricing","",{width:"100%"},{plan:"Starter",price:"$29",period:"/month",subtitle:"Everything you need to launch",features:["Unlimited steps","Custom domains","Email support"],ctaLabel:"Start now",ctaLink:"#",ctaBgColor:"#240E35",ctaTextColor:"#ffffff",badge:"Most popular"});
+    var formEl=makeEl("form","",{width:"100%"},{alignment:"left",width:"100%",buttonAlign:"left",buttonBold:true,fields:[
+        {type:"text",label:"Name",placeholder:"Your name",required:true},
+        {type:"email",label:"Email",placeholder:"Email address",required:true}
+    ]});
+    var section=makeSection({
+        style:{padding:"64px 24px",backgroundColor:"#ffffff"},
+        settings:{contentWidth:"wide"},
+        rows:[makeRow([makeColumn([pricing],{flex:"1"}),makeColumn([
+            makeEl("heading","Complete your order",{fontSize:"24px",color:"#240E35",fontWeight:"800",margin:"0 0 10px"},{}),
+            makeEl("text","Secure checkout. Cancel anytime.",{fontSize:"14px",color:"#64748b",margin:"0 0 14px"},{}),
+            formEl
+        ],{flex:"1"})],{gap:"24px",alignItems:"flex-start"})]
+    });
+    return {root:[section],sections:[],__editor:{canvasBg:"#F3EEF7"}};
+}
+function templateThankYouLayout(){
+    var section=makeSection({
+        style:{padding:"80px 24px",backgroundColor:"#ffffff"},
+        settings:{contentWidth:"medium"},
+        rows:[makeRow([makeColumn([
+            makeEl("heading","Thank you for signing up!",{fontSize:"36px",color:"#240E35",fontWeight:"800",textAlign:"center",margin:"0 0 10px"},{}),
+            makeEl("text","Check your inbox for the next steps and your bonus materials.",{fontSize:"16px",color:"#64748b",lineHeight:"1.6",textAlign:"center",margin:"0 0 18px"},{}),
+            makeEl("button","Back to Home",{backgroundColor:"#240E35",color:"#ffffff",borderRadius:"999px",padding:"12px 24px",fontWeight:"700"},{actionType:"link",link:"#",alignment:"center"}),
+            makeEl("testimonial","",{width:"100%"},{quote:"This builder helped us launch in a weekend.",name:"Jamie Lee",role:"Founder, Northwind",avatar:""})
+        ],{alignItems:"center",textAlign:"center"})],{gap:"14px"})]
+    });
+    return {root:[section],sections:[],__editor:{canvasBg:"#F8F5FB"}};
+}
+function templateStoryLayout(){
+    var story=makeSection({
+        style:{padding:"72px 24px",backgroundColor:"#ffffff"},
+        settings:{contentWidth:"wide"},
+        rows:[makeRow([makeColumn([
+            makeEl("image","",{width:"100%"},{src:"",alt:"Team photo",alignment:"center"})
+        ],{flex:"1"}),makeColumn([
+            makeEl("heading","Built by teams who care about conversion",{fontSize:"30px",color:"#240E35",fontWeight:"800",margin:"0 0 12px"},{}),
+            makeEl("text","We have helped hundreds of creators ship faster and convert better with streamlined funnels.",{fontSize:"16px",color:"#64748b",lineHeight:"1.7",margin:"0 0 16px"},{}),
+            makeEl("button","Read the story",{backgroundColor:"#240E35",color:"#ffffff",borderRadius:"999px",padding:"10px 20px",fontWeight:"700"},{actionType:"link",link:"#",alignment:"left"})
+        ],{flex:"1"})],{gap:"24px",alignItems:"center"})]
+    });
+    var stats=makeSection({
+        style:{padding:"20px 24px 64px",backgroundColor:"#ffffff"},
+        settings:{contentWidth:"wide"},
+        rows:[makeRow([
+            makeStatColumn("240%","Avg lift"),
+            makeStatColumn("12k+","Creators"),
+            makeStatColumn("4.9/5","Rating")
+        ],{gap:"12px"})]
+    });
+    return {root:[story,stats],sections:[],__editor:{canvasBg:"#F3EEF7"}};
+}
+const builtInTemplates=[
+    {id:"hero_launch",name:"Hero Launch",description:"Hero, CTA, and product image.",tags:["Landing","Sales"],preview:"hero",build:templateHeroLayout},
+    {id:"lead_capture",name:"Lead Capture",description:"Opt-in focused signup layout.",tags:["Opt-in"],preview:"lead",build:templateLeadCaptureLayout},
+    {id:"pricing_faq",name:"Pricing + FAQ",description:"Pricing card with supporting FAQs.",tags:["Sales","Checkout"],preview:"pricing",build:templatePricingFaqLayout},
+    {id:"hero_video",name:"Hero + Video",description:"Hero split with video and CTA.",tags:["Webinar","Landing"],preview:"video",build:templateHeroVideoLayout},
+    {id:"feature_grid",name:"Feature Grid",description:"Headline plus feature cards.",tags:["Landing","Product"],preview:"cards",build:templateFeatureGridLayout},
+    {id:"webinar_signup",name:"Webinar Signup",description:"Countdown and centered signup form.",tags:["Webinar","Opt-in"],preview:"lead",build:templateWebinarLayout},
+    {id:"checkout_split",name:"Checkout Split",description:"Pricing card with checkout form.",tags:["Checkout","Sales"],preview:"pricing",build:templateCheckoutLayout},
+    {id:"thank_you",name:"Thank You",description:"Centered confirmation with testimonial.",tags:["Thank You"],preview:"banner",build:templateThankYouLayout},
+    {id:"story_stats",name:"Story + Stats",description:"Story section with stats row.",tags:["About","Brand"],preview:"hero",build:templateStoryLayout}
+];
+function templatePreviewHtml(kind){
+    if(kind==="lead"){
+        return '<div class="tp-line tp-line-lg"></div><div class="tp-line tp-line-md"></div><div class="tp-form"></div><div class="tp-btn"></div>';
+    }
+    if(kind==="pricing"){
+        return '<div class="tp-card"></div><div class="tp-line tp-line-md"></div><div class="tp-line tp-line-sm"></div>';
+    }
+    if(kind==="cards"){
+        return '<div class="tp-card"></div><div class="tp-card" style="height:36px"></div><div class="tp-line tp-line-sm"></div>';
+    }
+    if(kind==="video"){
+        return '<div class="tp-line tp-line-md"></div><div class="tp-img"></div><div class="tp-btn"></div>';
+    }
+    if(kind==="banner"){
+        return '<div class="tp-line tp-line-lg"></div><div class="tp-line tp-line-sm"></div><div class="tp-btn"></div>';
+    }
+    return '<div class="tp-line tp-line-lg"></div><div class="tp-line tp-line-md"></div><div class="tp-btn"></div><div class="tp-img"></div>';
+}
+function confirmTemplateApply(message){
+    var modal=document.getElementById("fbTemplateConfirm");
+    var desc=document.getElementById("fbTemplateConfirmDesc");
+    var btnOk=document.getElementById("fbTemplateConfirmOk");
+    var btnCancel=document.getElementById("fbTemplateConfirmCancel");
+    if(!modal||!desc||!btnOk||!btnCancel){
+        return Promise.resolve(window.confirm(message));
+    }
+    desc.textContent=message;
+    modal.classList.add("open");
+    modal.setAttribute("aria-hidden","false");
+    return new Promise(function(resolve){
+        function cleanup(result){
+            modal.classList.remove("open");
+            modal.setAttribute("aria-hidden","true");
+            btnOk.removeEventListener("click",onOk);
+            btnCancel.removeEventListener("click",onCancel);
+            modal.removeEventListener("click",onBackdrop);
+            document.removeEventListener("keydown",onKey);
+            resolve(result);
+        }
+        function onOk(){cleanup(true);}
+        function onCancel(){cleanup(false);}
+        function onBackdrop(e){if(e.target===modal)cleanup(false);}
+        function onKey(e){
+            var k=String(e.key||"").toLowerCase();
+            if(k==="escape")cleanup(false);
+        }
+        btnOk.addEventListener("click",onOk);
+        btnCancel.addEventListener("click",onCancel);
+        modal.addEventListener("click",onBackdrop);
+        document.addEventListener("keydown",onKey);
+    });
+}
+function renderTemplateLibrary(){
+    var grid=document.getElementById("fbTemplateGrid");
+    if(!grid)return;
+    grid.innerHTML=(builtInTemplates||[]).map(function(t){
+        var tags=(t.tags||[]).map(function(tag){return '<span class="fb-template-tag">'+String(tag)+'</span>';}).join("");
+        return '<div class="fb-template-card">'
+            +'<div class="fb-template-preview">'+templatePreviewHtml(t.preview)+'</div>'
+            +'<div>'
+            +'<p class="fb-template-title">'+String(t.name||"Template")+'</p>'
+            +'<p class="fb-template-desc">'+String(t.description||"")+'</p>'
+            +'</div>'
+            +'<div class="fb-template-actions">'
+            +'<div class="fb-template-tags">'+tags+'</div>'
+            +'<button type="button" class="fb-btn primary" data-template-id="'+String(t.id||"")+'">Apply</button>'
+            +'</div>'
+            +'</div>';
+    }).join("");
+    grid.querySelectorAll("[data-template-id]").forEach(function(btn){
+        btn.addEventListener("click",function(){
+            var id=String(btn.getAttribute("data-template-id")||"");
+            var tpl=builtInTemplates.find(function(t){return t.id===id;});
+            if(!tpl||typeof tpl.build!=="function")return;
+            var s=cur();
+            if(!s){alert("No page selected.");return;}
+            var label=String(s.title||"this page");
+            var msg='Apply the "'+String(tpl.name||"template")+'" template to '+label+'? This will replace the current layout.';
+            confirmTemplateApply(msg).then(function(ok){
+                if(!ok)return;
+                saveToHistory();
+                var layout=tpl.build();
+                if(state.layout&&state.layout.__editor&&state.layout.__editor.canvasBg&&!(layout&&layout.__editor&&layout.__editor.canvasBg)){
+                    layout=withCanvasBgInLayout(layout,state.layout.__editor.canvasBg);
+                }
+                state.sel=null;
+                state.carouselSel=null;
+                state.editingEl=null;
+                state.linkPick=null;
+                state.layout=layout;
+                normalizeElementStyle(state.layout);
+                s.layout_json=clone(state.layout);
+                s.background_color=(state.layout&&state.layout.__editor&&state.layout.__editor.canvasBg)?String(state.layout.__editor.canvasBg):"";
+                s.template=String(tpl.id||"simple");
+                applyCanvasBgPreference();
+                syncCanvasBgControls();
+                render();
+                queueAutoSave();
+                if(saveMsg)saveMsg.textContent="Template applied. Not saved yet.";
+            });
+        });
+    });
+}
+const componentTemplates=[
+    {id:"hero_split_section",name:"Hero Split",kind:"section",build:function(){
+        var leftCol=makeColumn([
+            makeEl("heading","Launch your new offer",{fontSize:"38px",color:"#240E35",fontWeight:"800",margin:"0 0 12px",lineHeight:"1.2"},{}),
+            makeEl("text","Explain the value in one short paragraph and add a bold CTA.",{fontSize:"16px",color:"#64748b",lineHeight:"1.6",margin:"0 0 18px"},{}),
+            makeEl("button","Get Started",{backgroundColor:"#240E35",color:"#ffffff",borderRadius:"999px",padding:"12px 22px",fontWeight:"700"},{actionType:"next_step",actionStepSlug:"",link:"#",alignment:"left"})
+        ],{flex:"1"});
+        var rightCol=makeColumn([
+            makeEl("image","",{width:"100%"},{src:"",alt:"Hero image",alignment:"center"})
+        ],{flex:"1"});
+        return makeSection({style:{padding:"72px 24px",backgroundColor:"#ffffff"},rows:[makeRow([leftCol,rightCol],{gap:"24px",alignItems:"center"})]});
+    }},
+    {id:"feature_cards",name:"Feature Cards",kind:"section",build:function(){
+        return makeSection({
+            style:{padding:"56px 24px",backgroundColor:"#ffffff"},
+            settings:{contentWidth:"wide"},
+            rows:[makeRow([
+                makeFeatureCardColumn("bolt","Fast setup","Launch quickly with prebuilt blocks and layouts."),
+                makeFeatureCardColumn("star","Custom styles","Make every section match your brand."),
+                makeFeatureCardColumn("chart-line","Track results","See what converts and optimize instantly.")
+            ],{gap:"18px"})]
+        });
+    }},
+    {id:"logo_strip",name:"Logo Strip",kind:"section",build:function(){
+        return makeSection({
+            style:{padding:"32px 24px",backgroundColor:"#ffffff"},
+            settings:{contentWidth:"wide"},
+            rows:[makeRow([
+                makeLogoColumn("Northwind"),
+                makeLogoColumn("Boreal"),
+                makeLogoColumn("Summit"),
+                makeLogoColumn("Everest"),
+                makeLogoColumn("Aurora")
+            ],{gap:"10px",alignItems:"center"})]
+        });
+    }},
+    {id:"cta_banner",name:"CTA Banner",kind:"section",build:function(){
+        var leftCol=makeColumn([
+            makeEl("heading","Ready to launch today?",{fontSize:"26px",color:"#240E35",fontWeight:"800",margin:"0 0 6px"},{}),
+            makeEl("text","Start with a template and personalize it in minutes.",{fontSize:"14px",color:"#475569",margin:"0"},{})
+        ],{flex:"1"});
+        var rightCol=makeColumn([
+            makeEl("button","Start Now",{backgroundColor:"#240E35",color:"#ffffff",borderRadius:"999px",padding:"10px 20px",fontWeight:"700"},{actionType:"next_step",actionStepSlug:"",link:"#",alignment:"right"})
+        ],{flex:"0 0 auto",textAlign:"right"});
+        return makeSection({
+            style:{padding:"28px 24px",backgroundColor:"#F8F5FB",border:"1px solid #E6E1EF",borderRadius:"18px"},
+            settings:{contentWidth:"wide"},
+            rows:[makeRow([leftCol,rightCol],{gap:"16px",alignItems:"center"})]
+        });
+    }},
+    {id:"pricing_trio",name:"Pricing Trio",kind:"section",build:function(){
+        return makeSection({
+            style:{padding:"56px 24px",backgroundColor:"#ffffff"},
+            settings:{contentWidth:"wide"},
+            rows:[makeRow([
+                makeColumn([makeEl("pricing","",{width:"100%"},{plan:"Starter",price:"$19",period:"/month",subtitle:"For new teams",features:["1 funnel","Basic support","Email capture"],ctaLabel:"Choose Starter",ctaLink:"#",ctaBgColor:"#240E35",ctaTextColor:"#ffffff",badge:""})],{flex:"1"}),
+                makeColumn([makeEl("pricing","",{width:"100%"},{plan:"Growth",price:"$49",period:"/month",subtitle:"For growing teams",features:["Unlimited funnels","Custom domains","Priority support"],ctaLabel:"Choose Growth",ctaLink:"#",ctaBgColor:"#240E35",ctaTextColor:"#ffffff",badge:"Popular"})],{flex:"1"}),
+                makeColumn([makeEl("pricing","",{width:"100%"},{plan:"Scale",price:"$99",period:"/month",subtitle:"For scale-ups",features:["Advanced analytics","SLA support","Custom onboarding"],ctaLabel:"Choose Scale",ctaLink:"#",ctaBgColor:"#240E35",ctaTextColor:"#ffffff",badge:""})],{flex:"1"})
+            ],{gap:"18px",alignItems:"stretch"})]
+        });
+    }},
+    {id:"testimonials_row",name:"Testimonials Row",kind:"section",build:function(){
+        return makeSection({
+            style:{padding:"56px 24px",backgroundColor:"#ffffff"},
+            settings:{contentWidth:"wide"},
+            rows:[makeRow([
+                makeColumn([makeEl("testimonial","",{width:"100%"},{quote:"Our conversions doubled in one week.",name:"Chris Park",role:"Founder, Rally",avatar:""})],{flex:"1"}),
+                makeColumn([makeEl("testimonial","",{width:"100%"},{quote:"Best builder we have used so far.",name:"Sofia Tran",role:"Marketing Lead",avatar:""})],{flex:"1"})
+            ],{gap:"18px"})]
+        });
+    }},
+    {id:"faq_stack",name:"FAQ Stack",kind:"section",build:function(){
+        return makeSection({
+            style:{padding:"56px 24px",backgroundColor:"#ffffff"},
+            settings:{contentWidth:"medium"},
+            rows:[makeRow([makeColumn([
+                makeEl("heading","Frequently asked questions",{fontSize:"28px",color:"#240E35",fontWeight:"800",textAlign:"center",margin:"0 0 10px"},{}),
+                makeEl("faq","",{width:"100%"},{items:[{q:"Can I cancel anytime?",a:"Yes, cancel anytime from your account settings."},{q:"Do you offer a free trial?",a:"Yes, you can try it free for 14 days."},{q:"Do templates work on mobile?",a:"Yes, everything is responsive out of the box."}],itemGap:10,questionColor:"#240E35",answerColor:"#475569"})
+            ],{textAlign:"center"})],{gap:"12px"})]
+        });
+    }},
+    {id:"stats_row",name:"Stats Row",kind:"row",build:function(){
+        return makeRow([
+            makeStatColumn("98%","Satisfaction"),
+            makeStatColumn("3x","Speed"),
+            makeStatColumn("45k","Leads")
+        ],{gap:"12px",alignItems:"center"});
+    }},
+    {id:"text_media_row",name:"Text + Image Row",kind:"row",build:function(){
+        return makeRow([
+            makeColumn([
+                makeEl("heading","Explain the value",{fontSize:"26px",color:"#240E35",fontWeight:"800",margin:"0 0 10px"},{}),
+                makeEl("text","Use this row to tell a short story and point to a visual.",{fontSize:"15px",color:"#64748b",lineHeight:"1.6",margin:"0 0 16px"},{}),
+                makeEl("button","Learn More",{backgroundColor:"#240E35",color:"#ffffff",borderRadius:"999px",padding:"10px 20px",fontWeight:"700"},{actionType:"link",link:"#",alignment:"left"})
+            ],{flex:"1"}),
+            makeColumn([
+                makeEl("image","",{width:"100%"},{src:"",alt:"Feature image",alignment:"center"})
+            ],{flex:"1"})
+        ],{gap:"24px",alignItems:"center"});
+    }},
+    {id:"media_text_row",name:"Image + Text Row",kind:"row",build:function(){
+        return makeRow([
+            makeColumn([
+                makeEl("image","",{width:"100%"},{src:"",alt:"Feature image",alignment:"center"})
+            ],{flex:"1"}),
+            makeColumn([
+                makeEl("heading","Show the product",{fontSize:"26px",color:"#240E35",fontWeight:"800",margin:"0 0 10px"},{}),
+                makeEl("text","Pair visuals with a short explanation to build trust fast.",{fontSize:"15px",color:"#64748b",lineHeight:"1.6",margin:"0 0 16px"},{}),
+                makeEl("button","See Details",{backgroundColor:"#240E35",color:"#ffffff",borderRadius:"999px",padding:"10px 20px",fontWeight:"700"},{actionType:"link",link:"#",alignment:"left"})
+            ],{flex:"1"})
+        ],{gap:"24px",alignItems:"center"});
+    }}
+];
+function applyComponentTemplate(id){
+    var tpl=componentTemplates.find(function(t){return t.id===id;});
+    if(!tpl||typeof tpl.build!=="function")return;
+    saveToHistory();
+    ensureRootModel();
+    var did=false;
+    if(tpl.kind==="section"){
+        var section=tpl.build();
+        if(!section)return;
+        var rs=rootItems();
+        var insertIdx=rs.length;
+        if(state.sel&&state.sel.s){
+            var ctx=sectionRootContext(state.sel.s);
+            if(ctx&&ctx.index>=0)insertIdx=ctx.index+1;
+        }
+        rs.splice(Math.max(0,Math.min(insertIdx,rs.length)),0,Object.assign({kind:"section"},section));
+        syncSectionsFromRoot();
+        state.sel={k:"sec",s:section.id};
+        did=true;
+    }else if(tpl.kind==="row"){
+        var s=(state.sel&&state.sel.s)?sec(state.sel.s):((state.layout.sections||[])[0]||null);
+        if(!s||s.__freeformCanvas){
+            var wrapSection=makeSection({style:{padding:"56px 24px",backgroundColor:"#ffffff"},settings:{contentWidth:"wide"},rows:[tpl.build()]});
+            var rs2=rootItems();
+            var insertIdx2=rs2.length;
+            if(state.sel&&state.sel.s){
+                var ctx2=sectionRootContext(state.sel.s);
+                if(ctx2&&ctx2.index>=0)insertIdx2=ctx2.index+1;
+            }
+            rs2.splice(Math.max(0,Math.min(insertIdx2,rs2.length)),0,Object.assign({kind:"section"},wrapSection));
+            syncSectionsFromRoot();
+            state.sel={k:"sec",s:wrapSection.id};
+            did=true;
+        }else{
+            s.rows=Array.isArray(s.rows)?s.rows:[];
+            var rowObj=tpl.build();
+            var rowIdx=s.rows.length;
+            if(state.sel&&state.sel.r){
+                var ri=s.rows.findIndex(function(r){return String(r.id||"")===String(state.sel.r||"");});
+                if(ri>=0)rowIdx=ri+1;
+            }
+            s.rows.splice(Math.max(0,Math.min(rowIdx,s.rows.length)),0,rowObj);
+            state.sel={k:"row",s:s.id,r:rowObj.id};
+            did=true;
+        }
+    }
+    if(did){
+        render();
+        queueAutoSave();
+        if(saveMsg)saveMsg.textContent="Template added. Not saved yet.";
+    }
+}
 const cur=()=>steps.find(s=>+s.id===+state.sid);
 function escapeRegExp(v){return String(v||"").replace(/[.*+?^${}()|[\]\\]/g,"\\$&");}
 function slugifyPage(v){
@@ -8664,6 +9197,11 @@ function render(){renderCanvas();renderSettings();if(state.sel||state.carouselSe
 
 var _sidebarDragActive=false;
 document.querySelectorAll(".fb-lib button").forEach(b=>{
+    if(b.dataset.compTemplate){
+        b.draggable=false;
+        b.onclick=()=>{applyComponentTemplate(String(b.dataset.compTemplate||""));};
+        return;
+    }
     b.ondragstart=e=>{_sidebarDragActive=true;e.dataTransfer.setData("c",b.dataset.c||"");};
     b.ondragend=e=>{setTimeout(()=>{_sidebarDragActive=false;},100);};
     b.onclick=()=>{if(_sidebarDragActive){_sidebarDragActive=false;return;}addComponent(b.dataset.c||"");render();};
@@ -8671,19 +9209,25 @@ document.querySelectorAll(".fb-lib button").forEach(b=>{
 
 wireStepManagement();
 var fbGrid=document.getElementById("fbGrid"),fbComponentsHide=document.getElementById("fbComponentsHide"),fbComponentsShow=document.getElementById("fbComponentsShow");
-var fbTabComponents=document.getElementById("fbTabComponents"),fbTabSettings=document.getElementById("fbTabSettings"),fbTabHistory=document.getElementById("fbTabHistory"),
-    fbLeftPanelComponents=document.getElementById("fbLeftPanelComponents"),fbLeftPanelSettings=document.getElementById("fbLeftPanelSettings"),fbLeftPanelHistory=document.getElementById("fbLeftPanelHistory");
+var fbTabComponents=document.getElementById("fbTabComponents"),fbTabSettings=document.getElementById("fbTabSettings"),fbTabTemplates=document.getElementById("fbTabTemplates"),fbTabHistory=document.getElementById("fbTabHistory"),
+    fbLeftPanelComponents=document.getElementById("fbLeftPanelComponents"),fbLeftPanelSettings=document.getElementById("fbLeftPanelSettings"),fbLeftPanelTemplates=document.getElementById("fbLeftPanelTemplates"),fbLeftPanelHistory=document.getElementById("fbLeftPanelHistory");
 function showLeftPanel(panel){
     if(fbLeftPanelSettings)fbLeftPanelSettings.classList.add("hidden");
     if(fbLeftPanelComponents)fbLeftPanelComponents.classList.add("hidden");
+    if(fbLeftPanelTemplates)fbLeftPanelTemplates.classList.add("hidden");
     if(fbLeftPanelHistory)fbLeftPanelHistory.classList.add("hidden");
     if(fbTabComponents)fbTabComponents.classList.remove("active");
     if(fbTabSettings)fbTabSettings.classList.remove("active");
+    if(fbTabTemplates)fbTabTemplates.classList.remove("active");
     if(fbTabHistory)fbTabHistory.classList.remove("active");
 
     if(panel==="settings"){
         if(fbLeftPanelSettings)fbLeftPanelSettings.classList.remove("hidden");
         if(fbTabSettings)fbTabSettings.classList.add("active");
+    }else if(panel==="templates"){
+        if(fbLeftPanelTemplates)fbLeftPanelTemplates.classList.remove("hidden");
+        if(fbTabTemplates)fbTabTemplates.classList.add("active");
+        renderTemplateLibrary();
     }else if(panel==="history"){
         if(fbLeftPanelHistory)fbLeftPanelHistory.classList.remove("hidden");
         if(fbTabHistory)fbTabHistory.classList.add("active");
@@ -8695,6 +9239,7 @@ function showLeftPanel(panel){
 }
 if(fbTabComponents)fbTabComponents.onclick=()=>showLeftPanel("components");
 if(fbTabSettings)fbTabSettings.onclick=()=>showLeftPanel("settings");
+if(fbTabTemplates)fbTabTemplates.onclick=()=>showLeftPanel("templates");
 if(fbTabHistory)fbTabHistory.onclick=()=>showLeftPanel("history");
 var _canvasLockedWidth=0;
 var _canvasInnerWidth=0;
