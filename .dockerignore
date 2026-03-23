@@ -1,0 +1,12 @@
+.git
+.gitignore
+.env
+.env.*
+.vscode
+node_modules
+vendor
+storage
+tests
+README.md
+readme-*.md
+preview_page.html
