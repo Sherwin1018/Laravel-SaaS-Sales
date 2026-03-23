@@ -50,7 +50,7 @@ class TenantController extends Controller
                 'required',
                 'string',
                 'min:12',
-                'max:14',
+                'max:64',
                 'regex:/[a-z]/',
                 'regex:/[A-Z]/',
                 'regex:/[0-9]/',
@@ -91,7 +91,11 @@ class TenantController extends Controller
             return redirect()->route('admin.tenants.index')
                 ->with('success', 'Added Successfully');
         } catch (\Throwable $e) {
-            return redirect()->back()->withInput()->with('error', 'Added Failed');
+            report($e);
+
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Added Failed: '.$e->getMessage());
         }
     }
 

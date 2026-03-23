@@ -368,7 +368,7 @@
                     </div>
                 </div>
                 <p style="margin-bottom: 16px; color: var(--theme-muted, #6B7280); font-size: 12px; font-weight: 600;">
-                    12-14 chars, uppercase, lowercase, number, and special character.
+                    12-64 chars, uppercase, lowercase, number, and special character.
                 </p>
                 <div style="display: flex; gap: 8px;">
                     <button type="submit" style="padding: 8px 16px; background-color: var(--theme-primary, #240E35); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
