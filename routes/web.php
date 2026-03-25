@@ -173,6 +173,8 @@ Route::middleware(['auth', 'verified', 'role:sales-agent,marketing-manager,accou
         Route::get('/funnels/{funnel}/preview/{step?}', [FunnelController::class, 'preview'])->name('funnels.preview');
         Route::put('/funnels/{funnel}', [FunnelController::class, 'update'])->name('funnels.update');
         Route::post('/funnels/{funnel}/builder/layout', [FunnelController::class, 'saveLayout'])->name('funnels.builder.layout.save');
+        Route::get('/funnels/{funnel}/builder/assets', [FunnelController::class, 'builderAssets'])->name('funnels.builder.assets.index');
+        Route::post('/funnels/{funnel}/builder/assets/delete', [FunnelController::class, 'destroyBuilderAssets'])->name('funnels.builder.assets.destroy');
         Route::post('/funnels/{funnel}/builder/upload-image', [FunnelController::class, 'uploadBuilderImage'])->name('funnels.builder.image.upload');
         Route::post('/funnels/{funnel}/publish', [FunnelController::class, 'publish'])->name('funnels.publish');
         Route::post('/funnels/{funnel}/unpublish', [FunnelController::class, 'unpublish'])->name('funnels.unpublish');
@@ -180,6 +182,7 @@ Route::middleware(['auth', 'verified', 'role:sales-agent,marketing-manager,accou
         Route::post('/funnels/{funnel}/steps', [FunnelController::class, 'storeStep'])->name('funnels.steps.store');
         Route::put('/funnels/{funnel}/steps/{step}', [FunnelController::class, 'updateStep'])->name('funnels.steps.update');
         Route::delete('/funnels/{funnel}/steps/{step}', [FunnelController::class, 'destroyStep'])->name('funnels.steps.destroy');
+        Route::post('/funnels/{funnel}/steps/{step}/versions', [FunnelController::class, 'storeVersion'])->name('funnels.steps.versions.store');
         Route::post('/funnels/{funnel}/steps/reorder', [FunnelController::class, 'reorderSteps'])->name('funnels.steps.reorder');
 
     });

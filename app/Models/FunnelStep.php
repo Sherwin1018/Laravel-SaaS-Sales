@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class FunnelStep extends Model
 {
@@ -64,5 +65,10 @@ class FunnelStep extends Model
     public function funnel(): BelongsTo
     {
         return $this->belongsTo(Funnel::class);
+    }
+
+    public function revisions(): HasMany
+    {
+        return $this->hasMany(FunnelStepRevision::class)->orderBy('created_at')->orderBy('id');
     }
 }

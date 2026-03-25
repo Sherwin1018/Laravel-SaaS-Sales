@@ -46,7 +46,7 @@
             background: {{ $step->button_color ?: 'var(--theme-primary, #2563eb)' }};
             color: #fff;
             text-decoration: none;
-            font-weight: 700;
+            font-weight: inherit;
             cursor: pointer;
             box-shadow: none;
         }
@@ -71,6 +71,10 @@
         .builder-row { display: flex; gap: 8px; flex-wrap: wrap; padding: 6px; }
         .builder-col { min-width: 240px; min-height: 24px; flex: 1 1 0; position: relative; overflow: hidden; background: #ffffff; }
         .builder-col > .builder-col-inner > .builder-el { max-width: 100%; overflow: hidden; }
+        .builder-col.builder-col--abs { overflow: visible; }
+        .builder-col.builder-col--abs > .builder-col-inner { overflow: visible; position: relative; }
+        .builder-col.builder-col--abs > .builder-col-inner > .builder-el { max-width: none; overflow: visible; }
+        .builder-col.builder-col--abs .builder-el + .builder-el { margin-top: 0; }
         .builder-el + .builder-el { margin-top: 10px; }
         .builder-heading { margin: 0; font-size: 32px; line-height: 1.2; overflow-wrap: break-word; word-break: break-word; }
         .builder-text { margin: 0; color: #334155; line-height: normal; white-space: pre-wrap; overflow-wrap: break-word; word-break: break-word; }
@@ -83,6 +87,32 @@
         .builder-menu { width: 100%; }
         .builder-menu-list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; }
         .builder-menu-link { text-decoration: none; text-underline-offset: 3px; font: inherit; }
+        .builder-testimonial { display: grid; gap: 10px; }
+        .builder-testimonial-quote { font-style: italic; line-height: 1.5; color: #334155; }
+        .builder-testimonial-author { display: flex; align-items: center; gap: 10px; }
+        .builder-testimonial-avatar { width: 42px; height: 42px; border-radius: 999px; object-fit: cover; background: #e2e8f0; flex-shrink: 0; }
+        .builder-testimonial-name { font-weight: 800; color: #0f172a; }
+        .builder-testimonial-role { font-size: 12px; color: #64748b; }
+        .builder-faq { display: grid; gap: 10px; }
+        .builder-faq-item { border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; }
+        .builder-faq-item:last-child { border-bottom: 0; padding-bottom: 0; }
+        .builder-faq-question { font-weight: 800; color: #0f172a; }
+        .builder-faq-answer { color: #475569; font-size: 13px; margin-top: 4px; white-space: pre-wrap; }
+        .builder-pricing { display: grid; gap: 12px; }
+        .builder-pricing-badge { align-self: flex-start; background: #e2e8f0; color: #0f172a; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; }
+        .builder-pricing-title { font-size: 18px; font-weight: 900; color: #0f172a; }
+        .builder-pricing-price { font-size: 32px; font-weight: 900; color: #16a34a; }
+        .builder-pricing-period { font-size: 12px; color: #64748b; margin-left: 4px; }
+        .builder-pricing-subtitle { font-size: 12px; color: #64748b; }
+        .builder-pricing-features { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+        .builder-pricing-features li { display: flex; align-items: flex-start; gap: 6px; font-size: 12px; color: #334155; }
+        .builder-pricing-cta { display: inline-flex; align-items: center; justify-content: center; padding: 8px 12px; border-radius: 8px; font-weight: 700; text-decoration: none; border: 0; cursor: pointer; }
+        .builder-countdown { display: grid; gap: 10px; }
+        .builder-countdown-status { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; }
+        .builder-countdown-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+        .builder-countdown-box { padding: 8px; border-radius: 10px; background: rgba(15, 23, 42, 0.04); text-align: center; }
+        .builder-countdown-num { font-weight: 800; font-size: 20px; color: #0f172a; }
+        .builder-countdown-unit { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; }
         .builder-carousel-wrap { position: relative; min-height: 180px; border-radius: 10px; overflow: hidden; color: #fff; background: linear-gradient(135deg, #0ea5e9, #0284c7); border: 0; }
         .builder-carousel-track { display: flex; width: 100%; height: 100%; transition: transform .35s ease; }
         .builder-carousel-slide { width: 100%; height: 100%; flex: 0 0 100%; padding: 0; box-sizing: border-box; display: flex; flex-direction: column; }
@@ -398,6 +428,39 @@
             }
             return $styleToString($filtered);
         };
+        $clampScale = function ($scale): float {
+            $n = (float) $scale;
+            if ($n <= 0) return 1.0;
+            if ($n < 0.5) return 0.5;
+            if ($n > 3.0) return 3.0;
+            return $n;
+        };
+        $scalePxValue = function ($val, float $scale): string {
+            $raw = trim((string) $val);
+            if ($raw === '') return '';
+            if (!preg_match('/^-?\d+(\.\d+)?(px)?$/', $raw)) return $raw;
+            $n = (float) str_replace('px', '', $raw);
+            return round($n * $scale) . 'px';
+        };
+        $scalePaddingValue = function ($pad, float $scale) use ($scalePxValue): string {
+            $raw = trim((string) $pad);
+            if ($raw === '') return '';
+            $parts = preg_split('/\s+/', $raw);
+            if (!$parts) return '';
+            foreach ($parts as $part) {
+                if (!preg_match('/^-?\d+(\.\d+)?(px)?$/', $part)) {
+                    return $raw;
+                }
+            }
+            $vals = array_map(function ($part) use ($scalePxValue, $scale) {
+                return $scalePxValue($part, $scale);
+            }, $parts);
+            $t = $vals[0] ?? '0px';
+            $r = $vals[1] ?? $t;
+            $b = $vals[2] ?? $t;
+            $l = $vals[3] ?? $r;
+            return $t . ' ' . $r . ' ' . $b . ' ' . $l;
+        };
     @endphp
 
     <div class="wrap">
@@ -498,10 +561,12 @@
                                         $elements = is_array($column['elements'] ?? null) ? $column['elements'] : [];
                                         $colMinHeight = 0;
                                         $colMinWidth = 0;
+                                        $hasAbsEl = false;
                                         foreach ($elements as $_el) {
                                             $_elSettings = is_array($_el['settings'] ?? null) ? $_el['settings'] : [];
                                             $_elStyle = is_array($_el['style'] ?? null) ? $_el['style'] : [];
                                             if (trim((string) ($_elSettings['positionMode'] ?? '')) === 'absolute' || trim((string) ($_elStyle['position'] ?? '')) === 'absolute') {
+                                                $hasAbsEl = true;
                                                 $_ey = (int) ($_elSettings['freeY'] ?? 0);
                                                 if ($_ey <= 0) $_ey = (int) str_replace('px', '', (string) ($_elStyle['top'] ?? '0'));
                                                 $_eh = (int) str_replace('px', '', (string) ($_elStyle['height'] ?? '0'));
@@ -520,10 +585,11 @@
                                         $freeformWidth = ($isFreeformCanvas && $editorCanvasWidth > 0) ? $editorCanvasWidth : (($isFreeformCanvas && $colMinWidth > 0) ? $colMinWidth : 0);
                                         $colWidthStyle = $freeformWidth > 0 ? 'width:' . $freeformWidth . 'px;' : '';
                                     @endphp
-                                    <div class="builder-col" style="{{ $colStyle }}{{ $colHeightStyle }}{{ $colWidthStyle }}">
+                                    <div class="builder-col{{ $hasAbsEl ? ' builder-col--abs' : '' }}" style="{{ $colStyle }}{{ $colHeightStyle }}{{ $colWidthStyle }}">
                                         <div class="builder-col-inner" @if($colInnerMax !== '') style="max-width: {{ $colInnerMax }}; margin: 0 auto;" @endif>
                                         @foreach($elements as $element)
                                             @php
+                                                $elId = trim((string) ($element['id'] ?? ''));
                                                 $type = $element['type'] ?? 'text';
                                                 $content = (string) ($element['content'] ?? '');
                                                 $rawStyle = is_array($element['style'] ?? null) ? $element['style'] : [];
@@ -1021,25 +1087,278 @@
                                                     </div>
                                                 @elseif($type === 'spacer')
                                                     <div style="{{ $style ?: 'height:24px' }}"></div>
+                                                @elseif($type === 'testimonial')
+                                                    @php
+                                                        $tQuote = trim((string) ($settings['quote'] ?? $content));
+                                                        if ($tQuote === '') $tQuote = 'Testimonial';
+                                                        $tName = trim((string) ($settings['name'] ?? ''));
+                                                        $tRole = trim((string) ($settings['role'] ?? ''));
+                                                        $tAvatar = trim((string) ($settings['avatar'] ?? ''));
+                                                        $tColor = trim((string) ($rawStyle['color'] ?? ''));
+                                                        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $tColor)) $tColor = '';
+                                                        $scale = $clampScale($settings['contentScale'] ?? 1);
+                                                        $scaledContentStyle = $contentStyle;
+                                                        if ($scaledContentStyle !== '' && substr($scaledContentStyle, -1) !== ';') {
+                                                            $scaledContentStyle .= ';';
+                                                        }
+                                                        $testimonialGap = (int) round(10 * $scale);
+                                                        $scaledContentStyle .= 'gap:' . $testimonialGap . 'px;';
+                                                        $pad = trim((string) ($rawStyle['padding'] ?? ''));
+                                                        if ($pad !== '') {
+                                                            $scaledContentStyle .= 'padding:' . $scalePaddingValue($pad, $scale) . ';';
+                                                        }
+                                                        $radius = trim((string) ($rawStyle['borderRadius'] ?? ''));
+                                                        if ($radius !== '') {
+                                                            $scaledContentStyle .= 'border-radius:' . $scalePxValue($radius, $scale) . ';';
+                                                        }
+                                                        $authorGap = (int) round(10 * $scale);
+                                                        $avatarSize = (int) round(42 * $scale);
+                                                        $quoteStyle = 'font-size:' . (int) round(16 * $scale) . 'px;';
+                                                        $nameStyle = 'font-size:' . (int) round(16 * $scale) . 'px;';
+                                                        $roleStyle = 'font-size:' . (int) round(12 * $scale) . 'px;';
+                                                        if ($tColor !== '') {
+                                                            $quoteStyle .= 'color:' . $tColor . ';';
+                                                            $nameStyle .= 'color:' . $tColor . ';';
+                                                        }
+                                                        if ($tColor !== '') {
+                                                            $roleStyle .= 'color:' . $tColor . ';opacity:0.7;';
+                                                        }
+                                                    @endphp
+                                                    <div class="builder-testimonial" style="{{ $scaledContentStyle }}">
+                                                        <div class="builder-testimonial-quote" style="{{ $quoteStyle }}">{{ $tQuote }}</div>
+                                                        <div class="builder-testimonial-author" style="gap: {{ $authorGap }}px;">
+                                                            @if($tAvatar !== '')
+                                                                <img class="builder-testimonial-avatar" style="width: {{ $avatarSize }}px; height: {{ $avatarSize }}px;" src="{{ $tAvatar }}" alt="{{ $tName !== '' ? $tName : 'Avatar' }}">
+                                                            @endif
+                                                            <div>
+                                                                <div class="builder-testimonial-name" style="{{ $nameStyle }}">{{ $tName !== '' ? $tName : 'Customer name' }}</div>
+                                                                @if($tRole !== '')
+                                                                    <div class="builder-testimonial-role" style="{{ $roleStyle }}">{{ $tRole }}</div>
+                                                                @endif
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                @elseif($type === 'faq')
+                                                    @php
+                                                        $faqItems = is_array($settings['items'] ?? null) ? $settings['items'] : [];
+                                                        if (count($faqItems) === 0) {
+                                                            $faqItems = [['q' => 'Question 1', 'a' => 'Answer 1']];
+                                                        }
+                                                        $faqQColor = trim((string) ($settings['questionColor'] ?? '#0f172a'));
+                                                        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $faqQColor)) $faqQColor = '#0f172a';
+                                                        $faqAColor = trim((string) ($settings['answerColor'] ?? '#475569'));
+                                                        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $faqAColor)) $faqAColor = '#475569';
+                                                        $faqGap = (int) ($settings['itemGap'] ?? 10);
+                                                        if ($faqGap < 0) $faqGap = 0;
+                                                        $scale = $clampScale($settings['contentScale'] ?? 1);
+                                                        $scaledGap = (int) round($faqGap * $scale);
+                                                        $faqGapStyle = $scaledGap > 0 ? 'gap:' . $scaledGap . 'px;' : '';
+                                                        $faqInlineStyle = $contentStyle;
+                                                        if ($faqInlineStyle !== '' && substr($faqInlineStyle, -1) !== ';') {
+                                                            $faqInlineStyle .= ';';
+                                                        }
+                                                        if ($faqGapStyle !== '') {
+                                                            $faqInlineStyle .= $faqGapStyle;
+                                                        }
+                                                        $pad = trim((string) ($rawStyle['padding'] ?? ''));
+                                                        if ($pad !== '') {
+                                                            $faqInlineStyle .= 'padding:' . $scalePaddingValue($pad, $scale) . ';';
+                                                        }
+                                                        $radius = trim((string) ($rawStyle['borderRadius'] ?? ''));
+                                                        if ($radius !== '') {
+                                                            $faqInlineStyle .= 'border-radius:' . $scalePxValue($radius, $scale) . ';';
+                                                        }
+                                                        $faqQStyle = 'font-size:' . (int) round(16 * $scale) . 'px;color:' . $faqQColor . ';';
+                                                        $faqAStyle = 'font-size:' . (int) round(13 * $scale) . 'px;color:' . $faqAColor . ';';
+                                                    @endphp
+                                                    <div class="builder-faq" style="{{ $faqInlineStyle }}">
+                                                        @foreach($faqItems as $fi => $faq)
+                                                            @php
+                                                                $fq = trim((string) ($faq['q'] ?? ''));
+                                                                $fa = trim((string) ($faq['a'] ?? ''));
+                                                                if ($fq === '') $fq = 'Question ' . ($fi + 1);
+                                                                if ($fa === '') $fa = 'Answer ' . ($fi + 1);
+                                                            @endphp
+                                                            <div class="builder-faq-item">
+                                                                <div class="builder-faq-question" style="{{ $faqQStyle }}">{{ $fq }}</div>
+                                                                <div class="builder-faq-answer" style="{{ $faqAStyle }}">{{ $fa }}</div>
+                                                            </div>
+                                                        @endforeach
+                                                    </div>
+                                                @elseif($type === 'pricing')
+                                                    @php
+                                                        $plan = trim((string) ($settings['plan'] ?? 'Plan'));
+                                                        $priceVal = trim((string) ($settings['price'] ?? '$0'));
+                                                        $regularPrice = trim((string) ($settings['regularPrice'] ?? ''));
+                                                        $period = trim((string) ($settings['period'] ?? ''));
+                                                        $subtitle = trim((string) ($settings['subtitle'] ?? ''));
+                                                        $badge = trim((string) ($settings['badge'] ?? ''));
+                                                        $features = is_array($settings['features'] ?? null) ? $settings['features'] : [];
+                                                        if (count($features) === 0) {
+                                                            $features = ['Feature one', 'Feature two', 'Feature three'];
+                                                        }
+                                                        $pricingTextColor = trim((string) ($rawStyle['color'] ?? ''));
+                                                        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $pricingTextColor)) $pricingTextColor = '';
+                                                        $ctaLabel = trim((string) ($settings['ctaLabel'] ?? 'Get Started'));
+                                                        $ctaLink = trim((string) ($settings['ctaLink'] ?? '#'));
+                                                        $ctaBg = trim((string) ($settings['ctaBgColor'] ?? '#0f172a'));
+                                                        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $ctaBg)) $ctaBg = '#0f172a';
+                                                        $ctaText = trim((string) ($settings['ctaTextColor'] ?? '#ffffff'));
+                                                        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $ctaText)) $ctaText = '#ffffff';
+                                                        $promoKey = trim((string) ($settings['promoKey'] ?? ''));
+                                                        $linkedPricingIdsRaw = $settings['linkedPricingIds'] ?? [];
+                                                        $linkedPricingIds = [];
+                                                        if (is_array($linkedPricingIdsRaw)) {
+                                                            foreach ($linkedPricingIdsRaw as $lp) {
+                                                                $lp = trim((string) $lp);
+                                                                if ($lp !== '' && !in_array($lp, $linkedPricingIds, true)) $linkedPricingIds[] = $lp;
+                                                            }
+                                                        } elseif (is_string($linkedPricingIdsRaw)) {
+                                                            $lp = trim($linkedPricingIdsRaw);
+                                                            if ($lp !== '') $linkedPricingIds[] = $lp;
+                                                        }
+                                                        $legacyLinked = trim((string) ($settings['linkedPricingId'] ?? ''));
+                                                        if (!$linkedPricingIds && $legacyLinked !== '') $linkedPricingIds = [$legacyLinked];
+                                                        $linkedPricingId = $linkedPricingIds[0] ?? '';
+                                                        $linkedPricingIdsAttr = implode(',', $linkedPricingIds);
+                                                        $scale = $clampScale($settings['contentScale'] ?? 1);
+                                                        $scaledContentStyle = $contentStyle;
+                                                        if ($scaledContentStyle !== '' && substr($scaledContentStyle, -1) !== ';') {
+                                                            $scaledContentStyle .= ';';
+                                                        }
+                                                        $pricingGap = (int) round(12 * $scale);
+                                                        $scaledContentStyle .= 'gap:' . $pricingGap . 'px;';
+                                                        $pad = trim((string) ($rawStyle['padding'] ?? ''));
+                                                        if ($pad !== '') {
+                                                            $scaledContentStyle .= 'padding:' . $scalePaddingValue($pad, $scale) . ';';
+                                                        }
+                                                        $radius = trim((string) ($rawStyle['borderRadius'] ?? ''));
+                                                        if ($radius !== '') {
+                                                            $scaledContentStyle .= 'border-radius:' . $scalePxValue($radius, $scale) . ';';
+                                                        }
+                                                        $badgeStyle = 'font-size:' . (int) round(11 * $scale) . 'px;padding:' . (int) round(4 * $scale) . 'px ' . (int) round(10 * $scale) . 'px;';
+                                                        $titleStyle = 'font-size:' . (int) round(18 * $scale) . 'px;';
+                                                        $priceStyle = 'font-size:' . (int) round(32 * $scale) . 'px;';
+                                                        $periodStyle = 'font-size:' . (int) round(12 * $scale) . 'px;';
+                                                        $subtitleStyle = 'font-size:' . (int) round(12 * $scale) . 'px;';
+                                                        $featureStyle = 'font-size:' . (int) round(12 * $scale) . 'px;gap:' . (int) round(6 * $scale) . 'px;';
+                                                        $featureGapStyle = 'gap:' . (int) round(6 * $scale) . 'px;';
+                                                        $ctaStyle = 'font-size:' . (int) round(16 * $scale) . 'px;padding:' . (int) round(8 * $scale) . 'px ' . (int) round(12 * $scale) . 'px;';
+                                                    @endphp
+                                                    <div class="builder-pricing" data-pricing-id="{{ $elId }}" data-pricing-key="{{ $promoKey }}" data-pricing-sale="{{ $priceVal }}" data-pricing-regular="{{ $regularPrice }}" style="{{ $scaledContentStyle }}">
+                                                        @if($badge !== '')
+                                                            <div class="builder-pricing-badge" style="{{ $badgeStyle }}">{{ $badge }}</div>
+                                                        @endif
+                                                        <div class="builder-pricing-title" style="{{ $titleStyle }}@if($pricingTextColor !== '')color: {{ $pricingTextColor }};@endif">{{ $plan !== '' ? $plan : 'Plan' }}</div>
+                                                        <div>
+                                                            <span class="builder-pricing-price" data-pricing-price style="{{ $priceStyle }}@if($pricingTextColor !== '')color: {{ $pricingTextColor }};@endif">{{ $priceVal !== '' ? $priceVal : '$0' }}</span>
+                                                            @if($period !== '')
+                                                                <span class="builder-pricing-period" style="{{ $periodStyle }}@if($pricingTextColor !== '')color: {{ $pricingTextColor }}; opacity: 0.7;@endif">{{ $period }}</span>
+                                                            @endif
+                                                        </div>
+                                                        @if($subtitle !== '')
+                                                            <div class="builder-pricing-subtitle" style="{{ $subtitleStyle }}@if($pricingTextColor !== '')color: {{ $pricingTextColor }}; opacity: 0.7;@endif">{{ $subtitle }}</div>
+                                                        @endif
+                                                        <ul class="builder-pricing-features" style="{{ $featureGapStyle }}">
+                                                            @foreach($features as $fi => $feat)
+                                                                @php
+                                                                    $featText = trim((string) $feat);
+                                                                    if ($featText === '') $featText = 'Feature ' . ($fi + 1);
+                                                                @endphp
+                                                                <li style="{{ $featureStyle }}@if($pricingTextColor !== '')color: {{ $pricingTextColor }};@endif"><i class="fas fa-check" aria-hidden="true"></i> {{ $featText }}</li>
+                                                            @endforeach
+                                                        </ul>
+                                                        @if($ctaLabel !== '')
+                                                            <a class="builder-pricing-cta" href="{{ $ctaLink !== '' ? $ctaLink : '#' }}" style="{{ $ctaStyle }}background: {{ $ctaBg }}; color: {{ $ctaText }};">{{ $ctaLabel }}</a>
+                                                        @endif
+                                                    </div>
                                                 @elseif($type === 'countdown')
-                                                    {{-- Countdown component removed --}}
+                                                    @php
+                                                        $cdEnd = trim((string) ($settings['endAt'] ?? ''));
+                                                        $cdLabel = trim((string) ($settings['label'] ?? 'Offer ends in'));
+                                                        $cdExpired = trim((string) ($settings['expiredText'] ?? 'Offer ended'));
+                                                        $cdNumberColor = trim((string) ($settings['numberColor'] ?? '#0f172a'));
+                                                        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $cdNumberColor)) $cdNumberColor = '#0f172a';
+                                                        $cdLabelColor = trim((string) ($settings['labelColor'] ?? '#64748b'));
+                                                        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $cdLabelColor)) $cdLabelColor = '#64748b';
+                                                        $cdGap = (int) ($settings['itemGap'] ?? 8);
+                                                        if ($cdGap < 0) $cdGap = 0;
+                                                        $promoKey = trim((string) ($settings['promoKey'] ?? ''));
+                                                        $linkedPricingIdsRaw = $settings['linkedPricingIds'] ?? [];
+                                                        $linkedPricingIds = [];
+                                                        if (is_array($linkedPricingIdsRaw)) {
+                                                            foreach ($linkedPricingIdsRaw as $lp) {
+                                                                $lp = trim((string) $lp);
+                                                                if ($lp !== '' && !in_array($lp, $linkedPricingIds, true)) $linkedPricingIds[] = $lp;
+                                                            }
+                                                        } elseif (is_string($linkedPricingIdsRaw)) {
+                                                            $lp = trim($linkedPricingIdsRaw);
+                                                            if ($lp !== '') $linkedPricingIds[] = $lp;
+                                                        }
+                                                        $legacyLinked = trim((string) ($settings['linkedPricingId'] ?? ''));
+                                                        if (!$linkedPricingIds && $legacyLinked !== '') $linkedPricingIds = [$legacyLinked];
+                                                        $linkedPricingId = $linkedPricingIds[0] ?? '';
+                                                        $linkedPricingIdsAttr = implode(',', $linkedPricingIds);
+                                                        $scale = $clampScale($settings['contentScale'] ?? 1);
+                                                        $scaledContentStyle = $contentStyle;
+                                                        if ($scaledContentStyle !== '' && substr($scaledContentStyle, -1) !== ';') {
+                                                            $scaledContentStyle .= ';';
+                                                        }
+                                                        $cdContainerGap = (int) round(10 * $scale);
+                                                        $scaledContentStyle .= 'gap:' . $cdContainerGap . 'px;';
+                                                        $pad = trim((string) ($rawStyle['padding'] ?? ''));
+                                                        if ($pad !== '') {
+                                                            $scaledContentStyle .= 'padding:' . $scalePaddingValue($pad, $scale) . ';';
+                                                        }
+                                                        $radius = trim((string) ($rawStyle['borderRadius'] ?? ''));
+                                                        if ($radius !== '') {
+                                                            $scaledContentStyle .= 'border-radius:' . $scalePxValue($radius, $scale) . ';';
+                                                        }
+                                                        $scaledGap = (int) round($cdGap * $scale);
+                                                        $cdGapStyle = $scaledGap > 0 ? 'gap:' . $scaledGap . 'px;' : '';
+                                                        $labelStyle = 'font-size:' . (int) round(12 * $scale) . 'px;color:' . $cdLabelColor . ';';
+                                                        $numStyle = 'font-size:' . (int) round(20 * $scale) . 'px;color:' . $cdNumberColor . ';';
+                                                        $unitStyle = 'font-size:' . (int) round(10 * $scale) . 'px;color:' . $cdLabelColor . ';';
+                                                        $boxStyle = 'padding:' . (int) round(8 * $scale) . 'px;';
+                                                    @endphp
+                                                    <div class="builder-countdown" data-countdown="{{ $cdEnd }}" data-expired="{{ $cdExpired }}" data-promo-key="{{ $promoKey }}" data-linked-pricing-id="{{ $linkedPricingId }}" data-linked-pricing-ids="{{ $linkedPricingIdsAttr }}" style="{{ $scaledContentStyle }}">
+                                                        <div class="builder-countdown-status" data-countdown-status style="{{ $labelStyle }}">{{ $cdLabel }}</div>
+                                                        <div class="builder-countdown-grid" style="{{ $cdGapStyle }}">
+                                                            <div class="builder-countdown-box" style="{{ $boxStyle }}">
+                                                                <div class="builder-countdown-num" data-countdown-val="days" style="{{ $numStyle }}">00</div>
+                                                                <div class="builder-countdown-unit" style="{{ $unitStyle }}">Days</div>
+                                                            </div>
+                                                            <div class="builder-countdown-box" style="{{ $boxStyle }}">
+                                                                <div class="builder-countdown-num" data-countdown-val="hours" style="{{ $numStyle }}">00</div>
+                                                                <div class="builder-countdown-unit" style="{{ $unitStyle }}">Hours</div>
+                                                            </div>
+                                                            <div class="builder-countdown-box" style="{{ $boxStyle }}">
+                                                                <div class="builder-countdown-num" data-countdown-val="minutes" style="{{ $numStyle }}">00</div>
+                                                                <div class="builder-countdown-unit" style="{{ $unitStyle }}">Mins</div>
+                                                            </div>
+                                                            <div class="builder-countdown-box" style="{{ $boxStyle }}">
+                                                                <div class="builder-countdown-num" data-countdown-val="seconds" style="{{ $numStyle }}">00</div>
+                                                                <div class="builder-countdown-unit" style="{{ $unitStyle }}">Secs</div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 @elseif($type === 'form')
                                                     @php
                                                         $formWidth = trim((string) ($settings['width'] ?? ($settings['formWidth'] ?? ($rawStyle['width'] ?? '100%'))));
                                                         if ($formWidth === '' || !preg_match('/^[#(),.%\-\sA-Za-z0-9]+$/u', $formWidth)) {
                                                             $formWidth = '100%';
                                                         }
-                                                        $formLabelColor = trim((string) ($settings['labelColor'] ?? '#0f172a'));
+                                                        $formLabelColor = trim((string) ($settings['labelColor'] ?? '#240E35'));
                                                         if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $formLabelColor)) {
-                                                            $formLabelColor = '#0f172a';
+                                                            $formLabelColor = '#240E35';
                                                         }
                                                         $formPlaceholderColor = trim((string) ($settings['placeholderColor'] ?? '#94a3b8'));
                                                         if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $formPlaceholderColor)) {
                                                             $formPlaceholderColor = '#94a3b8';
                                                         }
-                                                        $formButtonBgColor = trim((string) ($settings['buttonBgColor'] ?? '#2563eb'));
+                                                        $formButtonBgColor = trim((string) ($settings['buttonBgColor'] ?? '#240E35'));
                                                         if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $formButtonBgColor)) {
-                                                            $formButtonBgColor = '#2563eb';
+                                                            $formButtonBgColor = '#240E35';
                                                         }
                                                         $formButtonTextColor = trim((string) ($settings['buttonTextColor'] ?? '#ffffff'));
                                                         if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $formButtonTextColor)) {
@@ -1054,7 +1373,7 @@
                                                         $formButtonItalic = (bool) ($settings['buttonItalic'] ?? false);
                                                         $formButtonFontWeight = $formButtonBold ? '700' : '400';
                                                         $formButtonFontStyle = $formButtonItalic ? 'italic' : 'normal';
-                                                        $formInlineStyle = 'display:block;width:' . $formWidth . ';max-width:100%;box-sizing:border-box;overflow:auto;';
+                                                        $formInlineStyle = 'display:block;width:' . $formWidth . ';max-width:100%;box-sizing:border-box;overflow:auto;text-align:left;';
                                                         if ($alignment === 'center') {
                                                             $formInlineStyle .= 'margin-left:auto;margin-right:auto;';
                                                         } elseif ($alignment === 'right') {
@@ -1140,11 +1459,11 @@
                                                                         $ph = $ft === 'phone_number' ? '09XXXXXXXXX' : $lbl;
                                                                     }
                                                                 @endphp
-                                                                <label style="display:block;margin-bottom:4px;color:{{ $formLabelColor }};">{{ $lbl }}</label>
-                                                                <input class="builder-form-input" type="{{ $inputType }}" name="{{ $nm }}" {{ $req ? 'required' : '' }} {!! $pat !!} placeholder="{{ $ph }}" style="--fb-placeholder-color:{{ $formPlaceholderColor }};width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:8px;box-sizing:border-box;">
+                                                                <label style="display:block;margin-bottom:4px;color:{{ $formLabelColor }};text-align:left;">{{ $lbl }}</label>
+                                                                <input class="builder-form-input" type="{{ $inputType }}" name="{{ $nm }}" {{ $req ? 'required' : '' }} {!! $pat !!} placeholder="{{ $ph }}" style="--fb-placeholder-color:{{ $formPlaceholderColor }};width:100%;padding:8px;border:1px solid #E6E1EF;border-radius:8px;margin-bottom:8px;box-sizing:border-box;text-align:left;">
                                                             @endforeach
                                                             <div style="display:flex;justify-content:{{ $formButtonJustify }};">
-                                                                <button type="submit" class="btn" style="margin-top:2px;background:{{ $formButtonBgColor }};color:{{ $formButtonTextColor }};font-weight:{{ $formButtonFontWeight }};font-style:{{ $formButtonFontStyle }};">{{ $content !== '' ? $content : 'Submit' }}</button>
+                                                                <button type="submit" class="builder-form-btn" style="margin-top:2px;background:{{ $formButtonBgColor }};color:{{ $formButtonTextColor }};font-weight:{{ $formButtonFontWeight }};font-style:{{ $formButtonFontStyle }};border-radius:8px;padding:8px 12px;border:1px solid {{ $formButtonBgColor }};line-height:1;">{{ $content !== '' ? $content : 'Submit' }}</button>
                                                             </div>
                 </form>
                                                     @else
@@ -1158,11 +1477,11 @@
                                                                         $ph = $ft === 'phone_number' ? '09XXXXXXXXX' : $lbl;
                                                                     }
                                                                 @endphp
-                                                                <label style="display:block;margin-bottom:4px;color:{{ $formLabelColor }};">{{ $lbl }}</label>
-                                                                <input class="builder-form-input" type="text" placeholder="{{ $ph }}" style="--fb-placeholder-color:{{ $formPlaceholderColor }};width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:8px;box-sizing:border-box;" @if($isPreview) disabled @endif>
+                                                                <label style="display:block;margin-bottom:4px;color:{{ $formLabelColor }};text-align:left;">{{ $lbl }}</label>
+                                                                <input class="builder-form-input" type="text" placeholder="{{ $ph }}" style="--fb-placeholder-color:{{ $formPlaceholderColor }};width:100%;padding:8px;border:1px solid #E6E1EF;border-radius:8px;margin-bottom:8px;box-sizing:border-box;text-align:left;" @if($isPreview) disabled @endif>
                                                             @endforeach
                                                             <div style="display:flex;justify-content:{{ $formButtonJustify }};">
-                                                                <button type="button" class="btn" style="margin-top:2px;background:{{ $formButtonBgColor }};color:{{ $formButtonTextColor }};font-weight:{{ $formButtonFontWeight }};font-style:{{ $formButtonFontStyle }};" @if($isPreview) disabled @endif>{{ $content !== '' ? $content : 'Submit' }}</button>
+                                                                <button type="button" class="builder-form-btn" style="margin-top:2px;background:{{ $formButtonBgColor }};color:{{ $formButtonTextColor }};font-weight:{{ $formButtonFontWeight }};font-style:{{ $formButtonFontStyle }};border-radius:8px;padding:8px 12px;border:1px solid {{ $formButtonBgColor }};line-height:1;" @if($isPreview) disabled @endif>{{ $content !== '' ? $content : 'Submit' }}</button>
                                                             </div>
                     </form>
                                                     @endif
@@ -1245,6 +1564,152 @@
             paint();
             restartAuto();
         });
+        var countdowns=document.querySelectorAll("[data-countdown]");
+        if(countdowns && countdowns.length){
+            function pad2(n){return String(n).padStart(2,"0");}
+            function escapeCssIdent(v){
+                var raw=String(v||"");
+                if(window.CSS && typeof window.CSS.escape==="function")return window.CSS.escape(raw);
+                // Minimal fallback: escape quotes/backslashes.
+                return raw.replace(/\\/g,"\\\\").replace(/"/g,'\\"');
+            }
+            function parseCountdownDate(raw){
+                var s=String(raw||"").trim();
+                if(!s)return null;
+                var d=new Date(s);
+                if(isNaN(d.getTime()))return null;
+                return d;
+            }
+            function collectLinkedPricingIds(node){
+                var linkedRaw=(node.getAttribute("data-linked-pricing-ids")||"").trim();
+                var linkedIds=linkedRaw?linkedRaw.split(",").map(function(v){return String(v||"").trim();}).filter(Boolean):[];
+                if(!linkedIds.length){
+                    var linked=(node.getAttribute("data-linked-pricing-id")||"").trim();
+                    if(linked!=="")linkedIds=[linked];
+                }
+                // De-dupe while preserving order.
+                var seen=new Set();
+                return linkedIds.filter(function(id){
+                    if(!id)return false;
+                    if(seen.has(id))return false;
+                    seen.add(id);
+                    return true;
+                });
+            }
+            function collectPricingTargets(node){
+                var linkedIds=collectLinkedPricingIds(node);
+                var targets=[];
+                if(linkedIds.length){
+                    // Preserve the same order as the saved linked IDs.
+                    linkedIds.forEach(function(id){
+                        var p=document.querySelector('[data-pricing-id="'+escapeCssIdent(id)+'"]');
+                        if(p)targets.push(p);
+                    });
+                    return targets;
+                }
+                var key=(node.getAttribute("data-promo-key")||"").trim();
+                if(!key)return targets;
+                var pricing=document.querySelectorAll("[data-pricing-key]");
+                pricing.forEach(function(p){
+                    if((p.getAttribute("data-pricing-key")||"").trim()===key)targets.push(p);
+                });
+                return targets;
+            }
+            function setCountdownValue(node,key,val){
+                var el=node.querySelector('[data-countdown-val="'+key+'"]');
+                if(!el)return;
+                if(key==="days")el.textContent=String(val);
+                else el.textContent=pad2(val);
+            }
+            function updateCountdown(node){
+                var endRaw=node.getAttribute("data-countdown")||"";
+                var end=parseCountdownDate(endRaw);
+                var status=node.querySelector("[data-countdown-status]");
+                var expiredText=node.getAttribute("data-expired")||"Expired";
+                if(status && !status.getAttribute("data-label")){
+                    status.setAttribute("data-label",status.textContent||"");
+                }
+                if(!end){
+                    setCountdownValue(node,"days",0);
+                    setCountdownValue(node,"hours",0);
+                    setCountdownValue(node,"minutes",0);
+                    setCountdownValue(node,"seconds",0);
+                    if(status)status.textContent=expiredText;
+                    return {expired:true,linkedIds:collectLinkedPricingIds(node),targets:collectPricingTargets(node)};
+                }
+                var diff=end.getTime()-Date.now();
+                if(diff<=0){
+                    setCountdownValue(node,"days",0);
+                    setCountdownValue(node,"hours",0);
+                    setCountdownValue(node,"minutes",0);
+                    setCountdownValue(node,"seconds",0);
+                    if(status)status.textContent=expiredText;
+                    return {expired:true,linkedIds:collectLinkedPricingIds(node),targets:collectPricingTargets(node)};
+                }
+                if(status)status.textContent=status.getAttribute("data-label")||"";
+                var total=Math.floor(diff/1000);
+                var days=Math.floor(total/86400);
+                total%=86400;
+                var hours=Math.floor(total/3600);
+                total%=3600;
+                var minutes=Math.floor(total/60);
+                var seconds=total%60;
+                setCountdownValue(node,"days",days);
+                setCountdownValue(node,"hours",hours);
+                setCountdownValue(node,"minutes",minutes);
+                setCountdownValue(node,"seconds",seconds);
+                return {expired:false,linkedIds:collectLinkedPricingIds(node),targets:collectPricingTargets(node)};
+            }
+            var tick=function(){
+                var targetState=new Map();
+                var visibilityState=new Map();
+                countdowns.forEach(function(node){
+                    var info=updateCountdown(node);
+                    if(!info||!info.targets||!info.targets.length)return;
+                    // If a countdown is linked to exactly 2 pricing cards, treat the first as "before expiry"
+                    // and the second as "after expiry", and toggle visibility accordingly.
+                    if(info.linkedIds && info.linkedIds.length===2){
+                        var activeId=info.expired?info.linkedIds[1]:info.linkedIds[0];
+                        info.targets.forEach(function(p){
+                            var pid=(p.getAttribute("data-pricing-id")||"").trim();
+                            if(!pid)return;
+                            var vs=visibilityState.get(p);
+                            if(!vs)vs={hasRule:true,visible:false};
+                            vs.hasRule=true;
+                            if(pid===activeId)vs.visible=true;
+                            visibilityState.set(p,vs);
+                        });
+                    }
+                    info.targets.forEach(function(p){
+                        var st=targetState.get(p);
+                        if(!st)st={hasLink:true,active:false};
+                        st.hasLink=true;
+                        if(!info.expired)st.active=true;
+                        targetState.set(p,st);
+                    });
+                });
+                visibilityState.forEach(function(vs,p){
+                    if(!vs||!vs.hasRule)return;
+                    p.style.display=vs.visible?"":"none";
+                });
+                targetState.forEach(function(st,p){
+                    if(!st||!st.hasLink)return;
+                    var sale=(p.getAttribute("data-pricing-sale")||"");
+                    var regular=(p.getAttribute("data-pricing-regular")||"");
+                    var target=p.querySelector("[data-pricing-price]");
+                    if(!target)return;
+                    if(st.active){
+                        if(sale!=="")target.textContent=sale;
+                        else if(regular!=="")target.textContent=regular;
+                    }else{
+                        if(regular!=="")target.textContent=regular;
+                        else if(sale!=="")target.textContent=sale;
+                    }
+                });
+            };
+            tick();
+            setInterval(tick,1000);
+        }
         var isPreview={{ ($isPreview ?? false) ? 'true' : 'false' }};
         var editorCanvasWidth={{ (int) ($editorCanvasWidth ?? 0) }};
         if(isPreview&&editorCanvasWidth>0){

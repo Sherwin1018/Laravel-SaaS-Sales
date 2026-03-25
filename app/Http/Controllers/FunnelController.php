@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Funnel;
+use App\Models\FunnelBuilderAsset;
 use App\Models\FunnelStep;
+use App\Models\FunnelStepRevision;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -11,6 +13,9 @@ use Illuminate\Support\Facades\Storage;
 
 class FunnelController extends Controller
 {
+    private const MAX_STEP_REVISIONS = 40;
+    private const MAX_MANUAL_VERSIONS = 25;
+
     public function index()
     {
         $tenantId = auth()->user()->tenant_id;
@@ -56,7 +61,7 @@ class FunnelController extends Controller
             ];
 
             foreach ($starterSteps as $index => $step) {
-                FunnelStep::create([
+                $createdStep = FunnelStep::create([
                     'funnel_id' => $funnel->id,
                     'title' => $step['title'],
                     'slug' => $step['slug'],
@@ -68,6 +73,7 @@ class FunnelController extends Controller
                     'position' => $index + 1,
                     'is_active' => true,
                 ]);
+                $this->ensureStepHasInitialRevision($createdStep);
             }
 
             return redirect()->route('funnels.edit', $funnel)->with('success', 'Added Successfully');
@@ -80,7 +86,16 @@ class FunnelController extends Controller
     {
         $this->ensureTenantFunnelAccess($funnel);
 
-        $funnel->load(['steps']);
+        $funnel->load(['steps.revisions']);
+        $seededMissingRevisions = false;
+        foreach ($funnel->steps as $step) {
+            if ($this->ensureStepHasInitialRevision($step)) {
+                $seededMissingRevisions = true;
+            }
+        }
+        if ($seededMissingRevisions) {
+            $funnel->load(['steps.revisions']);
+        }
         $defaultStep = $funnel->steps->sortBy('position')->first();
 
         return view('funnels.edit', [
@@ -128,6 +143,7 @@ class FunnelController extends Controller
             ],
             'layout_json' => 'required',
             'background_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'skip_revision' => ['nullable', 'boolean'],
         ]);
 
         $rawLayout = $validated['layout_json'];
@@ -143,6 +159,15 @@ class FunnelController extends Controller
         }
 
         $step = $funnel->steps()->where('id', $validated['step_id'])->firstOrFail();
+        $skipRevision = (bool) ($validated['skip_revision'] ?? false);
+        if (! $skipRevision) {
+            $this->rememberStepRevision(
+                $step,
+                $this->normalizeRevisionLayout($step->layout_json),
+                $this->normalizeRevisionBackground($step->background_color)
+            );
+        }
+
         $layout = $this->sanitizeLayoutJson($rawLayout);
         $this->mergeElementSizeFromRaw($layout, $rawLayout);
 
@@ -151,11 +176,64 @@ class FunnelController extends Controller
             'background_color' => $validated['background_color'] ?? null,
         ]);
 
+        if (! $skipRevision) {
+            $this->rememberStepRevision(
+                $step,
+                $layout,
+                $this->normalizeRevisionBackground($step->background_color)
+            );
+        }
+        $step->load('revisions');
+
         return response()->json([
             'message' => 'Layout saved successfully.',
             'step_id' => $step->id,
             'layout_json' => $layout,
             'background_color' => $step->background_color,
+            'revision_history' => $this->revisionHistoryPayload($step),
+        ]);
+    }
+
+    public function storeVersion(Request $request, Funnel $funnel, FunnelStep $step)
+    {
+        $this->ensureTenantFunnelAccess($funnel);
+        if ((int) $step->funnel_id !== (int) $funnel->id) {
+            abort(404);
+        }
+
+        $validated = $request->validate([
+            'label' => ['nullable', 'string', 'max:120'],
+        ]);
+
+        $step->revisions()->create([
+            'user_id' => auth()->id(),
+            'layout_json' => $this->normalizeRevisionLayout($step->layout_json),
+            'background_color' => $this->normalizeRevisionBackground($step->background_color),
+            'version_type' => 'manual',
+            'label' => $this->normalizeManualVersionLabel($validated['label'] ?? null),
+        ]);
+
+        $manualKeepIds = $step->revisions()
+            ->reorder()
+            ->orderByDesc('id')
+            ->get()
+            ->filter(fn (FunnelStepRevision $revision) => (string) ($revision->version_type ?? 'autosave') === 'manual')
+            ->take(self::MAX_MANUAL_VERSIONS)
+            ->pluck('id');
+
+        if ($manualKeepIds->isNotEmpty()) {
+            $step->revisions()
+                ->reorder()
+                ->where('version_type', 'manual')
+                ->whereNotIn('id', $manualKeepIds)
+                ->delete();
+        }
+
+        $step->load('revisions');
+
+        return response()->json([
+            'message' => 'Version saved successfully.',
+            'manual_versions' => $this->manualVersionPayload($step),
         ]);
     }
 
@@ -282,12 +360,29 @@ class FunnelController extends Controller
                 'image.max' => 'File is too large (max 100 MB).',
             ]);
 
-            $path = $validated['image']->store('funnel-builder', 'public');
-            $relativeUrl = Storage::url($path);
-            $fullUrl = str_starts_with($relativeUrl, 'http') ? $relativeUrl : url($relativeUrl);
+            $path = $validated['image']->store('funnel-builder/tenant-' . $funnel->tenant_id, 'public');
+            $relativeUrl = $this->builderPublicAssetUrl($path);
+            $assetKind = $this->builderAssetKindFromPath($path);
+
+            $asset = FunnelBuilderAsset::updateOrCreate(
+                [
+                    'disk' => 'public',
+                    'path' => $path,
+                ],
+                [
+                    'tenant_id' => $funnel->tenant_id,
+                    'funnel_id' => $funnel->id,
+                    'user_id' => auth()->id(),
+                    'original_name' => $validated['image']->getClientOriginalName(),
+                    'mime_type' => $validated['image']->getMimeType(),
+                    'kind' => $assetKind ?? 'image',
+                    'size' => (int) ($validated['image']->getSize() ?? 0),
+                ]
+            );
 
             return response()->json([
-                'url' => $fullUrl,
+                'asset' => $this->builderAssetPayload($asset),
+                'url' => $relativeUrl,
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             $errors = $e->errors();
@@ -310,6 +405,97 @@ class FunnelController extends Controller
                 'message' => $message !== '' ? $message : 'Upload failed. Please check file type and size (max 100 MB).',
             ], 500);
         }
+    }
+
+    public function builderAssets(Request $request, Funnel $funnel)
+    {
+        $this->ensureTenantFunnelAccess($funnel);
+
+        $kind = strtolower(trim((string) $request->query('kind', '')));
+        if (! in_array($kind, ['', 'image', 'video'], true)) {
+            $kind = '';
+        }
+
+        $assets = FunnelBuilderAsset::query()
+            ->where('tenant_id', $funnel->tenant_id)
+            ->when($kind !== '', fn ($query) => $query->where('kind', $kind))
+            ->latest('id')
+            ->get()
+            ->map(fn (FunnelBuilderAsset $asset) => $this->builderAssetPayload($asset))
+            ->filter()
+            ->keyBy('path');
+
+        foreach ($this->legacyBuilderAssetPayload($funnel, $kind) as $legacyAsset) {
+            if (! $assets->has($legacyAsset['path'])) {
+                $assets->put($legacyAsset['path'], $legacyAsset);
+            }
+        }
+
+        $assets = $assets
+            ->sortByDesc('modified_at_ts')
+            ->take(200)
+            ->values()
+            ->map(function (array $asset) {
+                unset($asset['modified_at_ts']);
+                return $asset;
+            })
+            ->all();
+
+        return response()->json([
+            'assets' => $assets,
+        ]);
+    }
+
+    public function destroyBuilderAssets(Request $request, Funnel $funnel)
+    {
+        $this->ensureTenantFunnelAccess($funnel);
+
+        $validated = $request->validate([
+            'paths' => ['required', 'array', 'min:1', 'max:200'],
+            'paths.*' => ['required', 'string', 'max:2048'],
+        ]);
+
+        $tenantId = (int) $funnel->tenant_id;
+        $deleted = 0;
+
+        $paths = collect($validated['paths'] ?? [])
+            ->map(fn ($path) => ltrim(str_replace('\\', '/', (string) $path), '/'))
+            ->filter()
+            ->unique()
+            ->values();
+
+        foreach ($paths as $path) {
+            if (! $this->builderAssetVisibleToTenant($path, $tenantId)) {
+                continue;
+            }
+
+            $asset = FunnelBuilderAsset::query()
+                ->where('tenant_id', $tenantId)
+                ->where('path', $path)
+                ->first();
+
+            $diskName = (string) ($asset?->disk ?: 'public');
+            $disk = Storage::disk($diskName);
+            $removed = false;
+
+            if ($disk->exists($path)) {
+                $removed = (bool) $disk->delete($path);
+            }
+
+            if ($asset) {
+                $asset->delete();
+                $removed = true;
+            }
+
+            if ($removed) {
+                $deleted++;
+            }
+        }
+
+        return response()->json([
+            'deleted' => $deleted,
+            'message' => $deleted === 1 ? 'Deleted 1 file.' : 'Deleted ' . $deleted . ' files.',
+        ]);
     }
 
     public function publish(Funnel $funnel)
@@ -426,27 +612,12 @@ class FunnelController extends Controller
                 'position' => $position,
                 'is_active' => true,
             ]);
+            $this->ensureStepHasInitialRevision($step);
 
             if ($request->expectsJson()) {
                 return response()->json([
                     'message' => 'Added Successfully',
-                    'step' => [
-                        'id' => $step->id,
-                        'title' => $step->title,
-                        'slug' => $step->slug,
-                        'type' => $step->type,
-                        'layout_json' => $step->layout_json,
-                        'background_color' => $step->background_color,
-                        'is_active' => (bool) $step->is_active,
-                        'position' => (int) $step->position,
-                        'layout_style' => $step->layout_style,
-                        'template' => $step->template,
-                        'subtitle' => $step->subtitle,
-                        'content' => $step->content,
-                        'cta_label' => $step->cta_label,
-                        'price' => $step->price,
-                        'step_tags' => $step->step_tags ?? [],
-                    ],
+                    'step' => $this->builderStepPayload($step),
                 ]);
             }
 
@@ -520,23 +691,7 @@ class FunnelController extends Controller
             if ($request->expectsJson()) {
                 return response()->json([
                     'message' => 'Edited Successfully',
-                    'step' => [
-                        'id' => $step->id,
-                        'title' => $step->title,
-                        'slug' => $step->slug,
-                        'type' => $step->type,
-                        'layout_json' => $step->layout_json,
-                        'background_color' => $step->background_color,
-                        'is_active' => (bool) $step->is_active,
-                        'position' => (int) $step->position,
-                        'layout_style' => $step->layout_style,
-                        'template' => $step->template,
-                        'subtitle' => $step->subtitle,
-                        'content' => $step->content,
-                        'cta_label' => $step->cta_label,
-                        'price' => $step->price,
-                        'step_tags' => $step->step_tags ?? [],
-                    ],
+                    'step' => $this->builderStepPayload($step),
                 ]);
             }
 
@@ -630,12 +785,287 @@ class FunnelController extends Controller
         }
     }
 
+    private function builderAssetKindFromPath(string $path): ?string
+    {
+        $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+
+        if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'], true)) {
+            return 'image';
+        }
+
+        if (in_array($ext, ['mp4', 'mov', 'avi', 'wmv', 'mkv', 'webm', 'm4v', '3gp', 'ogv'], true)) {
+            return 'video';
+        }
+
+        return null;
+    }
+
+    private function builderAssetPayload(FunnelBuilderAsset $asset): ?array
+    {
+        $disk = Storage::disk((string) ($asset->disk ?: 'public'));
+
+        if (! $disk->exists($asset->path)) {
+            return null;
+        }
+
+        $relativeUrl = $this->builderPublicAssetUrl($asset->path, (string) ($asset->disk ?: 'public'));
+        $modifiedAt = $asset->created_at?->getTimestamp() ?: $asset->updated_at?->getTimestamp() ?: now()->getTimestamp();
+
+        return [
+            'id' => $asset->id,
+            'name' => trim((string) ($asset->original_name ?? '')) !== '' ? trim((string) $asset->original_name) : basename($asset->path),
+            'path' => $asset->path,
+            'url' => $relativeUrl,
+            'kind' => (string) ($asset->kind ?: $this->builderAssetKindFromPath($asset->path) ?: 'image'),
+            'size' => (int) ($asset->size ?? 0),
+            'modified_at' => $asset->created_at?->toIso8601String() ?: date(DATE_ATOM, $modifiedAt),
+            'modified_at_ts' => $modifiedAt,
+        ];
+    }
+
+    private function legacyBuilderAssetPayload(Funnel $funnel, string $kind = ''): array
+    {
+        $disk = Storage::disk('public');
+
+        return collect($disk->allFiles('funnel-builder'))
+            ->filter(fn (string $path) => $this->builderAssetVisibleToTenant($path, (int) $funnel->tenant_id))
+            ->map(function (string $path) use ($disk) {
+                $assetKind = $this->builderAssetKindFromPath($path);
+                if ($assetKind === null) {
+                    return null;
+                }
+
+                $relativeUrl = $this->builderPublicAssetUrl($path, 'public');
+                $modifiedAt = $disk->lastModified($path);
+
+                return [
+                    'name' => basename($path),
+                    'path' => $path,
+                    'url' => $relativeUrl,
+                    'kind' => $assetKind,
+                    'size' => (int) $disk->size($path),
+                    'modified_at' => date(DATE_ATOM, $modifiedAt),
+                    'modified_at_ts' => $modifiedAt,
+                ];
+            })
+            ->filter()
+            ->when($kind !== '', fn ($items) => $items->where('kind', $kind))
+            ->values()
+            ->all();
+    }
+
+    private function builderAssetVisibleToTenant(string $path, int $tenantId): bool
+    {
+        $normalized = ltrim(str_replace('\\', '/', $path), '/');
+        if (! str_starts_with($normalized, 'funnel-builder/')) {
+            return false;
+        }
+
+        $relative = substr($normalized, strlen('funnel-builder/'));
+        if ($relative === false || $relative === '') {
+            return false;
+        }
+
+        if (! str_starts_with($relative, 'tenant-')) {
+            return true;
+        }
+
+        return str_starts_with($relative, 'tenant-' . $tenantId . '/');
+    }
+
+    private function builderPublicAssetUrl(string $path, string $disk = 'public'): string
+    {
+        $rawUrl = Storage::disk($disk)->url($path);
+
+        if (! is_string($rawUrl) || trim($rawUrl) === '') {
+            return '/storage/' . ltrim($path, '/');
+        }
+
+        if (str_starts_with($rawUrl, '/')) {
+            return $rawUrl;
+        }
+
+        $parts = parse_url($rawUrl);
+        $pathPart = is_array($parts) ? (string) ($parts['path'] ?? '') : '';
+        $queryPart = is_array($parts) && isset($parts['query']) ? ('?' . $parts['query']) : '';
+        $fragmentPart = is_array($parts) && isset($parts['fragment']) ? ('#' . $parts['fragment']) : '';
+
+        if ($pathPart !== '') {
+            return $pathPart . $queryPart . $fragmentPart;
+        }
+
+        return '/storage/' . ltrim($path, '/');
+    }
+
+    private function builderStepPayload(FunnelStep $step): array
+    {
+        return [
+            'id' => $step->id,
+            'title' => $step->title,
+            'slug' => $step->slug,
+            'type' => $step->type,
+            'layout_json' => $step->layout_json,
+            'background_color' => $step->background_color,
+            'position' => (int) $step->position,
+            'is_active' => (bool) $step->is_active,
+            'layout_style' => $step->layout_style,
+            'template' => $step->template,
+            'subtitle' => $step->subtitle,
+            'content' => $step->content,
+            'cta_label' => $step->cta_label,
+            'price' => $step->price,
+            'button_color' => $step->button_color,
+            'step_tags' => $step->step_tags ?? [],
+            'revision_history' => $this->revisionHistoryPayload($step),
+            'manual_versions' => $this->manualVersionPayload($step),
+        ];
+    }
+
+    private function manualVersionPayload(FunnelStep $step): array
+    {
+        $revisions = $step->relationLoaded('revisions')
+            ? $step->revisions
+            : $step->revisions()->get();
+
+        return $revisions
+            ->filter(fn (FunnelStepRevision $revision) => (string) ($revision->version_type ?? 'autosave') === 'manual')
+            ->sortBy(fn (FunnelStepRevision $revision) => [
+                $revision->created_at?->getTimestamp() ?? 0,
+                $revision->id,
+            ])
+            ->map(function (FunnelStepRevision $revision) {
+                return [
+                    'id' => $revision->id,
+                    'label' => trim((string) ($revision->label ?? '')) !== '' ? trim((string) $revision->label) : 'Saved version',
+                    'layout_json' => $this->normalizeRevisionLayout($revision->layout_json),
+                    'background_color' => $this->normalizeRevisionBackground($revision->background_color),
+                    'created_at' => $revision->created_at?->toIso8601String(),
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    private function ensureStepHasInitialRevision(FunnelStep $step): bool
+    {
+        if ($step->relationLoaded('revisions')) {
+            if ($step->revisions->isNotEmpty()) {
+                return false;
+            }
+        } elseif ($step->revisions()->exists()) {
+            return false;
+        }
+
+        $this->rememberStepRevision(
+            $step,
+            $this->normalizeRevisionLayout($step->layout_json),
+            $this->normalizeRevisionBackground($step->background_color)
+        );
+
+        return true;
+    }
+
+    private function revisionHistoryPayload(FunnelStep $step): array
+    {
+        $revisions = $step->relationLoaded('revisions')
+            ? $step->revisions
+            : $step->revisions()->get();
+
+        return $revisions
+            ->sortBy(fn (FunnelStepRevision $revision) => [
+                $revision->created_at?->getTimestamp() ?? 0,
+                $revision->id,
+            ])
+            ->map(function (FunnelStepRevision $revision) {
+            return [
+                'id' => $revision->id,
+                'label' => trim((string) ($revision->label ?? '')) !== '' ? trim((string) $revision->label) : null,
+                'version_type' => (string) ($revision->version_type ?? 'autosave'),
+                'layout_json' => $this->normalizeRevisionLayout($revision->layout_json),
+                'background_color' => $this->normalizeRevisionBackground($revision->background_color),
+                'created_at' => $revision->created_at?->toIso8601String(),
+            ];
+        })->values()->all();
+    }
+
+    private function rememberStepRevision(FunnelStep $step, mixed $layout, ?string $backgroundColor): void
+    {
+        $normalizedLayout = $this->normalizeRevisionLayout($layout);
+        $normalizedBackground = $this->normalizeRevisionBackground($backgroundColor);
+        $latest = $step->revisions()->latest('id')->first();
+
+        if ($latest) {
+            $latestLayout = $this->normalizeRevisionLayout($latest->layout_json);
+            $latestBackground = $this->normalizeRevisionBackground($latest->background_color);
+            if (
+                $this->revisionLayoutsMatch($latestLayout, $normalizedLayout)
+                && $latestBackground === $normalizedBackground
+            ) {
+                return;
+            }
+        }
+
+        $step->revisions()->create([
+            'user_id' => auth()->id(),
+            'layout_json' => $normalizedLayout,
+            'background_color' => $normalizedBackground,
+        ]);
+
+        $keepIds = $step->revisions()
+            ->reorder()
+            ->orderByDesc('id')
+            ->limit(self::MAX_STEP_REVISIONS)
+            ->pluck('id');
+
+        if ($keepIds->isNotEmpty()) {
+            $step->revisions()
+                ->reorder()
+                ->whereNotIn('id', $keepIds)
+                ->delete();
+        }
+    }
+
+    private function normalizeRevisionLayout(mixed $layout): array
+    {
+        if (! is_array($layout)) {
+            return ['root' => [], 'sections' => []];
+        }
+
+        if (! isset($layout['root']) && ! isset($layout['sections'])) {
+            return ['root' => [], 'sections' => []];
+        }
+
+        return $layout;
+    }
+
+    private function normalizeRevisionBackground(?string $backgroundColor): ?string
+    {
+        $bg = trim((string) $backgroundColor);
+        return preg_match('/^#[0-9A-Fa-f]{6}$/', $bg) ? $bg : null;
+    }
+
+    private function normalizeManualVersionLabel(?string $label): string
+    {
+        $value = trim((string) $label);
+        if ($value === '') {
+            return 'Saved version';
+        }
+
+        return mb_substr($value, 0, 120);
+    }
+
+    private function revisionLayoutsMatch(array $left, array $right): bool
+    {
+        return json_encode($left) === json_encode($right);
+    }
+
     private function sanitizeLayoutJson(array $layout): array
     {
         $sanitizeElement = function (array $element): array {
             $type = (string) ($element['type'] ?? 'text');
             $type = in_array($type, [
                 'heading', 'text', 'image', 'button', 'icon', 'form', 'video', 'countdown', 'spacer', 'menu', 'carousel',
+                'testimonial', 'faq', 'pricing',
             ], true) ? $type : 'text';
 
             $rawContent = (string) ($element['content'] ?? '');
@@ -904,6 +1334,12 @@ class FunnelController extends Controller
             }
             return mb_substr(trim((string) $settings[$key]), 0, $max);
         };
+        $readStringAllowEmpty = function (string $key, int $max = 1024) use (&$settings): ?string {
+            if (!array_key_exists($key, $settings) || (!is_scalar($settings[$key]) && $settings[$key] !== null)) {
+                return null;
+            }
+            return mb_substr(trim((string) $settings[$key]), 0, $max);
+        };
         $readEnum = function (string $key, array $allowed, ?string $default = null) use (&$settings): ?string {
             if (!array_key_exists($key, $settings) || !is_scalar($settings[$key])) {
                 return null;
@@ -928,6 +1364,22 @@ class FunnelController extends Controller
                 return null;
             }
             $n = (int) $settings[$key];
+            if ($n < $min) {
+                $n = $min;
+            }
+            if ($n > $max) {
+                $n = $max;
+            }
+            return $n;
+        };
+        $readFloat = function (string $key, float $min, float $max) use (&$settings): ?float {
+            if (!array_key_exists($key, $settings)) {
+                return null;
+            }
+            if (!is_scalar($settings[$key]) || !is_numeric($settings[$key])) {
+                return null;
+            }
+            $n = (float) $settings[$key];
             if ($n < $min) {
                 $n = $min;
             }
@@ -962,6 +1414,30 @@ class FunnelController extends Controller
         ] as $k => $maxLen) {
             $v = $readString($k, $maxLen);
             if ($v !== null && $v !== '') {
+                $safe[$k] = $v;
+            }
+        }
+        foreach ([
+            'quote' => 2000,
+            'name' => 200,
+            'role' => 200,
+            'avatar' => 2048,
+            'plan' => 200,
+            'price' => 200,
+            'regularPrice' => 200,
+            'period' => 60,
+            'subtitle' => 300,
+            'badge' => 80,
+            'ctaLabel' => 120,
+            'ctaLink' => 2048,
+            'endAt' => 120,
+            'label' => 120,
+            'expiredText' => 200,
+            'promoKey' => 120,
+            'linkedPricingId' => 120,
+        ] as $k => $maxLen) {
+            $v = $readStringAllowEmpty($k, $maxLen);
+            if ($v !== null) {
                 $safe[$k] = $v;
             }
         }
@@ -1017,8 +1493,12 @@ class FunnelController extends Controller
                 $safe[$k] = $v;
             }
         }
+        $scale = $readFloat('contentScale', 0.5, 3.0);
+        if ($scale !== null) {
+            $safe['contentScale'] = $scale;
+        }
 
-        foreach (['textColor', 'controlsColor', 'arrowColor', 'bodyBgColor', 'containerBgColor', 'labelColor', 'placeholderColor', 'buttonBgColor', 'buttonTextColor'] as $k) {
+        foreach (['textColor', 'controlsColor', 'arrowColor', 'bodyBgColor', 'containerBgColor', 'labelColor', 'placeholderColor', 'buttonBgColor', 'buttonTextColor', 'questionColor', 'answerColor', 'numberColor', 'ctaBgColor', 'ctaTextColor'] as $k) {
             $v = $readColor($k);
             if ($v !== null) {
                 $safe[$k] = $v;
@@ -1030,17 +1510,46 @@ class FunnelController extends Controller
         }
 
         if (isset($settings['items']) && is_array($settings['items'])) {
-            $safe['items'] = collect($settings['items'])
+            $isFaq = collect($settings['items'])
                 ->filter(fn ($item) => is_array($item))
-                ->take(50)
-                ->map(function (array $item) {
-                    return [
-                        'label' => mb_substr(trim((string) ($item['label'] ?? '')), 0, 200),
-                        'url' => mb_substr(trim((string) ($item['url'] ?? '')), 0, 2048),
-                        'newWindow' => (bool) filter_var($item['newWindow'] ?? false, FILTER_VALIDATE_BOOLEAN),
-                        'hasSubmenu' => (bool) filter_var($item['hasSubmenu'] ?? false, FILTER_VALIDATE_BOOLEAN),
-                    ];
-                })
+                ->contains(function (array $item) {
+                    return array_key_exists('q', $item) || array_key_exists('a', $item) || array_key_exists('question', $item) || array_key_exists('answer', $item);
+                });
+
+            if ($isFaq) {
+                $safe['items'] = collect($settings['items'])
+                    ->filter(fn ($item) => is_array($item))
+                    ->take(50)
+                    ->map(function (array $item) {
+                        $q = mb_substr(trim((string) ($item['q'] ?? ($item['question'] ?? ''))), 0, 500);
+                        $a = mb_substr(trim((string) ($item['a'] ?? ($item['answer'] ?? ''))), 0, 1000);
+                        return ['q' => $q, 'a' => $a];
+                    })
+                    ->values()
+                    ->all();
+            } else {
+                $safe['items'] = collect($settings['items'])
+                    ->filter(fn ($item) => is_array($item))
+                    ->take(50)
+                    ->map(function (array $item) {
+                        return [
+                            'label' => mb_substr(trim((string) ($item['label'] ?? '')), 0, 200),
+                            'url' => mb_substr(trim((string) ($item['url'] ?? '')), 0, 2048),
+                            'newWindow' => (bool) filter_var($item['newWindow'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                            'hasSubmenu' => (bool) filter_var($item['hasSubmenu'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                        ];
+                    })
+                    ->values()
+                    ->all();
+            }
+        }
+
+        if (isset($settings['features']) && is_array($settings['features'])) {
+            $safe['features'] = collect($settings['features'])
+                ->filter(fn ($item) => is_scalar($item))
+                ->take(40)
+                ->map(fn ($item) => mb_substr(trim((string) $item), 0, 200))
+                ->filter(fn ($item) => $item !== '')
                 ->values()
                 ->all();
         }
@@ -1127,6 +1636,7 @@ class FunnelController extends Controller
                                         $type = (string) ($element['type'] ?? 'text');
                                         $type = in_array($type, [
                                             'heading', 'text', 'image', 'button', 'icon', 'form', 'video', 'countdown', 'spacer', 'menu', 'carousel',
+                                            'testimonial', 'faq', 'pricing',
                                         ], true) ? $type : 'text';
 
                                         $rawContent = (string) ($element['content'] ?? '');
