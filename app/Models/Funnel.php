@@ -16,10 +16,12 @@ class Funnel extends Model
         'description',
         'default_tags',
         'status',
+        'require_double_opt_in',
     ];
 
     protected $casts = [
         'default_tags' => 'array',
+        'require_double_opt_in' => 'boolean',
     ];
 
     public function tenant(): BelongsTo

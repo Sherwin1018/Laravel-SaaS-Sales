@@ -529,6 +529,11 @@ table a:hover {
     color: #B91C1C;
 }
 
+.status-toast.warning .status-icon,
+.status-toast.warning h4 {
+    color: #CA8A04;
+}
+
 .status-toast-close {
     position: absolute;
     top: 8px;

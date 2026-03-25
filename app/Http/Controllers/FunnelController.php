@@ -43,6 +43,7 @@ class FunnelController extends Controller
                 'description' => $validated['description'] ?? null,
                 'default_tags' => $this->normalizeTagsString($validated['default_tags'] ?? null),
                 'status' => 'draft',
+                'require_double_opt_in' => $request->boolean('require_double_opt_in'),
             ]);
 
             // Starter flow: Landing -> Opt-in -> Sales -> Checkout -> Thank You
@@ -351,6 +352,7 @@ class FunnelController extends Controller
 
         try {
             $validated['default_tags'] = $this->normalizeTagsString($validated['default_tags'] ?? null);
+            $validated['require_double_opt_in'] = $request->boolean('require_double_opt_in');
             $funnel->update($validated);
             return redirect()->back()->with('success', 'Edited Successfully');
         } catch (\Throwable $e) {

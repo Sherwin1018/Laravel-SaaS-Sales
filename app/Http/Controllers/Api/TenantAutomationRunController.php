@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Services\LeadLinkTrackingService;
 use App\Models\AutomationSequence;
 use App\Models\AutomationSequenceStep;
 use App\Models\AutomationWorkflow;
@@ -148,12 +149,12 @@ class TenantAutomationRunController extends Controller
         $actions = [];
         foreach ($workflows as $workflow) {
             if ($workflow->action_type === 'send_email') {
-                $action = $this->buildEmailAction($workflow);
+                $action = $this->buildEmailAction($workflow, $tenantId, $payload);
                 if ($action !== null) {
                     $actions[] = $action;
                 }
             } elseif ($workflow->action_type === 'start_sequence') {
-                $action = $this->buildSequenceAction($workflow, $tenantId);
+                $action = $this->buildSequenceAction($workflow, $tenantId, $payload);
                 if ($action !== null) {
                     $actions[] = $action;
                 }
@@ -182,7 +183,7 @@ class TenantAutomationRunController extends Controller
     /**
      * Build one send_email action from workflow action_config.
      */
-    private function buildEmailAction(AutomationWorkflow $workflow): ?array
+    private function buildEmailAction(AutomationWorkflow $workflow, int $tenantId, array $payload): ?array
     {
         $config = $workflow->action_config ?? [];
         $recipient = $config['recipient'] ?? 'lead.email';
@@ -190,12 +191,26 @@ class TenantAutomationRunController extends Controller
             $recipient = 'lead.email';
         }
 
+        $leadId = $payload['lead']['id'] ?? $payload['body']['lead']['id'] ?? null;
+        $trackService = app(LeadLinkTrackingService::class);
+
+        $body = $config['body'] ?? '';
+        if ($leadId !== null && is_numeric($leadId) && trim((string) $body) !== '') {
+            $body = $trackService->rewriteHtmlLinks($body, [
+                'tenant_id' => $tenantId,
+                'lead_id' => (int) $leadId,
+                'workflow_id' => (int) $workflow->id,
+                'sequence_id' => null,
+                'sequence_step_order' => null,
+            ]);
+        }
+
         return [
             'workflow_id' => $workflow->id,
             'type' => 'send_email',
             'to' => $recipient,
             'subject' => $config['subject'] ?? '',
-            'body' => $config['body'] ?? '',
+            'body' => $body,
         ];
     }
 
@@ -216,7 +231,7 @@ class TenantAutomationRunController extends Controller
     /**
      * Build one start_sequence action: load sequence and compile steps for n8n.
      */
-    private function buildSequenceAction(AutomationWorkflow $workflow, int $tenantId): ?array
+    private function buildSequenceAction(AutomationWorkflow $workflow, int $tenantId, array $payload): ?array
     {
         $config = $workflow->action_config ?? [];
         $sequenceId = isset($config['sequence_id']) ? (int) $config['sequence_id'] : 0;
@@ -229,9 +244,17 @@ class TenantAutomationRunController extends Controller
             return null;
         }
 
+        $leadId = $payload['lead']['id'] ?? $payload['body']['lead']['id'] ?? null;
+        $trackService = app(LeadLinkTrackingService::class);
+
         $compiledSteps = [];
         foreach ($sequence->steps as $step) {
-            $compiled = $this->compileSequenceStep($step);
+            $compiled = $this->compileSequenceStep($step, [
+                'tenant_id' => $tenantId,
+                'lead_id' => $leadId !== null && is_numeric($leadId) ? (int) $leadId : null,
+                'workflow_id' => (int) $workflow->id,
+                'sequence_id' => $sequence->id,
+            ]);
             if ($compiled !== null) {
                 $compiledSteps[] = $compiled;
             }
@@ -253,7 +276,7 @@ class TenantAutomationRunController extends Controller
     /**
      * Compile a single sequence step into the response shape. Returns null for unsupported types.
      */
-    private function compileSequenceStep(AutomationSequenceStep $step): ?array
+    private function compileSequenceStep(AutomationSequenceStep $step, array $trackingContext): ?array
     {
         $config = $step->config ?? [];
         $base = [
@@ -266,10 +289,23 @@ class TenantAutomationRunController extends Controller
             if (!in_array($recipient, ['lead.email', 'assigned_agent.email'], true)) {
                 $recipient = 'lead.email';
             }
+
+            $body = $config['body'] ?? '';
+            if (!empty($body) && !empty($trackingContext['lead_id'])) {
+                $trackService = app(LeadLinkTrackingService::class);
+                $body = $trackService->rewriteHtmlLinks($body, [
+                    'tenant_id' => (int) $trackingContext['tenant_id'],
+                    'lead_id' => (int) $trackingContext['lead_id'],
+                    'workflow_id' => (int) $trackingContext['workflow_id'],
+                    'sequence_id' => (int) ($trackingContext['sequence_id'] ?? 0),
+                    'sequence_step_order' => (int) ($step->step_order ?? 0),
+                ]);
+            }
+
             return array_merge($base, [
                 'recipient' => $recipient,
                 'subject' => $config['subject'] ?? '',
-                'body' => $config['body'] ?? '',
+                'body' => $body,
             ]);
         }
 

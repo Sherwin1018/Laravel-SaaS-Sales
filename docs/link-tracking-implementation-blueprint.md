@@ -2,7 +2,7 @@
 
 This document is a **development guide and blueprint** for implementing link click tracking, visit attribution, and funnel analytics in the Laravel SaaS Sales Funnel project. Use it when you are ready to build the feature.
 
-**Related docs:**
+## Related docs
 - [lead-source-tracking-guide.md](lead-source-tracking-guide.md) — User-facing guide (UTM, source_campaign, reporting).
 - [automation-n8n-implementation.md](automation-n8n-implementation.md) — Automation events and n8n integration.
 
@@ -16,9 +16,9 @@ This document is a **development guide and blueprint** for implementing link cli
 |-------|-------------|----------|
 | **Pre-lead visit/click logging** | When a visitor lands on a funnel URL with UTM (or referrer), log one record: tenant, funnel, source, timestamp. | Laravel only |
 | **Source on lead at opt-in** | When they submit the opt-in form, set `lead.source_campaign` from UTM (or session). | Laravel only |
-| **Known-lead link tracking** | Emails contain tracked links (token in URL). Click → resolve token → log lead_id, link name, count, time → redirect. | Laravel only |
+| **Known-lead link tracking** | Laravel rewrites outbound email bodies so clicks go through `GET /r/{token}`. The token is signed (no DB token table). Click → decode token → log click + score + pipeline rules → redirect. | Laravel only |
 | **Funnel analytics UI** | Tenant-facing: conversion funnel (Visits → Opt-ins → Pipeline → Won) and/or clicks by source. | Laravel (views + controllers) |
-| **Pipeline enhancements** | On lead cards: show source and “Clicked: …” when we have link-click data. | Laravel (views) |
+| **Pipeline enhancements** | On lead cards: show `source_campaign` and `Link Clicks` summary. Also auto-move pipeline stage based on link keywords and payment status. | Laravel (views + controllers) |
 | **Optional automation** | Fire `lead.link_clicked` (or similar) to n8n so workflows can react. | Laravel + n8n |
 
 ### 1.2 Out of Scope (for This Blueprint)
@@ -36,7 +36,7 @@ flowchart TB
   subgraph preLead[Pre-lead]
     V[Visitor hits /f/funnelSlug?utm_source=fb]
     FPC[FunnelPortalController::show]
-    LogVisit[Log to funnel_visits or link_clicks]
+    LogVisit[Log to funnel_visits (always)]
     FPC --> LogVisit
     V --> FPC
   end
@@ -50,8 +50,8 @@ flowchart TB
     Email[Email with tracked link]
     Click[User clicks link]
     R[GET /r/token]
-    Resolve[Resolve token to lead + link]
-    LogClick[Log to lead_link_clicks]
+    Resolve[Decode signed token to lead + link]
+    LogClick[Log to lead_link_clicks + update lead score/status rules]
     Redirect[Redirect to destination]
     Email --> Click --> R --> Resolve --> LogClick --> Redirect
   end
@@ -75,79 +75,49 @@ flowchart TB
 
 ### 3.1 New Tables
 
-#### 3.1.1 Funnel visits (pre-lead)
+#### 3.1.1 Funnel visits (pre-lead, source attribution)
 
-Stores each landing (or click) on a funnel page when UTM or referrer is present.
+Stores **every** funnel landing (even without UTM). This is what powers:
+- “How many times the funnel link is clicked/visited”
+- “Which source (Facebook/YouTube/etc.) came in”
 
-| Table name | Suggested: `funnel_visits` |
-|------------|-----------------------------|
-| `id` | bigInteger, primary key |
+| Table name | Actual: `funnel_visits` |
+|------------|---------------------------|
 | `tenant_id` | foreignId → tenants |
 | `funnel_id` | foreignId → funnels |
-| `funnel_step_id` | nullable foreignId → funnel_steps (optional) |
-| `utm_source` | string, nullable (e.g. facebook, youtube) |
+| `funnel_step_id` | nullable foreignId → funnel_steps |
+| `utm_source` | string, nullable |
 | `utm_medium` | string, nullable |
 | `utm_campaign` | string, nullable |
-| `referrer` | string, nullable (HTTP Referer, truncated if needed e.g. 500 chars) |
-| `visitor_id` | string, nullable (cookie/session visitor_xxx; optional for Phase 1) |
+| `referrer` | string, nullable |
 | `visited_at` | timestamp |
-| Optional | `ip_hash` or `session_id` for simple deduplication |
 
 **Indexes:** `(tenant_id, funnel_id, visited_at)`, `(tenant_id, utm_source, visited_at)`.
 
-**Migration file name example:** `YYYY_MM_DD_HHMMSS_create_funnel_visits_table.php`
+#### 3.1.2 Lead link clicks (known leads, post-email engagement)
 
-#### 3.1.2 Tracked links (known leads — Phase 2)
+One row per click on a tracked link that was rewritten in an email for a specific `lead_id`.
 
-Defines the “link” that appears in emails (name + destination URL). Tenant- or campaign-scoped.
-
-| Table name | Suggested: `tracked_links` |
-|------------|----------------------------|
-| `id` | bigInteger, primary key |
-| `tenant_id` | foreignId → tenants |
-| `name` | string (e.g. "Pricing", "Book a call") |
-| `destination_url` | string (full URL to redirect to) |
-| `campaign` | string, nullable (e.g. sequence name or campaign id) |
-| `created_at` / `updated_at` | timestamps |
-
-**Indexes:** `(tenant_id)`.
-
-#### 3.1.3 Link click tokens (known leads — Phase 2)
-
-Maps a short token to a specific lead + tracked link so we can log the click and redirect.
-
-| Table name | Suggested: `link_click_tokens` |
-|------------|--------------------------------|
-| `id` | bigInteger, primary key |
-| `token` | string, unique (e.g. 12–16 char random) |
+| Table name | Actual: `lead_link_clicks` |
+|------------|-------------------------------|
 | `tenant_id` | foreignId → tenants |
 | `lead_id` | foreignId → leads |
-| `tracked_link_id` | foreignId → tracked_links |
-| `created_at` | timestamp (optional: expires_at for expiry) |
-
-**Indexes:** unique on `token`.
-
-#### 3.1.4 Lead link clicks (known leads — Phase 2)
-
-One row per click on a tracked link by a known lead.
-
-| Table name | Suggested: `lead_link_clicks` |
-|------------|------------------------------|
-| `id` | bigInteger, primary key |
-| `tenant_id` | foreignId → tenants |
-| `lead_id` | foreignId → leads |
-| `tracked_link_id` | foreignId → tracked_links |
+| `workflow_id` | nullable (automation workflow) |
+| `sequence_id` | nullable (sequence) |
+| `sequence_step_order` | nullable |
+| `link_name` | nullable (derived from anchor text / URL) |
+| `destination_url` | text |
+| `click_number` | unsigned int, default 1 |
 | `clicked_at` | timestamp |
-| Optional | `click_number` (per lead+link), `ip_hash`, `user_agent` |
 
-**Indexes:** `(tenant_id, lead_id, tracked_link_id, clicked_at)`, `(lead_id, tracked_link_id)`.
+**Indexes:** `(tenant_id, lead_id)` and `(tenant_id, lead_id, destination_url)`.
+
+> Note: this implementation uses **signed tokens** and does **not** create `tracked_links` or `link_click_tokens` tables.
 
 ### 3.2 Models to Create
 
-- **FunnelVisit** — belongs to Tenant, Funnel; optional FunnelStep, optional Visitor (if you add a visitors table later). Fillable: tenant_id, funnel_id, funnel_step_id, utm_source, utm_medium, utm_campaign, referrer, visitor_id, visited_at.
-- **TrackedLink** — belongs to Tenant. Fillable: tenant_id, name, destination_url, campaign.
-- **LinkClickToken** — belongs to Tenant, Lead, TrackedLink. Used to resolve `GET /r/{token}`.
-- **LeadLinkClick** — belongs to Tenant, Lead, TrackedLink. Fillable: tenant_id, lead_id, tracked_link_id, clicked_at (and optional fields).
+- **FunnelVisit** — represents `funnel_visits`.
+- **LeadLinkClick** — represents `lead_link_clicks`.
 
 ### 3.3 Existing Tables Used
 
@@ -170,20 +140,18 @@ One row per click on a tracked link by a known lead.
 **Where:** At the end of `show()`, after you have `$funnel` and `$step`, and **before** `return view(...)`.
 
 **Logic:**
-
 1. Read from request:
    - `utm_source`, `utm_medium`, `utm_campaign` (query params).
    - `referrer` from `$request->header('referer')` (optional; truncate to 500 chars).
-2. If **any** of these are present (e.g. `utm_source` or `referrer`):
-   - Create one row in `funnel_visits`:
-     - `tenant_id` = `$funnel->tenant_id`
-     - `funnel_id` = `$funnel->id`
-     - `funnel_step_id` = `$step->id` (optional)
-     - `utm_source`, `utm_medium`, `utm_campaign`, `referrer` from step 1
-     - `visited_at` = now()
-   - Optional: set or read a first-party cookie `visitor_id` (e.g. `visitor_` . Str::random(8)) and store in `funnel_visits.visitor_id` for future “journey” stitching. If you skip this in Phase 1, leave the column nullable and add later.
+2. **Always** create one row in `funnel_visits`:
+   - `tenant_id` = `$funnel->tenant_id`
+   - `funnel_id` = `$funnel->id`
+   - `funnel_step_id` = `$step->id`
+   - `utm_*` fields and `referrer` can be `null`
+3. Only when at least one tracking field exists:
+   - store a payload in `session()` under `funnel_utm_{funnel->id}` so `optIn()` can resolve `lead.source_campaign`.
 
-**Performance:** Use a single `FunnelVisit::create([...])`; no heavy logic. Optionally wrap in a try/catch so a DB failure does not break the page (log and continue).
+**Performance:** one insert; tracking must never break the funnel UI (try/catch + report).
 
 ### 4.3 FunnelPortalController::optIn — Set source_campaign
 
@@ -192,22 +160,24 @@ One row per click on a tracked link by a known lead.
 **Where:** After building `$lead` and before `$lead->save();`.
 
 **Logic:**
-
 1. Resolve source:
-   - Prefer query params from the **current request**: `$request->query('utm_source')` (or `$request->input('source_campaign')` if you add a hidden field that forwards UTM from the page).
-   - Optional: if you stored UTM in session on first visit (in `show`), fall back to `session('utm_source')` so opt-in from a second page still gets the original source.
-2. If source is non-empty: `$lead->source_campaign = $source;` (normalize to string, max length 100 to match `leads.source_campaign`).
+   - Prefer `utm_source` from the **current request** query string.
+   - Else read stored `utm_source`/`referrer` from `session()` (saved in `show()` when the visitor first landed).
+   - Else (fallback) infer a coarse source from the stored `referrer` (e.g. contains `facebook`, `youtube`, `instagram`, `tiktok`).
+2. If resolved source is non-empty:
+   - `$lead->source_campaign = $resolvedSource;` (normalized, max length 100).
 
 **Persistence:** `source_campaign` is already on `leads`; no migration. Ensure `Lead` model has `source_campaign` in `$fillable` (already present in the project).
 
 ### 4.4 Optional: Persist UTM in Session on First Visit
 
-In `show()`, after logging the funnel visit, you can store UTM in session so that when the user moves to the next step (or submits opt-in on another step), the source is still available:
+In `show()`, after logging the funnel visit, we store UTM/referrer in session so that moving between funnel steps keeps the same attribution:
 
-- `session()->put('funnel_utm_source', $request->query('utm_source'));` (and same for medium/campaign if needed).
-- In `optIn()`, fall back: `$source = $request->query('utm_source') ?? session('funnel_utm_source');`.
-
-Clear or overwrite when appropriate (e.g. new UTM on same session can update).
+- `session()->put("funnel_utm_{$funnel->id}", ['utm_source' => $utmSource, 'utm_medium' => $utmMedium, 'utm_campaign' => $utmCampaign, 'referrer' => $referrer])`
+- In `optIn()`, we:
+  - prefer `utm_source` from the current request query string
+  - else read `utm_source`/`referrer` from `session("funnel_utm_{$funnel->id}")`
+  - else infer a coarse source from the stored `referrer`
 
 ### 4.5 Phase 1 Reporting (Simple)
 
@@ -221,46 +191,82 @@ You can expose these in a simple report route and Blade view, or reuse in the Fu
 ## 5. Phase 2 — Known-Lead Link Tracking (Case 1)
 
 ### 5.1 Migrations
-
-1. `create_tracked_links_table` — §3.1.2.
-2. `create_link_click_tokens_table` — §3.1.3.
-3. `create_lead_link_clicks_table` — §3.1.4.
+1. `create_lead_link_clicks_table` — store clicks per `lead_id` + `destination_url`.
 
 Run migrations.
 
 ### 5.2 Token Lifecycle
 
-- **Create token:** When sending an email (e.g. from n8n or a future Laravel mail layer), for each (lead, tracked_link) you generate a unique token, insert into `link_click_tokens`, and use URL `https://yourapp.com/r/{token}` in the email.
-- **Resolve token:** On `GET /r/{token}`: look up `LinkClickToken` by `token`; get `lead_id`, `tracked_link_id`, `tenant_id`; create `LeadLinkClick`; redirect to `TrackedLink->destination_url`. Optionally increment a “click number” per (lead, tracked_link) and store it on `LeadLinkClick`.
+Implemented approach in this project:
 
-**Token format:** Random string (e.g. 12–16 chars), URL-safe. Ensure uniqueness (unique index on `link_click_tokens.token`).
+1. **Token is signed, not stored**
+   - `app/Services/LeadLinkTrackingService.php` generates a signed token that includes claims:
+     - `tenant_id`, `lead_id`
+     - `workflow_id`, `sequence_id`, `sequence_step_order` (when available)
+     - `link_name` (derived from anchor text or the URL itself)
+     - `destination_url`
+
+2. **Token is created while compiling automation email bodies**
+   - `app/Http/Controllers/Api/TenantAutomationRunController.php` rewrites email HTML for:
+     - `send_email` actions
+     - `start_sequence` email steps
+   - If the email body has `<a href="https://...">`, it rewrites anchor `href` to `/r/{token}`.
+   - If the email body contains plain `https://...` without `<a>` tags, it wraps the plain URLs into `<a>` tags and rewrites them.
+
+3. **Resolve token on click**
+   - `GET /r/{token}` decodes the token (no DB lookup), logs the click in `lead_link_clicks`, applies pipeline rules, then redirects to `destination_url`.
+
+**Token format:** signed payload (HMAC/secret), URL-safe. No uniqueness table required.
 
 ### 5.3 Redirect Route and Controller
 
 **Route:** `GET /r/{token}` — public, no auth.
 
-**Controller:** e.g. `LinkTrackController@redirect` or a single method in a dedicated controller.
+**Controller:** `LinkTrackingController::redirect` (public redirect handler).
 
-**Logic:**
+Logic:
+1. Decode the signed token (`app/Services/LeadLinkTrackingService.php`). If invalid, redirect safely.
+2. Load the `Lead` by `tenant_id` + `lead_id`.
+3. Insert into `lead_link_clicks`:
+   - `destination_url`
+   - derived `link_name`
+   - `click_number` = count(existing clicks for same tenant+lead+destination_url) + 1
+4. Increment lead score (+10) and create a “Scoring” activity note.
+5. Apply pipeline movement rules (next section).
+6. Redirect to `destination_url`.
 
-1. Find `LinkClickToken` by `token`. If not found, redirect to app homepage or a “link expired” page.
-2. Load `TrackedLink` and `Lead` (and optionally check tenant is active).
-3. Create `LeadLinkClick`: tenant_id, lead_id, tracked_link_id, clicked_at. Optionally compute `click_number` for this (lead_id, tracked_link_id) and save.
-4. Optional: fire `lead.link_clicked` event and send to n8n (see §7).
-5. Redirect: `redirect()->away($trackedLink->destination_url)` (external URLs must use `away()`).
+**Performance:** token decode + one DB insert + redirect.
 
-**Performance:** Single read (token + link), one insert (lead_link_clicks), redirect. Keep it fast.
+### 5.4 Pipeline Movement Rules (link clicks + payment)
 
-### 5.4 Where Tokens Are Created
+The redirect controller applies the “final combined strategy”:
 
-- **Option A (later):** Laravel sends sequence emails; when building the email body, replace placeholders like `{{ tracked_link:Pricing }}` with `https://yourapp.com/r/{token}` where token is created for that lead + “Pricing” link. Requires a “tracked link” registry per tenant and a small helper that creates a row in `link_click_tokens` and returns the URL.
-- **Option B:** n8n sends emails; Laravel exposes an API endpoint, e.g. `POST /api/tracked-link-url` with `tenant_id`, `lead_id`, `link_name` or `tracked_link_id`; Laravel creates a token and returns `{ "url": "https://..." }`; n8n inserts that URL into the email. Same table usage.
+1. **First click (any tracked link):** `new → contacted`
+2. **High intent click:** when the *lead status is* `new` or `contacted` AND `link_name` contains:
+   - `book`, `call`, `demo`, `schedule`
+   - then status becomes `proposal_sent`
+3. **More clicks:** no further status changes (unless the status is updated elsewhere)
+4. **Payment:** when payment is `paid` (`payment.paid`) => `closed_won`
+5. **Lost deal:** `payment.failed` does not auto-set `closed_lost` (manual only)
 
-For the blueprint, assume a **service or helper** in Laravel: e.g. `LinkTrackingService::urlForLeadAndLink(Lead $lead, TrackedLink $link): string` that creates a `LinkClickToken` and returns the full URL.
+Keyword matching detail (important for your team):
+- `link_name` comes from the **email clickable text**:
+  - if the email has HTML `<a>...</a>`, we use the anchor text
+  - if the email only contains plain URLs, we wrap the URL into an `<a>` and use the URL-derived name
 
-### 5.5 Tracked Links CRUD (Optional but Recommended)
+### 5.5 Where Tokens Are Created
 
-- **List/create/edit tracked links** per tenant (e.g. under Automation or Settings): name, destination_url, campaign. Store in `tracked_links`. No token creation here; tokens are created when generating email content.
+Tokens are created on-the-fly when Laravel compiles automation actions for n8n:
+- `app/Http/Controllers/Api/TenantAutomationRunController.php`
+  - rewrites `send_email.body`
+  - rewrites `start_sequence.steps[].body` for email steps
+- rewriting is handled by `app/Services/LeadLinkTrackingService.php`:
+  - if the body contains `<a href="https://...">`, it rewrites those anchor `href`s
+  - if the body contains plain `https://...` URLs (no `<a>`), it wraps and rewrites them
+
+### 5.6 Tracked Links Registry
+
+Not required in this implementation. Instead of a `tracked_links` registry, the system rewrites **every** `http://`/`https://` link found in the email HTML body (or plain URL text) into a tracked `/r/{token}` redirect.
 
 ---
 
@@ -268,45 +274,46 @@ For the blueprint, assume a **service or helper** in Laravel: e.g. `LinkTracking
 
 ### 6.1 Funnel Analytics Page (Conversion Funnel)
 
-**Purpose:** Show funnel-style conversion: Visits → Opt-ins → In pipeline → Closed Won. Optionally filter or break down by source (Facebook, YouTube, etc.).
+**Current state:** not implemented as a dedicated “Visits → Opt-ins → Pipeline → Won” conversion page in this repo.
 
-**Route:** e.g. `GET /analytics/funnel` or `/marketing/funnel-analytics`, under `role:account-owner,marketing-manager`. Add to [routes/web.php](routes/web.php) in the same middleware group as other marketing routes.
+**What you have right now:**
+- funnel landings are logged in `funnel_visits`
+- marketing dashboard shows **Funnel Visits by source** (UTM breakdown)
+- lead edit page shows **Link Clicks** + `source_campaign`
 
-**Controller:** New method, e.g. `AnalyticsController@funnel` or `DashboardController@funnelAnalytics`. Resolve `tenant_id` from `auth()->user()->tenant_id`.
-
-**Data:**
-
-- **Visits:** Count of `FunnelVisit` for tenant (optional: by funnel_id, date range, utm_source).
-- **Opt-ins:** Count of leads created via funnel (you may need to infer “from funnel” — e.g. leads with a given tag or created in a time window; or add `lead_source` = 'funnel' later). Simplest: total leads in tenant for the period, or count of `funnel_visits` that “converted” (harder without linking visit to lead). **Pragmatic:** use “lead count” for the period as proxy for opt-ins, or add a `source_type` on leads later (e.g. 'funnel' vs 'crm').
-- **In pipeline:** Count of leads where `status` in ('new', 'contacted', 'proposal_sent').
-- **Closed Won:** Count of leads where `status` = 'closed_won'.
-
-**View:** Funnel-style visualization (e.g. horizontal bars or stacked funnel shape) with four stages. Optional: dropdown “By source” to filter by `utm_source` and show the same four numbers for that source. Use existing layout (e.g. [resources/views/layouts/admin.blade.php](resources/views/layouts/admin.blade.php) or the one used by [resources/views/dashboard/marketing.blade.php](resources/views/dashboard/marketing.blade.php)).
+Optional next step: build the full conversion funnel UI once you decide how to associate `FunnelVisit` rows to created `Lead` records.
 
 ### 6.2 Marketing Dashboard Add-Ons
 
 - **Widget: “Funnel link visits by source”** — Same query as §4.5 (visits by utm_source). Display as a small table or bar chart on [dashboard/marketing](resources/views/dashboard/marketing.blade.php). Reuse `DashboardController::marketing()` and pass a new variable, e.g. `$visitsBySource`.
-- **Widget: “Top tracked links” (Phase 2)** — From `lead_link_clicks`: group by tracked_link_id, count clicks. Show link name and total clicks. Optional: distinct lead count.
+- **Notes:** In the current implementation, link-click performance is shown on the **Lead edit page** (not on the marketing dashboard).
 
 ### 6.3 Pipeline Lead Cards
+**File:** `resources/views/leads/edit.blade.php`
 
-**File:** View that renders the lead pipeline (kanban). Likely under `resources/views/leads/` or a partial used by the pipeline.
-
-**Enhancement:** On each lead card, display:
-- **Source:** `$lead->source_campaign` (e.g. “Facebook”, “YouTube”). Already on the model.
-- **Link clicks (Phase 2):** If you have `lead_link_clicks`, show a short line like “Clicked: Pricing, Book a call” or “2 links” from `LeadLinkClick::where('lead_id', $lead->id)->with('trackedLink')->get()`.
+**Enhancement (implemented):**
+- Source/Campaign dropdown now keeps whatever value is already stored on the lead (even if it’s not in the default list).
+- A **Link Clicks** card is displayed:
+  - **Top Links** (grouped by `link_name`, count clicks)
+  - **Recent Clicks** (last ~15 clicks with time + destination URL)
 
 ---
 
 ## 7. Optional — Automation Integration
 
-To let n8n react to link clicks:
+Optional: let n8n react to link-clicks.
 
-1. **Event name:** e.g. `lead.link_clicked`.
-2. **When:** In the redirect controller (§5.3), after creating `LeadLinkClick`, call the same pattern as existing automation: build a payload (tenant_id, lead_id, link name or tracked_link_id, clicked_at, click_number), then `AutomationWebhookService::dispatchEvent('lead.link_clicked', $payload)`.
-3. **n8n:** Add a branch in the SaaS Event Router for `lead.link_clicked` and implement the desired workflow (e.g. notify sales, add to sequence). Payload contract: document in [automation-n8n-implementation.md](automation-n8n-implementation.md).
+In this repo, link clicks already:
+- insert into `lead_link_clicks`
+- update lead score
+- auto-move pipeline stage (new/contacted/high-intent/payment)
 
-No new tables; reuse outbox and webhook job.
+If you still want an external n8n workflow, you can add an emitted event right after the redirect controller logs the click, e.g. `lead.link_clicked`, with a payload like:
+- `tenant_id`, `lead_id`
+- `link_name`, `destination_url`
+- `clicked_at`, `click_number`
+
+Then add a branch in the SaaS Event Router and document the payload contract in [automation-n8n-implementation.md](automation-n8n-implementation.md).
 
 ---
 
@@ -323,34 +330,31 @@ No new tables; reuse outbox and webhook job.
 | Create (optional) | View for “visits by source” or embed in existing marketing dashboard |
 
 ### 8.2 Phase 2
-
 | Action | File / artifact |
 |--------|------------------|
-| Create | Migrations: `tracked_links`, `link_click_tokens`, `lead_link_clicks` |
-| Create | Models: `TrackedLink`, `LinkClickToken`, `LeadLinkClick` |
-| Create | `app/Http/Controllers/LinkTrackController.php` (or similar) — redirect and log |
-| Create | `app/Services/LinkTrackingService.php` (or helper) — create token, return URL |
-| Add route | `Route::get('/r/{token}', [LinkTrackController::class, 'redirect'])->name('link.track.redirect');` |
-| Optional | CRUD for tracked links (controller + views + routes) |
-| Optional | API endpoint for n8n to get tracked URL: e.g. `POST /api/tracked-link-url` |
+| Create | Migration: `database/migrations/2026_03_20_000002_create_lead_link_clicks_table.php` |
+| Create | Model: `app/Models/LeadLinkClick.php` |
+| Create | `app/Http/Controllers/LinkTrackingController.php` — decode token, log click, apply pipeline rules, redirect |
+| Create | `app/Services/LeadLinkTrackingService.php` — rewrite email links + generate signed tokens |
+| Modify | `app/Http/Controllers/Api/TenantAutomationRunController.php` — rewrite `send_email` + `start_sequence` email bodies |
+| Add route | `Route::get('/r/{token}', [LinkTrackingController::class, 'redirect'])->name('link.track.redirect');` |
+| Modify | `app/Http/Controllers/PaymentController.php` — payment.paid => `closed_won` |
+| Modify | `app/Http/Controllers/FunnelPortalController.php` — funnel paid => `closed_won` |
 
 ### 8.3 Phase 3
-
 | Action | File / artifact |
 |--------|------------------|
-| Create or extend | Controller method for funnel analytics page |
-| Add route | e.g. `/analytics/funnel` or `/marketing/funnel-analytics` |
-| Create | `resources/views/analytics/funnel.blade.php` (or under dashboard/marketing) |
-| Modify | `DashboardController::marketing()` — pass `$visitsBySource`, optionally `$topTrackedLinks` |
-| Modify | Marketing dashboard view — add widgets |
-| Modify | Lead pipeline view/partial — show source and “Clicked: …” on cards |
+| Modify | `app/Http/Controllers/DashboardController.php` — add Funnel Visits by source queries |
+| Modify | `resources/views/dashboard/marketing.blade.php` — display Funnel Visits KPI + chart |
+| Modify | `app/Http/Controllers/LeadController.php` — load `recentLinkClicks` + `topLinkClicks` |
+| Modify | `resources/views/leads/edit.blade.php` — display “Link Clicks” card + keep `source_campaign` value |
 
 ### 8.4 Optional Automation
 
 | Action | File / artifact |
 |--------|------------------|
-| Modify | `LinkTrackController` (or redirect handler) — after logging click, call `AutomationWebhookService::dispatchEvent('lead.link_clicked', $payload)` |
-| Document | In [automation-n8n-implementation.md](automation-n8n-implementation.md): event `lead.link_clicked`, payload shape, and that n8n may add a branch for it |
+| Optional | `LinkTrackingController` — after logging the click, optionally emit a new automation event like `lead.link_clicked` (not required for pipeline movement because pipeline rules already run in Laravel). |
+| Document | Update [automation-n8n-implementation.md](automation-n8n-implementation.md) with the payload contract for `lead.link_clicked` if you implement the n8n branch. |
 
 ---
 
@@ -359,29 +363,36 @@ No new tables; reuse outbox and webhook job.
 ### 9.1 Phase 1
 
 - Visit `/f/{funnelSlug}?utm_source=facebook`. Assert one row in `funnel_visits` with utm_source = 'facebook', correct tenant_id and funnel_id.
-- Visit without UTM: no row (or define policy: only log when at least one of utm_source, utm_medium, utm_campaign, referrer is set).
+- Visit without UTM: a row still exists, but `utm_source`/`referrer` are `null` (your reporting should show it as “Unspecified” or similar).
 - Submit opt-in from a page that was loaded with `?utm_source=youtube`. Assert lead has `source_campaign` = 'youtube'.
 - Report: “Visits by source” shows Facebook and YouTube with correct counts.
 
 ### 9.2 Phase 2
-
-- Create a tracked link and a token for a lead. Open `https://yourapp.com/r/{token}`. Assert one row in `lead_link_clicks`, and browser redirects to `destination_url`.
-- Invalid token: redirect to homepage or error page, no insert.
-- Optional: same link clicked again by same lead: second row in `lead_link_clicks`, click_number or count correct if implemented.
+- Create/run an automation (sequence email or send_email) that includes a real `https://...` link (preferably inside an HTML `<a href="...">`).
+- Click the link (this opens `GET /r/{token}` behind the scenes). Assert:
+  - a row is inserted into `lead_link_clicks`
+  - lead score increments (+10) and a scoring activity note is created
+  - pipeline stage updates according to rules:
+    - first tracked click when lead is `new` => `contacted`
+    - high-intent link text (keywords `book/call/demo/schedule`) when old status is `new` or `contacted` => `proposal_sent`
+    - after stage becomes `contacted`/`proposal_sent`, more clicks do not advance further
+- Payment tests:
+  - create a `payment` with status `paid` for a lead => lead becomes `closed_won`
+  - create a `payment` with status `failed` => lead does NOT auto-move to `closed_lost` (manual only)
 
 ### 9.3 Phase 3
-
-- Funnel analytics page loads and shows four stages with non-zero numbers when data exists.
-- Marketing dashboard shows “visits by source” (and optionally “top links”).
-- Pipeline lead cards show source and “Clicked: …” when data exists.
+- Marketing dashboard shows Funnel Visits by source.
+- Lead edit page shows:
+  - `source_campaign`
+  - Link Clicks card (Top Links + Recent Clicks).
 
 ---
 
 ## 10. Order of Implementation (Summary)
 
 1. **Phase 1:** Migration `funnel_visits` + model → `FunnelPortalController::show` (log visit) → `FunnelPortalController::optIn` (set source_campaign) → simple report or widget (visits by source).
-2. **Phase 2:** Migrations `tracked_links`, `link_click_tokens`, `lead_link_clicks` + models → redirect route + controller (log + redirect) → service to generate token/URL → optional CRUD for tracked links, optional API for n8n.
-3. **Phase 3:** Funnel analytics page (conversion funnel UI) → dashboard widgets → pipeline card enhancements.
+2. **Phase 2:** Migration `lead_link_clicks` + service to rewrite outbound email bodies + signed redirect route → log clicks + apply pipeline movement rules + payment paid => closed_won.
+3. **Phase 3:** Dashboard widgets (funnel visits by source) + Lead edit UI (link clicks + source dropdown behavior).
 4. **Optional:** Emit `lead.link_clicked` in redirect controller; document and add n8n branch.
 
 This blueprint is self-contained so that development can proceed in the order above with minimal ambiguity. Update this doc if you change table names, add columns, or introduce new endpoints.

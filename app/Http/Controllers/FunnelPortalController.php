@@ -3,16 +3,18 @@
 namespace App\Http\Controllers;
 
 use App\Models\Funnel;
+use App\Models\FunnelVisit;
 use App\Models\FunnelStep;
 use App\Models\Lead;
 use App\Models\Payment;
+use App\Notifications\LeadVerifyEmail;
 use App\Services\AutomationWebhookService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class FunnelPortalController extends Controller
 {
-    public function show(string $funnelSlug, ?string $stepSlug = null)
+    public function show(Request $request, string $funnelSlug, ?string $stepSlug = null)
     {
         $funnel = Funnel::with(['tenant', 'steps'])->where('slug', $funnelSlug)->where('status', 'published')->firstOrFail();
         $steps = $funnel->steps->where('is_active', true)->sortBy('position')->values();
@@ -23,6 +25,40 @@ class FunnelPortalController extends Controller
             : $steps->first();
 
         abort_if(!$step, 404);
+
+        $utmSource = $this->normalizeSourceCampaign($request->query('utm_source'));
+        $utmMedium = $this->normalizeSourceCampaign($request->query('utm_medium'));
+        $utmCampaign = $this->normalizeSourceCampaign($request->query('utm_campaign'));
+        $referrer = $request->header('referer');
+        $referrer = $referrer ? mb_substr(trim((string) $referrer), 0, 500) : null;
+
+        // Persist attribution so it survives internal redirects between funnel steps.
+        // (We only store it when we actually have something useful to store.)
+        if ($utmSource || $utmMedium || $utmCampaign || $referrer) {
+            session()->put($this->funnelUtmSessionKey($funnel->id), [
+                'utm_source' => $utmSource,
+                'utm_medium' => $utmMedium,
+                'utm_campaign' => $utmCampaign,
+                'referrer' => $referrer,
+            ]);
+        }
+
+        // Always log funnel landing so the tenant can see “how many times link was clicked”.
+        try {
+            FunnelVisit::create([
+                'tenant_id' => $funnel->tenant_id,
+                'funnel_id' => $funnel->id,
+                'funnel_step_id' => $step->id,
+                'utm_source' => $utmSource,
+                'utm_medium' => $utmMedium,
+                'utm_campaign' => $utmCampaign,
+                'referrer' => $referrer,
+                'visited_at' => now(),
+            ]);
+        } catch (\Throwable $e) {
+            // Tracking must never break the funnel UI.
+            report($e);
+        }
 
         return view('funnels.portal.step', [
             'funnel' => $funnel,
@@ -73,6 +109,16 @@ class FunnelPortalController extends Controller
             $lead->score = 0;
         }
 
+        $utmFromRequest = $this->normalizeSourceCampaign($request->query('utm_source'));
+        $storedUtm = session()->get($this->funnelUtmSessionKey($funnel->id), []);
+        $utmFromSession = $this->normalizeSourceCampaign($storedUtm['utm_source'] ?? null);
+        $referrerFromSession = $storedUtm['referrer'] ?? null;
+
+        $resolvedSource = $utmFromRequest ?: $utmFromSession ?: $this->inferSourceFromReferrer($referrerFromSession);
+        if ($resolvedSource) {
+            $lead->source_campaign = $resolvedSource;
+        }
+
         $lead->name = $name !== '' ? $name : $lead->name;
         $lead->phone = $phone !== '' ? $phone : ($lead->phone ?? '');
         $lead->tags = $this->mergeTags(
@@ -82,13 +128,46 @@ class FunnelPortalController extends Controller
         );
         $lead->save();
 
+        session()->put($this->leadSessionKey($funnel->id), $lead->id);
+
+        // Fresh funnel flags (avoid stale model); DOI only when lead has never confirmed this email.
+        $funnel->refresh();
+        $needsDoubleOptIn = filter_var($funnel->getAttributes()['require_double_opt_in'] ?? false, FILTER_VALIDATE_BOOLEAN);
+
+        if ($needsDoubleOptIn && !$lead->hasVerifiedEmail()) {
+            $next = $this->nextStep($steps, $step->id);
+            session()->put("funnel_pending_step_{$funnel->id}", $next?->slug);
+
+            // Double opt-in: send verification email, do not dispatch webhook or score yet.
+            try {
+                logger()->info('DOI: sending lead verification email', [
+                    'lead_id' => $lead->id,
+                    'lead_email' => $lead->email,
+                    'funnel_id' => $funnel->id,
+                    'funnel_require_double_opt_in' => $funnel->require_double_opt_in,
+                ]);
+                // Pass opt-in step id so after verification we can redirect to the next funnel step.
+                $lead->notify(new LeadVerifyEmail($lead, (int) $funnel->id, $funnel->name, (int) $step->id));
+                logger()->info('DOI: lead verification email notify() returned', [
+                    'lead_id' => $lead->id,
+                    'lead_email' => $lead->email,
+                    'funnel_id' => $funnel->id,
+                ]);
+            } catch (\Throwable $e) {
+                report($e);
+                return redirect()->back()->withErrors([
+                    'email' => 'We could not send the confirmation email. Please try again later or contact support.',
+                ])->withInput();
+            }
+
+            return redirect()->route('funnels.lead.confirm-email', ['funnelSlug' => $funnel->slug]);
+        }
+
         $lead->increment('score', 20);
         $lead->activities()->create([
             'activity_type' => 'Scoring',
             'notes' => 'Form Submitted (+20 points)',
         ]);
-
-        session()->put($this->leadSessionKey($funnel->id), $lead->id);
 
         $this->dispatchFunnelOptInWebhook($lead, $funnel->id, $funnel->name ?? null);
 
@@ -201,6 +280,52 @@ class FunnelPortalController extends Controller
         return "funnel_lead_{$funnelId}";
     }
 
+    private function funnelUtmSessionKey(int $funnelId): string
+    {
+        return "funnel_utm_{$funnelId}";
+    }
+
+    private function normalizeSourceCampaign(?string $value): ?string
+    {
+        $v = trim((string) ($value ?? ''));
+        if ($v === '') {
+            return null;
+        }
+
+        // Keep it URL/DB friendly and consistent for analytics breakdowns.
+        $v = preg_replace('/\s+/', '_', $v) ?? '';
+        $v = mb_substr(trim($v), 0, 100);
+
+        return $v !== '' ? $v : null;
+    }
+
+    private function inferSourceFromReferrer(?string $referrer): ?string
+    {
+        if (!$referrer) {
+            return null;
+        }
+
+        $r = mb_strtolower($referrer);
+
+        if (str_contains($r, 'facebook')) {
+            return 'facebook';
+        }
+
+        if (str_contains($r, 'youtube')) {
+            return 'youtube';
+        }
+
+        if (str_contains($r, 'instagram')) {
+            return 'instagram';
+        }
+
+        if (str_contains($r, 'tiktok')) {
+            return 'tiktok';
+        }
+
+        return null;
+    }
+
     private function currentLeadId(int $funnelId): ?int
     {
         $leadId = session()->get($this->leadSessionKey($funnelId));
@@ -241,6 +366,26 @@ class FunnelPortalController extends Controller
             return;
         }
         $service = app(AutomationWebhookService::class);
+
+        // MVP rule: payment.paid => Closed Won (and notify n8n via lead.status_changed).
+        if ($event === 'payment.paid') {
+            $oldStatus = (string) ($lead->status ?? '');
+            $newStatus = 'closed_won';
+
+            if ($oldStatus !== $newStatus && !in_array($oldStatus, ['closed_lost', 'closed_won'], true)) {
+                $lead->status = $newStatus;
+                $lead->save();
+
+                $lead->activities()->create([
+                    'activity_type' => 'Scoring',
+                    'notes' => 'Auto: Pipeline Stage updated to closed_won (+0 points)',
+                ]);
+
+                $statusPayload = $service->buildLeadStatusChangedPayload($lead, $oldStatus, $newStatus, []);
+                $service->dispatchEvent('lead.status_changed', $statusPayload);
+            }
+        }
+
         $payload = $service->buildPaymentPayload($event, $lead, $payment, []);
         $service->dispatchEvent($event, $payload);
     }

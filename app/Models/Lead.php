@@ -6,10 +6,16 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Notifications\Notifiable;
 
 class Lead extends Model
 {
-    use HasFactory;
+    use HasFactory, Notifiable;
+
+    public function routeNotificationForMail(): string
+    {
+        return (string) $this->email;
+    }
 
     public const PIPELINE_STATUSES = [
         'new' => 'New',
@@ -29,11 +35,23 @@ class Lead extends Model
         'tags',
         'status',
         'score',
+        'email_verified_at',
     ];
 
     protected $casts = [
         'tags' => 'array',
+        'email_verified_at' => 'datetime',
     ];
+
+    public function hasVerifiedEmail(): bool
+    {
+        return $this->email_verified_at !== null;
+    }
+
+    public function getEmailForVerification(): string
+    {
+        return (string) $this->email;
+    }
 
     protected static function booted(): void
     {
@@ -66,5 +84,10 @@ class Lead extends Model
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class);
+    }
+
+    public function linkClicks(): HasMany
+    {
+        return $this->hasMany(LeadLinkClick::class, 'lead_id');
     }
 }

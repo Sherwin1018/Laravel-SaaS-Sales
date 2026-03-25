@@ -17,6 +17,17 @@
                         @endforeach
                     </div>
                 @endif
+                @if($pipelineLead->source_campaign)
+                    <small style="color: var(--theme-muted, #6B7280); display: block; margin-top: 4px;">
+                        Source: {{ $pipelineLead->source_campaign }}
+                    </small>
+                @endif
+                @php($clicks = \App\Models\LeadLinkClick::where('lead_id', $pipelineLead->id)->get())
+                @if($clicks->count() > 0)
+                    <small style="color: var(--theme-muted, #6B7280); display: block; margin-top: 2px;">
+                        Clicked: {{ $clicks->pluck('link_name')->implode(', ') }}
+                    </small>
+                @endif
             </div>
         @empty
             <p class="pipeline-empty">No leads</p>

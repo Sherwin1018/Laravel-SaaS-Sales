@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Super Admin Dashboard')</title>
     <link rel="stylesheet" href="{{ asset('css/admin-dashboard.css') }}">
     @php
@@ -285,13 +286,19 @@
         }
     </script>
 
-    @if(session('success') || session('error'))
+    @if(session('success') || session('error') || session('warning'))
+        @php
+            $toastType = session('success') ? 'success' : (session('warning') ? 'warning' : 'error');
+            $toastTitle = session('success') ? 'Success!' : (session('warning') ? 'Notice' : 'Error!');
+            $toastIcon = session('success') ? 'fa-check' : (session('warning') ? 'fa-exclamation-triangle' : 'fa-times');
+            $toastBody = session('success') ?? session('warning') ?? session('error');
+        @endphp
         <div id="statusToastContainer" class="status-toast-container">
-            <div class="status-toast {{ session('success') ? 'success' : 'error' }}">
-                <i class="status-icon fas {{ session('success') ? 'fa-check' : 'fa-times' }}"></i>
+            <div class="status-toast {{ $toastType }}">
+                <i class="status-icon fas {{ $toastIcon }}"></i>
                 <div>
-                    <h4>{{ session('success') ? 'Success!' : 'Error!' }}</h4>
-                    <p>{{ session('success') ?? session('error') }}</p>
+                    <h4>{{ $toastTitle }}</h4>
+                    <p>{{ $toastBody }}</p>
                 </div>
                 <button type="button" class="status-toast-close" onclick="closeStatusToast()" aria-label="Close notification">
                     <i class="fas fa-times-circle"></i>
@@ -306,7 +313,7 @@
                 }
             }
 
-            setTimeout(closeStatusToast, 3000);
+            setTimeout(closeStatusToast, {{ session('warning') ? 8000 : 3000 }});
         </script>
     @endif
     @yield('scripts')

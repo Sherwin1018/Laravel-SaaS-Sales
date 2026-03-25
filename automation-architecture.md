@@ -15,7 +15,7 @@
 | Event | Fired from | Description |
 |-------|-----------|-------------|
 | `lead.created` | `LeadController` | A new lead is added to the CRM |
-| `funnel.opt_in` | `FunnelPortalController` | Someone submits an opt-in form on a published funnel |
+| `funnel.opt_in` | `FunnelPortalController` / `LeadVerificationController` | Someone opts in on a funnel. If the funnel has **Require double opt-in** enabled, this fires when they *click the verification link*, not on form submit. |
 | `lead.status_changed` | `LeadController` | A lead's pipeline status is updated |
 | `payment.paid` | `PaymentController` | A payment is marked as paid |
 | `payment.failed` | `PaymentController` | A payment fails |

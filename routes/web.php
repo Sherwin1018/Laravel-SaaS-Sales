@@ -2,10 +2,12 @@
 
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Auth\EmailVerificationController;
 use App\Http\Controllers\AutomationController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FunnelController;
 use App\Http\Controllers\FunnelPortalController;
+use App\Http\Controllers\LeadVerificationController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProfileController;
@@ -80,17 +82,27 @@ HTML;
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
 
 Route::middleware(['auth'])->group(function () {
-    Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');
-    Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password.update');
-    Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar.update');
-    Route::delete('/profile/avatar', [ProfileController::class, 'deleteAvatar'])->name('profile.avatar.delete');
-    Route::post('/profile/company-logo', [ProfileController::class, 'updateCompanyLogo'])->name('profile.company-logo.update');
-    Route::delete('/profile/company-logo', [ProfileController::class, 'deleteCompanyLogo'])->name('profile.company-logo.delete');
-    Route::put('/profile/theme', [ProfileController::class, 'updateTheme'])->name('profile.theme.update');
+    Route::get('/email/verify', [EmailVerificationController::class, 'notice'])->name('verification.notice');
+    Route::get('/email/verify/{id}/{hash}', [EmailVerificationController::class, 'verify'])
+        ->middleware('signed')
+        ->name('verification.verify');
+    Route::post('/email/verification-notification', [EmailVerificationController::class, 'resend'])
+        ->middleware('throttle:6,1')
+        ->name('verification.send');
+
+    Route::middleware('verified')->group(function () {
+        Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');
+        Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
+        Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password.update');
+        Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar.update');
+        Route::delete('/profile/avatar', [ProfileController::class, 'deleteAvatar'])->name('profile.avatar.delete');
+        Route::post('/profile/company-logo', [ProfileController::class, 'updateCompanyLogo'])->name('profile.company-logo.update');
+        Route::delete('/profile/company-logo', [ProfileController::class, 'deleteCompanyLogo'])->name('profile.company-logo.delete');
+        Route::put('/profile/theme', [ProfileController::class, 'updateTheme'])->name('profile.theme.update');
+    });
 });
 
-Route::middleware(['auth', 'role:super-admin'])->group(function () {
+Route::middleware(['auth', 'verified', 'role:super-admin'])->group(function () {
     Route::get('/admin/dashboard', [AdminController::class, 'index'])->name('admin.dashboard');
 
     Route::get('/admin/tenants', [TenantController::class, 'index'])->name('admin.tenants.index');
@@ -105,9 +117,12 @@ Route::middleware(['auth', 'role:super-admin'])->group(function () {
     Route::get('/admin/leads', [LeadController::class, 'adminIndex'])->name('admin.leads.index');
 });
 
-Route::middleware(['auth', 'role:sales-agent,marketing-manager,account-owner,finance'])->group(function () {
+Route::middleware(['auth', 'verified', 'role:sales-agent,marketing-manager,account-owner,finance'])->group(function () {
     Route::get('/dashboard/owner', [DashboardController::class, 'owner'])->middleware('role:account-owner')->name('dashboard.owner');
     Route::get('/dashboard/marketing', [DashboardController::class, 'marketing'])->middleware('role:marketing-manager')->name('dashboard.marketing');
+    Route::get('/marketing/funnel-analytics', [DashboardController::class, 'funnelAnalytics'])
+        ->middleware('role:account-owner,marketing-manager')
+        ->name('marketing.funnel_analytics');
     Route::get('/dashboard/sales', [DashboardController::class, 'sales'])->middleware('role:sales-agent')->name('dashboard.sales');
     Route::get('/dashboard/finance', [DashboardController::class, 'finance'])->middleware('role:finance')->name('dashboard.finance');
 
@@ -126,6 +141,7 @@ Route::middleware(['auth', 'role:sales-agent,marketing-manager,account-owner,fin
         Route::get('/users', [UserController::class, 'index'])->name('users.index');
         Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
         Route::post('/users', [UserController::class, 'store'])->name('users.store');
+        Route::post('/users/{user}/resend-verification', [UserController::class, 'resendVerification'])->name('users.resend-verification');
         Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
     });
 
@@ -174,12 +190,25 @@ Route::middleware(['auth', 'role:sales-agent,marketing-manager,account-owner,fin
     });
 });
 
-Route::middleware(['auth', 'role:customer'])->group(function () {
+Route::middleware(['auth', 'verified', 'role:customer'])->group(function () {
     Route::get('/dashboard/customer', [DashboardController::class, 'customer'])->name('dashboard.customer');
 });
+
+// DOI pages must be registered BEFORE the generic step routes (order matters in Laravel routing).
+Route::get('/f/{funnelSlug}/confirm-email', [LeadVerificationController::class, 'confirmEmail'])
+    ->name('funnels.lead.confirm-email');
+Route::get('/f/{funnelSlug}/confirm-email/status', [LeadVerificationController::class, 'confirmEmailStatus'])
+    ->name('funnels.lead.confirm-email.status');
+Route::get('/funnel/verify', [LeadVerificationController::class, 'verify'])
+    ->middleware('signed')
+    ->name('funnels.lead.verify');
+Route::get('/funnel/verified', [LeadVerificationController::class, 'verified'])->name('funnels.lead.verified');
 
 Route::get('/f/{funnelSlug}/{stepSlug?}', [FunnelPortalController::class, 'show'])->name('funnels.portal.step');
 Route::get('/funnel/{funnelSlug}/{stepSlug?}', [FunnelPortalController::class, 'show'])->name('funnels.portal.step.alias');
 Route::post('/f/{funnelSlug}/{stepSlug}/opt-in', [FunnelPortalController::class, 'optIn'])->name('funnels.portal.optin');
 Route::post('/f/{funnelSlug}/{stepSlug}/checkout', [FunnelPortalController::class, 'checkout'])->name('funnels.portal.checkout');
 Route::post('/f/{funnelSlug}/{stepSlug}/offer', [FunnelPortalController::class, 'offer'])->name('funnels.portal.offer');
+
+// Public redirect route used for tracking lead link clicks.
+Route::get('/r/{token}', [\App\Http\Controllers\LinkTrackingController::class, 'redirect'])->name('link.track.redirect');
