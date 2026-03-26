@@ -1769,6 +1769,45 @@ function templateWorkshopTicketCheckoutLayout(){
     });
     return buildTemplateLayout("#F3EEF7",[ticket,agenda]);
 }
+function templateWorkshopTicketCheckoutDiscountLayout(){
+    // Same as the workshop checkout template, but includes a regular price so the countdown can switch displayed pricing.
+    var countdown=makeEl("countdown","",{width:"100%"},{
+        endAt:futureCountdownValue(7),
+        label:"Ticket price changes in",
+        expiredText:"Price update coming soon",
+        numberColor:"#240E35",
+        labelColor:"#64748b",
+        itemGap:8
+    });
+    var ticket=makeSplitInfoSection(
+        makePanelColumn([
+            makeEl("heading","Workshop registration",{fontSize:"28px",color:"#240E35",fontWeight:"800",margin:"0 0 10px"},{}),
+            makeEl("text","Use this style for live events, trainings, and intensives where urgency matters.",{fontSize:"15px",color:"#64748b",lineHeight:"1.7",margin:"0 0 16px"},{}),
+            countdown,
+            makePrimaryButtonEl("Reserve My Spot",{actionType:"checkout",alignment:"left"},{margin:"16px 0 0"})
+        ]),
+        makePanelColumn([makePricingCardEl({
+            plan:"Workshop Ticket",
+            price:"$97",
+            regularPrice:"$117",
+            period:"",
+            subtitle:"Live training plus replay and workbook",
+            features:["90-minute workshop","Replay access","Action workbook"],
+            badge:"Limited Seats"
+        },makeBareCardStyle())]),
+        {alignItems:"stretch"}
+    );
+    var agenda=makeCardGridSection({
+        title:"Show buyers what the ticket includes",
+        body:"Agenda blocks help the workshop feel more tangible and valuable before the purchase.",
+        columns:[
+            makeFeatureCardColumn("calendar-days","Live session","Explain how long the event is and what they will learn."),
+            makeFeatureCardColumn("gift","Bonus assets","List the workbook, replay, templates, or support extras."),
+            makeFeatureCardColumn("clock","Fast access","Tell them when they will receive event details and reminders.")
+        ]
+    });
+    return buildTemplateLayout("#F3EEF7",[ticket,agenda]);
+}
 function templateBundleCheckoutLayout(){
     var hero=makeSplitInfoSection(
         makeColumn(makeIntroElements(
@@ -1996,6 +2035,7 @@ const checkoutTemplates=[
     {id:"checkout_split",name:"Checkout Split",description:"Simple two-column checkout starter with summary and order area.",tags:["Checkout","Starter"],preview:"pricing",build:templateCheckoutLayout},
     {id:"checkout_premium",name:"Premium Checkout",description:"Polished checkout page with reassurance copy and proof.",tags:["Checkout","Premium"],preview:"pricing",build:templatePremiumCheckoutLayout},
     {id:"checkout_workshop_ticket",name:"Workshop Ticket",description:"Event-ticket checkout with urgency and agenda framing.",tags:["Checkout","Event"],preview:"pricing",build:templateWorkshopTicketCheckoutLayout},
+    {id:"checkout_workshop_ticket_discount",name:"Workshop Ticket (Countdown Discount)",description:"Workshop checkout with a regular price so the countdown can update pricing.",tags:["Checkout","Event","Countdown"],preview:"pricing",build:templateWorkshopTicketCheckoutDiscountLayout},
     {id:"checkout_bundle",name:"Bundle Checkout",description:"Stacked-offer checkout for bundles and bonus-heavy offers.",tags:["Checkout","Bundle"],preview:"pricing",build:templateBundleCheckoutLayout},
     {id:"checkout_membership",name:"Membership Checkout",description:"Recurring-offer checkout layout for subscriptions and communities.",tags:["Checkout","Membership"],preview:"pricing",build:templateMembershipCheckoutLayout}
 ];
@@ -2092,7 +2132,8 @@ function chooseTemplateTargetStep(stepList,currentStep,labelText){
     var checkoutStep=findFlowStepByTypes(stepList,currentStep,["checkout"]);
     var thankYouStep=findFlowStepByTypes(stepList,currentStep,["thank_you"]);
     var customStep=findFlowStepByTypes(stepList,currentStep,["custom"]);
-    var wantsCheckout=/(checkout|purchase|buy|order|seat|spot|bundle|membership)/.test(text);
+    // Avoid overly-broad words like "spot/seat" which can incorrectly route thank-you buttons back to checkout.
+    var wantsCheckout=/(checkout|purchase|buy|order|bundle|membership)/.test(text);
     var wantsOffer=/(price|pricing|offer|package|plan)/.test(text);
     var wantsResource=/(community|resource|download|calendar)/.test(text);
     if(/(^|\s)(home|back)(\s|$)/.test(text)){
@@ -2207,6 +2248,110 @@ function isBareCardSkin(style){
     var pad=String(s.padding||"").trim().toLowerCase();
     return border==="0"||border==="0px"||border==="none"||bg==="transparent"||shadow==="none"||pad==="0"||pad==="0px";
 }
+function autoLinkCountdownPricing(layout){
+    if(!layout||typeof layout!=="object")return layout;
+    var pricingEls=[];
+    var countdownEls=[];
+
+    function visitElements(list){
+        (Array.isArray(list)?list:[]).forEach(function(el){
+            if(!el||typeof el!=="object")return;
+            if(el.type==="pricing")pricingEls.push(el);
+            if(el.type==="countdown")countdownEls.push(el);
+
+            var slideList=(el.settings&&Array.isArray(el.settings.slides))?el.settings.slides:[];
+            slideList.forEach(function(slide){
+                if(slide&&Array.isArray(slide.elements)){
+                    visitElements(slide.elements);
+                }
+            });
+        });
+    }
+    function visitColumns(cols){
+        (Array.isArray(cols)?cols:[]).forEach(function(col){
+            if(!col||typeof col!=="object")return;
+            if(col&&Array.isArray(col.elements)){
+                visitElements(col.elements);
+            }
+        });
+    }
+    function visitSections(sections){
+        (Array.isArray(sections)?sections:[]).forEach(function(section){
+            if(!section||typeof section!=="object")return;
+            visitElements(section.elements);
+            (Array.isArray(section.rows)?section.rows:[]).forEach(function(row){
+                if(row&&Array.isArray(row.columns)){
+                    visitColumns(row.columns);
+                }
+            });
+        });
+    }
+
+    if(Array.isArray(layout.root))visitSections(layout.root);
+    if(Array.isArray(layout.sections))visitSections(layout.sections);
+
+    if(!pricingEls.length||!countdownEls.length)return layout;
+
+    var pricingIds=pricingEls
+        .map(function(p){return String(p&&p.id||"").trim();})
+        .filter(Boolean);
+    if(!pricingIds.length)return layout;
+
+    var firstPricingEl=pricingEls[0];
+
+    countdownEls.forEach(function(cd){
+        cd.settings=(cd.settings&&typeof cd.settings==="object")?cd.settings:{};
+
+        // Collect existing linked pricing ids (both new + legacy fields).
+        var linkedIds=[];
+        var raw=cd.settings.linkedPricingIds;
+        if(Array.isArray(raw)){
+            linkedIds=raw.map(function(v){return String(v||"").trim();}).filter(Boolean);
+        }else if(typeof raw==="string"){
+            var s=String(raw||"").trim();
+            if(s){
+                linkedIds=s.split(",").map(function(v){return String(v||"").trim();}).filter(Boolean);
+            }
+        }
+        var legacy=String(cd.settings.linkedPricingId||"").trim();
+        if(!linkedIds.length&&legacy!=="")linkedIds=[legacy];
+
+        // If not linked yet, link to all pricing cards found on this step layout.
+        if(!linkedIds.length){
+            cd.settings.linkedPricingIds=pricingIds;
+            if(Object.prototype.hasOwnProperty.call(cd.settings,"linkedPricingId")){
+                delete cd.settings.linkedPricingId;
+            }
+            linkedIds=pricingIds;
+        }
+
+        // Countdown promoKey rule:
+        // - If countdown promoKey is empty, copy it from the first linked pricing.
+        // - If countdown promoKey is manual, do not override it.
+        var curPromo=String(cd.settings.promoKey||"").trim();
+        if(curPromo===""){
+            var firstLinkedId=String(linkedIds[0]||"").trim();
+            var pricingTarget=firstPricingEl;
+            if(firstLinkedId!==""){
+                var found=pricingEls.find(function(p){
+                    return String(p&&p.id||"").trim()===firstLinkedId;
+                });
+                if(found)pricingTarget=found;
+            }
+            pricingTarget.settings=(pricingTarget.settings&&typeof pricingTarget.settings==="object")?pricingTarget.settings:{};
+            var pPromo=String(pricingTarget.settings.promoKey||"").trim();
+            if(pPromo===""){
+                // Generate a safe promo key when pricing doesn't have one yet.
+                pPromo=("promo_"+String(pricingTarget.id||"")).replace(/[^a-z0-9_\-]/gi,"");
+                if(pPromo==="promo_")pPromo="promo_"+String(Date.now());
+                pricingTarget.settings.promoKey=pPromo;
+            }
+            cd.settings.promoKey=pPromo;
+        }
+    });
+
+    return layout;
+}
 function applyFunnelThemeToLayout(layout,theme){
     var out=(layout&&typeof layout==="object")?clone(layout):{root:[],sections:[]};
     var brand=theme&&typeof theme==="object"?theme:{};
@@ -2309,6 +2454,9 @@ function buildPackLayout(pack,stepLike,stepList){
     var built=(tpl&&typeof tpl.build==="function")?tpl.build():defaults(type);
     built=applyFunnelThemeToLayout(built,(pack&&pack.theme)||{});
     built=wireTemplateLayoutForStep(built,(stepLike&&typeof stepLike==="object")?stepLike:{type:type},stepList||steps);
+    if(pack&&pack.autoLinkCountdownPricing){
+        built=autoLinkCountdownPricing(built);
+    }
     var packBg=normalizeCanvasBgValue(pack&&pack.theme&&pack.theme.canvasBg);
     if(packBg)built=withCanvasBgInLayout(built,packBg);
     normalizeElementStyle(built);
@@ -2350,6 +2498,16 @@ const funnelTemplatePacks=[
         preview:"lead",
         theme:{primary:"#DC2626",accent:"#F59E0B",heading:"#7F1D1D",body:"#57534E",surface:"#ffffff",soft:"#FFF7ED",border:"#FECACA",canvasBg:"#FFF8F5"},
         templates:{landing:"landing_hero_launch",opt_in:"optin_webinar_signup",sales:"sales_offer_stack",checkout:"checkout_workshop_ticket",thank_you:"thankyou_event",custom:"custom_hero_video"}
+    },
+    {
+        id:"pack_workshop_event_countdown_discount",
+        name:"Workshop Event (Countdown Discount)",
+        description:"Apply-to-all-pages funnel where the checkout countdown auto-updates pricing using sale vs regular price.",
+        tags:["All Pages","Event","Workshop","Countdown"],
+        preview:"pricing",
+        autoLinkCountdownPricing:true,
+        theme:{primary:"#DC2626",accent:"#F59E0B",heading:"#7F1D1D",body:"#57534E",surface:"#ffffff",soft:"#FFF7ED",border:"#FECACA",canvasBg:"#FFF8F5"},
+        templates:{landing:"landing_hero_launch",opt_in:"optin_webinar_signup",sales:"sales_offer_stack",checkout:"checkout_workshop_ticket_discount",thank_you:"thankyou_event",custom:"custom_hero_video"}
     },
     {
         id:"pack_membership_growth",
@@ -10369,7 +10527,21 @@ function renderSettings(){
                     chk.addEventListener("change",function(){
                         saveToHistory();
                         var ids=Array.from(settings.querySelectorAll(".cdPricingCheck:checked")).map(function(n){return String(n.value||"");});
-                        setLinkedPricingIds(t,ids);
+                        var cleanIds=setLinkedPricingIds(t,ids);
+                        // If the countdown promoKey is empty, auto-copy it from the first linked pricing.
+                        // If the user already provided a manual promoKey, do not override it.
+                        var curPromo=String((t.settings&&t.settings.promoKey)||"").trim();
+                        if(curPromo==="" && cleanIds && cleanIds.length){
+                            var firstId=String(cleanIds[0]||"").trim();
+                            if(firstId!==""){
+                                var pEl=findElementById(firstId);
+                                var pPromo=String((pEl&&pEl.settings&&pEl.settings.promoKey)||"").trim();
+                                if(pPromo!==""){
+                                    t.settings=t.settings||{};
+                                    t.settings.promoKey=pPromo;
+                                }
+                            }
+                        }
                         renderCanvas();
                         renderCountdownEditor();
                     });

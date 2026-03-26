@@ -7,6 +7,7 @@ use App\Http\Controllers\FunnelController;
 use App\Http\Controllers\FunnelPortalController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\PayMongoWebhookController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TenantController;
 use App\Http\Controllers\UserController;
@@ -14,7 +15,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    if (!Auth::check()) {
+    if (! Auth::check()) {
         return redirect()->route('login');
     }
 
@@ -47,6 +48,7 @@ Route::get('/', function () {
     Auth::logout();
     request()->session()->invalidate();
     request()->session()->regenerateToken();
+
     return redirect()->route('login')->with('error', 'Login Failed. Your role does not have access.');
 });
 
@@ -55,7 +57,7 @@ Route::middleware('guest')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 });
 Route::get('/logout', function () {
-    if (!Auth::check()) {
+    if (! Auth::check()) {
         return redirect()->route('login');
     }
 
@@ -74,6 +76,7 @@ Route::get('/logout', function () {
 </body>
 </html>
 HTML;
+
     return response($html);
 })->middleware('auth');
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
@@ -164,4 +167,9 @@ Route::get('/f/{funnelSlug}/{stepSlug?}', [FunnelPortalController::class, 'show'
 Route::get('/funnel/{funnelSlug}/{stepSlug?}', [FunnelPortalController::class, 'show'])->name('funnels.portal.step.alias');
 Route::post('/f/{funnelSlug}/{stepSlug}/opt-in', [FunnelPortalController::class, 'optIn'])->name('funnels.portal.optin');
 Route::post('/f/{funnelSlug}/{stepSlug}/checkout', [FunnelPortalController::class, 'checkout'])->name('funnels.portal.checkout');
+Route::get('/f/{funnelSlug}/{stepSlug}/paymongo/return/{payment}', [FunnelPortalController::class, 'paymongoReturn'])
+    ->middleware('signed')
+    ->name('funnels.portal.paymongo.return');
 Route::post('/f/{funnelSlug}/{stepSlug}/offer', [FunnelPortalController::class, 'offer'])->name('funnels.portal.offer');
+
+Route::post('/webhooks/paymongo', PayMongoWebhookController::class)->name('webhooks.paymongo');

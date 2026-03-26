@@ -595,6 +595,14 @@
         </div>
         @endif
 
+        @if(session('error'))
+            <div class="wrap" style="padding: 12px 2rem 0;">
+                <div style="padding: 12px 16px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; color: #991b1b; font-size: 14px;">
+                    {{ session('error') }}
+                </div>
+            </div>
+        @endif
+
         <div class="step-content--full">
             @if($hasBuilderLayout)
                 @foreach($renderSections as $section)

@@ -6,7 +6,9 @@ use App\Models\Funnel;
 use App\Models\FunnelStep;
 use App\Models\Lead;
 use App\Models\Payment;
+use App\Services\PayMongoCheckoutService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\Rule;
 
 class FunnelPortalController extends Controller
@@ -21,7 +23,7 @@ class FunnelPortalController extends Controller
             ? $steps->firstWhere('slug', $stepSlug)
             : $steps->first();
 
-        abort_if(!$step, 404);
+        abort_if(! $step, 404);
 
         return view('funnels.portal.step', [
             'funnel' => $funnel,
@@ -54,10 +56,10 @@ class FunnelPortalController extends Controller
 
         $name = trim(
             ($validated['name'] ?? '')
-            ?: trim(($validated['first_name'] ?? '') . ' ' . ($validated['last_name'] ?? ''))
+            ?: trim(($validated['first_name'] ?? '').' '.($validated['last_name'] ?? ''))
         );
         $phone = $validated['phone_number'] ?? $validated['phone'] ?? '';
-        if ($phone !== '' && !preg_match('/^09\d{9}$/', $phone)) {
+        if ($phone !== '' && ! preg_match('/^09\d{9}$/', $phone)) {
             return redirect()->back()->withErrors(['phone_number' => 'Phone must be a valid Philippine mobile number (09XXXXXXXXX).'])->withInput();
         }
 
@@ -66,7 +68,7 @@ class FunnelPortalController extends Controller
             'email' => $validated['email'],
         ]);
 
-        if (!$lead->exists) {
+        if (! $lead->exists) {
             $lead->assigned_to = null;
             $lead->status = 'new';
             $lead->score = 0;
@@ -90,12 +92,12 @@ class FunnelPortalController extends Controller
         session()->put($this->leadSessionKey($funnel->id), $lead->id);
 
         $next = $this->nextStep($steps, $step->id);
-        abort_if(!$next, 422, 'No next step configured.');
+        abort_if(! $next, 422, 'No next step configured.');
 
         return redirect()->route('funnels.portal.step', ['funnelSlug' => $funnel->slug, 'stepSlug' => $next->slug]);
     }
 
-    public function checkout(Request $request, string $funnelSlug, string $stepSlug)
+    public function checkout(Request $request, PayMongoCheckoutService $payMongo, string $funnelSlug, string $stepSlug)
     {
         [$funnel, $steps, $step] = $this->resolveStepContext($funnelSlug, $stepSlug, 'checkout');
 
@@ -106,6 +108,10 @@ class FunnelPortalController extends Controller
         $amount = $validated['amount'] ?? (float) ($step->price ?? 0);
         abort_if($amount <= 0, 422, 'Checkout amount is not configured.');
 
+        if ($payMongo->isConfigured()) {
+            return $this->checkoutWithPayMongo($payMongo, $funnel, $steps, $step, $amount);
+        }
+
         Payment::create([
             'tenant_id' => $funnel->tenant_id,
             'lead_id' => $this->currentLeadId($funnel->id),
@@ -114,8 +120,145 @@ class FunnelPortalController extends Controller
             'payment_date' => now()->toDateString(),
         ]);
 
+        return $this->redirectAfterPaidCheckout($funnel, $steps, $step);
+    }
+
+    public function paymongoReturn(PayMongoCheckoutService $payMongo, string $funnelSlug, string $stepSlug, int $payment)
+    {
+        $funnel = Funnel::with('steps')->where('slug', $funnelSlug)->where('status', 'published')->firstOrFail();
+        $steps = $funnel->steps->where('is_active', true)->sortBy('position')->values();
+        $step = $steps->firstWhere('slug', $stepSlug);
+        abort_if(! $step || $step->type !== 'checkout', 404);
+
+        $record = Payment::query()->findOrFail($payment);
+        abort_unless($record->provider === 'paymongo', 403);
+        abort_unless((int) $record->tenant_id === (int) $funnel->tenant_id, 403);
+
+        if ($record->status === 'paid') {
+            return $this->redirectAfterPaidCheckout($funnel, $steps, $step);
+        }
+
+        $sessionId = $record->provider_reference;
+        abort_if(! is_string($sessionId) || $sessionId === '', 422);
+
+        $data = $payMongo->retrieveCheckoutSession($sessionId);
+        if ($data === null) {
+            return redirect()
+                ->route('funnels.portal.step', ['funnelSlug' => $funnel->slug, 'stepSlug' => $step->slug])
+                ->with('error', 'We could not verify your payment yet. If you completed checkout, wait a moment or contact support.');
+        }
+
+        $paid = false;
+        $method = null;
+        $payments = data_get($data, 'attributes.payments');
+        if (is_array($payments)) {
+            foreach ($payments as $p) {
+                if (! is_array($p)) {
+                    continue;
+                }
+                $status = data_get($p, 'attributes.status');
+                if ($status === 'paid') {
+                    $paid = true;
+                    $t = data_get($p, 'attributes.source.type');
+                    $method = is_string($t) ? $t : null;
+                    break;
+                }
+            }
+        }
+
+        if ($paid) {
+            $record->update([
+                'status' => 'paid',
+                'payment_method' => $method ?? $record->payment_method,
+                'payment_date' => now()->toDateString(),
+            ]);
+
+            return $this->redirectAfterPaidCheckout($funnel, $steps, $step);
+        }
+
+        return redirect()
+            ->route('funnels.portal.step', ['funnelSlug' => $funnel->slug, 'stepSlug' => $step->slug])
+            ->with('error', 'Payment was not completed. You can try again.');
+    }
+
+    private function checkoutWithPayMongo(
+        PayMongoCheckoutService $payMongo,
+        Funnel $funnel,
+        $steps,
+        FunnelStep $step,
+        float $amount,
+    ): \Illuminate\Http\RedirectResponse {
+        $centavos = (int) round($amount * 100);
+        abort_if($centavos < 1, 422, 'Checkout amount is not configured.');
+
+        $leadId = $this->currentLeadId($funnel->id);
+        $lead = $leadId ? Lead::query()->find($leadId) : null;
+
+        $payment = Payment::create([
+            'tenant_id' => $funnel->tenant_id,
+            'lead_id' => $leadId,
+            'amount' => $amount,
+            'status' => 'pending',
+            'payment_date' => now()->toDateString(),
+            'provider' => 'paymongo',
+        ]);
+
+        $successUrl = URL::signedRoute('funnels.portal.paymongo.return', [
+            'funnelSlug' => $funnel->slug,
+            'stepSlug' => $step->slug,
+            'payment' => $payment->id,
+        ], now()->addHours(48));
+
+        $cancelUrl = route('funnels.portal.step', [
+            'funnelSlug' => $funnel->slug,
+            'stepSlug' => $step->slug,
+        ]);
+
+        $lineName = trim((string) ($step->title ?? '')) !== '' ? (string) $step->title : (string) $funnel->name;
+        $description = trim((string) $funnel->name).' — '.$lineName;
+
+        $billing = null;
+        if ($lead) {
+            $billing = array_filter([
+                'name' => trim((string) ($lead->name ?? '')) !== '' ? (string) $lead->name : null,
+                'email' => filter_var($lead->email, FILTER_VALIDATE_EMAIL) ? (string) $lead->email : null,
+            ]);
+            if ($billing === []) {
+                $billing = null;
+            }
+        }
+
+        $session = $payMongo->createCheckoutSession(
+            $centavos,
+            $lineName,
+            $description,
+            $successUrl,
+            $cancelUrl,
+            [
+                'payment_id' => (string) $payment->id,
+                'funnel_slug' => $funnel->slug,
+                'step_slug' => $step->slug,
+            ],
+            $billing,
+        );
+
+        if ($session === null) {
+            $payment->delete();
+
+            return redirect()
+                ->route('funnels.portal.step', ['funnelSlug' => $funnel->slug, 'stepSlug' => $step->slug])
+                ->with('error', 'Unable to start PayMongo checkout. Check your keys and payment method settings, then try again.');
+        }
+
+        $payment->update(['provider_reference' => $session['id']]);
+
+        return redirect()->away($session['checkout_url']);
+    }
+
+    private function redirectAfterPaidCheckout(Funnel $funnel, $steps, FunnelStep $step): \Illuminate\Http\RedirectResponse
+    {
         $next = $this->nextStep($steps, $step->id);
-        if (!$next) {
+        if (! $next) {
             return redirect()->route('funnels.portal.step', ['funnelSlug' => $funnel->slug, 'stepSlug' => $step->slug]);
         }
 
@@ -148,7 +291,7 @@ class FunnelPortalController extends Controller
 
         if ($currentIndex !== false) {
             $immediateNext = $ordered->get($currentIndex + 1);
-            if ($step->type === 'upsell' && !$accept && $immediateNext && $immediateNext->type === 'downsell') {
+            if ($step->type === 'upsell' && ! $accept && $immediateNext && $immediateNext->type === 'downsell') {
                 $target = $immediateNext;
             } elseif ($step->type === 'upsell' && $accept && $immediateNext && $immediateNext->type === 'downsell') {
                 $target = $ordered->get($currentIndex + 2);
@@ -157,7 +300,7 @@ class FunnelPortalController extends Controller
             }
         }
 
-        if (!$target) {
+        if (! $target) {
             $target = $ordered->last();
         }
 
@@ -169,7 +312,7 @@ class FunnelPortalController extends Controller
         $funnel = Funnel::with('steps')->where('slug', $funnelSlug)->where('status', 'published')->firstOrFail();
         $steps = $funnel->steps->where('is_active', true)->sortBy('position')->values();
         $step = $steps->firstWhere('slug', $stepSlug);
-        abort_if(!$step, 404);
+        abort_if(! $step, 404);
 
         if ($expectedType !== null) {
             abort_unless($step->type === $expectedType, 422, 'Invalid funnel step type.');
@@ -197,6 +340,7 @@ class FunnelPortalController extends Controller
     private function currentLeadId(int $funnelId): ?int
     {
         $leadId = session()->get($this->leadSessionKey($funnelId));
+
         return $leadId ? (int) $leadId : null;
     }
 
@@ -208,6 +352,7 @@ class FunnelPortalController extends Controller
             ->filter(fn ($tag) => $tag !== '')
             ->map(function ($tag) {
                 $clean = preg_replace('/[^a-z0-9\-_ ]/i', '', $tag) ?? '';
+
                 return mb_substr(trim($clean), 0, 40);
             })
             ->filter(fn ($tag) => $tag !== '')
