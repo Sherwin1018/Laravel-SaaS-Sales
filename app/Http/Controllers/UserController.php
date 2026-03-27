@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\User;
 use App\Models\Role;
+use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Throwable;
 
 class UserController extends Controller
 {
@@ -108,6 +109,11 @@ class UserController extends Controller
         try {
             $tenantId = auth()->user()->tenant_id;
 
+            $role = Role::where('slug', $request->role)->first();
+            if (!$role) {
+                return redirect()->back()->withInput()->with('error', 'Invalid role. Please refresh the page and try again.');
+            }
+
             // Create User
             $user = User::create([
                 'tenant_id' => $tenantId,
@@ -118,13 +124,64 @@ class UserController extends Controller
                 'status' => 'active',
             ]);
 
-            // Attach Role
-            $role = Role::where('slug', $request->role)->first();
             $user->roles()->attach($role);
 
-            return redirect()->route('users.index')->with('success', 'Added Successfully');
+            // Mail misconfiguration must not block team creation
+            try {
+                $user->sendEmailVerificationNotification();
+            } catch (Throwable $e) {
+                report($e);
+
+                return redirect()->route('users.index')->with(
+                    'warning',
+                    'User was added, but the verification email could not be sent. Fix MAIL_* in .env, then run php artisan config:clear. After mail works, they can log in and use “Resend verification email”.'
+                );
+            }
+
+            return redirect()->route('users.index')->with('success', 'User added. They must verify their email before accessing the platform.');
+        } catch (Throwable $e) {
+            report($e);
+
+            $message = config('app.debug')
+                ? 'Could not add user: '.$e->getMessage()
+                : 'Could not add user. Please try again or contact support.';
+
+            return redirect()->back()->withInput()->with('error', $message);
+        }
+    }
+
+    /**
+     * Resend verification email to user.
+     */
+    public function resendVerification(User $user)
+    {
+        // Policy: can only resend to users from own tenant
+        if ($user->tenant_id !== auth()->user()->tenant_id) {
+            abort(403);
+        }
+
+        // Check if user is already verified
+        if ($user->hasVerifiedEmail()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User has already verified their email address.'
+            ]);
+        }
+
+        try {
+            $user->sendEmailVerificationNotification();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Verification email sent successfully to ' . $user->email . '.'
+            ]);
         } catch (\Throwable $e) {
-            return redirect()->back()->withInput()->with('error', 'Added Failed');
+            report($e);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to send verification email. Please check your mail configuration and try again.'
+            ]);
         }
     }
 

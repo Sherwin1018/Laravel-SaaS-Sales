@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\FunnelVisit;
 use App\Models\Lead;
 use App\Models\LeadActivity;
+use App\Models\LeadLinkClick;
 use App\Models\Payment;
+use App\Models\TrackedLink;
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
@@ -122,6 +125,22 @@ class DashboardController extends Controller
             $trendValues[] = (int) ($mqlTrendRaw[$key] ?? 0);
         }
 
+        // New widgets for Phase 3
+        $visitsBySource = FunnelVisit::selectRaw('utm_source as source, COUNT(*) as total')
+            ->where('tenant_id', $tenantId)
+            ->whereNotNull('utm_source')
+            ->groupBy('utm_source')
+            ->orderByDesc('total')
+            ->get();
+
+        $topTrackedLinks = LeadLinkClick::selectRaw('link_name, COUNT(*) as total')
+            ->where('tenant_id', $tenantId)
+            ->whereNotNull('link_name')
+            ->groupBy('link_name')
+            ->orderByDesc('total')
+            ->take(5)
+            ->get();
+
         return view('dashboard.marketing', compact(
             'sourceBreakdown',
             'sourceBreakdownChart',
@@ -129,8 +148,23 @@ class DashboardController extends Controller
             'avgLeadScore',
             'trendLabels',
             'trendValues',
-            'mqlThreshold'
+            'mqlThreshold',
+            'visitsBySource',
+            'topTrackedLinks'
         ));
+    }
+
+    public function funnelAnalytics()
+    {
+        $tenantId = auth()->user()->tenant_id;
+
+        // Funnel stages
+        $visits = FunnelVisit::where('tenant_id', $tenantId)->count();
+        $optIns = Lead::where('tenant_id', $tenantId)->count(); // Proxy for opt-ins
+        $inPipeline = Lead::where('tenant_id', $tenantId)->whereIn('status', ['new', 'contacted', 'proposal_sent'])->count();
+        $closedWon = Lead::where('tenant_id', $tenantId)->where('status', 'closed_won')->count();
+
+        return view('analytics.funnel', compact('visits', 'optIns', 'inPipeline', 'closedWon'));
     }
 
     public function sales()

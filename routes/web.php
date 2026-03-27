@@ -2,9 +2,12 @@
 
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Auth\EmailVerificationController;
+use App\Http\Controllers\AutomationController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FunnelController;
 use App\Http\Controllers\FunnelPortalController;
+use App\Http\Controllers\LeadVerificationController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PayMongoWebhookController;
@@ -51,25 +54,27 @@ HTML;
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
 
 Route::middleware(['auth'])->group(function () {
-    Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');
-    Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password.update');
-    Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar.update');
-    Route::delete('/profile/avatar', [ProfileController::class, 'deleteAvatar'])->name('profile.avatar.delete');
-    Route::post('/profile/company-logo', [ProfileController::class, 'updateCompanyLogo'])->name('profile.company-logo.update');
-    Route::delete('/profile/company-logo', [ProfileController::class, 'deleteCompanyLogo'])->name('profile.company-logo.delete');
-    Route::put('/profile/theme', [ProfileController::class, 'updateTheme'])->name('profile.theme.update');
-});
-
-Route::middleware(['auth', 'role:account-owner'])->group(function () {
-    Route::get('/billing/trial-upgrade', [TrialSubscriptionController::class, 'show'])->name('trial.billing.show');
-    Route::post('/billing/trial-upgrade', [TrialSubscriptionController::class, 'startCheckout'])->name('trial.billing.checkout');
-    Route::get('/billing/trial-upgrade/return/{payment}', [TrialSubscriptionController::class, 'paymongoReturn'])
+    Route::get('/email/verify', [EmailVerificationController::class, 'notice'])->name('verification.notice');
+    Route::get('/email/verify/{id}/{hash}', [EmailVerificationController::class, 'verify'])
         ->middleware('signed')
-        ->name('trial.billing.return');
+        ->name('verification.verify');
+    Route::post('/email/verification-notification', [EmailVerificationController::class, 'resend'])
+        ->middleware('throttle:6,1')
+        ->name('verification.send');
+
+    Route::middleware('verified')->group(function () {
+        Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');
+        Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
+        Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password.update');
+        Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar.update');
+        Route::delete('/profile/avatar', [ProfileController::class, 'deleteAvatar'])->name('profile.avatar.delete');
+        Route::post('/profile/company-logo', [ProfileController::class, 'updateCompanyLogo'])->name('profile.company-logo.update');
+        Route::delete('/profile/company-logo', [ProfileController::class, 'deleteCompanyLogo'])->name('profile.company-logo.delete');
+        Route::put('/profile/theme', [ProfileController::class, 'updateTheme'])->name('profile.theme.update');
+    });
 });
 
-Route::middleware(['auth', 'tenant.subscription', 'role:super-admin'])->group(function () {
+Route::middleware(['auth', 'verified', 'role:super-admin'])->group(function () {
     Route::get('/admin/dashboard', [AdminController::class, 'index'])->name('admin.dashboard');
 
     Route::get('/admin/tenants', [TenantController::class, 'index'])->name('admin.tenants.index');
@@ -90,9 +95,24 @@ Route::middleware(['auth', 'tenant.subscription', 'role:super-admin'])->group(fu
     Route::get('/admin/leads', [LeadController::class, 'adminIndex'])->name('admin.leads.index');
 });
 
+Route::middleware(['auth', 'role:account-owner'])->group(function () {
+    Route::get('/billing/trial-upgrade', [TrialSubscriptionController::class, 'show'])->name('trial.billing.show');
+    Route::post('/billing/trial-upgrade', [TrialSubscriptionController::class, 'startCheckout'])->name('trial.billing.checkout');
+    Route::get('/billing/trial-upgrade/return/{payment}', [TrialSubscriptionController::class, 'paymongoReturn'])
+        ->middleware('signed')
+        ->name('trial.billing.return');
+});
+
+Route::middleware(['auth', 'tenant.subscription', 'role:super-admin'])->group(function () {
+    // Super admin tenant subscription routes can go here
+});
+
 Route::middleware(['auth', 'tenant.subscription', 'role:sales-agent,marketing-manager,account-owner,finance'])->group(function () {
     Route::get('/dashboard/owner', [DashboardController::class, 'owner'])->middleware('role:account-owner')->name('dashboard.owner');
     Route::get('/dashboard/marketing', [DashboardController::class, 'marketing'])->middleware('role:marketing-manager')->name('dashboard.marketing');
+    Route::get('/marketing/funnel-analytics', [DashboardController::class, 'funnelAnalytics'])
+        ->middleware('role:account-owner,marketing-manager')
+        ->name('marketing.funnel_analytics');
     Route::get('/dashboard/sales', [DashboardController::class, 'sales'])->middleware('role:sales-agent')->name('dashboard.sales');
     Route::get('/dashboard/finance', [DashboardController::class, 'finance'])->middleware('role:finance')->name('dashboard.finance');
 
@@ -111,11 +131,32 @@ Route::middleware(['auth', 'tenant.subscription', 'role:sales-agent,marketing-ma
         Route::get('/users', [UserController::class, 'index'])->name('users.index');
         Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
         Route::post('/users', [UserController::class, 'store'])->name('users.store');
+        Route::post('/users/{user}/resend-verification', [UserController::class, 'resendVerification'])->name('users.resend-verification');
         Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
     });
 
     Route::middleware(['role:account-owner,marketing-manager'])->group(function () {
         Route::get('/funnels', [FunnelController::class, 'index'])->name('funnels.index');
+
+        Route::get('/automation', [AutomationController::class, 'overview'])->name('automation.overview');
+        Route::get('/automation/sequences', [AutomationController::class, 'sequences'])->name('automation.sequences.index');
+        Route::get('/automation/sequences/create', [AutomationController::class, 'createSequenceBuilder'])->name('automation.sequences.create');
+        Route::post('/automation/sequences', [AutomationController::class, 'storeSequence'])->name('automation.sequences.store');
+        Route::get('/automation/sequences/{sequence}/edit', [AutomationController::class, 'editSequenceBuilder'])->name('automation.sequences.edit');
+        Route::put('/automation/sequences/{sequence}', [AutomationController::class, 'updateSequence'])->name('automation.sequences.update');
+        Route::post('/automation/sequences/{sequence}/toggle', [AutomationController::class, 'toggleSequence'])->name('automation.sequences.toggle');
+        Route::delete('/automation/sequences/{sequence}', [AutomationController::class, 'destroySequence'])->name('automation.sequences.destroy');
+        Route::get('/automation/workflows', [AutomationController::class, 'workflows'])->name('automation.workflows.index');
+        Route::get('/automation/workflows/create', [AutomationController::class, 'createWorkflow'])->name('automation.workflows.create');
+        Route::post('/automation/workflows', [AutomationController::class, 'storeWorkflow'])->name('automation.workflows.store');
+        Route::get('/automation/workflows/{workflow}/edit', [AutomationController::class, 'editWorkflow'])->name('automation.workflows.edit');
+        Route::put('/automation/workflows/{workflow}', [AutomationController::class, 'updateWorkflow'])->name('automation.workflows.update');
+        Route::post('/automation/workflows/{workflow}/toggle', [AutomationController::class, 'toggleWorkflow'])->name('automation.workflows.toggle');
+        Route::post('/automation/workflows/{workflow}/duplicate', [AutomationController::class, 'duplicateWorkflow'])->name('automation.workflows.duplicate');
+        Route::delete('/automation/workflows/{workflow}', [AutomationController::class, 'destroyWorkflow'])->name('automation.workflows.destroy');
+        Route::get('/automation/logs', [AutomationController::class, 'logs'])->name('automation.logs.index');
+        Route::get('/automation/logs/{id}', [AutomationController::class, 'showLog'])->name('automation.logs.show');
+
         Route::get('/funnels/create', [FunnelController::class, 'create'])->name('funnels.create');
         Route::post('/funnels', [FunnelController::class, 'store'])->name('funnels.store');
         Route::get('/funnels/{funnel}/edit', [FunnelController::class, 'edit'])->name('funnels.edit');
@@ -142,9 +183,19 @@ Route::middleware(['auth', 'tenant.subscription', 'role:sales-agent,marketing-ma
     });
 });
 
-Route::middleware(['auth', 'role:customer'])->group(function () {
+Route::middleware(['auth', 'verified', 'role:customer'])->group(function () {
     Route::get('/dashboard/customer', [DashboardController::class, 'customer'])->name('dashboard.customer');
 });
+
+// DOI pages must be registered BEFORE the generic step routes (order matters in Laravel routing).
+Route::get('/f/{funnelSlug}/confirm-email', [LeadVerificationController::class, 'confirmEmail'])
+    ->name('funnels.lead.confirm-email');
+Route::get('/f/{funnelSlug}/confirm-email/status', [LeadVerificationController::class, 'confirmEmailStatus'])
+    ->name('funnels.lead.confirm-email.status');
+Route::get('/funnel/verify', [LeadVerificationController::class, 'verify'])
+    ->middleware('signed')
+    ->name('funnels.lead.verify');
+Route::get('/funnel/verified', [LeadVerificationController::class, 'verified'])->name('funnels.lead.verified');
 
 Route::get('/f/{funnelSlug}/{stepSlug?}', [FunnelPortalController::class, 'show'])->name('funnels.portal.step');
 Route::get('/funnel/{funnelSlug}/{stepSlug?}', [FunnelPortalController::class, 'show'])->name('funnels.portal.step.alias');
@@ -154,7 +205,8 @@ Route::get('/f/{funnelSlug}/{stepSlug}/paymongo/return/{payment}', [FunnelPortal
     ->middleware('signed')
     ->name('funnels.portal.paymongo.return');
 Route::post('/f/{funnelSlug}/{stepSlug}/offer', [FunnelPortalController::class, 'offer'])->name('funnels.portal.offer');
-Route::get('/register/paymongo/return/{signupIntent}', [PublicOnboardingController::class, 'paymongoReturn'])
+
+Route::get('/register/paymongo/return/{payment}', [PayMongoCheckoutController::class, 'return'])
     ->middleware('signed')
     ->name('register.paymongo.return');
 

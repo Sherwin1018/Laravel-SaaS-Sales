@@ -51,6 +51,55 @@
         </div>
     </div>
 
+    <div class="widgets">
+        <div class="card">
+            <h3>Funnel Visits by Source</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Source</th>
+                        <th>Visits</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($visitsBySource as $row)
+                        <tr>
+                            <td>{{ $row->source }}</td>
+                            <td>{{ $row->total }}</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="2">No visit data found.</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+        <div class="card">
+            <h3>Top Tracked Links</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Link Name</th>
+                        <th>Clicks</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($topTrackedLinks as $row)
+                        <tr>
+                            <td>{{ $row->link_name ?? 'Unknown' }}</td>
+                            <td>{{ $row->total }}</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="2">No click data found.</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+
     <div class="charts">
         <div class="chart">
             <h3>MQL Trend (Score >= {{ $mqlThreshold }})</h3>

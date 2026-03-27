@@ -28,6 +28,14 @@
                 @enderror
             </div>
 
+            <div style="margin-bottom: 16px;">
+                <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+                    <input type="checkbox" name="require_double_opt_in" value="1" {{ old('require_double_opt_in') ? 'checked' : '' }}>
+                    <span style="font-weight:700;">Require email confirmation (double opt-in)</span>
+                </label>
+                <p style="color:#64748b; font-size:12px; margin:6px 0 0 28px;">When enabled, leads must click a verification link before automation runs.</p>
+            </div>
+
             <p style="color:#475569; font-size:12px; font-weight:600; margin-bottom:16px;">
                 A starter sequence will be created automatically: Landing -> Opt-in -> Sales -> Checkout -> Thank You.
                 You can add Checkout/Upsell/Downsell steps in the builder.

@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Lead;
+use App\Models\LeadLinkClick;
 use App\Models\User;
+use App\Services\AutomationWebhookService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -152,7 +154,7 @@ class LeadController extends Controller
         try {
             $assignedTo = $this->normalizeAssignee($validated['assigned_to'] ?? null, $user);
 
-            Lead::create([
+            $lead = Lead::create([
                 'tenant_id' => $user->tenant_id,
                 'assigned_to' => $assignedTo,
                 'name' => $validated['name'],
@@ -164,6 +166,8 @@ class LeadController extends Controller
                 'score' => 0,
             ]);
 
+            $this->dispatchLeadCreatedWebhook($lead);
+
             return redirect()->route('leads.index')->with('success', 'Added Successfully');
         } catch (\Throwable $e) {
             return redirect()->back()->withInput()->with('error', 'Added Failed');
@@ -174,11 +178,30 @@ class LeadController extends Controller
     {
         $this->ensureTenantLeadAccess($lead);
 
+        $user = auth()->user();
+        $tenantId = $user->tenant_id;
+
+        $recentLinkClicks = LeadLinkClick::where('tenant_id', $tenantId)
+            ->where('lead_id', $lead->id)
+            ->latest('clicked_at')
+            ->limit(15)
+            ->get();
+
+        $topLinkClicks = LeadLinkClick::selectRaw("COALESCE(NULLIF(link_name, ''), 'Link') as link_label, COUNT(*) as total")
+            ->where('tenant_id', $tenantId)
+            ->where('lead_id', $lead->id)
+            ->groupBy('link_label')
+            ->orderByDesc('total')
+            ->limit(5)
+            ->get();
+
         return view('leads.edit', [
             'lead' => $lead->load('activities'),
             'statuses' => Lead::PIPELINE_STATUSES,
             'assignableAgents' => $this->getAssignableAgents(auth()->user()->tenant_id),
             'canEditTags' => $this->canEditLeadTags(auth()->user()),
+            'recentLinkClicks' => $recentLinkClicks,
+            'topLinkClicks' => $topLinkClicks,
         ]);
     }
 
@@ -207,7 +230,12 @@ class LeadController extends Controller
             } else {
                 unset($validated['tags']);
             }
+            $oldStatus = $lead->status;
             $lead->update($validated);
+
+            if ($oldStatus !== $lead->status) {
+                $this->dispatchLeadStatusChangedWebhook($lead, $oldStatus, $lead->status);
+            }
 
             return redirect()->route('leads.index')->with('success', 'Edited Successfully');
         } catch (\Throwable $e) {
@@ -479,5 +507,19 @@ class LeadController extends Controller
             ->all();
 
         return $tags;
+    }
+
+    private function dispatchLeadCreatedWebhook(Lead $lead): void
+    {
+        $service = app(AutomationWebhookService::class);
+        $payload = $service->buildLeadCreatedPayload($lead, [], auth()->user());
+        $service->dispatchEvent('lead.created', $payload);
+    }
+
+    private function dispatchLeadStatusChangedWebhook(Lead $lead, string $oldStatus, string $newStatus): void
+    {
+        $service = app(AutomationWebhookService::class);
+        $payload = $service->buildLeadStatusChangedPayload($lead, $oldStatus, $newStatus, []);
+        $service->dispatchEvent('lead.status_changed', $payload);
     }
 }
