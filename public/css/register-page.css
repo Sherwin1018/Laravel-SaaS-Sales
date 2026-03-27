@@ -5,6 +5,7 @@
     --text-color: #1F2937;
     --text-light: #6B7280;
     --white: #FFFFFF;
+    --line: #E5E7EB;
     --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
 }
 
@@ -13,7 +14,7 @@ body {
     padding: 0;
     font-family: 'Inter', sans-serif;
     background: var(--bg-gradient);
-    height: 100vh;
+    min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -24,13 +25,12 @@ body {
     background: var(--white);
     border-radius: 16px;
     box-shadow: var(--shadow);
-    width: 900px;
+    width: 980px;
     max-width: 95%;
     overflow: hidden;
-    min-height: 600px;
+    min-height: 680px;
 }
 
-/* Left Panel */
 .info-panel {
     flex: 1;
     background: #240E35;
@@ -45,7 +45,6 @@ body {
     overflow: hidden;
 }
 
-/* Decorative circle */
 .info-panel::after {
     content: '';
     position: absolute;
@@ -59,7 +58,6 @@ body {
 
 .info-logo {
     width: 150px;
-    /* Increased size slightly for better visibility */
     margin-bottom: 30px;
     display: block;
 }
@@ -83,9 +81,7 @@ body {
     padding: 0;
     margin: 0;
     text-align: left;
-    /* Keep features left aligned or center? User said center logo. Let's keep features readable. */
     display: inline-block;
-    /* allows text-align: left within centered parent */
 }
 
 .features li {
@@ -109,15 +105,13 @@ body {
     font-weight: bold;
 }
 
-/* Right Panel */
 .login-card {
     flex: 1;
-    padding: 60px 50px;
+    padding: 48px 50px;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    /* Center content in right panel too */
     background: var(--white);
 }
 
@@ -143,28 +137,6 @@ body {
     width: 100px;
     margin-bottom: 20px;
     display: block;
-    /* Visible on all screens */
-}
-
-@media (max-width: 768px) {
-    .login-container {
-        flex-direction: column;
-        width: 100%;
-        height: 100vh;
-        border-radius: 0;
-    }
-
-    .info-panel {
-        display: none;
-    }
-
-    .login-logo {
-        margin-bottom: 20px;
-    }
-
-    .back-link {
-        margin-bottom: 16px;
-    }
 }
 
 .login-card h1 {
@@ -177,27 +149,15 @@ body {
 
 .subtitle {
     color: var(--text-light);
-    margin-bottom: 30px;
+    margin-bottom: 28px;
     font-size: 14px;
     text-align: center;
-}
-
-.error-message {
-    background-color: #FEE2E2;
-    color: #991B1B;
-    padding: 10px;
-    border-radius: 6px;
-    margin-bottom: 20px;
-    font-size: 14px;
-    text-align: center;
-    width: 100%;
 }
 
 form {
     display: flex;
     flex-direction: column;
     width: 100%;
-    /* Ensure form takes full width */
 }
 
 label {
@@ -213,14 +173,13 @@ input[type="password"],
 input[type="text"] {
     width: 100%;
     padding: 12px 16px;
-    border: 1px solid #E5E7EB;
+    border: 1px solid var(--line);
     border-radius: 8px;
     font-size: 14px;
     transition: all 0.3s;
     background: #F9FAFB;
-    margin-bottom: 20px;
+    margin-bottom: 18px;
     box-sizing: border-box;
-    /* Crucial for preventing overflow */
 }
 
 input:focus {
@@ -239,12 +198,12 @@ button {
     font-size: 16px;
     font-weight: 600;
     cursor: pointer;
-    transition: background-color 0.2s;
-    margin-top: 10px;
+    transition: background-color 0.2s, transform 0.2s;
 }
 
 button:hover {
     background-color: var(--primary-hover);
+    transform: translateY(-1px);
 }
 
 .register-link {
@@ -264,17 +223,14 @@ button:hover {
     text-decoration: underline;
 }
 
-/* Password Toggle Specifics */
 .password-container {
     position: relative;
     width: 100%;
-    margin-bottom: 20px;
-    /* moved from input to container for spacing */
+    margin-bottom: 18px;
 }
 
 .password-container input {
     margin-bottom: 0;
-    /* Let container handle spacing */
     padding-right: 45px;
 }
 
@@ -291,4 +247,232 @@ button:hover {
 
 .toggle-password:hover {
     color: #4B5563;
+}
+
+.password-hint {
+    margin: -4px 0 16px;
+    color: var(--text-light);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.status-toast-container {
+    position: fixed;
+    top: 18px;
+    right: 18px;
+    z-index: 9999;
+}
+
+.status-toast {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    background: #fff;
+    border-radius: 14px;
+    width: min(90vw, 380px);
+    padding: 12px 38px 12px 12px;
+    border: 1px solid #E6E1EF;
+    box-shadow: 0 18px 38px rgba(15, 23, 42, 0.2);
+    position: relative;
+}
+
+.status-toast i {
+    font-size: 24px;
+}
+
+.status-toast h4 {
+    margin: 0 0 6px 0;
+    font-size: 15px;
+    font-weight: 800;
+}
+
+.status-toast p {
+    margin: 0;
+    color: #334155;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.2;
+}
+
+.status-toast.success i,
+.status-toast.success h4 {
+    color: #65A30D;
+}
+
+.status-toast.error i,
+.status-toast.error h4 {
+    color: #B91C1C;
+}
+
+.status-toast button {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    border: none;
+    background: transparent;
+    color: #334155;
+    font-size: 16px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0;
+}
+
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    display: none;
+    padding: 18px;
+    z-index: 9998;
+}
+
+.modal-backdrop.open {
+    display: grid;
+    place-items: center;
+}
+
+.pricing-modal {
+    width: min(1080px, 100%);
+    max-height: calc(100vh - 36px);
+    overflow: auto;
+    background: #fff;
+    border-radius: 18px;
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.24);
+    padding: 28px;
+    position: relative;
+}
+
+.modal-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: transparent;
+    color: #334155;
+    padding: 0;
+    font-size: 18px;
+}
+
+.modal-header {
+    margin-bottom: 18px;
+}
+
+.modal-header h3 {
+    margin: 0 0 8px;
+    font-size: 24px;
+    color: var(--text-color);
+}
+
+.modal-header p {
+    margin: 0;
+    color: var(--text-light);
+    font-size: 14px;
+}
+
+.modal-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.plan-card {
+    border: 1px solid #E5E7EB;
+    border-radius: 14px;
+    padding: 22px;
+    background: #fff;
+    position: relative;
+}
+
+.plan-card.selected {
+    border-color: #240E35;
+    box-shadow: 0 14px 28px rgba(36, 14, 53, 0.08);
+}
+
+.plan-badge {
+    display: inline-flex;
+    margin-bottom: 12px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: #F3EEF7;
+    color: #240E35;
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.plan-card h4 {
+    margin: 0 0 10px;
+    font-size: 22px;
+    color: var(--text-color);
+}
+
+.plan-price {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 800;
+    color: #240E35;
+}
+
+.plan-period,
+.plan-summary {
+    color: var(--text-light);
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.plan-card ul {
+    list-style: none;
+    padding: 0;
+    margin: 14px 0 0;
+}
+
+.plan-card li {
+    position: relative;
+    padding-left: 16px;
+    margin-top: 10px;
+    color: var(--text-color);
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.plan-card li::before {
+    content: '•';
+    position: absolute;
+    left: 0;
+    top: 0;
+    color: #240E35;
+}
+
+.plan-button {
+    width: 100%;
+    margin-top: 18px;
+}
+
+@media (max-width: 768px) {
+    .login-container {
+        flex-direction: column;
+        width: 100%;
+        max-width: 100%;
+        min-height: 100vh;
+        border-radius: 0;
+    }
+
+    .info-panel {
+        display: none;
+    }
+
+    .login-card {
+        padding: 36px 22px;
+    }
+
+    .login-logo {
+        margin-bottom: 20px;
+    }
+
+    .back-link {
+        margin-bottom: 16px;
+    }
+
+    .modal-grid {
+        grid-template-columns: 1fr;
+    }
 }

@@ -1,9 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -12,6 +10,11 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement("ALTER TABLE tenants ALTER COLUMN theme_sidebar_bg SET DEFAULT '#240E35'");
+            return;
+        }
+
         DB::statement("ALTER TABLE tenants MODIFY theme_sidebar_bg VARCHAR(255) DEFAULT '#240E35'");
     }
 
@@ -20,6 +23,11 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement("ALTER TABLE tenants ALTER COLUMN theme_sidebar_bg SET DEFAULT '#4169E1'");
+            return;
+        }
+
         DB::statement("ALTER TABLE tenants MODIFY theme_sidebar_bg VARCHAR(255) DEFAULT '#4169E1'");
     }
 };

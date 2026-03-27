@@ -53,7 +53,7 @@ class ProfileController extends Controller
                 'required',
                 'string',
                 'min:12',
-                'max:14',
+                'max:64',
                 'regex:/[a-z]/',
                 'regex:/[A-Z]/',
                 'regex:/[0-9]/',

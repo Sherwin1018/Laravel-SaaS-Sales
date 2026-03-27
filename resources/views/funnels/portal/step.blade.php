@@ -260,6 +260,99 @@
         $hasBuilderLayout = count($renderSections) > 0;
         $activeSteps = collect($allSteps ?? [])->values()->filter(fn ($s) => isset($s->id, $s->slug));
         $activeStepsBySlug = $activeSteps->keyBy(fn ($s) => strtolower(trim((string) $s->slug)));
+        $normalizeStepType = function (?string $type): string {
+            $type = strtolower(trim((string) $type));
+            if (in_array($type, ['upsell', 'downsell'], true)) {
+                return 'sales';
+            }
+            return $type !== '' ? $type : 'custom';
+        };
+        $currentStepType = $normalizeStepType($step->type ?? '');
+        $currentStepIndex = $activeSteps->search(fn ($s) => (int) $s->id === (int) $step->id);
+        if ($currentStepIndex === false) {
+            $currentStepIndex = null;
+        }
+        $findStepByTypes = function (array $types) use ($activeSteps, $step, $normalizeStepType, $currentStepIndex) {
+            $wanted = collect($types)
+                ->map(fn ($type) => $normalizeStepType((string) $type))
+                ->filter()
+                ->unique()
+                ->values();
+            if ($wanted->isEmpty()) {
+                return null;
+            }
+            if ($currentStepIndex !== null) {
+                for ($i = $currentStepIndex + 1; $i < $activeSteps->count(); $i++) {
+                    $candidate = $activeSteps->get($i);
+                    if (!$candidate || (int) $candidate->id === (int) $step->id) {
+                        continue;
+                    }
+                    if ($wanted->contains($normalizeStepType($candidate->type ?? ''))) {
+                        return $candidate;
+                    }
+                }
+            }
+            foreach ($activeSteps as $candidate) {
+                if ((int) $candidate->id === (int) $step->id) {
+                    continue;
+                }
+                if ($wanted->contains($normalizeStepType($candidate->type ?? ''))) {
+                    return $candidate;
+                }
+            }
+            return null;
+        };
+        $choosePricingTarget = function (?string $label) use ($currentStepType, $nextStep, $step, $findStepByTypes, $activeSteps) {
+            $text = strtolower(trim((string) $label));
+            $homeStep = $findStepByTypes(['landing']) ?: $activeSteps->first(fn ($candidate) => (int) $candidate->id !== (int) $step->id);
+            $optInStep = $findStepByTypes(['opt_in']);
+            $salesStep = $findStepByTypes(['sales']);
+            $checkoutStep = $findStepByTypes(['checkout']);
+            $thankYouStep = $findStepByTypes(['thank_you']);
+            $customStep = $findStepByTypes(['custom']);
+            if (preg_match('/(^|\s)(home|back)(\s|$)/', $text) === 1) {
+                return $homeStep;
+            }
+            if (preg_match('/(checkout|purchase|buy|order|seat|spot|bundle|membership)/', $text) === 1 && $checkoutStep) {
+                return $checkoutStep;
+            }
+            if (preg_match('/(community|resource|download|calendar)/', $text) === 1 && $customStep) {
+                return $customStep;
+            }
+            if (in_array($currentStepType, ['landing', 'opt_in', 'custom'], true) && preg_match('/(price|pricing|offer|package|plan)/', $text) === 1 && $salesStep) {
+                return $salesStep;
+            }
+            if ($currentStepType === 'landing') {
+                return $optInStep ?: $salesStep ?: $checkoutStep ?: $nextStep ?: $thankYouStep ?: $customStep ?: $homeStep;
+            }
+            if ($currentStepType === 'opt_in') {
+                return $salesStep ?: $checkoutStep ?: $thankYouStep ?: $customStep ?: $nextStep ?: $homeStep;
+            }
+            if ($currentStepType === 'sales') {
+                return $checkoutStep ?: $thankYouStep ?: $customStep ?: $nextStep ?: $homeStep;
+            }
+            if ($currentStepType === 'checkout') {
+                return $thankYouStep ?: $customStep ?: $nextStep ?: $homeStep;
+            }
+            if ($currentStepType === 'thank_you') {
+                return $customStep ?: $homeStep ?: $nextStep ?: $activeSteps->first(fn ($candidate) => (int) $candidate->id !== (int) $step->id);
+            }
+            return $optInStep ?: $salesStep ?: $checkoutStep ?: $thankYouStep ?: $homeStep ?: $nextStep ?: $activeSteps->first(fn ($candidate) => (int) $candidate->id !== (int) $step->id);
+        };
+        $resolvePricingCtaHref = function (array $settings) use ($choosePricingTarget, $isPreview, $funnel) {
+            $link = trim((string) ($settings['ctaLink'] ?? '#'));
+            if ($link !== '' && $link !== '#') {
+                return $link;
+            }
+            $target = $choosePricingTarget($settings['ctaLabel'] ?? $settings['plan'] ?? '');
+            if (!$target) {
+                return '#';
+            }
+            if ($isPreview) {
+                return route('funnels.preview', ['funnel' => $funnel, 'step' => $target->id]);
+            }
+            return route('funnels.portal.step', ['funnelSlug' => $funnel->slug, 'stepSlug' => $target->slug]);
+        };
         $resolveButtonAction = function (array $settings) use ($funnel, $step, $nextStep, $isPreview, $activeStepsBySlug) {
             $link = trim((string) ($settings['link'] ?? '#'));
             $actionType = strtolower(trim((string) ($settings['actionType'] ?? '')));
@@ -318,6 +411,35 @@
             }
 
             return ['kind' => 'link', 'href' => ($link !== '' ? $link : '#')];
+        };
+        $resolveMediaUrl = function (?string $src): string {
+            $src = trim((string) $src);
+            if ($src === '') {
+                return '';
+            }
+            if (preg_match('#^(https?:)?//#i', $src) === 1) {
+                return str_starts_with($src, '//') ? ('https:' . $src) : $src;
+            }
+            if (str_starts_with($src, 'data:') || str_starts_with($src, 'blob:')) {
+                return $src;
+            }
+            if (str_starts_with($src, '/')) {
+                return url($src);
+            }
+            return asset(ltrim($src, '/'));
+        };
+        $normalizeVideoSource = function (?string $src): string {
+            $src = trim((string) $src);
+            if ($src === '') {
+                return '';
+            }
+            if (preg_match('#^(https?:)?//#i', $src) === 1) {
+                return str_starts_with($src, '//') ? ('https:' . $src) : $src;
+            }
+            if (preg_match('#^(www\.)?(youtube\.com|youtu\.be|vimeo\.com)/#i', $src) === 1) {
+                return 'https://' . ltrim($src, '/');
+            }
+            return $src;
         };
 
         $styleToString = function (array $style): string {
@@ -471,6 +593,14 @@
             </a>
             <span class="preview-badge"><i class="fas fa-eye"></i> Preview Mode</span>
         </div>
+        @endif
+
+        @if(session('error'))
+            <div class="wrap" style="padding: 12px 2rem 0;">
+                <div style="padding: 12px 16px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; color: #991b1b; font-size: 14px;">
+                    {{ session('error') }}
+                </div>
+            </div>
         @endif
 
         <div class="step-content--full">
@@ -739,10 +869,7 @@
                                                     @endphp
                                                     @if($videoSrcRaw !== '')
                                                         @php
-                                                            $vSrc = $videoSrcRaw;
-                                                            if (!str_starts_with($vSrc, 'http')) {
-                                                                $vSrc = 'https://' . ltrim($vSrc, '/');
-                                                            }
+                                                            $vSrc = $normalizeVideoSource($videoSrcRaw);
                                                             $videoEmbedUrl = $vSrc;
                                                             $isYoutubeVimeo = str_contains($vSrc, 'youtube.com') || str_contains($vSrc, 'youtu.be') || str_contains($vSrc, 'vimeo.com');
                                                             if (str_contains($vSrc, 'youtube.com/watch')) {
@@ -753,7 +880,7 @@
                                                             } elseif (preg_match('#vimeo\.com/(?:video/)?(\d+)#', $vSrc, $m)) {
                                                                 $videoEmbedUrl = 'https://player.vimeo.com/video/' . $m[1];
                                                             }
-                                                            $videoFinalSrc = $isYoutubeVimeo ? $videoEmbedUrl : (str_starts_with($vSrc, 'http') ? $vSrc : asset(ltrim($vSrc, '/')));
+                                                            $videoFinalSrc = $isYoutubeVimeo ? $videoEmbedUrl : $resolveMediaUrl($videoSrcRaw);
                                                         @endphp
                                                         <div class="builder-video-wrap" style="{{ $videoWrapStyle }}">
                                                             @if($isYoutubeVimeo)
@@ -969,14 +1096,15 @@
                                                                                                     @if($img !== '')
                                                                                                         <img class="builder-img" src="{{ $img }}" alt="{{ $alt }}" style="{{ $ss }}{{ $ss !== '' && $mediaClipStyle !== '' ? ';' : '' }}{{ $mediaClipStyle }}">
                                                                                                     @endif
-                                                                                                @elseif($st === 'video')
-                                                                                                    @php
-                                                                                                        $videoSrc = trim((string) ($ssc['src'] ?? ''));
-                                                                                                        $cropTop = max(0, (int) ($ssc['cropTop'] ?? 0));
-                                                                                                        $cropRight = max(0, (int) ($ssc['cropRight'] ?? 0));
-                                                                                                        $cropBottom = max(0, (int) ($ssc['cropBottom'] ?? 0));
-                                                                                                        $cropLeft = max(0, (int) ($ssc['cropLeft'] ?? 0));
-                                                                                                        $mediaClipStyle = ($cropTop || $cropRight || $cropBottom || $cropLeft)
+                                                                                                    @elseif($st === 'video')
+                                                                                                        @php
+                                                                                                            $videoSrcRaw = trim((string) ($ssc['src'] ?? ''));
+                                                                                                            $videoSrc = $resolveMediaUrl($videoSrcRaw);
+                                                                                                            $cropTop = max(0, (int) ($ssc['cropTop'] ?? 0));
+                                                                                                            $cropRight = max(0, (int) ($ssc['cropRight'] ?? 0));
+                                                                                                            $cropBottom = max(0, (int) ($ssc['cropBottom'] ?? 0));
+                                                                                                            $cropLeft = max(0, (int) ($ssc['cropLeft'] ?? 0));
+                                                                                                            $mediaClipStyle = ($cropTop || $cropRight || $cropBottom || $cropLeft)
                                                                                                             ? ('clip-path: inset(' . $cropTop . 'px ' . $cropRight . 'px ' . $cropBottom . 'px ' . $cropLeft . 'px);')
                                                                                                             : '';
                                                                                                     @endphp
@@ -1199,8 +1327,10 @@
                                                         }
                                                         $pricingTextColor = trim((string) ($rawStyle['color'] ?? ''));
                                                         if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $pricingTextColor)) $pricingTextColor = '';
-                                                        $ctaLabel = trim((string) ($settings['ctaLabel'] ?? 'Get Started'));
                                                         $ctaLink = trim((string) ($settings['ctaLink'] ?? '#'));
+                                                        $ctaHref = $resolvePricingCtaHref($settings);
+                                                        $ctaLabelRaw = array_key_exists('ctaLabel', $settings) ? trim((string) $settings['ctaLabel']) : '';
+                                                        $ctaLabel = $ctaLabelRaw !== '' ? $ctaLabelRaw : ($currentStepType !== 'checkout' ? 'Get Started' : '');
                                                         $ctaBg = trim((string) ($settings['ctaBgColor'] ?? '#0f172a'));
                                                         if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $ctaBg)) $ctaBg = '#0f172a';
                                                         $ctaText = trim((string) ($settings['ctaTextColor'] ?? '#ffffff'));
@@ -1269,7 +1399,7 @@
                                                             @endforeach
                                                         </ul>
                                                         @if($ctaLabel !== '')
-                                                            <a class="builder-pricing-cta" href="{{ $ctaLink !== '' ? $ctaLink : '#' }}" style="{{ $ctaStyle }}background: {{ $ctaBg }}; color: {{ $ctaText }};">{{ $ctaLabel }}</a>
+                                                            <a class="builder-pricing-cta" href="{{ $ctaHref }}" style="{{ $ctaStyle }}background: {{ $ctaBg }}; color: {{ $ctaText }};">{{ $ctaLabel }}</a>
                                                         @endif
                                                     </div>
                                                 @elseif($type === 'countdown')
@@ -1567,6 +1697,18 @@
         var countdowns=document.querySelectorAll("[data-countdown]");
         if(countdowns && countdowns.length){
             function pad2(n){return String(n).padStart(2,"0");}
+            function parseMoneyToNumber(raw){
+                var s=String(raw||"").trim();
+                if(!s)return null;
+                // Keep digits, commas, and decimal dot only.
+                s=s.replace(/[^0-9,.\-]/g,"");
+                if(!s)return null;
+                // Remove thousand separators.
+                s=s.replace(/,/g,"");
+                var n=parseFloat(s);
+                if(!isFinite(n)||isNaN(n))return null;
+                return n;
+            }
             function escapeCssIdent(v){
                 var raw=String(v||"");
                 if(window.CSS && typeof window.CSS.escape==="function")return window.CSS.escape(raw);
@@ -1710,6 +1852,38 @@
             tick();
             setInterval(tick,1000);
         }
+
+        // Ensure the posted checkout amount matches the visible pricing (sale/regular) when present.
+        // This makes PayMongo charge what the customer sees on the page.
+        function findVisiblePricingAmount(){
+            var cards=Array.from(document.querySelectorAll("[data-pricing-id]")||[]);
+            if(!cards.length)return null;
+            var visible=cards.filter(function(p){
+                // Consider as visible if not display:none and in DOM flow.
+                if(!p||!p.getBoundingClientRect)return false;
+                if(p.style && String(p.style.display).toLowerCase()==="none")return false;
+                return true;
+            });
+            var target=(visible[0]||cards[0])||null;
+            if(!target)return null;
+            var priceEl=target.querySelector("[data-pricing-price]");
+            if(!priceEl)return null;
+            return parseMoneyToNumber(priceEl.textContent||"");
+        }
+        document.addEventListener("submit",function(e){
+            var form=e.target;
+            if(!form||form.tagName!=="FORM")return;
+            var method=String(form.getAttribute("method")||"").toLowerCase();
+            if(method!=="post")return;
+            var action=String(form.getAttribute("action")||"");
+            if(action.indexOf("/checkout")<0)return;
+            var amountInput=form.querySelector('input[name="amount"]');
+            if(!amountInput)return;
+            var amount=findVisiblePricingAmount();
+            if(typeof amount==="number" && amount>0){
+                amountInput.value=String(amount);
+            }
+        },true);
         var isPreview={{ ($isPreview ?? false) ? 'true' : 'false' }};
         var editorCanvasWidth={{ (int) ($editorCanvasWidth ?? 0) }};
         if(isPreview&&editorCanvasWidth>0){

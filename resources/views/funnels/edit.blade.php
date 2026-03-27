@@ -97,12 +97,21 @@
 .fb-lib-group{margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #E6E1EF}
 .fb-lib-group:last-child{margin-bottom:0;padding-bottom:0;border-bottom:0}
 .fb-lib-group-title{font-size:12px;font-weight:900;letter-spacing:.02em;text-transform:uppercase;color:#2E1244;margin:0 0 8px}
-.fb-template-grid{display:grid;grid-template-columns:1fr;gap:10px}
-.fb-template-card{border:1px solid #E6E1EF;border-radius:12px;background:#fff;padding:10px;display:flex;flex-direction:column;gap:8px;box-shadow:0 10px 20px rgba(36,14,53,.06)}
+.fb-template-grid{display:grid;grid-template-columns:1fr;gap:12px}
+.fb-template-card{border:1px solid #E6E1EF;border-radius:14px;background:#fff;padding:12px;display:flex;flex-direction:column;gap:10px;box-shadow:0 10px 20px rgba(36,14,53,.06);transition:transform .16s ease,box-shadow .2s ease,border-color .2s ease}
+.fb-template-card:hover{transform:translateY(-1px);border-color:#D8C8EA;box-shadow:0 16px 28px rgba(36,14,53,.10)}
+.fb-template-status{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 8px}
+.fb-template-pill{display:inline-flex;align-items:center;justify-content:center;padding:6px 10px;border-radius:999px;background:#F3EEF7;color:#240E35;font-size:11px;font-weight:800;white-space:nowrap;border:1px solid #E6E1EF}
+.fb-template-mode{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 12px}
+.fb-template-mode-btn{min-height:38px;border:1px solid #E6E1EF;border-radius:12px;background:#ffffff;color:#6B4A7A;font-size:12px;font-weight:800;letter-spacing:.01em;cursor:pointer;transition:background .18s ease,color .18s ease,border-color .18s ease,box-shadow .18s ease}
+.fb-template-mode-btn.active{background:#240E35;color:#ffffff;border-color:#240E35;box-shadow:0 10px 20px rgba(36,14,53,.18)}
+.fb-template-mode-btn:not(.active):hover{background:#F8F5FB;border-color:#D8C8EA}
+.fb-template-current{margin:0 0 12px;font-size:12px;color:#64748b;line-height:1.45}
+.fb-template-pane.hidden{display:none}
 .fb-template-preview{height:92px;border-radius:10px;border:1px dashed #E6E1EF;background:linear-gradient(135deg,#F8F5FB,#F3EEF7);position:relative;overflow:hidden}
 .fb-template-title{font-size:13px;font-weight:800;color:#240E35;margin:0}
 .fb-template-desc{font-size:12px;color:#64748b;line-height:1.4;margin:0}
-.fb-template-actions{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.fb-template-actions{display:flex;align-items:flex-end;justify-content:space-between;gap:8px}
 .fb-template-tags{display:flex;flex-wrap:wrap;gap:6px}
 .fb-template-tag{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:800;color:#6B4A7A;background:#F3EEF7;border:1px solid #E6E1EF;border-radius:999px;padding:2px 6px;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}
 .fb-template-preview .tp-line{height:6px;background:#E6E1EF;border-radius:999px;margin:6px 8px}
@@ -538,9 +547,23 @@
         </div>
         <div class="fb-left-panel hidden" id="fbLeftPanelTemplates">
             <div class="fb-card settings">
-                <h3 class="fb-h">Templates</h3>
-                <p class="meta" style="margin:0 0 10px;">Replace the current page with a starter layout.</p>
-                <div id="fbTemplateGrid" class="fb-template-grid"></div>
+                <h3 class="fb-h" id="fbTemplateHeading">Templates</h3>
+                <p class="meta" id="fbTemplateMeta" style="margin:0 0 10px;">Replace the current page with a starter layout.</p>
+                <div class="fb-template-status">
+                    <span class="fb-template-pill" id="fbTemplateTypePill">Current Page</span>
+                    <span class="fb-template-pill" id="fbTemplateCountPill">0 layouts</span>
+                </div>
+                <div class="fb-template-mode" role="tablist" aria-label="Template scope">
+                    <button type="button" class="fb-template-mode-btn active" id="fbTemplateModePage">Single Page</button>
+                    <button type="button" class="fb-template-mode-btn" id="fbTemplateModeFunnel">All Pages</button>
+                </div>
+                <p class="fb-template-current" id="fbTemplateCurrentPage">Choose a page to see its starter layouts.</p>
+                <div id="fbTemplatePagePane" class="fb-template-pane">
+                    <div id="fbTemplateGrid" class="fb-template-grid"></div>
+                </div>
+                <div id="fbTemplateFunnelPane" class="fb-template-pane hidden">
+                    <div id="fbFunnelTemplateGrid" class="fb-template-grid"></div>
+                </div>
             </div>
         </div>
         <div class="fb-left-panel hidden" id="fbLeftPanelHistory">
@@ -705,6 +728,7 @@ const stepDeleteTpl="{{ route('funnels.steps.destroy',['funnel'=>$funnel,'step'=
 const stepReorderUrl="{{ route('funnels.steps.reorder',$funnel) }}";
 const csrf="{{ csrf_token() }}";
 const funnelSlug=@json($funnel->slug);
+const funnelStepUrlTpl=@json(route('funnels.portal.step',['funnelSlug'=>$funnel->slug,'stepSlug'=>'__STEP__']));
 const steps=@json($builderSteps);
 const state={sid:{{ (int)($defaultStepId??0) }}||((steps[0]&&steps[0].id)||null),layout:null,sel:null,carouselSel:null,clipboard:null,pasteAnchor:null,editingEl:null,mediaLoading:new Set()};
 const fonts=[
@@ -836,7 +860,8 @@ function renderStepOptions(){
     steps.forEach(function(s){
         var o=document.createElement("option");
         o.value=String(s.id);
-        o.textContent=String(s.title||("Step "+String(s.id)));
+        var stepTitle=String(s.title||("Step "+String(s.id)));
+        o.textContent=stepTitle+" ("+pageTypeLabel(s.type)+")";
         stepSel.appendChild(o);
     });
     var hasCurrent=steps.some(function(s){return +s.id===+state.sid;});
@@ -930,11 +955,16 @@ function futureCountdownValue(days){
     var pad=n=>String(n).padStart(2,"0");
     return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())+"T"+pad(d.getHours())+":"+pad(d.getMinutes());
 }
-const makeFeatureCardColumn=(iconName,title,body)=>makeColumn([
+const makeStretchColumn=(elements,style,settings)=>makeColumn(
+    Array.isArray(elements)?elements:[],
+    Object.assign({flex:"1"},style||{}),
+    Object.assign({stretch:true,stretchJustify:"flex-start",stretchAlign:"stretch"},settings||{})
+);
+const makeFeatureCardColumn=(iconName,title,body)=>makeStretchColumn([
     makeEl("icon","",{fontSize:"28px",color:"#6B4A7A",margin:"0 0 10px"},{iconName:iconName||"star",iconStyle:"solid",alignment:"left",link:""}),
     makeEl("heading",title||"Feature title",{fontSize:"18px",color:"#240E35",fontWeight:"800",margin:"0 0 6px"},{}),
-    makeEl("text",body||"Short feature description goes here.",{fontSize:"14px",color:"#64748b",lineHeight:"1.6",margin:"0"},{})
-],{padding:"18px",backgroundColor:"#ffffff",border:"1px solid #E6E1EF",borderRadius:"16px",boxShadow:"0 12px 24px rgba(15,23,42,.08)"});
+    makeEl("text",body||"Short feature description goes here.",{fontSize:"14px",color:"#64748b",lineHeight:"1.6",margin:"0",flex:"1"},{})
+],{padding:"18px",backgroundColor:"#ffffff",border:"1px solid #E6E1EF",borderRadius:"16px",boxShadow:"0 12px 24px rgba(15,23,42,.08)",minHeight:"210px"});
 const makeStatColumn=(stat,label)=>makeColumn([
     makeEl("heading",stat||"10x",{fontSize:"28px",color:"#240E35",fontWeight:"800",margin:"0 0 4px",textAlign:"center"},{}),
     makeEl("text",label||"Metric",{fontSize:"12px",color:"#64748b",textTransform:"uppercase",letterSpacing:"0.12em",textAlign:"center",margin:"0"},{})
@@ -982,12 +1012,18 @@ function templatePricingFaqLayout(){
             makeEl("text","Start today and upgrade anytime.",{fontSize:"16px",color:"#64748b",lineHeight:"1.6",textAlign:"center"},{})
         ],{textAlign:"center"})],{gap:"10px"})]
     });
-    var pricing=makeEl("pricing","",{width:"100%"},{plan:"Pro",price:"$49",period:"/month",subtitle:"Best for growing teams",features:["Unlimited pages","Custom domains","Priority support"],ctaLabel:"Get Started",ctaLink:"#",ctaBgColor:"#240E35",ctaTextColor:"#ffffff",badge:"Popular"});
-    var faq=makeEl("faq","",{width:"100%"},{items:[{q:"Can I cancel anytime?",a:"Yes, cancel anytime from your account settings."},{q:"Do you offer a free trial?",a:"Yes, you get a 14-day free trial."}],itemGap:10,questionColor:"#240E35",answerColor:"#475569"});
+    var pricing=makePricingCardEl({plan:"Pro",price:"$49",period:"/month",subtitle:"Best for growing teams",features:["Unlimited pages","Custom domains","Priority support"],badge:"Popular"},makeBareCardStyle());
+    var faq=makeFaqCardEl([{q:"Can I cancel anytime?",a:"Yes, cancel anytime from your account settings."},{q:"Do you offer a free trial?",a:"Yes, you get a 14-day free trial."}],makeBareCardStyle());
     var gridSection=makeSection({
         style:{padding:"28px 24px 64px",backgroundColor:"#ffffff"},
         settings:{contentWidth:"wide"},
-        rows:[makeRow([makeColumn([pricing],{flex:"1"}),makeColumn([faq],{flex:"1"})],{gap:"20px",alignItems:"flex-start"})]
+        rows:[makeRow([
+            makePanelColumn([
+                pricing,
+                makePrimaryButtonEl("Get Started",{alignment:"left"},{margin:"18px 0 0"})
+            ]),
+            makePanelColumn([faq])
+        ],{gap:"20px",alignItems:"stretch"})]
     });
     return {root:[intro,gridSection],sections:[],__editor:{canvasBg:"#F3EEF7"}};
 }
@@ -1050,21 +1086,29 @@ function templateWebinarLayout(){
     return {root:[section],sections:[],__editor:{canvasBg:"#F8F5FB"}};
 }
 function templateCheckoutLayout(){
-    var pricing=makeEl("pricing","",{width:"100%"},{plan:"Starter",price:"$29",period:"/month",subtitle:"Everything you need to launch",features:["Unlimited steps","Custom domains","Email support"],ctaLabel:"Start now",ctaLink:"#",ctaBgColor:"#240E35",ctaTextColor:"#ffffff",badge:"Most popular"});
-    var formEl=makeEl("form","",{width:"100%"},{alignment:"left",width:"100%",buttonAlign:"left",buttonBold:true,fields:[
-        {type:"text",label:"Name",placeholder:"Your name",required:true},
-        {type:"email",label:"Email",placeholder:"Email address",required:true}
-    ]});
-    var section=makeSection({
-        style:{padding:"64px 24px",backgroundColor:"#ffffff"},
-        settings:{contentWidth:"wide"},
-        rows:[makeRow([makeColumn([pricing],{flex:"1"}),makeColumn([
+    var section=makeSplitInfoSection(
+        makePanelColumn([makePricingCardEl({
+            plan:"Starter",
+            price:"$29",
+            period:"/month",
+            subtitle:"Everything you need to launch",
+            features:["Unlimited steps","Custom domains","Email support"],
+            badge:"Most popular"
+        },makeBareCardStyle())]),
+        makePanelColumn([
             makeEl("heading","Complete your order",{fontSize:"24px",color:"#240E35",fontWeight:"800",margin:"0 0 10px"},{}),
-            makeEl("text","Secure checkout. Cancel anytime.",{fontSize:"14px",color:"#64748b",margin:"0 0 14px"},{}),
-            formEl
-        ],{flex:"1"})],{gap:"24px",alignItems:"flex-start"})]
-    });
-    return {root:[section],sections:[],__editor:{canvasBg:"#F3EEF7"}};
+            makeEl("text",buildChecklistHtml("Use this area for final reassurance",[
+                "Summarize what the buyer gets",
+                "Mention delivery or onboarding timing",
+                "Call out guarantee or support details"
+            ]),{fontSize:"15px",color:"#64748b",lineHeight:"1.7",margin:"0 0 18px"},{}),
+            makePrimaryButtonEl("Complete Purchase",{actionType:"checkout",alignment:"left"}),
+            makeEl("text","Secure checkout ready. Replace this with your own purchase reassurance copy.",{fontSize:"13px",color:"#64748b",margin:"12px 0 0"},{}),
+            makeTestimonialCardEl("The streamlined checkout felt much more trustworthy and easier to finish.","Jamie Lee","Founder",makeBareCardStyle({margin:"18px 0 0"}))
+        ]),
+        {alignItems:"stretch"}
+    );
+    return buildTemplateLayout("#F3EEF7",[section]);
 }
 function templateThankYouLayout(){
     var section=makeSection({
@@ -1102,17 +1146,1435 @@ function templateStoryLayout(){
     });
     return {root:[story,stats],sections:[],__editor:{canvasBg:"#F3EEF7"}};
 }
-const builtInTemplates=[
-    {id:"hero_launch",name:"Hero Launch",description:"Hero, CTA, and product image.",tags:["Landing","Sales"],preview:"hero",build:templateHeroLayout},
-    {id:"lead_capture",name:"Lead Capture",description:"Opt-in focused signup layout.",tags:["Opt-in"],preview:"lead",build:templateLeadCaptureLayout},
-    {id:"pricing_faq",name:"Pricing + FAQ",description:"Pricing card with supporting FAQs.",tags:["Sales","Checkout"],preview:"pricing",build:templatePricingFaqLayout},
-    {id:"hero_video",name:"Hero + Video",description:"Hero split with video and CTA.",tags:["Webinar","Landing"],preview:"video",build:templateHeroVideoLayout},
-    {id:"feature_grid",name:"Feature Grid",description:"Headline plus feature cards.",tags:["Landing","Product"],preview:"cards",build:templateFeatureGridLayout},
-    {id:"webinar_signup",name:"Webinar Signup",description:"Countdown and centered signup form.",tags:["Webinar","Opt-in"],preview:"lead",build:templateWebinarLayout},
-    {id:"checkout_split",name:"Checkout Split",description:"Pricing card with checkout form.",tags:["Checkout","Sales"],preview:"pricing",build:templateCheckoutLayout},
-    {id:"thank_you",name:"Thank You",description:"Centered confirmation with testimonial.",tags:["Thank You"],preview:"banner",build:templateThankYouLayout},
-    {id:"story_stats",name:"Story + Stats",description:"Story section with stats row.",tags:["About","Brand"],preview:"hero",build:templateStoryLayout}
+function buildTemplateLayout(canvasBg,sections){
+    return {root:Array.isArray(sections)?sections:[],sections:[],__editor:{canvasBg:canvasBg||"#F3EEF7"}};
+}
+function buildChecklistHtml(title,items){
+    var rows=[];
+    if(title)rows.push("<strong>"+String(title||"")+"</strong>");
+    (Array.isArray(items)?items:[]).forEach(function(item){
+        if(String(item||"").trim()!=="")rows.push("&bull; "+String(item));
+    });
+    return rows.join("<br>");
+}
+function makePrimaryButtonEl(label,settings,style){
+    return makeEl("button",label||"Continue",Object.assign({
+        backgroundColor:"#240E35",
+        color:"#ffffff",
+        borderRadius:"999px",
+        padding:"12px 24px",
+        fontWeight:"700",
+        textAlign:"center"
+    },style||{}),Object.assign({
+        actionType:"next_step",
+        actionStepSlug:"",
+        link:"#",
+        alignment:"left"
+    },settings||{}));
+}
+function makeOptInFormEl(label,fields,opts){
+    opts=opts||{};
+    return makeEl("form",label||"Get Access",Object.assign({
+        width:"100%",
+        maxWidth:opts.maxWidth||"520px",
+        padding:"22px",
+        backgroundColor:"#ffffff",
+        border:"1px solid #E6E1EF",
+        borderRadius:"20px",
+        boxShadow:"0 12px 24px rgba(36,14,53,.08)"
+    },opts.style||{}),{
+        alignment:opts.alignment||"center",
+        width:opts.formWidth||"100%",
+        buttonAlign:opts.buttonAlign||"center",
+        buttonBold:true,
+        labelColor:"#240E35",
+        placeholderColor:"#94a3b8",
+        buttonBgColor:"#240E35",
+        buttonTextColor:"#ffffff",
+        fields:Array.isArray(fields)&&fields.length?fields:[
+            {type:"first_name",label:"First name",placeholder:"First name",required:false},
+            {type:"email",label:"Email",placeholder:"Email address",required:true}
+        ]
+    });
+}
+function makePricingCardEl(opts,style){
+    opts=opts||{};
+    return makeEl("pricing","",Object.assign({
+        width:"100%",
+        flex:"1",
+        height:"100%",
+        display:"flex",
+        flexDirection:"column",
+        justifyContent:"space-between",
+        boxSizing:"border-box",
+        padding:"18px",
+        backgroundColor:"#ffffff",
+        border:"1px solid #E6E1EF",
+        borderRadius:"18px",
+        boxShadow:"0 12px 24px rgba(36,14,53,.08)"
+    },style||{}),{
+        plan:opts.plan||"Growth",
+        price:opts.price||"$49",
+        period:opts.period||"/month",
+        subtitle:opts.subtitle||"Best for growing teams",
+        features:Array.isArray(opts.features)&&opts.features.length?opts.features:["Unlimited funnels","Priority support","Conversion analytics"],
+        ctaLabel:opts.ctaLabel||"",
+        ctaLink:opts.ctaLink||"#",
+        ctaBgColor:opts.ctaBgColor||"#240E35",
+        ctaTextColor:opts.ctaTextColor||"#ffffff",
+        badge:opts.badge||"",
+        textColor:opts.textColor||"#240E35",
+        regularPrice:opts.regularPrice||""
+    });
+}
+function makeFaqCardEl(items,style){
+    return makeEl("faq","",Object.assign({
+        width:"100%",
+        flex:"1",
+        height:"100%",
+        display:"flex",
+        flexDirection:"column",
+        boxSizing:"border-box",
+        padding:"18px",
+        backgroundColor:"#ffffff",
+        border:"1px solid #E6E1EF",
+        borderRadius:"18px",
+        boxShadow:"0 12px 24px rgba(36,14,53,.08)"
+    },style||{}),{
+        items:Array.isArray(items)?items:[],
+        itemGap:10,
+        questionColor:"#240E35",
+        answerColor:"#475569"
+    });
+}
+function makeTestimonialCardEl(quote,name,role,style){
+    return makeEl("testimonial","",Object.assign({
+        width:"100%",
+        flex:"1",
+        height:"100%",
+        display:"flex",
+        flexDirection:"column",
+        justifyContent:"space-between",
+        boxSizing:"border-box",
+        padding:"18px",
+        backgroundColor:"#ffffff",
+        border:"1px solid #E6E1EF",
+        borderRadius:"18px",
+        boxShadow:"0 12px 24px rgba(36,14,53,.08)"
+    },style||{}),{
+        quote:quote||"This layout helped us launch faster.",
+        name:name||"Alex Morgan",
+        role:role||"Founder",
+        avatar:""
+    });
+}
+function makeBareCardStyle(style){
+    return Object.assign({
+        backgroundColor:"transparent",
+        border:"0",
+        boxShadow:"none",
+        padding:"0",
+        borderRadius:"0"
+    },style||{});
+}
+function makePanelColumn(elements,style){
+    return makeStretchColumn(Array.isArray(elements)?elements:[],Object.assign({
+        padding:"22px",
+        backgroundColor:"#ffffff",
+        border:"1px solid #E6E1EF",
+        borderRadius:"20px",
+        boxShadow:"0 12px 24px rgba(36,14,53,.08)"
+    },style||{}));
+}
+function makeIntroElements(kicker,heading,body,opts){
+    opts=opts||{};
+    var align=opts.align||"left";
+    var headingSize=opts.headingSize||"38px";
+    var bodySize=opts.bodySize||"16px";
+    var out=[];
+    if(kicker){
+        out.push(makeEl("text",String(kicker||"").toUpperCase(),{
+            fontSize:"12px",
+            color:"#6B4A7A",
+            fontWeight:"800",
+            letterSpacing:"0.16em",
+            textAlign:align,
+            margin:"0 0 10px"
+        },{}));
+    }
+    if(heading){
+        out.push(makeEl("heading",heading,{
+            fontSize:headingSize,
+            color:"#240E35",
+            fontWeight:"800",
+            lineHeight:"1.15",
+            textAlign:align,
+            margin:"0 0 12px"
+        },{}));
+    }
+    if(body){
+        out.push(makeEl("text",body,{
+            fontSize:bodySize,
+            color:"#64748b",
+            lineHeight:"1.7",
+            textAlign:align,
+            margin:"0 0 18px"
+        },{}));
+    }
+    if(opts.button){
+        out.push(makePrimaryButtonEl(
+            opts.button.label,
+            Object.assign({alignment:opts.button.alignment||align},opts.button.settings||{}),
+            opts.button.style||{}
+        ));
+    }
+    (Array.isArray(opts.extraEls)?opts.extraEls:[]).forEach(function(extra){
+        if(extra)out.push(extra);
+    });
+    return out;
+}
+function makeTrustSection(labels){
+    return makeSection({
+        style:{padding:"18px 24px 42px",backgroundColor:"#ffffff"},
+        settings:{contentWidth:"wide"},
+        rows:[makeRow((labels||[]).map(function(label){return makeLogoColumn(label);}),{gap:"10px",alignItems:"center"})]
+    });
+}
+function makeSplitInfoSection(leftCol,rightCol,opts){
+    opts=opts||{};
+    return makeSection({
+        style:{padding:opts.padding||"72px 24px",backgroundColor:opts.backgroundColor||"#ffffff"},
+        settings:{contentWidth:opts.contentWidth||"wide"},
+        rows:[makeRow([leftCol,rightCol],{gap:opts.gap||"24px",alignItems:opts.alignItems||"center"})]
+    });
+}
+function makeCardGridSection(opts){
+    opts=opts||{};
+    var rows=[];
+    if(opts.title||opts.body||opts.kicker){
+        rows.push(makeRow([makeColumn(
+            makeIntroElements(opts.kicker,opts.title,opts.body,{
+                align:opts.align||"center",
+                headingSize:opts.headingSize||"32px",
+                bodySize:opts.bodySize||"16px"
+            }),
+            {textAlign:opts.align||"center"}
+        )],{gap:"12px"}));
+    }
+    if(Array.isArray(opts.columns)&&opts.columns.length){
+        rows.push(makeRow(opts.columns,{gap:opts.gap||"18px",alignItems:opts.alignItems||"stretch"}));
+    }
+    return makeSection({
+        style:{padding:opts.padding||"0 24px 64px",backgroundColor:opts.backgroundColor||"#ffffff"},
+        settings:{contentWidth:opts.contentWidth||"wide"},
+        rows:rows
+    });
+}
+function makeCenteredCtaSection(opts){
+    opts=opts||{};
+    var style={padding:opts.padding||"32px 24px",backgroundColor:opts.backgroundColor||"#F8F5FB"};
+    if(opts.bordered!==false){
+        style.border="1px solid #E6E1EF";
+        style.borderRadius=opts.radius||"20px";
+    }
+    return makeSection({
+        style:style,
+        settings:{contentWidth:opts.contentWidth||"wide"},
+        rows:[makeRow([makeColumn(
+            makeIntroElements(opts.kicker,opts.heading,opts.body,{
+                align:"center",
+                headingSize:opts.headingSize||"28px",
+                bodySize:opts.bodySize||"15px",
+                button:opts.button?{
+                    label:opts.button.label,
+                    alignment:"center",
+                    settings:opts.button.settings||{},
+                    style:opts.button.style||{}
+                }:null,
+                extraEls:opts.extraEls||[]
+            }),
+            {textAlign:"center"}
+        )],{gap:"12px"})]
+    });
+}
+function makeNextStepCtaSection(opts){
+    opts=opts||{};
+    return makeCenteredCtaSection({
+        kicker:opts.kicker||"Next Step",
+        heading:opts.heading||"Keep the funnel moving",
+        body:opts.body||"This starter includes a dedicated button block so users can wire the next page later.",
+        button:{
+            label:opts.label||"Continue To Next Step",
+            settings:Object.assign({
+                actionType:"next_step",
+                actionStepSlug:"",
+                link:"#"
+            },opts.buttonSettings||{}),
+            style:opts.buttonStyle||{}
+        },
+        backgroundColor:opts.backgroundColor||"#F8F5FB",
+        padding:opts.padding||"30px 24px 38px"
+    });
+}
+function templateAuthorityLandingLayout(){
+    var hero=makeSplitInfoSection(
+        makeColumn(makeIntroElements(
+            "Consulting Funnel",
+            "Book more qualified calls with a polished first impression",
+            "Start with a premium hero, layer in trust, and guide visitors toward the next step without clutter.",
+            {button:{label:"See The Offer"}}
+        )),
+        makePanelColumn([
+            makeEl("heading","Why this layout converts",{fontSize:"24px",color:"#240E35",fontWeight:"800",margin:"0 0 10px"},{}),
+            makeEl("text",buildChecklistHtml("Keep the message tight",[
+                "Lead with one outcome visitors care about",
+                "Add proof before asking for the click",
+                "Use each section to remove one objection"
+            ]),{fontSize:"15px",color:"#64748b",lineHeight:"1.7",margin:"0 0 16px"},{}),
+            makeTestimonialCardEl("We used this exact structure to increase booked calls by 34% in two weeks.","Maya Chen","Growth Consultant",makeBareCardStyle())
+        ])
+    );
+    var trust=makeTrustSection(["NORTHWIND","SUMMIT","AURORA","ATLAS","EVERGREEN"]);
+    var services=makeCardGridSection({
+        title:"What to place below the fold",
+        body:"Use these cards to explain the offer, the process, and the proof.",
+        columns:[
+            makeFeatureCardColumn("comments","Clear positioning","Show exactly who this page is for and what changes after they say yes."),
+            makeFeatureCardColumn("shield-halved","Trust builders","Add authority, testimonials, and proof elements before the CTA."),
+            makeFeatureCardColumn("paper-plane","Simple next step","End sections with one direct action instead of too many choices.")
+        ]
+    });
+    var cta=makeCenteredCtaSection({
+        heading:"Ready to make it yours?",
+        body:"Swap in your copy, your proof, and your offer details to ship a professional page quickly.",
+        button:{label:"Use This Landing Page"}
+    });
+    return buildTemplateLayout("#F3EEF7",[hero,trust,services,cta]);
+}
+function templateAppShowcaseLayout(){
+    var hero=makeCenteredCtaSection({
+        kicker:"Product Showcase",
+        heading:"Put the product promise front and center",
+        body:"This template gives you a modern product page flow: headline, proof, benefits, and a strong call to action.",
+        button:{label:"View Pricing"},
+        headingSize:"40px",
+        bodySize:"16px",
+        padding:"84px 24px 34px",
+        backgroundColor:"#ffffff",
+        bordered:false
+    });
+    var stats=makeCardGridSection({
+        padding:"0 24px 28px",
+        backgroundColor:"#ffffff",
+        columns:[
+            makeStatColumn("24H","Launch time"),
+            makeStatColumn("3.4X","Clickthrough"),
+            makeStatColumn("4.9/5","User rating")
+        ]
+    });
+    var features=makeCardGridSection({
+        title:"Professional structure for a product page",
+        body:"Lead with a clear value prop, then support it with product proof and friction-reducing sections.",
+        columns:[
+            makeFeatureCardColumn("bolt","Fast setup","Use this as a clean first draft for SaaS, apps, or digital tools."),
+            makeFeatureCardColumn("image","Visual storytelling","Pair screenshots or mockups with short, persuasive copy blocks."),
+            makeFeatureCardColumn("cart-shopping","Stronger CTAs","Move visitors naturally from curiosity to offer review.")
+        ]
+    });
+    var social=makeCardGridSection({
+        padding:"0 24px 64px",
+        columns:[
+            makePanelColumn([makeTestimonialCardEl("The layout instantly made our product look more established and easier to trust.","Darren Cole","Product Lead",makeBareCardStyle())]),
+            makePanelColumn([makeTestimonialCardEl("We finally had a template that felt premium without over-designing everything.","Sofia Tran","Marketing Manager",makeBareCardStyle())])
+        ]
+    });
+    return buildTemplateLayout("#F8F5FB",[hero,stats,features,social]);
+}
+function templateWaitlistLaunchLayout(){
+    var formEl=makeOptInFormEl("Join the Waitlist",[
+        {type:"first_name",label:"First name",placeholder:"First name",required:false},
+        {type:"email",label:"Email",placeholder:"Email address",required:true}
+    ],{alignment:"center",buttonAlign:"center",maxWidth:"520px"});
+    var hero=makeCenteredCtaSection({
+        kicker:"Launch Waitlist",
+        heading:"Build early demand before your offer goes live",
+        body:"Use this waitlist page to collect warm leads, tease the launch, and show why joining early matters.",
+        headingSize:"38px",
+        bodySize:"16px",
+        padding:"80px 24px 30px",
+        backgroundColor:"#ffffff",
+        bordered:false,
+        extraEls:[formEl]
+    });
+    var trust=makeTrustSection(["EARLY ACCESS","BONUS DROP","VIP LIST","FIRST NOTICE"]);
+    var reasons=makeCardGridSection({
+        title:"Why people sign up early",
+        body:"Call out the exclusivity, bonuses, or launch updates they get by joining now.",
+        columns:[
+            makeFeatureCardColumn("gift","Launch bonus","Reward early subscribers with an exclusive bonus or discount."),
+            makeFeatureCardColumn("clock","Priority access","Let them know they will hear about openings first."),
+            makeFeatureCardColumn("users","Community feel","Create momentum by framing this as an insider list.")
+        ]
+    });
+    return buildTemplateLayout("#F8F5FB",[hero,trust,reasons]);
+}
+function templateApplicationCallLayout(){
+    var formEl=makeOptInFormEl("Apply Now",[
+        {type:"first_name",label:"First name",placeholder:"First name",required:false},
+        {type:"email",label:"Email",placeholder:"Email address",required:true},
+        {type:"phone_number",label:"Phone",placeholder:"09XXXXXXXXX",required:false}
+    ],{alignment:"left",buttonAlign:"left",maxWidth:"100%",style:makeBareCardStyle()});
+    var hero=makeSplitInfoSection(
+        makePanelColumn(makeIntroElements(
+            "Application Funnel",
+            "Qualify leads before you ever get on a call",
+            "Use this page when you want the next step to feel selective, credible, and higher value.",
+            {extraEls:[
+                makeEl("text",buildChecklistHtml("This layout works best when you need to:",[
+                    "Frame the application as a premium next step",
+                    "Set expectations before the form",
+                    "Reduce low-intent submissions"
+                ]),{fontSize:"15px",color:"#64748b",lineHeight:"1.7",margin:"0"}, {})
+            ]}
+        )),
+        makePanelColumn([
+            makeEl("heading","Tell them what happens next",{fontSize:"24px",color:"#240E35",fontWeight:"800",margin:"0 0 10px"},{}),
+            makeEl("text","Explain review time, who this is for, and what they can expect after applying.",{fontSize:"15px",color:"#64748b",lineHeight:"1.7",margin:"0 0 16px"},{}),
+            formEl
+        ]),
+        {padding:"78px 24px 38px"}
+    );
+    var proof=makeCardGridSection({
+        padding:"0 24px 64px",
+        columns:[
+            makePanelColumn([makeTestimonialCardEl("The application format instantly improved lead quality for our sales calls.","Alyssa Park","Agency Owner",makeBareCardStyle())]),
+            makePanelColumn([makeTestimonialCardEl("We stopped attracting casual clicks and started talking to better-fit prospects.","Nico Alvarez","Consultant",makeBareCardStyle())])
+        ]
+    });
+    return buildTemplateLayout("#F3EEF7",[hero,proof]);
+}
+function templateNewsletterDigestLayout(){
+    var formEl=makeOptInFormEl("Subscribe Free",[
+        {type:"first_name",label:"First name",placeholder:"First name",required:false},
+        {type:"email",label:"Email",placeholder:"Email address",required:true}
+    ],{alignment:"center",buttonAlign:"center",maxWidth:"460px"});
+    var hero=makeCenteredCtaSection({
+        kicker:"Weekly Newsletter",
+        heading:"Turn casual visitors into repeat readers",
+        body:"Use a simple editorial-style page when the offer is your insights, updates, or curated resources.",
+        headingSize:"38px",
+        bodySize:"16px",
+        padding:"80px 24px 30px",
+        backgroundColor:"#ffffff",
+        bordered:false,
+        extraEls:[formEl]
+    });
+    var issues=makeCardGridSection({
+        title:"What to include below the signup",
+        body:"Show what subscribers receive, how often you send, and why your perspective is worth following.",
+        columns:[
+            makeFeatureCardColumn("envelope","Clear promise","Describe the type of insight or updates subscribers receive."),
+            makeFeatureCardColumn("calendar-days","Consistent cadence","Set expectations with a reliable weekly or monthly rhythm."),
+            makeFeatureCardColumn("star","Trusted perspective","Use proof, niche expertise, or recent wins to build confidence.")
+        ]
+    });
+    var social=makeCardGridSection({
+        padding:"0 24px 64px",
+        columns:[
+            makePanelColumn([makeTestimonialCardEl("Our newsletter opt-in rate improved as soon as the page felt more intentional.","Jamie Lee","Creator",makeBareCardStyle())]),
+            makePanelColumn([makeTestimonialCardEl("This gives a simple but premium structure for audience building.","Chris Park","Founder",makeBareCardStyle())])
+        ]
+    });
+    return buildTemplateLayout("#F8F5FB",[hero,issues,social]);
+}
+function templateSalesOfferStackLayout(){
+    var hero=makeSplitInfoSection(
+        makeColumn(makeIntroElements(
+            "Offer Page",
+            "Present the transformation before the price",
+            "Lead with the result, reinforce it with proof, and only then move into the offer details.",
+            {button:{label:"See The Package"}}
+        )),
+        makePanelColumn([
+            makePricingCardEl({
+                plan:"Signature Offer",
+                price:"$1,500",
+                period:"",
+                subtitle:"Ideal for clients who want faster implementation",
+                features:["Strategy kickoff","Custom build","Launch support"],
+                badge:"Most Popular"
+            },makeBareCardStyle())
+        ]),
+        {alignItems:"stretch"}
+    );
+    var sections=makeCardGridSection({
+        title:"Build the sales story in this order",
+        body:"This layout is designed for consultants, service providers, or high-ticket digital offers.",
+        columns:[
+            makeFeatureCardColumn("circle-check","Outcome first","Open with the transformation clients want, not your whole process."),
+            makeFeatureCardColumn("comments","Proof second","Use testimonials, wins, and credibility markers before the pitch."),
+            makeFeatureCardColumn("tag","Offer third","Present pricing only after the value feels concrete.")
+        ]
+    });
+    var close=makeCardGridSection({
+        padding:"0 24px 28px",
+        columns:[
+            makePanelColumn([makeTestimonialCardEl("This structure made our offer page feel premium without getting too long.","Morgan Yu","Business Coach",makeBareCardStyle())]),
+            makePanelColumn([makeFaqCardEl([
+                {q:"Is this layout only for services?",a:"No, it also works well for premium digital products and programs."},
+                {q:"Should I include pricing right away?",a:"Lead with the promise and proof first, then reveal the offer."}
+            ],makeBareCardStyle())])
+        ]
+    });
+    var cta=makeCenteredCtaSection({
+        heading:"Guide them to the next step with confidence",
+        body:"Use the CTA below to move visitors toward checkout or an application page.",
+        button:{label:"Continue To Checkout"}
+    });
+    return buildTemplateLayout("#F3EEF7",[hero,sections,close,cta]);
+}
+function templateVideoSalesLetterLayout(){
+    var hero=makeSplitInfoSection(
+        makeColumn(makeIntroElements(
+            "Video Sales Letter",
+            "Pair a strong opening promise with a focused sales video",
+            "Use this format when the offer sells best through story, demonstration, or teaching.",
+            {button:{label:"Watch The Overview"}}
+        )),
+        makePanelColumn([
+            makeEl("video","",{width:"100%"},{src:"",alignment:"center"})
+        ])
+    );
+    var proof=makeCardGridSection({
+        title:"Support the video with crisp proof points",
+        body:"Keep the supporting sections short so the video stays the hero of the page.",
+        columns:[
+            makeFeatureCardColumn("play","Lead with movement","Use video when tone, explanation, or demo matters most."),
+            makeFeatureCardColumn("shield-halved","Remove friction","Add proof, guarantees, and short objection-handling sections."),
+            makeFeatureCardColumn("cart-shopping","Close clearly","Use a direct CTA after the key proof blocks.")
+        ]
+    });
+    var offer=makeCardGridSection({
+        padding:"0 24px 28px",
+        columns:[
+            makePanelColumn([makePricingCardEl({
+                plan:"Launch Intensive",
+                price:"$497",
+                period:"",
+                subtitle:"Fast-start program with templates and support",
+                features:["Video training","Templates","Q and A session"],
+                badge:"Limited Spots"
+            },makeBareCardStyle())]),
+            makePanelColumn([makeTestimonialCardEl("The video-first layout made our sales page feel far more persuasive.","Darren Cole","Course Creator",makeBareCardStyle())])
+        ]
+    });
+    return buildTemplateLayout("#F8F5FB",[hero,proof,offer]);
+}
+function templateComparisonSalesLayout(){
+    var hero=makeCenteredCtaSection({
+        kicker:"Offer Comparison",
+        heading:"Show the best-fit option and help visitors choose faster",
+        body:"This format works when you need to compare plans, bundles, or implementation levels before checkout.",
+        button:{label:"Choose A Plan"},
+        headingSize:"38px",
+        bodySize:"16px",
+        padding:"80px 24px 30px",
+        backgroundColor:"#ffffff",
+        bordered:false
+    });
+    var pricing=makeCardGridSection({
+        padding:"0 24px 32px",
+        backgroundColor:"#ffffff",
+        columns:[
+            makePanelColumn([makePricingCardEl({plan:"Starter",price:"$49",period:"/month",subtitle:"For getting started",features:["Core pages","Email capture","Basic support"]},makeBareCardStyle())]),
+            makePanelColumn([makePricingCardEl({plan:"Growth",price:"$99",period:"/month",subtitle:"For serious launches",features:["Unlimited funnels","Priority support","Analytics"],badge:"Best Value"},makeBareCardStyle())]),
+            makePanelColumn([makePricingCardEl({plan:"Scale",price:"$199",period:"/month",subtitle:"For advanced teams",features:["Advanced insights","Team access","Hands-on onboarding"]},makeBareCardStyle())])
+        ]
+    });
+    var faq=makeCardGridSection({
+        padding:"0 24px 28px",
+        columns:[
+            makePanelColumn([makeFaqCardEl([
+                {q:"Can I upgrade later?",a:"Yes, upgrade when your funnel needs expand."},
+                {q:"Which plan should I highlight?",a:"Use the middle or best-fit option as your anchor offer."}
+            ],makeBareCardStyle())]),
+            makePanelColumn([makeTestimonialCardEl("This layout made plan selection feel much clearer and less overwhelming.","Sofia Tran","Marketing Lead",makeBareCardStyle())])
+        ]
+    });
+    var cta=makeCenteredCtaSection({
+        heading:"Move the best-fit buyer forward",
+        body:"Use a strong CTA below the comparison so the next action feels obvious.",
+        button:{label:"Go To Checkout"}
+    });
+    return buildTemplateLayout("#F3EEF7",[hero,pricing,faq,cta]);
+}
+function templatePremiumCheckoutLayout(){
+    var orderButton=makePrimaryButtonEl("Complete Purchase",{actionType:"checkout",alignment:"left"});
+    var summary=makeSplitInfoSection(
+        makePanelColumn([makePricingCardEl({
+            plan:"Premium Access",
+            price:"$299",
+            period:"",
+            subtitle:"Everything needed to launch with confidence",
+            features:["Templates included","Priority email support","Bonus training vault"],
+            badge:"Secure Checkout"
+        },makeBareCardStyle())]),
+        makePanelColumn([
+            makeEl("heading","Before you complete the order",{fontSize:"24px",color:"#240E35",fontWeight:"800",margin:"0 0 10px"},{}),
+            makeEl("text",buildChecklistHtml("Use this panel for key reassurance",[
+                "Summarize what is included",
+                "Call out refund or guarantee details",
+                "Remind them what happens immediately after purchase"
+            ]),{fontSize:"15px",color:"#64748b",lineHeight:"1.7",margin:"0 0 18px"},{}),
+            orderButton,
+            makeEl("text","Secure checkout ready. Replace this with your final checkout copy.",{fontSize:"13px",color:"#64748b",margin:"12px 0 0"},{}),
+            makeTestimonialCardEl("The checkout finally felt premium and trustworthy instead of rushed.","Ari Flores","Operations Lead",makeBareCardStyle({margin:"18px 0 0"}))
+        ]),
+        {alignItems:"stretch"}
+    );
+    var trust=makeCardGridSection({
+        title:"What to reassure buyers about",
+        body:"This is the place for guarantees, delivery timing, and support details.",
+        columns:[
+            makeFeatureCardColumn("lock","Secure purchase","Reassure them the order process is protected and straightforward."),
+            makeFeatureCardColumn("circle-check","Instant access","Explain how they receive the product, login, or next instructions."),
+            makeFeatureCardColumn("comments","Support available","Set expectations for onboarding, delivery, or support response times.")
+        ]
+    });
+    return buildTemplateLayout("#F8F5FB",[summary,trust]);
+}
+function templateWorkshopTicketCheckoutLayout(){
+    var countdown=makeEl("countdown","",{width:"100%"},{endAt:futureCountdownValue(7),label:"Ticket price changes in",expiredText:"Price update coming soon",numberColor:"#240E35",labelColor:"#64748b",itemGap:8});
+    var ticket=makeSplitInfoSection(
+        makePanelColumn([
+            makeEl("heading","Workshop registration",{fontSize:"28px",color:"#240E35",fontWeight:"800",margin:"0 0 10px"},{}),
+            makeEl("text","Use this style for live events, trainings, and intensives where urgency matters.",{fontSize:"15px",color:"#64748b",lineHeight:"1.7",margin:"0 0 16px"},{}),
+            countdown,
+            makePrimaryButtonEl("Reserve My Spot",{actionType:"checkout",alignment:"left"},{margin:"16px 0 0"})
+        ]),
+        makePanelColumn([makePricingCardEl({
+            plan:"Workshop Ticket",
+            price:"$97",
+            period:"",
+            subtitle:"Live training plus replay and workbook",
+            features:["90-minute workshop","Replay access","Action workbook"],
+            badge:"Limited Seats"
+        },makeBareCardStyle())]),
+        {alignItems:"stretch"}
+    );
+    var agenda=makeCardGridSection({
+        title:"Show buyers what the ticket includes",
+        body:"Agenda blocks help the workshop feel more tangible and valuable before the purchase.",
+        columns:[
+            makeFeatureCardColumn("calendar-days","Live session","Explain how long the event is and what they will learn."),
+            makeFeatureCardColumn("gift","Bonus assets","List the workbook, replay, templates, or support extras."),
+            makeFeatureCardColumn("clock","Fast access","Tell them when they will receive event details and reminders.")
+        ]
+    });
+    return buildTemplateLayout("#F3EEF7",[ticket,agenda]);
+}
+function templateWorkshopTicketCheckoutDiscountLayout(){
+    // Same as the workshop checkout template, but includes a regular price so the countdown can switch displayed pricing.
+    var countdown=makeEl("countdown","",{width:"100%"},{
+        endAt:futureCountdownValue(7),
+        label:"Ticket price changes in",
+        expiredText:"Price update coming soon",
+        numberColor:"#240E35",
+        labelColor:"#64748b",
+        itemGap:8
+    });
+    var ticket=makeSplitInfoSection(
+        makePanelColumn([
+            makeEl("heading","Workshop registration",{fontSize:"28px",color:"#240E35",fontWeight:"800",margin:"0 0 10px"},{}),
+            makeEl("text","Use this style for live events, trainings, and intensives where urgency matters.",{fontSize:"15px",color:"#64748b",lineHeight:"1.7",margin:"0 0 16px"},{}),
+            countdown,
+            makePrimaryButtonEl("Reserve My Spot",{actionType:"checkout",alignment:"left"},{margin:"16px 0 0"})
+        ]),
+        makePanelColumn([makePricingCardEl({
+            plan:"Workshop Ticket",
+            price:"$97",
+            regularPrice:"$117",
+            period:"",
+            subtitle:"Live training plus replay and workbook",
+            features:["90-minute workshop","Replay access","Action workbook"],
+            badge:"Limited Seats"
+        },makeBareCardStyle())]),
+        {alignItems:"stretch"}
+    );
+    var agenda=makeCardGridSection({
+        title:"Show buyers what the ticket includes",
+        body:"Agenda blocks help the workshop feel more tangible and valuable before the purchase.",
+        columns:[
+            makeFeatureCardColumn("calendar-days","Live session","Explain how long the event is and what they will learn."),
+            makeFeatureCardColumn("gift","Bonus assets","List the workbook, replay, templates, or support extras."),
+            makeFeatureCardColumn("clock","Fast access","Tell them when they will receive event details and reminders.")
+        ]
+    });
+    return buildTemplateLayout("#F3EEF7",[ticket,agenda]);
+}
+function templateBundleCheckoutLayout(){
+    var hero=makeSplitInfoSection(
+        makeColumn(makeIntroElements(
+            "Bundle Checkout",
+            "Increase perceived value with a stacked-offer checkout",
+            "This layout is ideal when you want the main purchase and included bonuses to feel especially clear.",
+            {button:{label:"Complete Bundle",settings:{actionType:"checkout"}}}
+        )),
+        makePanelColumn([makePricingCardEl({
+            plan:"Launch Bundle",
+            price:"$149",
+            period:"",
+            subtitle:"Core offer plus valuable bonuses",
+            features:["Main product","Bonus template pack","Private Q and A","Quick-start checklist"],
+            badge:"Bundle Price"
+        },makeBareCardStyle())]),
+        {alignItems:"stretch"}
+    );
+    var bonuses=makeCardGridSection({
+        title:"Use the bonus section to justify the stack",
+        body:"Spell out the add-ons so the bundle feels like a stronger, easier yes.",
+        columns:[
+            makeFeatureCardColumn("gift","Bonus templates","Add ready-made assets that shorten the buyer's path to success."),
+            makeFeatureCardColumn("bolt","Quick-start checklist","Help them get results faster with a simple implementation guide."),
+            makeFeatureCardColumn("comments","Support touchpoint","Add a short support or coaching bonus to lift the offer.")
+        ]
+    });
+    var proof=makeCardGridSection({
+        padding:"0 24px 64px",
+        columns:[
+            makePanelColumn([makeTestimonialCardEl("The bundle framing made the order feel much more complete and worthwhile.","Jamie Lee","Founder",makeBareCardStyle())]),
+            makePanelColumn([makeFaqCardEl([
+                {q:"Should I show every bonus value?",a:"Yes, showing value stacks can make the bundle easier to justify."},
+                {q:"Can the CTA stay simple?",a:"Yes, one strong checkout CTA is usually enough here."}
+            ],makeBareCardStyle())])
+        ]
+    });
+    return buildTemplateLayout("#F8F5FB",[hero,bonuses,proof]);
+}
+function templateMembershipCheckoutLayout(){
+    var section=makeSplitInfoSection(
+        makePanelColumn([makePricingCardEl({
+            plan:"Membership Access",
+            price:"$39",
+            period:"/month",
+            subtitle:"Ongoing training, resources, and support",
+            features:["New sessions monthly","Resource vault","Member-only updates"],
+            badge:"Join Today"
+        },makeBareCardStyle())]),
+        makePanelColumn([
+            makeEl("heading","Why this checkout works for subscriptions",{fontSize:"24px",color:"#240E35",fontWeight:"800",margin:"0 0 10px"},{}),
+            makeEl("text",buildChecklistHtml("Use the right-side panel to clarify:",[
+                "What members get every month",
+                "Whether they can cancel any time",
+                "What the first week inside looks like"
+            ]),{fontSize:"15px",color:"#64748b",lineHeight:"1.7",margin:"0 0 18px"},{}),
+            makePrimaryButtonEl("Join The Membership",{actionType:"checkout",alignment:"left"})
+        ]),
+        {alignItems:"stretch"}
+    );
+    var faq=makeCardGridSection({
+        padding:"0 24px 64px",
+        columns:[
+            makePanelColumn([makeFaqCardEl([
+                {q:"Can members cancel later?",a:"Use this block to answer billing and cancellation questions clearly."},
+                {q:"What should be highlighted most?",a:"Focus on the rhythm of value they receive after joining."}
+            ],makeBareCardStyle())]),
+            makePanelColumn([makeTestimonialCardEl("The recurring-offer checkout felt much more confident and clear with this structure.","Nico Alvarez","Community Builder",makeBareCardStyle())])
+        ]
+    });
+    return buildTemplateLayout("#F3EEF7",[section,faq]);
+}
+function templateThankYouDownloadLayout(){
+    var hero=makeCenteredCtaSection({
+        kicker:"Download Ready",
+        heading:"Your resource is on the way",
+        body:"Use this thank-you page to confirm the opt-in, set expectations, and guide visitors to the next useful action.",
+        button:{label:"Open Resource",settings:{actionType:"link",link:"#"},style:{backgroundColor:"#6B4A7A"}},
+        headingSize:"38px",
+        bodySize:"16px",
+        padding:"84px 24px 30px",
+        backgroundColor:"#ffffff",
+        bordered:false
+    });
+    var next=makeCardGridSection({
+        title:"What to place below the confirmation",
+        body:"Show the resource, recommend the next step, and reinforce the relationship after the signup.",
+        columns:[
+            makeFeatureCardColumn("image","Resource access","Tell them where the file, bonus, or replay can be found."),
+            makeFeatureCardColumn("arrow-right","Next action","Send them to a sales page, community page, or onboarding step."),
+            makeFeatureCardColumn("envelope","Inbox reminder","Let them know a copy or confirmation was sent by email.")
+        ]
+    });
+    return buildTemplateLayout("#F8F5FB",[hero,next]);
+}
+function templateThankYouCommunityLayout(){
+    var hero=makeCenteredCtaSection({
+        kicker:"Community Invite",
+        heading:"Welcome in. Here is what to do next.",
+        body:"This format works well after a purchase or registration when you want the thank-you page to keep momentum going.",
+        button:{label:"Join The Community",settings:{actionType:"link",link:"#"}},
+        headingSize:"38px",
+        bodySize:"16px",
+        padding:"84px 24px 30px",
+        backgroundColor:"#ffffff",
+        bordered:false
+    });
+    var steps=makeCardGridSection({
+        title:"Three smart next steps",
+        body:"Use cards like these to reduce confusion after the conversion is complete.",
+        columns:[
+            makeFeatureCardColumn("circle-check","Check email","Tell them where important login or confirmation details were sent."),
+            makeFeatureCardColumn("users","Join the group","Point them to your community, portal, or onboarding hub."),
+            makeFeatureCardColumn("calendar-days","Watch for reminders","Set expectations for what they will receive next.")
+        ]
+    });
+    return buildTemplateLayout("#F3EEF7",[hero,steps]);
+}
+function templateThankYouCallLayout(){
+    var hero=makeCenteredCtaSection({
+        kicker:"Call Confirmed",
+        heading:"Your call is booked and the next steps are clear",
+        body:"Use a stronger thank-you page after booking so people know how to prepare and what to expect.",
+        button:{label:"Add To Calendar",settings:{actionType:"link",link:"#"}},
+        headingSize:"38px",
+        bodySize:"16px",
+        padding:"84px 24px 30px",
+        backgroundColor:"#ffffff",
+        bordered:false
+    });
+    var prep=makeCardGridSection({
+        title:"What to include before the meeting",
+        body:"Reduce no-shows and improve call quality by making the prep simple and visible.",
+        columns:[
+            makeFeatureCardColumn("clock","Show up ready","Tell them exactly when to arrive and what link to use."),
+            makeFeatureCardColumn("comment","Bring context","Ask them to prepare any questions, screenshots, or current metrics."),
+            makeFeatureCardColumn("shield-halved","Set expectations","Explain what the meeting covers and what happens after.")
+        ]
+    });
+    var proof=makeCardGridSection({
+        padding:"0 24px 64px",
+        columns:[makePanelColumn([makeTestimonialCardEl("Our thank-you page became a much stronger handoff after calls were booked.","Morgan Yu","Sales Strategist",makeBareCardStyle())])]
+    });
+    return buildTemplateLayout("#F8F5FB",[hero,prep,proof]);
+}
+function templateThankYouEventLayout(){
+    var countdown=makeEl("countdown","",{width:"100%"},{endAt:futureCountdownValue(3),label:"Event starts in",expiredText:"The event has started",numberColor:"#240E35",labelColor:"#64748b",itemGap:8});
+    var hero=makeCenteredCtaSection({
+        kicker:"Event Confirmed",
+        heading:"Your seat is saved",
+        body:"Use this page after webinar or event registration to confirm the seat and keep anticipation high.",
+        headingSize:"38px",
+        bodySize:"16px",
+        padding:"84px 24px 30px",
+        backgroundColor:"#ffffff",
+        bordered:false,
+        extraEls:[countdown,makePrimaryButtonEl("Save My Spot",{
+            actionType:"link",
+            link:"#",
+            alignment:"center"
+        },{backgroundColor:"#6B4A7A"})]
+    });
+    var details=makeCardGridSection({
+        title:"What to reinforce here",
+        body:"Keep the thank-you focused on the reminder, logistics, and the payoff for attending.",
+        columns:[
+            makeFeatureCardColumn("calendar-days","Event details","Tell them the time, format, and how they will join."),
+            makeFeatureCardColumn("gift","Bonus promise","Mention the replay, workbook, or attendee bonus."),
+            makeFeatureCardColumn("paper-plane","Reminder flow","Explain when the follow-up emails and reminders will arrive.")
+        ]
+    });
+    return buildTemplateLayout("#F3EEF7",[hero,details]);
+}
+function templateContactAuthorityLayout(){
+    var hero=makeCenteredCtaSection({
+        kicker:"Contact Page",
+        heading:"Give visitors a clean path to reach out",
+        body:"Use this as a polished custom page for contact, consulting inquiries, or partnership requests.",
+        button:{label:"Start The Conversation",settings:{actionType:"link",link:"#"}},
+        headingSize:"38px",
+        bodySize:"16px",
+        padding:"84px 24px 30px",
+        backgroundColor:"#ffffff",
+        bordered:false
+    });
+    var options=makeCardGridSection({
+        title:"Common contact-page blocks",
+        body:"These sections make the page feel complete without making it busy.",
+        columns:[
+            makeFeatureCardColumn("envelope","General inquiry","Share the best path for a first conversation or request."),
+            makeFeatureCardColumn("calendar-days","Booking option","Invite qualified leads to the next scheduling step."),
+            makeFeatureCardColumn("comments","Partnerships","Use a clear card for collaborations, speaking, or press requests.")
+        ]
+    });
+    var close=makeCenteredCtaSection({
+        heading:"Keep the next step clear",
+        body:"This final section is a great place for a direct CTA or a concise response-time promise.",
+        button:{label:"Book A Call"},
+        backgroundColor:"#F8F5FB"
+    });
+    return buildTemplateLayout("#F3EEF7",[hero,options,close]);
+}
+const landingTemplates=[
+    {id:"landing_hero_launch",name:"Hero Launch",description:"Classic launch hero with a strong CTA and product visual.",tags:["Landing","SaaS"],preview:"hero",build:templateHeroLayout},
+    {id:"landing_feature_grid",name:"Feature Grid",description:"Headline-led landing page with clean proof cards.",tags:["Landing","Product"],preview:"cards",build:templateFeatureGridLayout},
+    {id:"landing_story_stats",name:"Story + Stats",description:"Founder-style landing layout with image story and metrics.",tags:["Landing","Brand"],preview:"hero",build:templateStoryLayout},
+    {id:"landing_authority",name:"Authority Page",description:"Professional service-focused landing page with trust and CTA flow.",tags:["Landing","Service"],preview:"hero",build:templateAuthorityLandingLayout},
+    {id:"landing_app_showcase",name:"App Showcase",description:"Modern landing layout for apps, tools, and product demos.",tags:["Landing","Showcase"],preview:"cards",build:templateAppShowcaseLayout}
 ];
+const optInTemplates=[
+    {id:"optin_lead_capture",name:"Lead Capture",description:"Simple centered opt-in for checklists, guides, and freebies.",tags:["Opt-in","Lead"],preview:"lead",build:templateLeadCaptureLayout},
+    {id:"optin_webinar_signup",name:"Webinar Signup",description:"Countdown-first registration layout for live events.",tags:["Opt-in","Webinar"],preview:"lead",build:templateWebinarLayout},
+    {id:"optin_waitlist_launch",name:"Waitlist Launch",description:"Early-access waitlist page with launch momentum.",tags:["Opt-in","Waitlist"],preview:"lead",build:templateWaitlistLaunchLayout},
+    {id:"optin_application_call",name:"Application Page",description:"Premium application-style opt-in for higher-intent leads.",tags:["Opt-in","Application"],preview:"hero",build:templateApplicationCallLayout},
+    {id:"optin_newsletter_digest",name:"Newsletter Digest",description:"Editorial signup page for newsletters and weekly insights.",tags:["Opt-in","Newsletter"],preview:"lead",build:templateNewsletterDigestLayout}
+];
+const salesTemplates=[
+    {id:"sales_pricing_faq",name:"Pricing + FAQ",description:"Straight-to-offer sales page with pricing and objection handling.",tags:["Sales","Pricing"],preview:"pricing",build:templatePricingFaqLayout},
+    {id:"sales_offer_stack",name:"Offer Stack",description:"Transformation-led sales page for services or premium offers.",tags:["Sales","Offer"],preview:"pricing",build:templateSalesOfferStackLayout},
+    {id:"sales_video_letter",name:"Video Sales Letter",description:"Sales page built around a focused video pitch.",tags:["Sales","Video"],preview:"video",build:templateVideoSalesLetterLayout},
+    {id:"sales_story_close",name:"Story Close",description:"Story-driven sales page that mixes brand narrative and proof.",tags:["Sales","Story"],preview:"hero",build:templateStoryLayout},
+    {id:"sales_comparison",name:"Comparison Close",description:"Multi-plan sales page that helps buyers choose fast.",tags:["Sales","Plans"],preview:"pricing",build:templateComparisonSalesLayout}
+];
+const checkoutTemplates=[
+    {id:"checkout_split",name:"Checkout Split",description:"Simple two-column checkout starter with summary and order area.",tags:["Checkout","Starter"],preview:"pricing",build:templateCheckoutLayout},
+    {id:"checkout_premium",name:"Premium Checkout",description:"Polished checkout page with reassurance copy and proof.",tags:["Checkout","Premium"],preview:"pricing",build:templatePremiumCheckoutLayout},
+    {id:"checkout_workshop_ticket",name:"Workshop Ticket",description:"Event-ticket checkout with urgency and agenda framing.",tags:["Checkout","Event"],preview:"pricing",build:templateWorkshopTicketCheckoutLayout},
+    {id:"checkout_workshop_ticket_discount",name:"Workshop Ticket (Countdown Discount)",description:"Workshop checkout with a regular price so the countdown can update pricing.",tags:["Checkout","Event","Countdown"],preview:"pricing",build:templateWorkshopTicketCheckoutDiscountLayout},
+    {id:"checkout_bundle",name:"Bundle Checkout",description:"Stacked-offer checkout for bundles and bonus-heavy offers.",tags:["Checkout","Bundle"],preview:"pricing",build:templateBundleCheckoutLayout},
+    {id:"checkout_membership",name:"Membership Checkout",description:"Recurring-offer checkout layout for subscriptions and communities.",tags:["Checkout","Membership"],preview:"pricing",build:templateMembershipCheckoutLayout}
+];
+const thankYouTemplates=[
+    {id:"thankyou_centered",name:"Classic Thank You",description:"Centered confirmation page with a clean next step.",tags:["Thank You","Starter"],preview:"banner",build:templateThankYouLayout},
+    {id:"thankyou_download",name:"Download Delivery",description:"Thank-you page for guides, replays, and resource delivery.",tags:["Thank You","Download"],preview:"banner",build:templateThankYouDownloadLayout},
+    {id:"thankyou_community",name:"Community Invite",description:"Use the thank-you page to move buyers into the next ecosystem step.",tags:["Thank You","Community"],preview:"banner",build:templateThankYouCommunityLayout},
+    {id:"thankyou_call",name:"Call Confirmed",description:"Booking confirmation layout with prep instructions and reassurance.",tags:["Thank You","Call"],preview:"banner",build:templateThankYouCallLayout},
+    {id:"thankyou_event",name:"Event Confirmed",description:"Confirmation page for webinars and workshops with reminder flow.",tags:["Thank You","Event"],preview:"banner",build:templateThankYouEventLayout}
+];
+const customTemplates=[
+    {id:"custom_story_stats",name:"Story + Stats",description:"Flexible custom page for story-led brand content.",tags:["Custom","Story"],preview:"hero",build:templateStoryLayout},
+    {id:"custom_hero_video",name:"Hero + Video",description:"General-purpose custom page with media-led storytelling.",tags:["Custom","Video"],preview:"video",build:templateHeroVideoLayout},
+    {id:"custom_feature_grid",name:"Feature Grid",description:"Modular custom page for product, service, or feature sections.",tags:["Custom","Blocks"],preview:"cards",build:templateFeatureGridLayout},
+    {id:"custom_pricing_faq",name:"Pricing + FAQ",description:"Reusable custom layout for plans, comparisons, or help content.",tags:["Custom","Pricing"],preview:"pricing",build:templatePricingFaqLayout},
+    {id:"custom_contact",name:"Contact Authority",description:"Professional custom page for contact, booking, or inquiries.",tags:["Custom","Contact"],preview:"banner",build:templateContactAuthorityLayout}
+];
+const builtInTemplatesByType={
+    landing:landingTemplates,
+    opt_in:optInTemplates,
+    sales:salesTemplates,
+    checkout:checkoutTemplates,
+    thank_you:thankYouTemplates,
+    custom:customTemplates,
+    upsell:salesTemplates,
+    downsell:salesTemplates
+};
+function normalizeTemplateType(type){
+    var t=String(type||"custom").toLowerCase();
+    if(t==="upsell"||t==="downsell")return "sales";
+    return builtInTemplatesByType[t]?t:"custom";
+}
+function findTemplateById(type,id){
+    var list=builtInTemplatesByType[normalizeTemplateType(type)]||customTemplates;
+    var target=String(id||"").trim();
+    return list.find(function(t){return String(t.id||"")===target;})||list[0]||customTemplates[0];
+}
+function buildFunnelStepHref(stepLike){
+    var funnel=String(funnelSlug||"").trim();
+    var slug=String(stepLike&&stepLike.slug||"").trim();
+    if(funnel===""||slug==="")return "#";
+    if(typeof funnelStepUrlTpl==="string"&&funnelStepUrlTpl.indexOf("__STEP__")>=0){
+        return funnelStepUrlTpl.replace("__STEP__",encodeURIComponent(slug));
+    }
+    return "/f/"+encodeURIComponent(funnel)+"/"+encodeURIComponent(slug);
+}
+function templateStepType(stepLike){
+    return normalizeTemplateType((stepLike&&stepLike.type)||stepLike||"custom");
+}
+function stepIndexInFlow(stepList,currentStep){
+    var currentId=String((currentStep&&currentStep.id)||"");
+    return (Array.isArray(stepList)?stepList:[]).findIndex(function(step){
+        return String((step&&step.id)||"")===currentId;
+    });
+}
+function firstOtherFlowStep(stepList,currentStep){
+    return (Array.isArray(stepList)?stepList:[]).find(function(step){
+        return step&&String(step.id||"")!==String((currentStep&&currentStep.id)||"");
+    })||null;
+}
+function nextFlowStep(stepList,currentStep){
+    var list=Array.isArray(stepList)?stepList:[];
+    var idx=stepIndexInFlow(list,currentStep);
+    if(idx<0||idx>=list.length-1)return null;
+    return list[idx+1]||null;
+}
+function findFlowStepByTypes(stepList,currentStep,types){
+    var list=Array.isArray(stepList)?stepList:[];
+    var wanted=(Array.isArray(types)?types:[]).map(normalizeTemplateType);
+    if(!wanted.length)return null;
+    var currentId=String((currentStep&&currentStep.id)||"");
+    var idx=stepIndexInFlow(list,currentStep);
+    if(idx>=0){
+        for(var i=idx+1;i<list.length;i++){
+            var later=list[i];
+            if(!later||String(later.id||"")===currentId)continue;
+            if(wanted.indexOf(templateStepType(later))>=0)return later;
+        }
+    }
+    for(var j=0;j<list.length;j++){
+        var step=list[j];
+        if(!step||String(step.id||"")===currentId)continue;
+        if(wanted.indexOf(templateStepType(step))>=0)return step;
+    }
+    return null;
+}
+function chooseTemplateTargetStep(stepList,currentStep,labelText){
+    var text=String(labelText||"").trim().toLowerCase();
+    var currentType=templateStepType(currentStep);
+    var nextStep=nextFlowStep(stepList,currentStep);
+    var homeStep=findFlowStepByTypes(stepList,currentStep,["landing"])||firstOtherFlowStep(stepList,currentStep)||null;
+    var optInStep=findFlowStepByTypes(stepList,currentStep,["opt_in"]);
+    var salesStep=findFlowStepByTypes(stepList,currentStep,["sales"]);
+    var checkoutStep=findFlowStepByTypes(stepList,currentStep,["checkout"]);
+    var thankYouStep=findFlowStepByTypes(stepList,currentStep,["thank_you"]);
+    var customStep=findFlowStepByTypes(stepList,currentStep,["custom"]);
+    // Avoid overly-broad words like "spot/seat" which can incorrectly route thank-you buttons back to checkout.
+    var wantsCheckout=/(checkout|purchase|buy|order|bundle|membership)/.test(text);
+    var wantsOffer=/(price|pricing|offer|package|plan)/.test(text);
+    var wantsResource=/(community|resource|download|calendar)/.test(text);
+    if(/(^|\s)(home|back)(\s|$)/.test(text)){
+        return homeStep;
+    }
+    if(wantsCheckout&&checkoutStep){
+        return checkoutStep;
+    }
+    if(wantsResource&&customStep){
+        return customStep;
+    }
+    if((currentType==="landing"||currentType==="opt_in"||currentType==="custom")&&wantsOffer&&salesStep){
+        return salesStep;
+    }
+    if(currentType==="landing"){
+        return optInStep||salesStep||checkoutStep||nextStep||thankYouStep||customStep||homeStep;
+    }
+    if(currentType==="opt_in"){
+        return salesStep||checkoutStep||thankYouStep||customStep||nextStep||homeStep;
+    }
+    if(currentType==="sales"){
+        return checkoutStep||thankYouStep||customStep||nextStep||homeStep;
+    }
+    if(currentType==="checkout"){
+        return thankYouStep||customStep||nextStep||homeStep;
+    }
+    if(currentType==="thank_you"){
+        return customStep||homeStep||nextStep||firstOtherFlowStep(stepList,currentStep);
+    }
+    return optInStep||salesStep||checkoutStep||thankYouStep||homeStep||nextStep||firstOtherFlowStep(stepList,currentStep);
+}
+function wireButtonElementForStep(el,currentStep,stepList){
+    if(!el||typeof el!=="object")return;
+    el.settings=(el.settings&&typeof el.settings==="object")?el.settings:{};
+    var currentType=templateStepType(currentStep);
+    if(currentType==="checkout"){
+        el.settings.actionType="checkout";
+        el.settings.actionStepSlug="";
+        el.settings.link="#";
+        return;
+    }
+    var target=chooseTemplateTargetStep(stepList,currentStep,el.content);
+    if(target&&String(target.id||"")!==String((currentStep&&currentStep.id)||"")){
+        el.settings.actionType="step";
+        el.settings.actionStepSlug=String(target.slug||"");
+        el.settings.link=buildFunnelStepHref(target);
+        return;
+    }
+    el.settings.actionType="next_step";
+    el.settings.actionStepSlug="";
+    el.settings.link="#";
+}
+function wirePricingElementForStep(el,currentStep,stepList){
+    if(!el||typeof el!=="object")return;
+    el.settings=(el.settings&&typeof el.settings==="object")?el.settings:{};
+    var currentType=templateStepType(currentStep);
+    if(currentType==="checkout"){
+        el.settings.ctaLabel="";
+        el.settings.ctaLink="#";
+        return;
+    }
+    var ctaLabel=String(el.settings.ctaLabel||"").trim();
+    var target=chooseTemplateTargetStep(stepList,currentStep,ctaLabel||el.settings.plan);
+    if(ctaLabel===""){
+        el.settings.ctaLabel="Get Started";
+        ctaLabel="Get Started";
+    }
+    el.settings.ctaLink=(target&&String(target.id||"")!==String((currentStep&&currentStep.id)||""))?buildFunnelStepHref(target):"#";
+}
+function wireTemplateLayoutForStep(layout,currentStep,stepList){
+    if(!layout||typeof layout!=="object")return layout;
+    function visitElements(list){
+        (Array.isArray(list)?list:[]).forEach(function(el){
+            if(!el||typeof el!=="object")return;
+            if(el.type==="button")wireButtonElementForStep(el,currentStep,stepList);
+            if(el.type==="pricing")wirePricingElementForStep(el,currentStep,stepList);
+            var slideList=(el.settings&&Array.isArray(el.settings.slides))?el.settings.slides:[];
+            slideList.forEach(function(slide){
+                if(!slide||typeof slide!=="object")return;
+                visitElements(slide.elements);
+            });
+        });
+    }
+    function visitColumns(cols){
+        (Array.isArray(cols)?cols:[]).forEach(function(col){
+            if(!col||typeof col!=="object")return;
+            visitElements(col.elements);
+        });
+    }
+    function visitSections(sections){
+        (Array.isArray(sections)?sections:[]).forEach(function(section){
+            if(!section||typeof section!=="object")return;
+            visitElements(section.elements);
+            (Array.isArray(section.rows)?section.rows:[]).forEach(function(row){
+                if(!row||typeof row!=="object")return;
+                visitColumns(row.columns);
+            });
+        });
+    }
+    if(Array.isArray(layout.root))visitSections(layout.root);
+    if(Array.isArray(layout.sections))visitSections(layout.sections);
+    return layout;
+}
+function solidBorder(color){
+    return "1px solid "+String(color||"#E6E1EF");
+}
+function isBareCardSkin(style){
+    var s=(style&&typeof style==="object")?style:{};
+    var border=String(s.border||"").trim().toLowerCase();
+    var bg=String(s.backgroundColor||"").trim().toLowerCase();
+    var shadow=String(s.boxShadow||"").trim().toLowerCase();
+    var pad=String(s.padding||"").trim().toLowerCase();
+    return border==="0"||border==="0px"||border==="none"||bg==="transparent"||shadow==="none"||pad==="0"||pad==="0px";
+}
+function autoLinkCountdownPricing(layout){
+    if(!layout||typeof layout!=="object")return layout;
+    var pricingEls=[];
+    var countdownEls=[];
+
+    function visitElements(list){
+        (Array.isArray(list)?list:[]).forEach(function(el){
+            if(!el||typeof el!=="object")return;
+            if(el.type==="pricing")pricingEls.push(el);
+            if(el.type==="countdown")countdownEls.push(el);
+
+            var slideList=(el.settings&&Array.isArray(el.settings.slides))?el.settings.slides:[];
+            slideList.forEach(function(slide){
+                if(slide&&Array.isArray(slide.elements)){
+                    visitElements(slide.elements);
+                }
+            });
+        });
+    }
+    function visitColumns(cols){
+        (Array.isArray(cols)?cols:[]).forEach(function(col){
+            if(!col||typeof col!=="object")return;
+            if(col&&Array.isArray(col.elements)){
+                visitElements(col.elements);
+            }
+        });
+    }
+    function visitSections(sections){
+        (Array.isArray(sections)?sections:[]).forEach(function(section){
+            if(!section||typeof section!=="object")return;
+            visitElements(section.elements);
+            (Array.isArray(section.rows)?section.rows:[]).forEach(function(row){
+                if(row&&Array.isArray(row.columns)){
+                    visitColumns(row.columns);
+                }
+            });
+        });
+    }
+
+    if(Array.isArray(layout.root))visitSections(layout.root);
+    if(Array.isArray(layout.sections))visitSections(layout.sections);
+
+    if(!pricingEls.length||!countdownEls.length)return layout;
+
+    var pricingIds=pricingEls
+        .map(function(p){return String(p&&p.id||"").trim();})
+        .filter(Boolean);
+    if(!pricingIds.length)return layout;
+
+    var firstPricingEl=pricingEls[0];
+
+    countdownEls.forEach(function(cd){
+        cd.settings=(cd.settings&&typeof cd.settings==="object")?cd.settings:{};
+
+        // Collect existing linked pricing ids (both new + legacy fields).
+        var linkedIds=[];
+        var raw=cd.settings.linkedPricingIds;
+        if(Array.isArray(raw)){
+            linkedIds=raw.map(function(v){return String(v||"").trim();}).filter(Boolean);
+        }else if(typeof raw==="string"){
+            var s=String(raw||"").trim();
+            if(s){
+                linkedIds=s.split(",").map(function(v){return String(v||"").trim();}).filter(Boolean);
+            }
+        }
+        var legacy=String(cd.settings.linkedPricingId||"").trim();
+        if(!linkedIds.length&&legacy!=="")linkedIds=[legacy];
+
+        // If not linked yet, link to all pricing cards found on this step layout.
+        if(!linkedIds.length){
+            cd.settings.linkedPricingIds=pricingIds;
+            if(Object.prototype.hasOwnProperty.call(cd.settings,"linkedPricingId")){
+                delete cd.settings.linkedPricingId;
+            }
+            linkedIds=pricingIds;
+        }
+
+        // Countdown promoKey rule:
+        // - If countdown promoKey is empty, copy it from the first linked pricing.
+        // - If countdown promoKey is manual, do not override it.
+        var curPromo=String(cd.settings.promoKey||"").trim();
+        if(curPromo===""){
+            var firstLinkedId=String(linkedIds[0]||"").trim();
+            var pricingTarget=firstPricingEl;
+            if(firstLinkedId!==""){
+                var found=pricingEls.find(function(p){
+                    return String(p&&p.id||"").trim()===firstLinkedId;
+                });
+                if(found)pricingTarget=found;
+            }
+            pricingTarget.settings=(pricingTarget.settings&&typeof pricingTarget.settings==="object")?pricingTarget.settings:{};
+            var pPromo=String(pricingTarget.settings.promoKey||"").trim();
+            if(pPromo===""){
+                // Generate a safe promo key when pricing doesn't have one yet.
+                pPromo=("promo_"+String(pricingTarget.id||"")).replace(/[^a-z0-9_\-]/gi,"");
+                if(pPromo==="promo_")pPromo="promo_"+String(Date.now());
+                pricingTarget.settings.promoKey=pPromo;
+            }
+            cd.settings.promoKey=pPromo;
+        }
+    });
+
+    return layout;
+}
+function applyFunnelThemeToLayout(layout,theme){
+    var out=(layout&&typeof layout==="object")?clone(layout):{root:[],sections:[]};
+    var brand=theme&&typeof theme==="object"?theme:{};
+    var primary=/^#[0-9A-Fa-f]{6}$/.test(String(brand.primary||""))?String(brand.primary):"#240E35";
+    var accent=/^#[0-9A-Fa-f]{6}$/.test(String(brand.accent||""))?String(brand.accent):primary;
+    var heading=/^#[0-9A-Fa-f]{6}$/.test(String(brand.heading||""))?String(brand.heading):"#240E35";
+    var body=/^#[0-9A-Fa-f]{6}$/.test(String(brand.body||""))?String(brand.body):"#64748b";
+    var surface=/^#[0-9A-Fa-f]{6}$/.test(String(brand.surface||""))?String(brand.surface):"#ffffff";
+    var soft=/^#[0-9A-Fa-f]{6}$/.test(String(brand.soft||""))?String(brand.soft):"#F8F5FB";
+    var border=/^#[0-9A-Fa-f]{6}$/.test(String(brand.border||""))?String(brand.border):"#E6E1EF";
+    function visitElements(list){
+        (Array.isArray(list)?list:[]).forEach(function(el){
+            if(!el||typeof el!=="object")return;
+            el.style=(el.style&&typeof el.style==="object")?el.style:{};
+            el.settings=(el.settings&&typeof el.settings==="object")?el.settings:{};
+            var bareSkin=isBareCardSkin(el.style);
+            if(el.type==="heading"){
+                el.style.color=heading;
+            }else if(el.type==="text"){
+                el.style.color=body;
+            }else if(el.type==="button"){
+                el.style.backgroundColor=primary;
+                el.style.color="#ffffff";
+            }else if(el.type==="icon"){
+                el.style.color=accent;
+            }else if(el.type==="form"){
+                el.settings.labelColor=heading;
+                el.settings.placeholderColor="#94a3b8";
+                el.settings.buttonBgColor=primary;
+                el.settings.buttonTextColor="#ffffff";
+                if(!bareSkin){
+                    el.style.backgroundColor=surface;
+                    el.style.border=solidBorder(border);
+                }
+            }else if(el.type==="pricing"){
+                el.settings.ctaBgColor=primary;
+                el.settings.ctaTextColor="#ffffff";
+                if(!bareSkin){
+                    el.style.backgroundColor=surface;
+                    el.style.border=solidBorder(border);
+                }
+            }else if(el.type==="faq"){
+                el.settings.questionColor=heading;
+                el.settings.answerColor=body;
+                if(!bareSkin){
+                    el.style.backgroundColor=surface;
+                    el.style.border=solidBorder(border);
+                }
+            }else if(el.type==="testimonial"){
+                el.style.color=heading;
+                if(!bareSkin){
+                    el.style.backgroundColor=surface;
+                    el.style.border=solidBorder(border);
+                }
+            }else if(el.type==="countdown"){
+                el.settings.numberColor=primary;
+                el.settings.labelColor=body;
+                if(!bareSkin){
+                    el.style.backgroundColor=surface;
+                    el.style.border=solidBorder(border);
+                }
+            }
+        });
+    }
+    function visitColumns(cols){
+        (Array.isArray(cols)?cols:[]).forEach(function(col){
+            if(!col||typeof col!=="object")return;
+            col.style=(col.style&&typeof col.style==="object")?col.style:{};
+            if(col.style.border||col.style.boxShadow){
+                col.style.backgroundColor=surface;
+                col.style.border=solidBorder(border);
+            }else if(String(col.style.backgroundColor||"").toLowerCase()==="#f8f5fb"){
+                col.style.backgroundColor=soft;
+            }
+            visitElements(col.elements);
+        });
+    }
+    function visitSections(sections){
+        (Array.isArray(sections)?sections:[]).forEach(function(sec){
+            if(!sec||typeof sec!=="object")return;
+            sec.style=(sec.style&&typeof sec.style==="object")?sec.style:{};
+            var secBg=String(sec.style.backgroundColor||"").toLowerCase();
+            if(secBg!==""&&secBg!=="#ffffff"&&secBg!=="transparent")sec.style.backgroundColor=soft;
+            visitElements(sec.elements);
+            (Array.isArray(sec.rows)?sec.rows:[]).forEach(function(row){
+                if(!row||typeof row!=="object")return;
+                row.style=(row.style&&typeof row.style==="object")?row.style:{};
+                visitColumns(row.columns);
+            });
+        });
+    }
+    if(Array.isArray(out.root))visitSections(out.root);
+    if(Array.isArray(out.sections))visitSections(out.sections);
+    return out;
+}
+function buildPackLayout(pack,stepLike,stepList){
+    var type=normalizeTemplateType((stepLike&&stepLike.type)||stepLike);
+    var packTemplates=(pack&&pack.templates&&typeof pack.templates==="object")?pack.templates:{};
+    var tpl=findTemplateById(type,packTemplates[type]||packTemplates.custom||"");
+    var built=(tpl&&typeof tpl.build==="function")?tpl.build():defaults(type);
+    built=applyFunnelThemeToLayout(built,(pack&&pack.theme)||{});
+    built=wireTemplateLayoutForStep(built,(stepLike&&typeof stepLike==="object")?stepLike:{type:type},stepList||steps);
+    if(pack&&pack.autoLinkCountdownPricing){
+        built=autoLinkCountdownPricing(built);
+    }
+    var packBg=normalizeCanvasBgValue(pack&&pack.theme&&pack.theme.canvasBg);
+    if(packBg)built=withCanvasBgInLayout(built,packBg);
+    normalizeElementStyle(built);
+    return {template:tpl,layout:built};
+}
+const funnelTemplatePacks=[
+    {
+        id:"pack_consulting_authority",
+        name:"Consulting Authority",
+        description:"Authority landing, application opt-in, high-ticket sales page, and premium checkout across the whole funnel.",
+        tags:["All Pages","Consulting","Premium"],
+        preview:"pricing",
+        theme:{primary:"#1D4ED8",accent:"#C2410C",heading:"#172554",body:"#475569",surface:"#ffffff",soft:"#EEF4FF",border:"#D7E3FF",canvasBg:"#F4F8FF"},
+        templates:{landing:"landing_authority",opt_in:"optin_application_call",sales:"sales_offer_stack",checkout:"checkout_premium",thank_you:"thankyou_call",custom:"custom_contact"}
+    },
+    {
+        id:"pack_saas_launch",
+        name:"SaaS Launch",
+        description:"Modern app-style funnel for software launches with waitlist flow, comparison sales page, and polished handoff.",
+        tags:["All Pages","SaaS","Launch"],
+        preview:"cards",
+        theme:{primary:"#0F766E",accent:"#14B8A6",heading:"#134E4A",body:"#52606D",surface:"#ffffff",soft:"#ECFEF8",border:"#BDEEE3",canvasBg:"#F2FFFB"},
+        templates:{landing:"landing_app_showcase",opt_in:"optin_waitlist_launch",sales:"sales_comparison",checkout:"checkout_premium",thank_you:"thankyou_community",custom:"custom_feature_grid"}
+    },
+    {
+        id:"pack_course_creator",
+        name:"Course Creator",
+        description:"Lead magnet or webinar into video sales letter, bundle checkout, and download-style thank-you flow.",
+        tags:["All Pages","Course","Creator"],
+        preview:"video",
+        theme:{primary:"#2563EB",accent:"#F97316",heading:"#1E3A8A",body:"#64748B",surface:"#ffffff",soft:"#FFF7ED",border:"#FED7AA",canvasBg:"#FFF8F0"},
+        templates:{landing:"landing_hero_launch",opt_in:"optin_webinar_signup",sales:"sales_video_letter",checkout:"checkout_bundle",thank_you:"thankyou_download",custom:"custom_hero_video"}
+    },
+    {
+        id:"pack_workshop_event",
+        name:"Workshop Event",
+        description:"Registration-first funnel for live workshops and events with urgency, ticket checkout, and event confirmation page.",
+        tags:["All Pages","Event","Workshop"],
+        preview:"lead",
+        theme:{primary:"#DC2626",accent:"#F59E0B",heading:"#7F1D1D",body:"#57534E",surface:"#ffffff",soft:"#FFF7ED",border:"#FECACA",canvasBg:"#FFF8F5"},
+        templates:{landing:"landing_hero_launch",opt_in:"optin_webinar_signup",sales:"sales_offer_stack",checkout:"checkout_workshop_ticket",thank_you:"thankyou_event",custom:"custom_hero_video"}
+    },
+    {
+        id:"pack_workshop_event_countdown_discount",
+        name:"Workshop Event (Countdown Discount)",
+        description:"Apply-to-all-pages funnel where the checkout countdown auto-updates pricing using sale vs regular price.",
+        tags:["All Pages","Event","Workshop","Countdown"],
+        preview:"pricing",
+        autoLinkCountdownPricing:true,
+        theme:{primary:"#DC2626",accent:"#F59E0B",heading:"#7F1D1D",body:"#57534E",surface:"#ffffff",soft:"#FFF7ED",border:"#FECACA",canvasBg:"#FFF8F5"},
+        templates:{landing:"landing_hero_launch",opt_in:"optin_webinar_signup",sales:"sales_offer_stack",checkout:"checkout_workshop_ticket_discount",thank_you:"thankyou_event",custom:"custom_hero_video"}
+    },
+    {
+        id:"pack_membership_growth",
+        name:"Membership Growth",
+        description:"Subscription-focused system with newsletter capture, plan comparison, membership checkout, and community thank-you page.",
+        tags:["All Pages","Membership","Community"],
+        preview:"pricing",
+        theme:{primary:"#047857",accent:"#22C55E",heading:"#14532D",body:"#4B5563",surface:"#ffffff",soft:"#F0FDF4",border:"#BBF7D0",canvasBg:"#F5FFF8"},
+        templates:{landing:"landing_feature_grid",opt_in:"optin_newsletter_digest",sales:"sales_comparison",checkout:"checkout_membership",thank_you:"thankyou_community",custom:"custom_pricing_faq"}
+    },
+    {
+        id:"pack_agency_premium",
+        name:"Agency Premium",
+        description:"Service funnel with authority positioning, direct lead capture, story-led sales page, and premium checkout.",
+        tags:["All Pages","Agency","Service"],
+        preview:"hero",
+        theme:{primary:"#111827",accent:"#D97706",heading:"#111827",body:"#4B5563",surface:"#ffffff",soft:"#FAF7F0",border:"#E5D3B3",canvasBg:"#FBF8F2"},
+        templates:{landing:"landing_authority",opt_in:"optin_lead_capture",sales:"sales_story_close",checkout:"checkout_premium",thank_you:"thankyou_call",custom:"custom_contact"}
+    },
+    {
+        id:"pack_digital_product",
+        name:"Digital Product",
+        description:"Straightforward product funnel with lead capture, classic pricing sales page, bundle checkout, and delivery thank-you.",
+        tags:["All Pages","Digital","Product"],
+        preview:"pricing",
+        theme:{primary:"#0F766E",accent:"#EAB308",heading:"#134E4A",body:"#64748B",surface:"#ffffff",soft:"#F7FEE7",border:"#D9F99D",canvasBg:"#FBFFF2"},
+        templates:{landing:"landing_feature_grid",opt_in:"optin_lead_capture",sales:"sales_pricing_faq",checkout:"checkout_bundle",thank_you:"thankyou_download",custom:"custom_feature_grid"}
+    },
+    {
+        id:"pack_editorial_media",
+        name:"Editorial Media",
+        description:"Story-led funnel for newsletters, media brands, and editorial offers with softer conversion steps.",
+        tags:["All Pages","Editorial","Newsletter"],
+        preview:"banner",
+        theme:{primary:"#1E40AF",accent:"#0EA5E9",heading:"#1E3A8A",body:"#475569",surface:"#ffffff",soft:"#EFF6FF",border:"#BFDBFE",canvasBg:"#F6FAFF"},
+        templates:{landing:"landing_story_stats",opt_in:"optin_newsletter_digest",sales:"sales_story_close",checkout:"checkout_membership",thank_you:"thankyou_community",custom:"custom_contact"}
+    },
+    {
+        id:"pack_high_ticket_closer",
+        name:"High-Ticket Closer",
+        description:"Application plus video-led close for premium offers, then a more formal checkout and call-confirmed thank-you.",
+        tags:["All Pages","High Ticket","Closer"],
+        preview:"video",
+        theme:{primary:"#7C3AED",accent:"#EC4899",heading:"#4C1D95",body:"#5B5B77",surface:"#ffffff",soft:"#FAF5FF",border:"#E9D5FF",canvasBg:"#FCF7FF"},
+        templates:{landing:"landing_authority",opt_in:"optin_application_call",sales:"sales_video_letter",checkout:"checkout_premium",thank_you:"thankyou_call",custom:"custom_contact"}
+    },
+    {
+        id:"pack_community_starter",
+        name:"Community Starter",
+        description:"Warm, growth-focused funnel for memberships, communities, and audience-building offers.",
+        tags:["All Pages","Community","Growth"],
+        preview:"cards",
+        theme:{primary:"#0369A1",accent:"#10B981",heading:"#0F172A",body:"#475569",surface:"#ffffff",soft:"#ECFEFF",border:"#A5F3FC",canvasBg:"#F2FEFF"},
+        templates:{landing:"landing_app_showcase",opt_in:"optin_waitlist_launch",sales:"sales_video_letter",checkout:"checkout_membership",thank_you:"thankyou_community",custom:"custom_hero_video"}
+    }
+];
+function currentTemplateType(){
+    var step=cur();
+    return normalizeTemplateType((step&&step.type)||"landing");
+}
+function currentPageTemplates(){
+    return builtInTemplatesByType[currentTemplateType()]||customTemplates;
+}
 function templatePreviewHtml(kind){
     if(kind==="lead"){
         return '<div class="tp-line tp-line-lg"></div><div class="tp-line tp-line-md"></div><div class="tp-form"></div><div class="tp-btn"></div>';
@@ -1165,10 +2627,112 @@ function confirmTemplateApply(message){
         document.addEventListener("keydown",onKey);
     });
 }
+function applyPageTemplate(tpl){
+    var s=cur();
+    if(!s||!tpl||typeof tpl.build!=="function")return;
+    saveToHistory();
+    var layout=tpl.build();
+    if(state.layout&&state.layout.__editor&&state.layout.__editor.canvasBg&&!(layout&&layout.__editor&&layout.__editor.canvasBg)){
+        layout=withCanvasBgInLayout(layout,state.layout.__editor.canvasBg);
+    }
+    layout=wireTemplateLayoutForStep(layout,s,steps);
+    state.sel=null;
+    state.carouselSel=null;
+    state.editingEl=null;
+    state.linkPick=null;
+    state.layout=layout;
+    normalizeElementStyle(state.layout);
+    s.layout_json=clone(state.layout);
+    s.background_color=(state.layout&&state.layout.__editor&&state.layout.__editor.canvasBg)?String(state.layout.__editor.canvasBg):"";
+    s.template=String(tpl.id||"simple");
+    applyCanvasBgPreference();
+    syncCanvasBgControls();
+    render();
+    queueAutoSave();
+    if(saveMsg)saveMsg.textContent="Template applied and CTAs auto-connected. Not saved yet.";
+}
+var templateLibraryMode="page";
+function setTemplateLibraryMode(mode){
+    templateLibraryMode=(String(mode||"").toLowerCase()==="funnel")?"funnel":"page";
+    renderTemplateLibrary();
+}
+function applyFunnelTemplatePack(pack){
+    if(!pack||!steps.length)return;
+    var current=cur();
+    var pageCount=steps.length;
+    var msg='Apply the "'+String(pack.name||"funnel pack")+'" funnel pack to all '+pageCount+' pages? This will replace every page layout in the funnel.';
+    confirmTemplateApply(msg).then(function(ok){
+        if(!ok)return;
+        saveToHistory();
+        var currentStepId=current?+current.id:null;
+        var nextStateLayout=null;
+        steps.forEach(function(step){
+            if(!step)return;
+            var built=buildPackLayout(pack,step,steps);
+            step.layout_json=clone(built.layout);
+            step.background_color=(built.layout&&built.layout.__editor&&built.layout.__editor.canvasBg)?String(built.layout.__editor.canvasBg):"";
+            step.template=String(pack.id||"funnel_pack")+"__"+String((built.template&&built.template.id)||normalizeTemplateType(step.type));
+            if(currentStepId!==null&&+step.id===currentStepId){
+                nextStateLayout=clone(built.layout);
+            }
+        });
+        state.sel=null;
+        state.carouselSel=null;
+        state.editingEl=null;
+        state.linkPick=null;
+        if(nextStateLayout)state.layout=nextStateLayout;
+        applyCanvasBgPreference();
+        syncCanvasBgControls();
+        renderTemplateLibrary();
+        render();
+        queueAutoSave();
+        if(saveMsg)saveMsg.textContent="Funnel pack applied to all pages with auto-connected CTAs. Not saved yet.";
+    });
+}
 function renderTemplateLibrary(){
     var grid=document.getElementById("fbTemplateGrid");
+    var funnelGrid=document.getElementById("fbFunnelTemplateGrid");
+    var pagePane=document.getElementById("fbTemplatePagePane");
+    var funnelPane=document.getElementById("fbTemplateFunnelPane");
+    var pageModeBtn=document.getElementById("fbTemplateModePage");
+    var funnelModeBtn=document.getElementById("fbTemplateModeFunnel");
+    var titleEl=document.getElementById("fbTemplateHeading");
+    var metaEl=document.getElementById("fbTemplateMeta");
+    var typePill=document.getElementById("fbTemplateTypePill");
+    var countPill=document.getElementById("fbTemplateCountPill");
+    var currentPageEl=document.getElementById("fbTemplateCurrentPage");
     if(!grid)return;
-    grid.innerHTML=(builtInTemplates||[]).map(function(t){
+    var step=cur();
+    var pageType=currentTemplateType();
+    var templates=currentPageTemplates();
+    var pageLabel=pageTypeLabel(pageType);
+    var mode=(templateLibraryMode==="funnel")?"funnel":"page";
+    if(pageModeBtn){
+        pageModeBtn.classList.toggle("active",mode==="page");
+        pageModeBtn.setAttribute("aria-pressed",mode==="page"?"true":"false");
+        pageModeBtn.onclick=function(){setTemplateLibraryMode("page");};
+    }
+    if(funnelModeBtn){
+        funnelModeBtn.classList.toggle("active",mode==="funnel");
+        funnelModeBtn.setAttribute("aria-pressed",mode==="funnel"?"true":"false");
+        funnelModeBtn.onclick=function(){setTemplateLibraryMode("funnel");};
+    }
+    if(pagePane)pagePane.classList.toggle("hidden",mode!=="page");
+    if(funnelPane)funnelPane.classList.toggle("hidden",mode!=="funnel");
+    if(mode==="funnel"){
+        if(titleEl)titleEl.textContent="Funnel Packs";
+        if(metaEl)metaEl.textContent="Showing "+funnelTemplatePacks.length+" coordinated template systems. Applying one replaces the layouts across all pages and auto-connects the main CTAs for this funnel.";
+        if(typePill)typePill.textContent="All Pages";
+        if(countPill)countPill.textContent=String(funnelTemplatePacks.length)+" packs";
+        if(currentPageEl)currentPageEl.textContent="This will restyle "+steps.length+" page"+(steps.length===1?"":"s")+" in the current funnel with one consistent system and ready-to-use step links.";
+    }else{
+        if(titleEl)titleEl.textContent=pageLabel+" Templates";
+        if(metaEl)metaEl.textContent="Showing "+templates.length+" ready-to-use "+pageLabel.toLowerCase()+" layouts. Applying one replaces the current page.";
+        if(typePill)typePill.textContent=pageLabel+" Page";
+        if(countPill)countPill.textContent=String(templates.length)+" layouts";
+        if(currentPageEl)currentPageEl.textContent=step?"Current page: "+String(step.title||pageLabel):"Choose a page to see its starter layouts.";
+    }
+    grid.innerHTML=(templates||[]).map(function(t){
         var tags=(t.tags||[]).map(function(tag){return '<span class="fb-template-tag">'+String(tag)+'</span>';}).join("");
         return '<div class="fb-template-card">'
             +'<div class="fb-template-preview">'+templatePreviewHtml(t.preview)+'</div>'
@@ -1185,7 +2749,7 @@ function renderTemplateLibrary(){
     grid.querySelectorAll("[data-template-id]").forEach(function(btn){
         btn.addEventListener("click",function(){
             var id=String(btn.getAttribute("data-template-id")||"");
-            var tpl=builtInTemplates.find(function(t){return t.id===id;});
+            var tpl=templates.find(function(t){return t.id===id;});
             if(!tpl||typeof tpl.build!=="function")return;
             var s=cur();
             if(!s){alert("No page selected.");return;}
@@ -1193,28 +2757,34 @@ function renderTemplateLibrary(){
             var msg='Apply the "'+String(tpl.name||"template")+'" template to '+label+'? This will replace the current layout.';
             confirmTemplateApply(msg).then(function(ok){
                 if(!ok)return;
-                saveToHistory();
-                var layout=tpl.build();
-                if(state.layout&&state.layout.__editor&&state.layout.__editor.canvasBg&&!(layout&&layout.__editor&&layout.__editor.canvasBg)){
-                    layout=withCanvasBgInLayout(layout,state.layout.__editor.canvasBg);
-                }
-                state.sel=null;
-                state.carouselSel=null;
-                state.editingEl=null;
-                state.linkPick=null;
-                state.layout=layout;
-                normalizeElementStyle(state.layout);
-                s.layout_json=clone(state.layout);
-                s.background_color=(state.layout&&state.layout.__editor&&state.layout.__editor.canvasBg)?String(state.layout.__editor.canvasBg):"";
-                s.template=String(tpl.id||"simple");
-                applyCanvasBgPreference();
-                syncCanvasBgControls();
-                render();
-                queueAutoSave();
-                if(saveMsg)saveMsg.textContent="Template applied. Not saved yet.";
+                applyPageTemplate(tpl);
             });
         });
     });
+    if(funnelGrid){
+        funnelGrid.innerHTML=(funnelTemplatePacks||[]).map(function(pack){
+            var tags=(pack.tags||[]).map(function(tag){return '<span class="fb-template-tag">'+String(tag)+'</span>';}).join("");
+            return '<div class="fb-template-card">'
+                +'<div class="fb-template-preview">'+templatePreviewHtml(pack.preview)+'</div>'
+                +'<div>'
+                +'<p class="fb-template-title">'+String(pack.name||"Funnel Pack")+'</p>'
+                +'<p class="fb-template-desc">'+String(pack.description||"")+'</p>'
+                +'</div>'
+                +'<div class="fb-template-actions">'
+                +'<div class="fb-template-tags">'+tags+'</div>'
+                +'<button type="button" class="fb-btn primary" data-funnel-pack-id="'+String(pack.id||"")+'">Apply To All Pages</button>'
+                +'</div>'
+                +'</div>';
+        }).join("");
+        funnelGrid.querySelectorAll("[data-funnel-pack-id]").forEach(function(btn){
+            btn.addEventListener("click",function(){
+                var id=String(btn.getAttribute("data-funnel-pack-id")||"");
+                var pack=(funnelTemplatePacks||[]).find(function(item){return String(item.id||"")===id;});
+                if(!pack)return;
+                applyFunnelTemplatePack(pack);
+            });
+        });
+    }
 }
 const componentTemplates=[
     {id:"hero_split_section",name:"Hero Split",kind:"section",build:function(){
@@ -2764,6 +4334,7 @@ function loadStep(id){
     saveMsg.textContent="Loaded "+s.title;
     applyCanvasBgPreference();
     syncCanvasBgControls();
+    if(typeof renderTemplateLibrary==="function")renderTemplateLibrary();
     render();
 }
 
@@ -5676,6 +7247,8 @@ function renderElement(item,ctx){
     else if(item.type==="pricing"){
         item.settings=item.settings||{};
         item.settings.features=normalizeFeatureList(item.settings.features);
+        var activeStepForPricing=cur();
+        var pricingStepType=normalizeTemplateType((activeStepForPricing&&activeStepForPricing.type)||"custom");
         var plan=String(item.settings.plan||"Plan");
         var salePrice=String(item.settings.price||"");
         var regularPrice=String(item.settings.regularPrice||"");
@@ -5683,8 +7256,9 @@ function renderElement(item,ctx){
         var period=String(item.settings.period||"");
         var subtitle=String(item.settings.subtitle||"");
         var badge=String(item.settings.badge||"");
-        var ctaLabel=String(item.settings.ctaLabel||"Get Started");
         var ctaLink=String(item.settings.ctaLink||"#");
+        var ctaLabelRaw=(typeof item.settings.ctaLabel==="string")?String(item.settings.ctaLabel).trim():"";
+        var ctaLabel=ctaLabelRaw!==""?ctaLabelRaw:(pricingStepType!=="checkout"?"Get Started":"");
         var ctaBg=String(item.settings.ctaBgColor||"#240E35");
         var ctaText=String(item.settings.ctaTextColor||"#ffffff");
         var customColor2=(item.style&&item.style.color)?String(item.style.color):"";
@@ -5731,18 +7305,20 @@ function renderElement(item,ctx){
             listWrap.appendChild(li);
         });
         pricing.appendChild(listWrap);
-        var cta=document.createElement(ctaLink?"a":"button");
-        if(ctaLink){
-            cta.href=ctaLink;
-            cta.addEventListener("click",function(e){e.preventDefault();});
-        }else{
-            cta.type="button";
+        if(ctaLabel!==""){
+            var cta=document.createElement(ctaLink?"a":"button");
+            if(ctaLink){
+                cta.href=ctaLink;
+                cta.addEventListener("click",function(e){e.preventDefault();});
+            }else{
+                cta.type="button";
+            }
+            cta.className="fb-pricing-cta";
+            cta.textContent=ctaLabel;
+            cta.style.background=ctaBg;
+            cta.style.color=ctaText;
+            pricing.appendChild(cta);
         }
-        cta.className="fb-pricing-cta";
-        cta.textContent=ctaLabel;
-        cta.style.background=ctaBg;
-        cta.style.color=ctaText;
-        pricing.appendChild(cta);
         w.appendChild(pricing);
     }
     else if(item.type==="countdown"){
@@ -8955,7 +10531,21 @@ function renderSettings(){
                     chk.addEventListener("change",function(){
                         saveToHistory();
                         var ids=Array.from(settings.querySelectorAll(".cdPricingCheck:checked")).map(function(n){return String(n.value||"");});
-                        setLinkedPricingIds(t,ids);
+                        var cleanIds=setLinkedPricingIds(t,ids);
+                        // If the countdown promoKey is empty, auto-copy it from the first linked pricing.
+                        // If the user already provided a manual promoKey, do not override it.
+                        var curPromo=String((t.settings&&t.settings.promoKey)||"").trim();
+                        if(curPromo==="" && cleanIds && cleanIds.length){
+                            var firstId=String(cleanIds[0]||"").trim();
+                            if(firstId!==""){
+                                var pEl=findElementById(firstId);
+                                var pPromo=String((pEl&&pEl.settings&&pEl.settings.promoKey)||"").trim();
+                                if(pPromo!==""){
+                                    t.settings=t.settings||{};
+                                    t.settings.promoKey=pPromo;
+                                }
+                            }
+                        }
                         renderCanvas();
                         renderCountdownEditor();
                     });

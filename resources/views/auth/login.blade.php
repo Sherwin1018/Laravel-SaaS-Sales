@@ -60,6 +60,11 @@
 
         <!-- Right Login Panel -->
         <div class="login-card">
+            <a href="{{ route('landing') }}" class="back-link">
+                <i class="fas fa-arrow-left"></i>
+                <span>Back to landing page</span>
+            </a>
+
             <img src="{{ asset('images/logo2.png') }}" alt="Funnel System Logo" class="login-logo">
 
             <h1>Login to Funnel System</h1>
@@ -80,7 +85,7 @@
             </form>
 
             <p class="register-link">
-                Don't have an account? Register here</a>
+                Don't have an account? <a href="{{ route('register') }}">Register here</a>
             </p>
         </div>
     </div>

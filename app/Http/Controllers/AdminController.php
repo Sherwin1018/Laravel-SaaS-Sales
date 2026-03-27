@@ -13,6 +13,10 @@ class AdminController extends Controller
 {
     public function index()
     {
+        $monthKeyExpression = DB::getDriverName() === 'pgsql'
+            ? "TO_CHAR(created_at, 'YYYY-MM')"
+            : "DATE_FORMAT(created_at, '%Y-%m')";
+
         $tenantCount = Tenant::count();
         $activeTenantCount = Tenant::where('status', 'active')->count();
         $trialTenantCount = Tenant::where('status', 'trial')->count();
@@ -34,7 +38,7 @@ class AdminController extends Controller
             ->get(['id', 'name', 'slug']);
 
         $leadTrendRaw = Lead::withoutGlobalScope('tenant')
-            ->selectRaw("DATE_FORMAT(created_at, '%Y-%m') as month_key, COUNT(*) as total")
+            ->selectRaw("{$monthKeyExpression} as month_key, COUNT(*) as total")
             ->where('created_at', '>=', now()->copy()->subMonths(5)->startOfMonth())
             ->groupBy('month_key')
             ->pluck('total', 'month_key');

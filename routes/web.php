@@ -10,55 +10,26 @@ use App\Http\Controllers\FunnelPortalController;
 use App\Http\Controllers\LeadVerificationController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\PayMongoWebhookController;
+use App\Http\Controllers\PlanController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PublicOnboardingController;
 use App\Http\Controllers\TenantController;
+use App\Http\Controllers\TrialSubscriptionController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    if (!Auth::check()) {
-        return redirect()->route('login');
-    }
-
-    $user = Auth::user();
-
-    if ($user->hasRole('super-admin')) {
-        return redirect()->route('admin.dashboard');
-    }
-
-    if ($user->hasRole('account-owner')) {
-        return redirect()->route('dashboard.owner');
-    }
-
-    if ($user->hasRole('marketing-manager')) {
-        return redirect()->route('dashboard.marketing');
-    }
-
-    if ($user->hasRole('sales-agent')) {
-        return redirect()->route('dashboard.sales');
-    }
-
-    if ($user->hasRole('finance')) {
-        return redirect()->route('dashboard.finance');
-    }
-
-    if ($user->hasRole('customer')) {
-        return redirect()->route('dashboard.customer');
-    }
-
-    Auth::logout();
-    request()->session()->invalidate();
-    request()->session()->regenerateToken();
-    return redirect()->route('login')->with('error', 'Login Failed. Your role does not have access.');
-});
+Route::get('/', [PublicOnboardingController::class, 'landing'])->name('landing');
 
 Route::middleware('guest')->group(function () {
+    Route::get('/register', [PublicOnboardingController::class, 'showRegister'])->name('register');
+    Route::post('/register', [PublicOnboardingController::class, 'startRegistrationCheckout'])->name('register.post');
     Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
     Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 });
 Route::get('/logout', function () {
-    if (!Auth::check()) {
+    if (! Auth::check()) {
         return redirect()->route('login');
     }
 
@@ -77,6 +48,7 @@ Route::get('/logout', function () {
 </body>
 </html>
 HTML;
+
     return response($html);
 })->middleware('auth');
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
@@ -111,13 +83,31 @@ Route::middleware(['auth', 'verified', 'role:super-admin'])->group(function () {
     Route::get('/admin/tenants/{tenant}/edit', [TenantController::class, 'edit'])->name('admin.tenants.edit');
     Route::put('/admin/tenants/{tenant}', [TenantController::class, 'update'])->name('admin.tenants.update');
     Route::delete('/admin/tenants/{tenant}', [TenantController::class, 'destroy'])->name('admin.tenants.destroy');
+    Route::get('/admin/plans', [PlanController::class, 'index'])->name('admin.plans.index');
+    Route::get('/admin/plans/create', [PlanController::class, 'create'])->name('admin.plans.create');
+    Route::post('/admin/plans', [PlanController::class, 'store'])->name('admin.plans.store');
+    Route::get('/admin/plans/{plan}/edit', [PlanController::class, 'edit'])->name('admin.plans.edit');
+    Route::put('/admin/plans/{plan}', [PlanController::class, 'update'])->name('admin.plans.update');
+    Route::delete('/admin/plans/{plan}', [PlanController::class, 'destroy'])->name('admin.plans.destroy');
 
     Route::get('/admin/users', [UserController::class, 'adminIndex'])->name('admin.users.index');
     Route::patch('/admin/users/{user}/status', [UserController::class, 'toggleOwnerStatus'])->name('admin.users.status');
     Route::get('/admin/leads', [LeadController::class, 'adminIndex'])->name('admin.leads.index');
 });
 
-Route::middleware(['auth', 'verified', 'role:sales-agent,marketing-manager,account-owner,finance'])->group(function () {
+Route::middleware(['auth', 'role:account-owner'])->group(function () {
+    Route::get('/billing/trial-upgrade', [TrialSubscriptionController::class, 'show'])->name('trial.billing.show');
+    Route::post('/billing/trial-upgrade', [TrialSubscriptionController::class, 'startCheckout'])->name('trial.billing.checkout');
+    Route::get('/billing/trial-upgrade/return/{payment}', [TrialSubscriptionController::class, 'paymongoReturn'])
+        ->middleware('signed')
+        ->name('trial.billing.return');
+});
+
+Route::middleware(['auth', 'tenant.subscription', 'role:super-admin'])->group(function () {
+    // Super admin tenant subscription routes can go here
+});
+
+Route::middleware(['auth', 'tenant.subscription', 'role:sales-agent,marketing-manager,account-owner,finance'])->group(function () {
     Route::get('/dashboard/owner', [DashboardController::class, 'owner'])->middleware('role:account-owner')->name('dashboard.owner');
     Route::get('/dashboard/marketing', [DashboardController::class, 'marketing'])->middleware('role:marketing-manager')->name('dashboard.marketing');
     Route::get('/marketing/funnel-analytics', [DashboardController::class, 'funnelAnalytics'])
@@ -211,7 +201,13 @@ Route::get('/f/{funnelSlug}/{stepSlug?}', [FunnelPortalController::class, 'show'
 Route::get('/funnel/{funnelSlug}/{stepSlug?}', [FunnelPortalController::class, 'show'])->name('funnels.portal.step.alias');
 Route::post('/f/{funnelSlug}/{stepSlug}/opt-in', [FunnelPortalController::class, 'optIn'])->name('funnels.portal.optin');
 Route::post('/f/{funnelSlug}/{stepSlug}/checkout', [FunnelPortalController::class, 'checkout'])->name('funnels.portal.checkout');
+Route::get('/f/{funnelSlug}/{stepSlug}/paymongo/return/{payment}', [FunnelPortalController::class, 'paymongoReturn'])
+    ->middleware('signed')
+    ->name('funnels.portal.paymongo.return');
 Route::post('/f/{funnelSlug}/{stepSlug}/offer', [FunnelPortalController::class, 'offer'])->name('funnels.portal.offer');
 
-// Public redirect route used for tracking lead link clicks.
-Route::get('/r/{token}', [\App\Http\Controllers\LinkTrackingController::class, 'redirect'])->name('link.track.redirect');
+Route::get('/register/paymongo/return/{payment}', [PayMongoCheckoutController::class, 'return'])
+    ->middleware('signed')
+    ->name('register.paymongo.return');
+
+Route::post('/webhooks/paymongo', PayMongoWebhookController::class)->name('webhooks.paymongo');

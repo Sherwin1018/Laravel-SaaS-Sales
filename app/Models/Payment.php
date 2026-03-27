@@ -13,6 +13,9 @@ class Payment extends Model
         'amount',
         'status',
         'payment_date',
+        'provider',
+        'provider_reference',
+        'payment_method',
     ];
 
     protected $casts = [

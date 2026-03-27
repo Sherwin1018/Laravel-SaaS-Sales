@@ -68,6 +68,11 @@ class AuthController extends Controller
         }
 
         if ($user->hasRole('account-owner')) {
+            $tenant = $user->tenant;
+            if ($tenant && $tenant->isTrialExpired()) {
+                return redirect()->intended(route('trial.billing.show'))->with('error', 'Your 7-day free trial has ended. Complete payment to continue.');
+            }
+
             return redirect()->intended(route('dashboard.owner'))->with('success', 'Login Successfully');
         }
 

@@ -12,8 +12,16 @@ use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
+    protected function monthKeyExpression(string $column): string
+    {
+        return DB::getDriverName() === 'pgsql'
+            ? "TO_CHAR({$column}, 'YYYY-MM')"
+            : "DATE_FORMAT({$column}, '%Y-%m')";
+    }
+
     public function owner()
     {
+        $tenant = auth()->user()->tenant;
         $tenantId = auth()->user()->tenant_id;
 
         $leadsThisMonth = Lead::where('tenant_id', $tenantId)
@@ -60,7 +68,12 @@ class DashboardController extends Controller
             ->latest()
             ->paginate(10, ['*'], 'activity_page');
 
+        $trialDaysRemaining = $tenant?->trialDaysRemaining() ?? 0;
+        $trialEndsAt = $tenant?->trial_ends_at;
+        $trialActive = $tenant?->status === 'trial' && ! $tenant?->isTrialExpired();
+
         return view('dashboard.account-owner', compact(
+            'tenant',
             'leadsThisMonth',
             'wonCount',
             'lostCount',
@@ -69,7 +82,10 @@ class DashboardController extends Controller
             'pipelineAging',
             'revenueTotal',
             'paymentStatusTotals',
-            'teamActivity'
+            'teamActivity',
+            'trialDaysRemaining',
+            'trialEndsAt',
+            'trialActive'
         ));
     }
 
@@ -93,7 +109,7 @@ class DashboardController extends Controller
         $mqlCount = Lead::where('tenant_id', $tenantId)->where('score', '>=', $mqlThreshold)->count();
         $avgLeadScore = round((float) Lead::where('tenant_id', $tenantId)->avg('score'), 1);
 
-        $mqlTrendRaw = Lead::selectRaw("DATE_FORMAT(created_at, '%Y-%m') as month_key, COUNT(*) as total")
+        $mqlTrendRaw = Lead::selectRaw($this->monthKeyExpression('created_at') . " as month_key, COUNT(*) as total")
             ->where('tenant_id', $tenantId)
             ->where('score', '>=', $mqlThreshold)
             ->where('created_at', '>=', now()->copy()->subMonths(5)->startOfMonth())
@@ -209,7 +225,7 @@ class DashboardController extends Controller
         $outstandingAmount = (float) ($statusAmounts['pending'] ?? 0);
         $outstandingCount = (int) ($statusCounts['pending'] ?? 0);
 
-        $collectionTrendRaw = Payment::selectRaw("DATE_FORMAT(payment_date, '%Y-%m') as month_key, SUM(amount) as total")
+        $collectionTrendRaw = Payment::selectRaw($this->monthKeyExpression('payment_date') . " as month_key, SUM(amount) as total")
             ->where('tenant_id', $tenantId)
             ->where('status', 'paid')
             ->where('payment_date', '>=', now()->copy()->subMonths(5)->startOfMonth())

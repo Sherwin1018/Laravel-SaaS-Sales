@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'paymongo' => [
+        'secret' => env('PAYMONGO_SECRET_KEY'),
+        'webhook_secret' => env('PAYMONGO_WEBHOOK_SECRET'),
+        'payment_method_types' => array_values(array_filter(array_map('trim', explode(',', (string) env('PAYMONGO_PAYMENT_METHOD_TYPES', 'card,gcash'))))),
+    ],
+
 ];

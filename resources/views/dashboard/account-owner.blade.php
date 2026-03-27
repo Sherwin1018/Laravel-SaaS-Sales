@@ -32,6 +32,23 @@
         </div>
     </div>
 
+    @if($trialActive)
+        <div class="card" style="margin-bottom: 20px; border-left: 4px solid var(--theme-accent, #6B4A7A);">
+            <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;">
+                <div>
+                    <h3 style="margin:0 0 8px;">7-Day Free Trial Active</h3>
+                    <p style="margin:0;color:var(--theme-muted, #6B7280);line-height:1.7;">
+                        {{ $trialDaysRemaining }} day{{ $trialDaysRemaining === 1 ? '' : 's' }} remaining.
+                        Your trial ends on {{ optional($trialEndsAt)->format('F j, Y g:i A') }}.
+                    </p>
+                </div>
+                <a href="{{ route('trial.billing.show') }}" style="display:inline-flex;align-items:center;justify-content:center;padding:12px 18px;border-radius:12px;background:var(--theme-primary, #240E35);color:#fff;font-weight:700;text-decoration:none;">
+                    Upgrade with PayMongo
+                </a>
+            </div>
+        </div>
+    @endif
+
     <div class="kpi-cards">
         <div class="card">
             <h3>Leads This Month</h3>

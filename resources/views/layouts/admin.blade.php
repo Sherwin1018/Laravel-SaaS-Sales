@@ -95,6 +95,9 @@
                 <a href="{{ route('admin.tenants.index') }}" class="{{ request()->routeIs('admin.tenants.*') ? 'active' : '' }}">
                     <i class="fas fa-building"></i> <span>Tenants</span>
                 </a>
+                <a href="{{ route('admin.plans.index') }}" class="{{ request()->routeIs('admin.plans.*') ? 'active' : '' }}">
+                    <i class="fas fa-tags"></i> <span>Plans</span>
+                </a>
             @endif
 
             {{-- TENANT LINKS (Account Owner, Marketing, Sales, Finance, Customer) --}}
@@ -154,6 +157,12 @@
             @if(auth()->user()->hasRole('account-owner') || auth()->user()->hasRole('finance'))
                 <a href="{{ route('payments.index') }}" class="{{ request()->routeIs('payments.*') ? 'active' : '' }}">
                     <i class="fas fa-file-invoice-dollar"></i> <span>Billing</span>
+                </a>
+            @endif
+
+            @if(auth()->user()->hasRole('account-owner') && optional(auth()->user()->tenant)->status === 'trial')
+                <a href="{{ route('trial.billing.show') }}" class="{{ request()->routeIs('trial.billing.*') ? 'active' : '' }}">
+                    <i class="fas fa-bolt"></i> <span>Upgrade Plan</span>
                 </a>
             @endif
             

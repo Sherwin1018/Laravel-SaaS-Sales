@@ -70,7 +70,7 @@
                     <span style="color: red; font-size: 12px;">{{ $message }}</span>
                 @enderror
                 <p style="margin-top: 6px; color: #475569; font-size: 12px; font-weight: 600;">
-                    12-14 characters with uppercase, lowercase, number, and special character.
+                    12-64 characters with uppercase, lowercase, number, and special character.
                 </p>
             </div>
 
