@@ -25,6 +25,7 @@ body {
     font-family: 'Inter', sans-serif;
     color: var(--text);
     background: #fff;
+    overflow-x: hidden;
 }
 
 a {
@@ -39,6 +40,7 @@ img {
 
 .landing-page {
     min-height: 100vh;
+    overflow-x: clip;
 }
 
 .landing-header {
@@ -101,6 +103,27 @@ img {
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: var(--text-light);
+}
+
+.landing-nav > a.is-active:not(.landing-nav__cta),
+.landing-nav > a[aria-current="true"]:not(.landing-nav__cta) {
+    color: var(--primary);
+}
+
+.landing-nav > a.is-active:not(.landing-nav__cta)::after,
+.landing-nav > a[aria-current="true"]:not(.landing-nav__cta)::after {
+    content: '';
+    display: block;
+    height: 2px;
+    margin-top: 6px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--primary), var(--accent));
+}
+
+.landing-nav > a:focus-visible {
+    outline: 2px solid rgba(107, 74, 122, 0.45);
+    outline-offset: 4px;
+    border-radius: 10px;
 }
 
 .landing-nav > a:hover:not(.landing-nav__cta) {
@@ -172,6 +195,10 @@ img {
 
 .landing-main {
     padding: 0 0 56px;
+}
+
+section[id] {
+    scroll-margin-top: 92px;
 }
 
 .hero {
@@ -818,6 +845,11 @@ img {
         flex-direction: column;
         align-items: stretch;
         padding-top: 10px;
+    }
+
+    .landing-nav > a.is-active:not(.landing-nav__cta)::after,
+    .landing-nav > a[aria-current="true"]:not(.landing-nav__cta)::after {
+        margin-top: 10px;
     }
 
     .landing-nav.open {

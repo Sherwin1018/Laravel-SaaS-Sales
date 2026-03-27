@@ -278,6 +278,18 @@
         const landingNav = document.getElementById('landingNav');
         const workFilterButtons = document.querySelectorAll('[data-work-filter]');
         const workCards = document.querySelectorAll('[data-work-card]');
+        const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        const setActiveNavHash = (hash) => {
+            if (!landingNav) return;
+
+            const navLinks = Array.from(landingNav.querySelectorAll('a[href^="#"]'));
+            navLinks.forEach((link) => {
+                const isActive = link.getAttribute('href') === hash;
+                link.classList.toggle('is-active', isActive);
+                link.setAttribute('aria-current', isActive ? 'true' : 'false');
+            });
+        };
 
         if (navToggle && landingNav) {
             navToggle.addEventListener('click', () => {
@@ -286,11 +298,88 @@
             });
 
             landingNav.querySelectorAll('a').forEach((link) => {
-                link.addEventListener('click', () => {
+                link.addEventListener('click', (event) => {
+                    const href = link.getAttribute('href') || '';
+                    const isHashLink = href.startsWith('#') && href.length > 1;
+
+                    if (isHashLink) {
+                        const target = document.querySelector(href);
+                        if (target) {
+                            event.preventDefault();
+                            history.pushState(null, '', href);
+                            target.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'start' });
+                        }
+                    }
+
                     landingNav.classList.remove('open');
                     navToggle.setAttribute('aria-expanded', 'false');
                 });
             });
+        }
+
+        if (landingNav) {
+            const navLinks = Array.from(landingNav.querySelectorAll('a[href^="#"]'));
+            const sectionIds = navLinks.map((link) => link.getAttribute('href')).filter(Boolean);
+            const sections = sectionIds
+                .map((id) => document.querySelector(id))
+                .filter((section) => section && section.id);
+
+            // Always start in default state on hero/top.
+            setActiveNavHash('');
+
+            if ('IntersectionObserver' in window && sections.length) {
+                const observer = new IntersectionObserver(
+                    (entries) => {
+                        // Pick the most visible intersecting section (handles fast scroll).
+                        const visible = entries
+                            .filter((entry) => entry.isIntersecting)
+                            .sort((a, b) => (b.intersectionRatio || 0) - (a.intersectionRatio || 0));
+
+                        if (!visible.length) {
+                            setActiveNavHash('');
+                            return;
+                        }
+
+                        const section = visible[0].target;
+                        if (section && section.id) {
+                            setActiveNavHash(`#${section.id}`);
+                        }
+                    },
+                    {
+                        root: null,
+                        // Trigger when a section crosses the middle of the viewport.
+                        rootMargin: '-45% 0px -55% 0px',
+                        threshold: [0, 0.1, 0.25, 0.5, 0.75, 1],
+                    }
+                );
+
+                sections.forEach((section) => observer.observe(section));
+            } else if (sections.length) {
+                // Fallback for older browsers without IntersectionObserver.
+                const onScroll = () => {
+                    const viewportMiddle = window.scrollY + window.innerHeight / 2;
+                    let activeSection = null;
+
+                    sections.forEach((section) => {
+                        const rect = section.getBoundingClientRect();
+                        const top = rect.top + window.scrollY;
+                        const bottom = top + rect.height;
+                        if (viewportMiddle >= top && viewportMiddle < bottom) {
+                            activeSection = section;
+                        }
+                    });
+
+                    if (activeSection && activeSection.id) {
+                        setActiveNavHash(`#${activeSection.id}`);
+                        return;
+                    }
+
+                    setActiveNavHash('');
+                };
+
+                window.addEventListener('scroll', onScroll, { passive: true });
+                onScroll();
+            }
         }
 
         if (workFilterButtons.length && workCards.length) {
