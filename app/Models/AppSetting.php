@@ -13,7 +13,11 @@ class AppSetting extends Model
 
     public static function getValue(string $key, ?string $default = null): ?string
     {
-        return static::query()->where('key', $key)->value('value') ?? $default;
+        try {
+            return static::query()->where('key', $key)->value('value') ?? $default;
+        } catch (\Throwable) {
+            return $default;
+        }
     }
 
     public static function putValue(string $key, ?string $value): void
@@ -29,4 +33,3 @@ class AppSetting extends Model
         static::query()->where('key', $key)->delete();
     }
 }
-
