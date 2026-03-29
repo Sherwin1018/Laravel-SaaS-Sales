@@ -83,20 +83,22 @@ body {
     padding: 0;
     margin: 0;
     text-align: left;
-    /* Keep features left aligned or center? User said center logo. Let's keep features readable. */
-    display: inline-block;
-    /* allows text-align: left within centered parent */
+    width: 100%;
+    max-width: 500px;
 }
 
 .features li {
-    margin-bottom: 15px;
-    display: flex;
+    margin-bottom: 16px;
+    display: grid;
+    grid-template-columns: 22px minmax(120px, 150px) minmax(0, 1fr);
     align-items: center;
+    column-gap: 10px;
     font-size: 14px;
+    line-height: 1.35;
 }
 
 .features li::before {
-    content: '✓';
+    content: "\2713";
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -104,9 +106,16 @@ body {
     height: 20px;
     background: rgba(255, 255, 255, 0.2);
     border-radius: 50%;
-    margin-right: 10px;
     font-size: 12px;
     font-weight: bold;
+}
+
+.feature-title {
+    font-weight: 700;
+}
+
+.feature-text {
+    opacity: 0.98;
 }
 
 /* Right Panel */
@@ -164,6 +173,21 @@ body {
 
     .back-link {
         margin-bottom: 16px;
+    }
+
+    .features {
+        max-width: 100%;
+    }
+
+    .features li {
+        grid-template-columns: 22px 1fr;
+        row-gap: 4px;
+        align-items: start;
+    }
+
+    .feature-title,
+    .feature-text {
+        grid-column: 2 / 3;
     }
 }
 
@@ -292,3 +316,4 @@ button:hover {
 .toggle-password:hover {
     color: #4B5563;
 }
+

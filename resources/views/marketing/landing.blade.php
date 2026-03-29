@@ -72,24 +72,28 @@
                                     <strong>96%</strong>
                                 </article>
                             </div>
+                            @php
+                                $heroVideoReady = filled($landingHeroVideoUrl ?? null);
+                                $heroVideoWidth = (int) ($landingHeroVideoWidth ?? 1280);
+                                $heroVideoHeight = (int) ($landingHeroVideoHeight ?? 720);
+                                $heroVideoStyle = ($heroVideoWidth > 0 && $heroVideoHeight > 0)
+                                    ? 'aspect-ratio: ' . $heroVideoWidth . ' / ' . $heroVideoHeight . ';'
+                                    : '';
+                            @endphp
                             <div class="hero-card__device">
-                                <div class="hero-card__content">
-                                    <div class="hero-card__stage hero-card__stage--primary">
-                                        <span>Top of Funnel</span>
-                                        <strong>Traffic to Opt-In</strong>
-                                        <p>Capture visitors with campaign-driven landing pages and lead entry points.</p>
-                                    </div>
-                                    <div class="hero-card__stage-grid">
-                                        <div class="hero-card__stage">
-                                            <span>Middle Funnel</span>
-                                            <strong>Lead Nurturing</strong>
-                                            <p>Score, qualify, and route leads into the right sales actions.</p>
-                                        </div>
-                                        <div class="hero-card__stage">
-                                            <span>Bottom Funnel</span>
-                                            <strong>Checkout to Owner</strong>
-                                            <p>Connect pricing, payment, and Account Owner onboarding in one path.</p>
-                                        </div>
+                                <div class="hero-demo {{ $heroVideoReady ? '' : 'is-empty' }}" data-hero-demo style="{{ $heroVideoStyle }}">
+                                    <video class="hero-demo__video" preload="metadata" playsinline>
+                                        @if($heroVideoReady)
+                                            <source src="{{ $landingHeroVideoUrl }}" type="video/mp4">
+                                        @endif
+                                        Your browser does not support the video tag.
+                                    </video>
+                                    <button type="button" class="hero-demo__play" data-hero-demo-play aria-label="Play product demo video">
+                                        <span class="hero-demo__play-icon" aria-hidden="true"></span>
+                                    </button>
+                                    <div class="hero-demo__meta">
+                                        <strong>Watch Product Demo</strong>
+                                        <span>3 minutes</span>
                                     </div>
                                 </div>
                             </div>
@@ -226,39 +230,54 @@
                         <summary>Can the platform support both sales and marketing teams?</summary>
                         <p>Yes. The system is built for shared funnel visibility while still giving different roles the dashboards and permissions they need.</p>
                     </details>
+                    <details class="faq__item" data-aos="fade-up" data-aos-delay="300">
+                        <summary>Can super admins update the landing hero demo video?</summary>
+                        <p>Yes. Super admins can upload, replace, or delete the landing hero demo video from the dashboard settings, and the fallback demo card appears automatically when no video is set.</p>
+                    </details>
                 </div>
             </section>
         </main>
 
         <footer class="landing-footer">
-            <div class="landing-footer__brand" data-aos="fade-right">
-                <div class="landing-footer__logos">
-                    <img src="{{ asset('images/saas_logo.png') }}" alt="Sales and Marketing Funnel System Logo" class="landing-footer__funnel">
-                    <img src="{{ asset('images/logo2.png') }}" alt="Nehemiah Solutions Logo" class="landing-footer__company">
+            <div class="landing-footer__top" data-aos="fade-up">
+                <div class="landing-footer__brand">
+                    <div class="landing-footer__logos">
+                        <img src="{{ asset('images/saas_logo.png') }}" alt="Sales and Marketing Funnel System Logo" class="landing-footer__funnel">
+                        <img src="{{ asset('images/logo2.png') }}" alt="Nehemiah Solutions Logo" class="landing-footer__company">
+                    </div>
+                    <p>
+                        Built for teams that want to run campaigns, capture leads, and move people through pricing and onboarding with less friction.
+                    </p>
                 </div>
-                <p>
-                    A sales and marketing funnel system for modern businesses that need landing pages, lead operations,
-                    pricing, payment-connected onboarding, and role-based dashboards in one platform.
-                </p>
-            </div>
 
-            <div class="landing-footer__links" data-aos="fade-left" data-aos-delay="100">
-                <div>
-                    <h4>Product</h4>
-                    <a href="#services">Services</a>
-                    <a href="#works">Featured Works</a>
-                    <a href="#pricing">Pricing</a>
-                </div>
-                <div>
-                    <h4>Access</h4>
-                    <a href="{{ route('login') }}">Sign In</a>
-                    <a href="{{ route('register') }}">Register</a>
-                    <a href="#faq">FAQ</a>
+                <div class="landing-footer__columns">
+                    <div class="landing-footer__column">
+                        <h4>Platform</h4>
+                        <a href="#services">Services</a>
+                        <a href="#works">Featured Works</a>
+                        <a href="#pricing">Pricing</a>
+                    </div>
+                    <div class="landing-footer__column">
+                        <h4>Company</h4>
+                        <a href="{{ route('register') }}">Register</a>
+                        <a href="{{ route('login') }}">Sign In</a>
+                        <a href="{{ route('register', ['trial' => 1]) }}">Free Trial</a>
+                    </div>
+                    <div class="landing-footer__column">
+                        <h4>Support</h4>
+                        <a href="#faq">FAQ</a>
+                        <a href="#pricing">Plans</a>
+                        <a href="{{ route('register') }}">Contact Team</a>
+                    </div>
                 </div>
             </div>
 
             <div class="landing-footer__bottom">
                 <span>&copy; {{ now()->year }} Nehemiah Solutions. All rights reserved.</span>
+                <div class="landing-footer__legal">
+                    <a href="#faq">Terms</a>
+                    <a href="#faq">Privacy</a>
+                </div>
             </div>
         </footer>
     </div>
@@ -278,6 +297,18 @@
         const landingNav = document.getElementById('landingNav');
         const workFilterButtons = document.querySelectorAll('[data-work-filter]');
         const workCards = document.querySelectorAll('[data-work-card]');
+        const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        const setActiveNavHash = (hash) => {
+            if (!landingNav) return;
+
+            const navLinks = Array.from(landingNav.querySelectorAll('a[href^="#"]'));
+            navLinks.forEach((link) => {
+                const isActive = link.getAttribute('href') === hash;
+                link.classList.toggle('is-active', isActive);
+                link.setAttribute('aria-current', isActive ? 'true' : 'false');
+            });
+        };
 
         if (navToggle && landingNav) {
             navToggle.addEventListener('click', () => {
@@ -286,11 +317,88 @@
             });
 
             landingNav.querySelectorAll('a').forEach((link) => {
-                link.addEventListener('click', () => {
+                link.addEventListener('click', (event) => {
+                    const href = link.getAttribute('href') || '';
+                    const isHashLink = href.startsWith('#') && href.length > 1;
+
+                    if (isHashLink) {
+                        const target = document.querySelector(href);
+                        if (target) {
+                            event.preventDefault();
+                            history.pushState(null, '', href);
+                            target.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'start' });
+                        }
+                    }
+
                     landingNav.classList.remove('open');
                     navToggle.setAttribute('aria-expanded', 'false');
                 });
             });
+        }
+
+        if (landingNav) {
+            const navLinks = Array.from(landingNav.querySelectorAll('a[href^="#"]'));
+            const sectionIds = navLinks.map((link) => link.getAttribute('href')).filter(Boolean);
+            const sections = sectionIds
+                .map((id) => document.querySelector(id))
+                .filter((section) => section && section.id);
+
+            // Always start in default state on hero/top.
+            setActiveNavHash('');
+
+            if ('IntersectionObserver' in window && sections.length) {
+                const observer = new IntersectionObserver(
+                    (entries) => {
+                        // Pick the most visible intersecting section (handles fast scroll).
+                        const visible = entries
+                            .filter((entry) => entry.isIntersecting)
+                            .sort((a, b) => (b.intersectionRatio || 0) - (a.intersectionRatio || 0));
+
+                        if (!visible.length) {
+                            setActiveNavHash('');
+                            return;
+                        }
+
+                        const section = visible[0].target;
+                        if (section && section.id) {
+                            setActiveNavHash(`#${section.id}`);
+                        }
+                    },
+                    {
+                        root: null,
+                        // Trigger when a section crosses the middle of the viewport.
+                        rootMargin: '-45% 0px -55% 0px',
+                        threshold: [0, 0.1, 0.25, 0.5, 0.75, 1],
+                    }
+                );
+
+                sections.forEach((section) => observer.observe(section));
+            } else if (sections.length) {
+                // Fallback for older browsers without IntersectionObserver.
+                const onScroll = () => {
+                    const viewportMiddle = window.scrollY + window.innerHeight / 2;
+                    let activeSection = null;
+
+                    sections.forEach((section) => {
+                        const rect = section.getBoundingClientRect();
+                        const top = rect.top + window.scrollY;
+                        const bottom = top + rect.height;
+                        if (viewportMiddle >= top && viewportMiddle < bottom) {
+                            activeSection = section;
+                        }
+                    });
+
+                    if (activeSection && activeSection.id) {
+                        setActiveNavHash(`#${activeSection.id}`);
+                        return;
+                    }
+
+                    setActiveNavHash('');
+                };
+
+                window.addEventListener('scroll', onScroll, { passive: true });
+                onScroll();
+            }
         }
 
         if (workFilterButtons.length && workCards.length) {
@@ -320,6 +428,42 @@
 
             setWorkFilter('all');
         }
+
+        const heroDemos = document.querySelectorAll('[data-hero-demo]');
+        heroDemos.forEach((demo) => {
+            const video = demo.querySelector('.hero-demo__video');
+            const playButton = demo.querySelector('[data-hero-demo-play]');
+            if (!video || !playButton) return;
+            const source = video.querySelector('source');
+            const hasVideoSource = !!(source && source.getAttribute('src'));
+
+            if (!hasVideoSource) {
+                playButton.setAttribute('aria-disabled', 'true');
+                return;
+            }
+
+            playButton.addEventListener('click', () => {
+                const isPlaying = !video.paused && !video.ended;
+                if (isPlaying) {
+                    video.pause();
+                    return;
+                }
+
+                demo.classList.add('is-playing');
+                video.setAttribute('controls', 'controls');
+                video.play().catch(() => {
+                    demo.classList.remove('is-playing');
+                });
+            });
+
+            video.addEventListener('pause', () => {
+                demo.classList.remove('is-playing');
+            });
+
+            video.addEventListener('ended', () => {
+                demo.classList.remove('is-playing');
+            });
+        });
     </script>
 </body>
 </html>

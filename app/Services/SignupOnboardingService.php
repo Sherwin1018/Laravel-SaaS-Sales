@@ -24,19 +24,23 @@ class SignupOnboardingService
      */
     public function plans(): array
     {
-        if (! Schema::hasTable('plans')) {
+        try {
+            if (! Schema::hasTable('plans')) {
+                return $this->defaultPlans();
+            }
+
+            $plans = Plan::query()
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->orderBy('id')
+                ->get()
+                ->map(fn (Plan $plan) => $this->serializePlan($plan))
+                ->all();
+
+            return $plans !== [] ? $plans : $this->defaultPlans();
+        } catch (\Throwable) {
             return $this->defaultPlans();
         }
-
-        $plans = Plan::query()
-            ->where('is_active', true)
-            ->orderBy('sort_order')
-            ->orderBy('id')
-            ->get()
-            ->map(fn (Plan $plan) => $this->serializePlan($plan))
-            ->all();
-
-        return $plans !== [] ? $plans : $this->defaultPlans();
     }
 
     /**

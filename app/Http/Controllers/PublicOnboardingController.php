@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AppSetting;
 use App\Models\SignupIntent;
 use App\Models\User;
 use App\Services\PayMongoCheckoutService;
 use App\Services\SignupOnboardingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class PublicOnboardingController extends Controller
 {
@@ -17,8 +19,19 @@ class PublicOnboardingController extends Controller
             return $this->redirectByRole(Auth::user());
         }
 
+        $landingHeroVideoPath = AppSetting::getValue('landing_hero_video_path');
+        $landingHeroVideoWidth = (int) (AppSetting::getValue('landing_hero_video_width', '1280') ?? 1280);
+        $landingHeroVideoHeight = (int) (AppSetting::getValue('landing_hero_video_height', '720') ?? 720);
+        $landingHeroVideoUrl = null;
+        if (is_string($landingHeroVideoPath) && $landingHeroVideoPath !== '' && Storage::disk('public')->exists($landingHeroVideoPath)) {
+            $landingHeroVideoUrl = Storage::disk('public')->url($landingHeroVideoPath);
+        }
+
         return view('marketing.landing', [
             'plans' => $onboarding->plans(),
+            'landingHeroVideoUrl' => $landingHeroVideoUrl,
+            'landingHeroVideoWidth' => max(1, $landingHeroVideoWidth),
+            'landingHeroVideoHeight' => max(1, $landingHeroVideoHeight),
         ]);
     }
 

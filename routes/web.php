@@ -71,6 +71,8 @@ Route::middleware(['auth', 'role:account-owner'])->group(function () {
 
 Route::middleware(['auth', 'tenant.subscription', 'role:super-admin'])->group(function () {
     Route::get('/admin/dashboard', [AdminController::class, 'index'])->name('admin.dashboard');
+    Route::post('/admin/landing-hero-video', [AdminController::class, 'updateLandingHeroVideo'])->name('admin.landing-video.update');
+    Route::delete('/admin/landing-hero-video', [AdminController::class, 'deleteLandingHeroVideo'])->name('admin.landing-video.delete');
 
     Route::get('/admin/tenants', [TenantController::class, 'index'])->name('admin.tenants.index');
     Route::get('/admin/tenants/create', [TenantController::class, 'create'])->name('admin.tenants.create');
