@@ -56,11 +56,12 @@ class Tenant extends Model
             return 0;
         }
 
-        $trialEnd = $this->trial_ends_at->copy()->endOfDay();
-        if (now()->greaterThan($trialEnd)) {
+        $trialEnd = $this->trial_ends_at->copy();
+        $currentTime = now();
+        if ($currentTime->greaterThan($trialEnd)) {
             return 0;
         }
 
-        return now()->startOfDay()->diffInDays($trialEnd->copy()->startOfDay()) + 1;
+        return $currentTime->startOfDay()->diffInDays($trialEnd->copy()->startOfDay()) + 1;
     }
 }

@@ -67,12 +67,11 @@ class AuthController extends Controller
             return redirect()->intended('/admin/dashboard')->with('success', 'Login Successfully');
         }
 
-        if ($user->hasRole('account-owner')) {
-            $tenant = $user->tenant;
-            if ($tenant && $tenant->isTrialExpired()) {
-                return redirect()->intended(route('trial.billing.show'))->with('error', 'Your 7-day free trial has ended. Complete payment to continue.');
-            }
+        if ($response = $this->tenantAccessRedirect($user)) {
+            return $response;
+        }
 
+        if ($user->hasRole('account-owner')) {
             return redirect()->intended(route('dashboard.owner'))->with('success', 'Login Successfully');
         }
 
@@ -96,5 +95,40 @@ class AuthController extends Controller
         request()->session()->invalidate();
         request()->session()->regenerateToken();
         return redirect()->route('login')->with('error', 'Login Failed. Your role does not have access.');
+    }
+
+    private function tenantAccessRedirect($user)
+    {
+        $tenant = $user->tenant;
+
+        if (! $tenant) {
+            return null;
+        }
+
+        if ($tenant->isTrialExpired()) {
+            if ($user->hasRole('account-owner')) {
+                return redirect()->intended(route('trial.billing.show'))->with('error', 'Your 7-day free trial has ended. Complete payment to continue.');
+            }
+
+            Auth::logout();
+            request()->session()->invalidate();
+            request()->session()->regenerateToken();
+
+            return redirect()->route('login')->with('error', 'Your workspace trial has ended. Please contact your Account Owner to reactivate access.');
+        }
+
+        if ($tenant->status === 'inactive') {
+            if ($user->hasRole('account-owner')) {
+                return redirect()->intended(route('trial.billing.show'))->with('error', 'Your workspace is inactive. Complete payment to restore access.');
+            }
+
+            Auth::logout();
+            request()->session()->invalidate();
+            request()->session()->regenerateToken();
+
+            return redirect()->route('login')->with('error', 'Your workspace is inactive. Please contact your Account Owner to restore access.');
+        }
+
+        return null;
     }
 }
