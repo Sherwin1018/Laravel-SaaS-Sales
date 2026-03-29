@@ -36,7 +36,33 @@
         <div class="card" style="margin-bottom: 20px; border-left: 4px solid var(--theme-accent, #6B4A7A);">
             <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;">
                 <div>
-                    <h3 style="margin:0 0 8px;">7-Day Free Trial Active</h3>
+                    <div
+                        style="display:flex;flex-wrap:wrap;align-items:center;gap:14px;margin:0 0 12px;"
+                    >
+                        <h3 style="margin:0;">7-Day Free Trial Active</h3>
+                        <div
+                            data-trial-countdown
+                            data-trial-ends-at="{{ optional($trialEndsAt)?->toIso8601String() }}"
+                            style="display:flex;flex-wrap:wrap;gap:8px;"
+                        >
+                            <div style="min-width:74px;padding:10px 10px;border-radius:14px;background:#f4f3f8;text-align:center;">
+                                <strong data-trial-days style="display:block;font-size:20px;line-height:1;color:var(--theme-primary, #240E35);">0</strong>
+                                <span style="display:block;margin-top:6px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--theme-muted, #6B7280);">Days</span>
+                            </div>
+                            <div style="min-width:74px;padding:10px 10px;border-radius:14px;background:#f4f3f8;text-align:center;">
+                                <strong data-trial-hours style="display:block;font-size:20px;line-height:1;color:var(--theme-primary, #240E35);">00</strong>
+                                <span style="display:block;margin-top:6px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--theme-muted, #6B7280);">Hours</span>
+                            </div>
+                            <div style="min-width:74px;padding:10px 10px;border-radius:14px;background:#f4f3f8;text-align:center;">
+                                <strong data-trial-minutes style="display:block;font-size:20px;line-height:1;color:var(--theme-primary, #240E35);">00</strong>
+                                <span style="display:block;margin-top:6px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--theme-muted, #6B7280);">Minutes</span>
+                            </div>
+                            <div style="min-width:74px;padding:10px 10px;border-radius:14px;background:#f4f3f8;text-align:center;">
+                                <strong data-trial-seconds style="display:block;font-size:20px;line-height:1;color:var(--theme-primary, #240E35);">00</strong>
+                                <span style="display:block;margin-top:6px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--theme-muted, #6B7280);">Seconds</span>
+                            </div>
+                        </div>
+                    </div>
                     <p style="margin:0;color:var(--theme-muted, #6B7280);line-height:1.7;">
                         {{ $trialDaysRemaining }} day{{ $trialDaysRemaining === 1 ? '' : 's' }} remaining.
                         Your trial ends on {{ optional($trialEndsAt)->format('F j, Y g:i A') }}.
@@ -175,5 +201,44 @@
                 maintainAspectRatio: false
             }
         });
+
+        const trialCountdown = document.querySelector('[data-trial-countdown]');
+        if (trialCountdown) {
+            const endsAt = trialCountdown.getAttribute('data-trial-ends-at');
+            const dayNode = trialCountdown.querySelector('[data-trial-days]');
+            const hourNode = trialCountdown.querySelector('[data-trial-hours]');
+            const minuteNode = trialCountdown.querySelector('[data-trial-minutes]');
+            const secondNode = trialCountdown.querySelector('[data-trial-seconds]');
+            const endTime = endsAt ? new Date(endsAt).getTime() : NaN;
+
+            const pad = value => String(value).padStart(2, '0');
+
+            let countdownTimer = null;
+
+            const renderCountdown = () => {
+                if (Number.isNaN(endTime)) {
+                    return;
+                }
+
+                const remaining = Math.max(0, endTime - Date.now());
+                const totalSeconds = Math.floor(remaining / 1000);
+                const days = Math.floor(totalSeconds / 86400);
+                const hours = Math.floor((totalSeconds % 86400) / 3600);
+                const minutes = Math.floor((totalSeconds % 3600) / 60);
+                const seconds = totalSeconds % 60;
+
+                if (dayNode) dayNode.textContent = String(days);
+                if (hourNode) hourNode.textContent = pad(hours);
+                if (minuteNode) minuteNode.textContent = pad(minutes);
+                if (secondNode) secondNode.textContent = pad(seconds);
+
+                if (remaining <= 0 && countdownTimer) {
+                    clearInterval(countdownTimer);
+                }
+            };
+
+            renderCountdown();
+            countdownTimer = window.setInterval(renderCountdown, 1000);
+        }
     </script>
 @endsection
