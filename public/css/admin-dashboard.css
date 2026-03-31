@@ -374,6 +374,9 @@ body {
     border-radius: 8px;
     border: 1px solid var(--theme-border, #E6E1EF);
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.08);
+    min-height: 380px;
+    display: flex;
+    flex-direction: column;
 }
 
 .chart h3 {
@@ -382,9 +385,26 @@ body {
     padding-bottom: 10px;
 }
 
-canvas {
+.chart canvas {
     width: 100% !important;
-    height: 300px !important;
+    height: 320px !important;
+    max-height: 320px;
+    display: block;
+}
+
+@media (max-width: 768px) {
+    .charts {
+        grid-template-columns: 1fr;
+    }
+
+    .chart {
+        min-height: 320px;
+    }
+
+    .chart canvas {
+        height: 260px !important;
+        max-height: 260px;
+    }
 }
 
 /* ============================= */

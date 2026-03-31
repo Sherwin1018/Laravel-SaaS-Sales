@@ -8,6 +8,7 @@ use App\Models\Payment;
 use App\Models\Role;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\AnalyticsDashboardService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -18,22 +19,27 @@ class AdminController extends Controller
     private const LANDING_VIDEO_WIDTH_KEY = 'landing_hero_video_width';
     private const LANDING_VIDEO_HEIGHT_KEY = 'landing_hero_video_height';
 
-    public function index()
+    public function index(AnalyticsDashboardService $analytics)
     {
         $monthKeyExpression = DB::getDriverName() === 'pgsql'
             ? "TO_CHAR(created_at, 'YYYY-MM')"
             : "DATE_FORMAT(created_at, '%Y-%m')";
 
-        $tenantCount = Tenant::count();
-        $activeTenantCount = Tenant::where('status', 'active')->count();
-        $trialTenantCount = Tenant::where('status', 'trial')->count();
+        $platformSummary = $analytics->platformSummary();
+        $tenantCount = $platformSummary['tenant_count'];
+        $activeTenantCount = $platformSummary['active_tenants'];
+        $trialTenantCount = $platformSummary['trial_tenants'];
+        $inactiveTenantCount = $platformSummary['inactive_tenants'];
         $userCount = User::count();
         $leadCount = Lead::withoutGlobalScope('tenant')->count();
-
-        $mrr = Payment::where('status', 'paid')
-            ->whereYear('payment_date', now()->year)
-            ->whereMonth('payment_date', now()->month)
-            ->sum('amount');
+        $mrr = $platformSummary['mrr'];
+        $previousMonthMrr = $platformSummary['previous_month_mrr'];
+        $mrrGrowthRate = $platformSummary['mrr_growth_rate'];
+        $churnRate = $platformSummary['churn_rate'];
+        $arpu = $platformSummary['arpu'];
+        $payingTenantCount = $platformSummary['paying_tenants'];
+        $usageMetrics = $platformSummary['usage_metrics'];
+        $tenantGrowth = $platformSummary['tenant_growth'];
 
         $paymentStatusTotals = Payment::select('status', DB::raw('COUNT(*) as count'), DB::raw('SUM(amount) as total'))
             ->groupBy('status')
@@ -75,9 +81,17 @@ class AdminController extends Controller
             'tenantCount',
             'activeTenantCount',
             'trialTenantCount',
+            'inactiveTenantCount',
             'userCount',
             'leadCount',
             'mrr',
+            'previousMonthMrr',
+            'mrrGrowthRate',
+            'churnRate',
+            'arpu',
+            'payingTenantCount',
+            'usageMetrics',
+            'tenantGrowth',
             'paymentStatusTotals',
             'usersByRole',
             'leadTrendLabels',

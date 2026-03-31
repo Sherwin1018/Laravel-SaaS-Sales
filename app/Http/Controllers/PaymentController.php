@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Lead;
 use App\Models\Payment;
+use App\Services\SubscriptionLifecycleService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -23,8 +24,10 @@ class PaymentController extends Controller
 
         $payments = $query->paginate(10);
         $leadOptions = Lead::where('tenant_id', $user->tenant_id)->orderBy('name')->get(['id', 'name']);
+        $tenant = app(SubscriptionLifecycleService::class)->expireGracePeriodIfNeeded($user->tenant);
+        $billingStateLabel = app(SubscriptionLifecycleService::class)->billingStateLabel($tenant);
 
-        return view('payments.index', compact('payments', 'leadOptions'));
+        return view('payments.index', compact('payments', 'leadOptions', 'tenant', 'billingStateLabel'));
     }
 
     public function store(Request $request)
@@ -36,6 +39,9 @@ class PaymentController extends Controller
             'amount' => 'required|numeric|min:0.01',
             'status' => ['required', Rule::in(array_keys(Payment::STATUSES))],
             'payment_date' => 'required|date',
+            'provider' => 'nullable|string|max:50',
+            'provider_reference' => 'nullable|string|max:120',
+            'payment_method' => 'nullable|string|max:50',
         ]);
 
         if (!empty($validated['lead_id'])) {
@@ -49,13 +55,22 @@ class PaymentController extends Controller
         }
 
         try {
-            Payment::create([
+            $payment = Payment::create([
                 'tenant_id' => $user->tenant_id,
                 'lead_id' => $validated['lead_id'] ?? null,
                 'amount' => $validated['amount'],
                 'status' => $validated['status'],
                 'payment_date' => $validated['payment_date'],
+                'provider' => $validated['provider'] ?? null,
+                'provider_reference' => $validated['provider_reference'] ?? null,
+                'payment_method' => $validated['payment_method'] ?? null,
             ]);
+
+            if ($payment->status === 'failed') {
+                app(SubscriptionLifecycleService::class)->markPaymentFailed($payment);
+            } elseif ($payment->status === 'paid') {
+                app(SubscriptionLifecycleService::class)->restoreTenantBilling($user->tenant);
+            }
 
             return redirect()->route('payments.index')->with('success', 'Added Successfully');
         } catch (\Throwable $e) {

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Lead;
 use App\Models\LeadActivity;
 use App\Models\Payment;
+use App\Services\AnalyticsDashboardService;
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
@@ -16,7 +17,7 @@ class DashboardController extends Controller
             : "DATE_FORMAT({$column}, '%Y-%m')";
     }
 
-    public function owner()
+    public function owner(AnalyticsDashboardService $analytics)
     {
         $tenant = auth()->user()->tenant;
         $tenantId = auth()->user()->tenant_id;
@@ -68,6 +69,11 @@ class DashboardController extends Controller
         $trialDaysRemaining = $tenant?->trialDaysRemaining() ?? 0;
         $trialEndsAt = $tenant?->trial_ends_at;
         $trialActive = $tenant?->isOnTrial() && ! $tenant?->isTrialExpired();
+        $analyticsSummary = $tenant ? $analytics->tenantOwnerSummary($tenant) : [
+            'usage' => [],
+            'revenue_trend_labels' => [],
+            'revenue_trend_values' => [],
+        ];
 
         return view('dashboard.account-owner', compact(
             'tenant',
@@ -82,7 +88,8 @@ class DashboardController extends Controller
             'teamActivity',
             'trialDaysRemaining',
             'trialEndsAt',
-            'trialActive'
+            'trialActive',
+            'analyticsSummary'
         ));
     }
 

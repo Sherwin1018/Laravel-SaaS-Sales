@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\SubscriptionLifecycleService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -104,6 +105,7 @@ class AuthController extends Controller
         if (! $tenant) {
             return null;
         }
+        $tenant = app(SubscriptionLifecycleService::class)->expireGracePeriodIfNeeded($tenant);
 
         if ($tenant->isTrialExpired()) {
             if ($user->hasRole('account-owner')) {
@@ -127,6 +129,10 @@ class AuthController extends Controller
             request()->session()->regenerateToken();
 
             return redirect()->route('login')->with('error', 'Your workspace is inactive. Please contact your Account Owner to restore access.');
+        }
+
+        if ($tenant->isOverdue() && $user->hasRole('account-owner')) {
+            return redirect()->intended(route('payments.index'))->with('error', 'A recent payment failed. Your workspace is in a grace period until ' . optional($tenant->billing_grace_ends_at)->format('F j, Y g:i A') . '. Complete payment to avoid deactivation.');
         }
 
         return null;
