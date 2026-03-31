@@ -36,4 +36,9 @@ class Funnel extends Model
     {
         return $this->hasMany(FunnelStep::class)->orderBy('position');
     }
+
+    public function events(): HasMany
+    {
+        return $this->hasMany(FunnelEvent::class);
+    }
 }

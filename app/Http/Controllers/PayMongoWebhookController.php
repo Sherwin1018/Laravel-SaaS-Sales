@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Payment;
 use App\Models\SignupIntent;
+use App\Services\FunnelTrackingService;
 use App\Services\SignupOnboardingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -68,6 +69,7 @@ class PayMongoWebhookController extends Controller
                 'payment_method' => $method ?? $payment->payment_method,
                 'payment_date' => now()->toDateString(),
             ]);
+            app(FunnelTrackingService::class)->trackPaymentPaid($payment->fresh(), ['source' => 'paymongo_webhook.checkout_session_paid']);
         }
 
         $metadata = data_get($session, 'attributes.metadata');
@@ -103,6 +105,7 @@ class PayMongoWebhookController extends Controller
                 'payment_method' => is_string($method) ? $method : $payment->payment_method,
                 'payment_date' => now()->toDateString(),
             ]);
+            app(FunnelTrackingService::class)->trackPaymentPaid($payment->fresh(), ['source' => 'paymongo_webhook.payment_paid']);
         }
 
         if (($meta['flow'] ?? null) === 'trial_upgrade' && $payment) {

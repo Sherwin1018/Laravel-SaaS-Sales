@@ -65,6 +65,9 @@
                             <a href="{{ route('funnels.edit', $funnel) }}" style="color:var(--theme-primary, #240E35); text-decoration:none; font-weight:700;">
                                 <i class="fas fa-pen"></i> Builder
                             </a>
+                            <a href="{{ route('funnels.analytics', $funnel) }}" style="color:#0F766E; text-decoration:none; font-weight:700;">
+                                <i class="fas fa-chart-line"></i> Analytics
+                            </a>
                             <form method="POST" action="{{ route('funnels.destroy', $funnel) }}" data-confirm-message="Delete this funnel?">
                                 @csrf
                                 @method('DELETE')

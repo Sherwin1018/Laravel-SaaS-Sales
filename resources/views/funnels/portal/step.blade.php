@@ -1581,6 +1581,7 @@
                                                                     @foreach(($pricingCtaAction['fields'] ?? []) as $fieldName => $fieldValue)
                                                                         <input type="hidden" name="{{ $fieldName }}" value="{{ $fieldName === 'amount' && $pricingPostedAmount > 0 ? $pricingPostedAmount : $fieldValue }}">
                                                                     @endforeach
+                                                                    <input type="hidden" name="website" value="">
                                                                     <input type="hidden" name="checkout_pricing_id" value="{{ $checkoutSelectionPricingId }}">
                                                                     <input type="hidden" name="checkout_pricing_source_step" value="{{ $checkoutSelectionSourceStep }}">
                                                                     <input type="hidden" name="checkout_pricing_plan" value="{{ $plan }}">
@@ -1756,6 +1757,7 @@
                                                     @if($step->type === 'opt_in' && !$isPreview)
                                                         <form method="POST" action="{{ route('funnels.portal.optin', ['funnelSlug' => $funnel->slug, 'stepSlug' => $step->slug]) }}" style="{{ $formInlineStyle }}">
                     @csrf
+                                                            <input type="hidden" name="website" value="">
                                                             @foreach($formFields as $f)
                                                                 @php
                                                                     $ft = strtolower(trim((string) ($f['type'] ?? 'text')));
@@ -2315,6 +2317,20 @@
             if(!form||form.tagName!=="FORM")return;
             var method=String(form.getAttribute("method")||"").toLowerCase();
             if(method!=="post")return;
+            if(form.getAttribute("data-submitting")==="1"){
+                e.preventDefault();
+                return;
+            }
+            form.setAttribute("data-submitting","1");
+            Array.from(form.querySelectorAll('button[type="submit"], input[type="submit"]')||[]).forEach(function(btn){
+                btn.setAttribute("disabled","disabled");
+                if(btn.tagName==="BUTTON"){
+                    btn.setAttribute("data-original-text",btn.textContent||"");
+                    if((btn.textContent||"").trim()!==""){
+                        btn.textContent="Processing...";
+                    }
+                }
+            });
             var action=String(form.getAttribute("action")||"");
             if(action.indexOf("/checkout")<0)return;
             syncCheckoutPricingForm(form);

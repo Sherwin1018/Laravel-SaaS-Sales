@@ -6,6 +6,7 @@ use App\Models\Funnel;
 use App\Models\FunnelBuilderAsset;
 use App\Models\FunnelStep;
 use App\Models\FunnelStepRevision;
+use App\Services\FunnelTrackingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -130,6 +131,44 @@ class FunnelController extends Controller
             'isPreview' => true,
             'selectedPricing' => $selectedPricing,
         ]);
+    }
+
+    public function analytics(Request $request, Funnel $funnel, FunnelTrackingService $tracking)
+    {
+        $this->ensureTenantFunnelAccess($funnel);
+
+        $filters = $tracking->normalizeDateFilters($request->only(['from', 'to', 'step_id', 'event_name', 'per_page']));
+        $analytics = $tracking->analyticsForFunnel($funnel, $filters);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'analytics' => $analytics,
+            ]);
+        }
+
+        $events = $tracking->eventsForFunnel($funnel, array_merge($filters, ['per_page' => 15]));
+
+        return view('funnels.analytics', [
+            'funnel' => $funnel->load('steps'),
+            'analytics' => $analytics,
+            'events' => $events,
+            'filters' => [
+                'from' => $request->query('from', ''),
+                'to' => $request->query('to', ''),
+            ],
+        ]);
+    }
+
+    public function events(Request $request, Funnel $funnel, FunnelTrackingService $tracking)
+    {
+        $this->ensureTenantFunnelAccess($funnel);
+
+        return response()->json(
+            $tracking->eventsForFunnel(
+                $funnel,
+                $tracking->normalizeDateFilters($request->only(['from', 'to', 'step_id', 'event_name', 'per_page']))
+            )
+        );
     }
 
     public function saveLayout(Request $request, Funnel $funnel)
@@ -1962,16 +2001,48 @@ class FunnelController extends Controller
     {
         $ordered = collect($steps)->values();
         $issues = [];
+        $requiredTypes = ['landing', 'opt_in', 'sales', 'checkout', 'thank_you'];
+        $activeSlugs = $ordered
+            ->map(fn ($step) => strtolower(trim((string) ($step->slug ?? ''))))
+            ->filter()
+            ->values();
+
+        foreach ($requiredTypes as $requiredType) {
+            if (! $ordered->contains(fn ($step) => strtolower(trim((string) ($step->type ?? ''))) === $requiredType)) {
+                $issues[] = 'Add an active ' . str_replace('_', '-', $requiredType) . ' step.';
+            }
+        }
+
+        $firstStep = $ordered->first();
+        $lastStep = $ordered->last();
+        if ($firstStep && strtolower(trim((string) ($firstStep->type ?? ''))) === 'thank_you') {
+            $issues[] = 'The first active step cannot be a Thank You step.';
+        }
+        if ($lastStep && strtolower(trim((string) ($lastStep->type ?? ''))) !== 'thank_you') {
+            $issues[] = 'The last active step must be a Thank You step so the flow resolves safely.';
+        }
+
+        foreach ($ordered as $idx => $step) {
+            $slug = strtolower(trim((string) ($step->slug ?? '')));
+            if ($slug === '') {
+                $issues[] = 'Every active step must have a valid slug.';
+                continue;
+            }
+            if ($activeSlugs->filter(fn (string $candidate) => $candidate === $slug)->count() > 1) {
+                $issues[] = 'Active step slug "' . $slug . '" is duplicated.';
+            }
+        }
 
         foreach ($ordered as $idx => $step) {
             $type = strtolower(trim((string) ($step->type ?? '')));
             $title = trim((string) ($step->title ?? '')) !== '' ? trim((string) $step->title) : ('Step #' . ($idx + 1));
             $hasNext = $ordered->get($idx + 1) !== null;
-            if (!$hasNext) {
-                continue;
+            $stats = $this->collectStepActionStats(is_array($step->layout_json ?? null) ? $step->layout_json : [], $activeSlugs->all(), $type === 'checkout');
+
+            if (($stats['invalidTargetCount'] ?? 0) > 0) {
+                $issues[] = 'Step "' . $title . '" contains button or pricing actions that point to missing step slugs.';
             }
 
-            $stats = $this->collectStepActionStats(is_array($step->layout_json ?? null) ? $step->layout_json : []);
             if ($type === 'opt_in') {
                 if (($stats['formCount'] ?? 0) <= 0) {
                     $issues[] = 'Step "' . $title . '" (Opt-in) must include at least one Form component.';
@@ -1981,6 +2052,10 @@ class FunnelController extends Controller
             if ($type === 'checkout') {
                 if (($stats['checkoutActionCount'] ?? 0) <= 0) {
                     $issues[] = 'Step "' . $title . '" (Checkout) must include at least one Button with action "Checkout submit".';
+                }
+                $stepAmount = (float) ($step->price ?? 0);
+                if ($stepAmount <= 0 && ($stats['pricingAmountCount'] ?? 0) <= 0) {
+                    $issues[] = 'Step "' . $title . '" (Checkout) must have a valid amount on the step or in a Pricing component.';
                 }
                 continue;
             }
@@ -1993,15 +2068,31 @@ class FunnelController extends Controller
             if ($type === 'thank_you') {
                 continue;
             }
+            if (!$hasNext) {
+                $issues[] = 'Step "' . $title . '" must route to another active step before the Thank You step.';
+                continue;
+            }
             if (($stats['navigateActionCount'] ?? 0) <= 0) {
                 $issues[] = 'Step "' . $title . '" must include at least one Button with action "Next step", "Specific step", or "Custom URL".';
             }
         }
 
-        return $issues;
+        $ordered->values()->each(function ($step, int $index) use ($ordered, &$issues) {
+            $type = strtolower(trim((string) ($step->type ?? '')));
+            if ($type !== 'downsell') {
+                return;
+            }
+
+            $previous = $ordered->get($index - 1);
+            if (! $previous || strtolower(trim((string) ($previous->type ?? ''))) !== 'upsell') {
+                $issues[] = 'Downsell steps must immediately follow an Upsell step so decline routing stays safe.';
+            }
+        });
+
+        return array_values(array_unique($issues));
     }
 
-    private function collectStepActionStats(array $layout): array
+    private function collectStepActionStats(array $layout, array $validStepSlugs = [], bool $isCheckoutStep = false): array
     {
         $stats = [
             'formCount' => 0,
@@ -2009,9 +2100,15 @@ class FunnelController extends Controller
             'checkoutActionCount' => 0,
             'offerAcceptActionCount' => 0,
             'offerDeclineActionCount' => 0,
+            'invalidTargetCount' => 0,
+            'pricingAmountCount' => 0,
         ];
+        $normalizedSlugs = collect($validStepSlugs)
+            ->map(fn ($slug) => strtolower(trim((string) $slug)))
+            ->filter()
+            ->values();
 
-        $visit = function ($node) use (&$visit, &$stats): void {
+        $visit = function ($node) use (&$visit, &$stats, $normalizedSlugs, $isCheckoutStep): void {
             if (!is_array($node)) {
                 return;
             }
@@ -2033,6 +2130,9 @@ class FunnelController extends Controller
                         $stats['navigateActionCount']++;
                     } elseif ($actionType === 'step' && $stepSlug !== '') {
                         $stats['navigateActionCount']++;
+                        if (! $normalizedSlugs->contains(strtolower($stepSlug))) {
+                            $stats['invalidTargetCount']++;
+                        }
                     } elseif ($actionType === 'link' && $link !== '' && $link !== '#') {
                         $stats['navigateActionCount']++;
                     } elseif ($actionType === 'checkout') {
@@ -2047,6 +2147,17 @@ class FunnelController extends Controller
                     $actionType = strtolower(trim((string) ($settings['ctaActionType'] ?? '')));
                     $link = trim((string) ($settings['ctaLink'] ?? ''));
                     $stepSlug = trim((string) ($settings['ctaActionStepSlug'] ?? ''));
+                    foreach (['price', 'regularPrice'] as $amountKey) {
+                        $amountText = trim((string) ($settings[$amountKey] ?? ''));
+                        if ($amountText === '') {
+                            continue;
+                        }
+                        $clean = preg_replace('/[^0-9,.\-]/', '', $amountText);
+                        if (is_string($clean) && $clean !== '' && (float) str_replace(',', '', $clean) > 0) {
+                            $stats['pricingAmountCount']++;
+                            break;
+                        }
+                    }
                     if ($actionType === '') {
                         $actionType = ($link !== '' && $link !== '#') ? 'link' : 'next_step';
                     }
@@ -2054,9 +2165,14 @@ class FunnelController extends Controller
                         $stats['navigateActionCount']++;
                     } elseif ($actionType === 'step' && $stepSlug !== '') {
                         $stats['navigateActionCount']++;
+                        if (! $normalizedSlugs->contains(strtolower($stepSlug))) {
+                            $stats['invalidTargetCount']++;
+                        }
                     } elseif ($actionType === 'link' && $link !== '' && $link !== '#') {
                         $stats['navigateActionCount']++;
                     } elseif ($actionType === 'checkout') {
+                        $stats['checkoutActionCount']++;
+                    } elseif ($isCheckoutStep) {
                         $stats['checkoutActionCount']++;
                     }
                 }

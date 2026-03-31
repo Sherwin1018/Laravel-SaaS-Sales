@@ -7,13 +7,14 @@ use App\Models\FunnelStep;
 use App\Models\Lead;
 use App\Models\Payment;
 use App\Services\PayMongoCheckoutService;
+use App\Services\FunnelTrackingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\Rule;
 
 class FunnelPortalController extends Controller
 {
-    public function show(Request $request, string $funnelSlug, ?string $stepSlug = null)
+    public function show(Request $request, FunnelTrackingService $tracking, string $funnelSlug, ?string $stepSlug = null)
     {
         $funnel = Funnel::with(['tenant', 'steps'])->where('slug', $funnelSlug)->where('status', 'published')->firstOrFail();
         $steps = $funnel->steps->where('is_active', true)->sortBy('position')->values();
@@ -27,6 +28,9 @@ class FunnelPortalController extends Controller
 
         $isFirstStep = (int) $steps->first()->id === (int) $step->id;
         $selectedPricing = $this->syncSelectedPricingFromRequest($request, $funnel, $steps, $step, $isFirstStep);
+        $tracking->trackStepViewed($funnel, $step, $request, [
+            'is_first_step' => $isFirstStep,
+        ]);
 
         return view('funnels.portal.step', [
             'funnel' => $funnel,
@@ -38,9 +42,10 @@ class FunnelPortalController extends Controller
         ]);
     }
 
-    public function optIn(Request $request, string $funnelSlug, string $stepSlug)
+    public function optIn(Request $request, FunnelTrackingService $tracking, string $funnelSlug, string $stepSlug)
     {
         [$funnel, $steps, $step] = $this->resolveStepContext($funnelSlug, $stepSlug, 'opt_in');
+        $sessionIdentifier = $tracking->sessionIdentifier($request);
 
         $validated = $request->validate([
             'first_name' => 'nullable|string|max:150',
@@ -53,6 +58,7 @@ class FunnelPortalController extends Controller
             'city_municipality' => 'nullable|string|max:150',
             'barangay' => 'nullable|string|max:150',
             'street' => 'nullable|string|max:180',
+            'website' => 'nullable|string|size:0',
         ], [
             'email.required' => 'Email is required.',
             'email.email' => 'Please enter a valid email.',
@@ -87,11 +93,28 @@ class FunnelPortalController extends Controller
         );
         $lead->save();
 
-        $lead->increment('score', 20);
-        $lead->activities()->create([
-            'activity_type' => 'Scoring',
-            'notes' => 'Form Submitted (+20 points)',
-        ]);
+        $isRepeatSubmission = $tracking->hasRecentEvent([
+            'tenant_id' => $funnel->tenant_id,
+            'funnel_id' => $funnel->id,
+            'funnel_step_id' => $step->id,
+            'event_name' => FunnelTrackingService::EVENT_OPT_IN_SUBMITTED,
+            'session_identifier' => $sessionIdentifier,
+        ], 90);
+
+        if (! $isRepeatSubmission) {
+            $lead->increment('score', 20);
+            $lead->activities()->create([
+                'activity_type' => 'Scoring',
+                'notes' => 'Form Submitted (+20 points)',
+            ]);
+
+            $tracking->trackOptInSubmitted($funnel, $step, $lead, $request, [
+                'submitted_fields' => collect(array_keys($validated))
+                    ->reject(fn (string $field) => $field === 'website')
+                    ->values()
+                    ->all(),
+            ]);
+        }
 
         session()->put($this->leadSessionKey($funnel->id), $lead->id);
 
@@ -100,9 +123,16 @@ class FunnelPortalController extends Controller
         return redirect()->route('funnels.portal.step', ['funnelSlug' => $funnel->slug, 'stepSlug' => $next->slug]);
     }
 
-    public function checkout(Request $request, PayMongoCheckoutService $payMongo, string $funnelSlug, string $stepSlug)
+    public function checkout(
+        Request $request,
+        PayMongoCheckoutService $payMongo,
+        FunnelTrackingService $tracking,
+        string $funnelSlug,
+        string $stepSlug
+    )
     {
         [$funnel, $steps, $step] = $this->resolveStepContext($funnelSlug, $stepSlug, 'checkout');
+        $sessionIdentifier = $tracking->sessionIdentifier($request);
 
         $validated = $request->validate([
             'amount' => 'nullable|numeric|min:0.01',
@@ -115,6 +145,7 @@ class FunnelPortalController extends Controller
             'checkout_pricing_subtitle' => 'nullable|string|max:300',
             'checkout_pricing_badge' => 'nullable|string|max:80',
             'checkout_pricing_features' => 'nullable|string|max:5000',
+            'website' => 'nullable|string|size:0',
         ]);
 
         $submittedAmount = array_key_exists('amount', $validated) ? (float) $validated['amount'] : null;
@@ -145,22 +176,56 @@ class FunnelPortalController extends Controller
         }
         abort_if($amount <= 0, 422, 'Checkout amount is not configured.');
 
-        if ($payMongo->isConfigured()) {
-            return $this->checkoutWithPayMongo($payMongo, $funnel, $steps, $step, $amount, $selectedPricing);
+        $recentPayment = Payment::query()
+            ->where('tenant_id', $funnel->tenant_id)
+            ->where('funnel_id', $funnel->id)
+            ->where('funnel_step_id', $step->id)
+            ->where('session_identifier', $sessionIdentifier)
+            ->where('amount', $amount)
+            ->where('created_at', '>=', now()->subMinutes(10))
+            ->latest('id')
+            ->first();
+
+        if ($recentPayment) {
+            if ($recentPayment->status === 'paid') {
+                $tracking->trackPaymentPaid($recentPayment, ['source' => 'checkout_repeat_guard']);
+
+                return $this->redirectAfterPaidCheckout($funnel, $steps, $step);
+            }
+
+            return redirect()
+                ->route('funnels.portal.step', ['funnelSlug' => $funnel->slug, 'stepSlug' => $step->slug])
+                ->with('error', 'Checkout is already in progress for this session. Please finish the current payment before trying again.');
         }
 
-        Payment::create([
+        if ($payMongo->isConfigured()) {
+            return $this->checkoutWithPayMongo($payMongo, $tracking, $request, $funnel, $steps, $step, $amount, $selectedPricing);
+        }
+
+        $payment = Payment::create([
             'tenant_id' => $funnel->tenant_id,
+            'funnel_id' => $funnel->id,
+            'funnel_step_id' => $step->id,
             'lead_id' => $this->currentLeadId($funnel->id),
             'amount' => $amount,
             'status' => 'paid',
             'payment_date' => now()->toDateString(),
+            'session_identifier' => $sessionIdentifier,
         ]);
+
+        $tracking->trackCheckoutStarted($funnel, $step, $payment, $request, $selectedPricing, ['source' => 'direct_checkout']);
+        $tracking->trackPaymentPaid($payment, ['source' => 'direct_checkout']);
 
         return $this->redirectAfterPaidCheckout($funnel, $steps, $step);
     }
 
-    public function paymongoReturn(PayMongoCheckoutService $payMongo, string $funnelSlug, string $stepSlug, int $payment)
+    public function paymongoReturn(
+        PayMongoCheckoutService $payMongo,
+        FunnelTrackingService $tracking,
+        string $funnelSlug,
+        string $stepSlug,
+        int $payment
+    )
     {
         $funnel = Funnel::with('steps')->where('slug', $funnelSlug)->where('status', 'published')->firstOrFail();
         $steps = $funnel->steps->where('is_active', true)->sortBy('position')->values();
@@ -172,6 +237,7 @@ class FunnelPortalController extends Controller
         abort_unless((int) $record->tenant_id === (int) $funnel->tenant_id, 403);
 
         if ($record->status === 'paid') {
+            $tracking->trackPaymentPaid($record, ['source' => 'paymongo_return_cached']);
             return $this->redirectAfterPaidCheckout($funnel, $steps, $step);
         }
 
@@ -209,6 +275,7 @@ class FunnelPortalController extends Controller
                 'payment_method' => $method ?? $record->payment_method,
                 'payment_date' => now()->toDateString(),
             ]);
+            $tracking->trackPaymentPaid($record->fresh(), ['source' => 'paymongo_return']);
 
             return $this->redirectAfterPaidCheckout($funnel, $steps, $step);
         }
@@ -220,6 +287,8 @@ class FunnelPortalController extends Controller
 
     private function checkoutWithPayMongo(
         PayMongoCheckoutService $payMongo,
+        FunnelTrackingService $tracking,
+        Request $request,
         Funnel $funnel,
         $steps,
         FunnelStep $step,
@@ -234,12 +303,17 @@ class FunnelPortalController extends Controller
 
         $payment = Payment::create([
             'tenant_id' => $funnel->tenant_id,
+            'funnel_id' => $funnel->id,
+            'funnel_step_id' => $step->id,
             'lead_id' => $leadId,
             'amount' => $amount,
             'status' => 'pending',
             'payment_date' => now()->toDateString(),
             'provider' => 'paymongo',
+            'session_identifier' => $tracking->sessionIdentifier($request),
         ]);
+
+        $tracking->trackCheckoutStarted($funnel, $step, $payment, $request, $selectedPricing, ['source' => 'paymongo']);
 
         $successUrl = URL::signedRoute('funnels.portal.paymongo.return', [
             'funnelSlug' => $funnel->slug,
@@ -309,24 +383,50 @@ class FunnelPortalController extends Controller
         return redirect()->route('funnels.portal.step', ['funnelSlug' => $funnel->slug, 'stepSlug' => $next->slug]);
     }
 
-    public function offer(Request $request, string $funnelSlug, string $stepSlug)
+    public function offer(Request $request, FunnelTrackingService $tracking, string $funnelSlug, string $stepSlug)
     {
         [$funnel, $steps, $step] = $this->resolveStepContext($funnelSlug, $stepSlug, null);
         abort_unless(in_array($step->type, ['upsell', 'downsell'], true), 422, 'Invalid offer step.');
 
         $validated = $request->validate([
             'decision' => ['required', Rule::in(['accept', 'decline'])],
+            'website' => 'nullable|string|size:0',
         ]);
 
         $accept = $validated['decision'] === 'accept';
-        if ($accept && (float) $step->price > 0) {
-            Payment::create([
+        $recentDecision = $tracking->hasRecentEvent([
+            'tenant_id' => $funnel->tenant_id,
+            'funnel_id' => $funnel->id,
+            'funnel_step_id' => $step->id,
+            'event_name' => $step->type === 'upsell'
+                ? ($accept ? FunnelTrackingService::EVENT_UPSELL_ACCEPTED : FunnelTrackingService::EVENT_UPSELL_DECLINED)
+                : ($accept ? FunnelTrackingService::EVENT_DOWNSELL_ACCEPTED : FunnelTrackingService::EVENT_DOWNSELL_DECLINED),
+            'session_identifier' => $tracking->sessionIdentifier($request),
+        ], 90);
+
+        $payment = null;
+        if (! $recentDecision && $accept && (float) $step->price > 0) {
+            $payment = Payment::create([
                 'tenant_id' => $funnel->tenant_id,
+                'funnel_id' => $funnel->id,
+                'funnel_step_id' => $step->id,
                 'lead_id' => $this->currentLeadId($funnel->id),
                 'amount' => (float) $step->price,
                 'status' => 'paid',
                 'payment_date' => now()->toDateString(),
+                'session_identifier' => $tracking->sessionIdentifier($request),
             ]);
+            $tracking->trackPaymentPaid($payment, ['source' => 'offer_accept']);
+        }
+
+        if (! $recentDecision) {
+            $lead = null;
+            $leadId = $this->currentLeadId($funnel->id);
+            if ($leadId) {
+                $lead = Lead::query()->find($leadId);
+            }
+
+            $tracking->trackOfferDecision($funnel, $step, $validated['decision'], $lead, $payment, $request);
         }
 
         $ordered = $steps->values();

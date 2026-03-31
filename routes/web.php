@@ -129,6 +129,8 @@ Route::middleware(['auth', 'tenant.subscription', 'role:sales-agent,marketing-ma
         Route::post('/funnels/{funnel}/builder/upload-image', [FunnelController::class, 'uploadBuilderImage'])->name('funnels.builder.image.upload');
         Route::post('/funnels/{funnel}/publish', [FunnelController::class, 'publish'])->name('funnels.publish');
         Route::post('/funnels/{funnel}/unpublish', [FunnelController::class, 'unpublish'])->name('funnels.unpublish');
+        Route::get('/funnels/{funnel}/analytics', [FunnelController::class, 'analytics'])->name('funnels.analytics');
+        Route::get('/funnels/{funnel}/events', [FunnelController::class, 'events'])->name('funnels.events');
         Route::delete('/funnels/{funnel}', [FunnelController::class, 'destroy'])->name('funnels.destroy');
         Route::post('/funnels/{funnel}/steps', [FunnelController::class, 'storeStep'])->name('funnels.steps.store');
         Route::put('/funnels/{funnel}/steps/{step}', [FunnelController::class, 'updateStep'])->name('funnels.steps.update');
@@ -148,14 +150,14 @@ Route::middleware(['auth', 'role:customer'])->group(function () {
     Route::get('/dashboard/customer', [DashboardController::class, 'customer'])->name('dashboard.customer');
 });
 
-Route::get('/f/{funnelSlug}/{stepSlug?}', [FunnelPortalController::class, 'show'])->name('funnels.portal.step');
-Route::get('/funnel/{funnelSlug}/{stepSlug?}', [FunnelPortalController::class, 'show'])->name('funnels.portal.step.alias');
-Route::post('/f/{funnelSlug}/{stepSlug}/opt-in', [FunnelPortalController::class, 'optIn'])->name('funnels.portal.optin');
-Route::post('/f/{funnelSlug}/{stepSlug}/checkout', [FunnelPortalController::class, 'checkout'])->name('funnels.portal.checkout');
+Route::get('/f/{funnelSlug}/{stepSlug?}', [FunnelPortalController::class, 'show'])->middleware('throttle:funnel-public-view')->name('funnels.portal.step');
+Route::get('/funnel/{funnelSlug}/{stepSlug?}', [FunnelPortalController::class, 'show'])->middleware('throttle:funnel-public-view')->name('funnels.portal.step.alias');
+Route::post('/f/{funnelSlug}/{stepSlug}/opt-in', [FunnelPortalController::class, 'optIn'])->middleware('throttle:funnel-public-submit')->name('funnels.portal.optin');
+Route::post('/f/{funnelSlug}/{stepSlug}/checkout', [FunnelPortalController::class, 'checkout'])->middleware('throttle:funnel-public-submit')->name('funnels.portal.checkout');
 Route::get('/f/{funnelSlug}/{stepSlug}/paymongo/return/{payment}', [FunnelPortalController::class, 'paymongoReturn'])
     ->middleware('signed')
     ->name('funnels.portal.paymongo.return');
-Route::post('/f/{funnelSlug}/{stepSlug}/offer', [FunnelPortalController::class, 'offer'])->name('funnels.portal.offer');
+Route::post('/f/{funnelSlug}/{stepSlug}/offer', [FunnelPortalController::class, 'offer'])->middleware('throttle:funnel-public-submit')->name('funnels.portal.offer');
 Route::get('/register/paymongo/return/{signupIntent}', [PublicOnboardingController::class, 'paymongoReturn'])
     ->middleware('signed')
     ->name('register.paymongo.return');
