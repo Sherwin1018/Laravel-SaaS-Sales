@@ -45,7 +45,6 @@ class FunnelPortalController extends Controller
     public function optIn(Request $request, FunnelTrackingService $tracking, string $funnelSlug, string $stepSlug)
     {
         [$funnel, $steps, $step] = $this->resolveStepContext($funnelSlug, $stepSlug, 'opt_in');
-        $sessionIdentifier = $tracking->sessionIdentifier($request);
 
         $validated = $request->validate([
             'first_name' => 'nullable|string|max:150',
@@ -92,6 +91,20 @@ class FunnelPortalController extends Controller
             $step->step_tags ?? []
         );
         $lead->save();
+
+        $currentLeadId = $this->currentLeadId($funnel->id);
+        $currentLead = $currentLeadId ? Lead::query()->find($currentLeadId) : null;
+        $submittedEmail = mb_strtolower(trim((string) $lead->email));
+        $currentEmail = mb_strtolower(trim((string) ($currentLead->email ?? '')));
+        $isNewJourney = $currentLead && $currentEmail !== '' && $submittedEmail !== '' && $currentEmail !== $submittedEmail;
+
+        if ($isNewJourney) {
+            session()->forget($this->leadSessionKey($funnel->id));
+            session()->forget($this->selectedPricingSessionKey($funnel->id));
+            $request->session()->regenerate();
+        }
+
+        $sessionIdentifier = $tracking->sessionIdentifier($request);
 
         $isRepeatSubmission = $tracking->hasRecentEvent([
             'tenant_id' => $funnel->tenant_id,
@@ -391,7 +404,23 @@ class FunnelPortalController extends Controller
         $validated = $request->validate([
             'decision' => ['required', Rule::in(['accept', 'decline'])],
             'website' => 'nullable|string|size:0',
+            'checkout_pricing_id' => 'nullable|string|max:120',
+            'checkout_pricing_source_step' => 'nullable|string|max:120',
+            'checkout_pricing_plan' => 'nullable|string|max:200',
+            'checkout_pricing_price' => 'nullable|string|max:120',
+            'checkout_pricing_regular_price' => 'nullable|string|max:120',
+            'checkout_pricing_period' => 'nullable|string|max:60',
+            'checkout_pricing_subtitle' => 'nullable|string|max:300',
+            'checkout_pricing_badge' => 'nullable|string|max:80',
+            'checkout_pricing_features' => 'nullable|string|max:4000',
         ]);
+
+        $requestSelection = $this->pricingSelectionFromCheckoutRequest($validated);
+        $selectedPricing = $this->mergePricingSelections($this->currentSelectedPricing($funnel->id), $requestSelection);
+        $offerAmount = $this->amountFromSelectedPricing($selectedPricing)
+            ?? ((float) ($step->price ?? 0) > 0 ? (float) $step->price : null)
+            ?? $this->primaryPricingAmountFromLayout($step)
+            ?? 0.0;
 
         $accept = $validated['decision'] === 'accept';
         $recentDecision = $tracking->hasRecentEvent([
@@ -405,13 +434,13 @@ class FunnelPortalController extends Controller
         ], 90);
 
         $payment = null;
-        if (! $recentDecision && $accept && (float) $step->price > 0) {
+        if (! $recentDecision && $accept && $offerAmount > 0) {
             $payment = Payment::create([
                 'tenant_id' => $funnel->tenant_id,
                 'funnel_id' => $funnel->id,
                 'funnel_step_id' => $step->id,
                 'lead_id' => $this->currentLeadId($funnel->id),
-                'amount' => (float) $step->price,
+                'amount' => $offerAmount,
                 'status' => 'paid',
                 'payment_date' => now()->toDateString(),
                 'session_identifier' => $tracking->sessionIdentifier($request),
@@ -426,7 +455,10 @@ class FunnelPortalController extends Controller
                 $lead = Lead::query()->find($leadId);
             }
 
-            $tracking->trackOfferDecision($funnel, $step, $validated['decision'], $lead, $payment, $request);
+            $tracking->trackOfferDecision($funnel, $step, $validated['decision'], $lead, $payment, $request, [
+                'amount' => $offerAmount,
+                'selected_pricing' => $selectedPricing,
+            ]);
         }
 
         $ordered = $steps->values();

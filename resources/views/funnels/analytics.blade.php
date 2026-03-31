@@ -28,13 +28,11 @@
         .analytics-card h3 { margin:0 0 14px; color: var(--theme-primary, #240E35); }
         .analytics-chart-wrap { position:relative; min-height:280px; }
         .analytics-chart-wrap canvas { width:100% !important; height:100% !important; display:block; }
-        .analytics-legend { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:12px; margin:0 0 12px; }
-        .analytics-legend-item { display:flex; align-items:center; justify-content:flex-start; text-align:left; gap:8px; }
-        .analytics-legend-swatch { width:16px; height:16px; border-radius:4px; flex:0 0 16px; }
         .analytics-card.analytics-card--step-visits { width:100%; }
         .analytics-card.analytics-card--step-visits .analytics-chart-wrap { min-height: 260px; }
         .analytics-card.analytics-card--offer-rates { width:100%; }
-        .analytics-card.analytics-card--offer-rates .analytics-chart-wrap { min-height: 260px; max-height: 260px; }
+        .analytics-card.analytics-card--offer-rates .analytics-chart-wrap { min-height: 260px; max-height: 260px; display:flex; align-items:center; justify-content:center; }
+        .analytics-card.analytics-card--offer-rates .analytics-chart-wrap canvas { max-width:300px !important; max-height:300px !important; margin:0 auto; }
         .analytics-card.analytics-card--offer-counts { width:100%; }
         .analytics-chart-empty { min-height:280px; display:grid; place-items:center; text-align:center; padding:20px; border-radius:14px; background: var(--theme-surface-softer, #F7F7FB); color: var(--theme-muted, #6B7280); }
         .analytics-table-wrap { overflow:auto; }
@@ -44,19 +42,33 @@
         .analytics-pill { display:inline-flex; align-items:center; padding:5px 10px; border-radius:999px; background: var(--theme-surface-soft, #F3EEF7); color: var(--theme-primary, #240E35); font-size:12px; font-weight:800; }
         .analytics-mini-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
         .analytics-mini-stat { border:1px solid var(--theme-border, #E6E1EF); border-radius:14px; padding:14px; background:linear-gradient(180deg,#fff,#fcfbfe); }
+        .analytics-mini-stat--button { width:100%; appearance:none; text-align:left; cursor:pointer; transition:transform .15s ease, box-shadow .15s ease, border-color .15s ease; }
+        .analytics-mini-stat--button:hover { transform:translateY(-1px); box-shadow:0 10px 24px rgba(15,23,42,.08); border-color:rgba(36, 14, 53, .18); }
+        .analytics-mini-stat--button:focus-visible { outline:3px solid rgba(124,58,237,.24); outline-offset:2px; }
         .analytics-mini-stat span { display:block; font-size:12px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; color: var(--theme-muted, #6B7280); }
         .analytics-mini-stat strong { display:block; margin-top:8px; font-size:24px; color: var(--theme-primary, #240E35); }
+        .analytics-mini-stat small { display:block; margin-top:8px; color: var(--theme-muted, #6B7280); font-size:12px; }
         .analytics-events { display:grid; gap:12px; }
         .analytics-event { border:1px solid var(--theme-border, #E6E1EF); border-radius:14px; padding:14px; background:linear-gradient(180deg,#fff,#fcfbfe); }
         .analytics-event-head { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px; }
         .analytics-event-meta { color: var(--theme-muted, #6B7280); font-size:13px; line-height:1.5; }
         .analytics-empty { padding:18px; border-radius:14px; background: var(--theme-surface-softer, #F7F7FB); color: var(--theme-muted, #6B7280); }
+        .analytics-section-filters { display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end; margin-bottom:14px; }
+        .analytics-table-row-hidden { display:none; }
+        .analytics-modal[hidden] { display:none !important; }
+        .analytics-modal { position:fixed; inset:0; z-index:1100; display:grid; place-items:center; padding:20px; }
+        .analytics-modal-backdrop { position:absolute; inset:0; background:rgba(15, 23, 42, .48); }
+        .analytics-modal-dialog { position:relative; width:min(920px, calc(100vw - 32px)); max-height:calc(100vh - 40px); overflow:auto; border-radius:20px; border:1px solid var(--theme-border, #E6E1EF); background:#fff; box-shadow:0 24px 70px rgba(15,23,42,.28); }
+        .analytics-modal-head { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; padding:20px 20px 0; }
+        .analytics-modal-head h3 { margin:0; }
+        .analytics-modal-head p { margin:6px 0 0; color:var(--theme-muted, #6B7280); }
+        .analytics-modal-close { appearance:none; border:1px solid var(--theme-border, #E6E1EF); background:#fff; color:var(--theme-primary, #240E35); width:40px; height:40px; border-radius:999px; font-size:18px; font-weight:900; cursor:pointer; }
+        .analytics-modal-body { padding:18px 20px 20px; }
         @media (max-width: 1200px) {
             .analytics-grid.analytics-grid--summary { grid-template-columns:1fr; }
         }
         @media (max-width: 960px) {
             .analytics-grid { grid-template-columns:1fr; }
-            .analytics-legend { grid-template-columns:1fr; }
         }
     </style>
 @endsection
@@ -81,6 +93,41 @@
         $dailyPaidValues = $dailySeries->pluck('paid')->map(fn ($value) => (int) $value)->values()->all();
         $conversionLabels = $conversionFunnel->pluck('label')->values()->all();
         $conversionValues = $conversionFunnel->pluck('count')->map(fn ($value) => (int) $value)->values()->all();
+        $offerActivityGroups = [
+            'upsell_accepted' => [
+                'title' => 'Upsell Accepted',
+                'description' => 'Customers who accepted the upsell offer.',
+                'action' => 'Accepted',
+                'offer_type' => 'Upsell',
+                'count' => (int) ($offerCounts['upsell_accepted'] ?? 0),
+                'rows' => $analytics['offer_activity']['upsell_accepted'] ?? [],
+            ],
+            'upsell_declined' => [
+                'title' => 'Upsell Declined',
+                'description' => 'Customers who declined the upsell offer.',
+                'action' => 'Declined',
+                'offer_type' => 'Upsell',
+                'count' => (int) ($offerCounts['upsell_declined'] ?? 0),
+                'rows' => $analytics['offer_activity']['upsell_declined'] ?? [],
+            ],
+            'downsell_accepted' => [
+                'title' => 'Downsell Accepted',
+                'description' => 'Customers who accepted the downsell offer.',
+                'action' => 'Accepted',
+                'offer_type' => 'Downsell',
+                'count' => (int) ($offerCounts['downsell_accepted'] ?? 0),
+                'rows' => $analytics['offer_activity']['downsell_accepted'] ?? [],
+            ],
+            'downsell_declined' => [
+                'title' => 'Downsell Declined',
+                'description' => 'Customers who declined the downsell offer.',
+                'action' => 'Declined',
+                'offer_type' => 'Downsell',
+                'count' => (int) ($offerCounts['downsell_declined'] ?? 0),
+                'rows' => $analytics['offer_activity']['downsell_declined'] ?? [],
+            ],
+        ];
+        $offerCustomerSummary = collect($analytics['offer_customer_summary'] ?? []);
         $offerRateValues = [
             (float) ($rates['upsell_acceptance_rate'] ?? 0),
             (float) ($rates['downsell_acceptance_rate'] ?? 0),
@@ -196,20 +243,6 @@
             <div class="analytics-card analytics-card--offer-rates">
                 <h3>Offer Rates</h3>
                 @if($hasOfferData)
-                    <div class="analytics-legend">
-                        <div class="analytics-legend-item">
-                            <span class="analytics-legend-swatch" style="background:#240E35;"></span>
-                            <span>Upsell Acceptance</span>
-                        </div>
-                        <div class="analytics-legend-item">
-                            <span class="analytics-legend-swatch" style="background:#6B4A7A;"></span>
-                            <span>Downsell Acceptance</span>
-                        </div>
-                        <div class="analytics-legend-item">
-                            <span class="analytics-legend-swatch" style="background:#F97316;"></span>
-                            <span>Abandoned Checkout</span>
-                        </div>
-                    </div>
                     <div class="analytics-chart-wrap">
                         <canvas id="offerRatesChart"></canvas>
                     </div>
@@ -226,22 +259,19 @@
             <div class="analytics-card analytics-card--offer-counts">
                 <h3>Offer Counts</h3>
                 <div class="analytics-mini-grid">
-                    <div class="analytics-mini-stat">
-                        <span>Upsell Accepted</span>
-                        <strong>{{ number_format((int) ($offerCounts['upsell_accepted'] ?? 0)) }}</strong>
-                    </div>
-                    <div class="analytics-mini-stat">
-                        <span>Upsell Declined</span>
-                        <strong>{{ number_format((int) ($offerCounts['upsell_declined'] ?? 0)) }}</strong>
-                    </div>
-                    <div class="analytics-mini-stat">
-                        <span>Downsell Accepted</span>
-                        <strong>{{ number_format((int) ($offerCounts['downsell_accepted'] ?? 0)) }}</strong>
-                    </div>
-                    <div class="analytics-mini-stat">
-                        <span>Downsell Declined</span>
-                        <strong>{{ number_format((int) ($offerCounts['downsell_declined'] ?? 0)) }}</strong>
-                    </div>
+                    @foreach($offerActivityGroups as $groupKey => $group)
+                        <button
+                            type="button"
+                            class="analytics-mini-stat analytics-mini-stat--button"
+                            data-offer-activity="{{ $groupKey }}"
+                            aria-haspopup="dialog"
+                            aria-controls="offerActivityModal"
+                        >
+                            <span>{{ $group['title'] }}</span>
+                            <strong>{{ number_format($group['count']) }}</strong>
+                            <small>Click to view customers</small>
+                        </button>
+                    @endforeach
                 </div>
             </div>
         </div>
@@ -258,6 +288,79 @@
                 <h3>Conversion Path</h3>
                 <div class="analytics-chart-wrap">
                     <canvas id="conversionPathChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="analytics-card">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+                <h3 style="margin:0;">Offer Activity Table</h3>
+                <button type="button" id="toggleOfferActivityBtn" class="analytics-toggle-btn" aria-expanded="false" aria-controls="offerActivityContent">Show</button>
+            </div>
+            <div id="offerActivityContent" style="display:none;">
+                <div class="analytics-section-filters">
+                    <div class="analytics-field">
+                        <label for="offerActivityUpsellFilter">Upsell</label>
+                        <select id="offerActivityUpsellFilter">
+                            <option value="">All upsell statuses</option>
+                            <option value="Accepted">Accepted</option>
+                            <option value="Declined">Declined</option>
+                            <option value="Did not avail">Did not avail</option>
+                        </select>
+                    </div>
+                    <div class="analytics-field">
+                        <label for="offerActivityDownsellFilter">Downsell</label>
+                        <select id="offerActivityDownsellFilter">
+                            <option value="">All downsell statuses</option>
+                            <option value="Accepted">Accepted</option>
+                            <option value="Declined">Declined</option>
+                            <option value="Did not avail">Did not avail</option>
+                        </select>
+                    </div>
+                    <button type="button" id="clearOfferActivityFiltersBtn" class="analytics-btn">Clear</button>
+                </div>
+                <div class="analytics-table-wrap">
+                    <table class="analytics-table">
+                        <thead>
+                            <tr>
+                                <th>Customer</th>
+                                <th>Email</th>
+                                <th>Selected Subscription</th>
+                                <th>Checkout Paid</th>
+                                <th>Upsell</th>
+                                <th>Downsell</th>
+                                <th>Last Activity</th>
+                            </tr>
+                        </thead>
+                        <tbody id="offerActivityTableBody">
+                            @forelse($offerCustomerSummary as $row)
+                                @php
+                                    $upsellStatus = (string) ($row['upsell_status'] ?? 'Did not avail');
+                                    $downsellStatus = (string) ($row['downsell_status'] ?? 'Did not avail');
+                                    $upsellFilterValue = str_starts_with($upsellStatus, 'Accepted') ? 'Accepted' : $upsellStatus;
+                                    $downsellFilterValue = str_starts_with($downsellStatus, 'Accepted') ? 'Accepted' : $downsellStatus;
+                                @endphp
+                                <tr data-upsell-status="{{ $upsellFilterValue }}" data-downsell-status="{{ $downsellFilterValue }}">
+                                    <td><strong>{{ $row['customer'] ?? 'Anonymous visitor' }}</strong></td>
+                                    <td>{{ $row['email'] ?? 'N/A' }}</td>
+                                    <td>{{ $row['selected_offer'] ?? 'N/A' }}</td>
+                                    <td>PHP {{ number_format((float) ($row['checkout_amount'] ?? 0), 2) }}</td>
+                                    <td>{{ $upsellStatus }}</td>
+                                    <td>{{ $downsellStatus }}</td>
+                                    <td>{{ $row['last_activity'] ?? 'N/A' }}</td>
+                                </tr>
+                            @empty
+                            <tr id="offerActivityEmptyRow">
+                                    <td colspan="7">No upsell or downsell activity has been recorded for the current filters.</td>
+                                </tr>
+                            @endforelse
+                            @if($offerCustomerSummary->isNotEmpty())
+                                <tr id="offerActivityNoMatchRow" style="display:none;">
+                                    <td colspan="7">No rows match the selected offer filters.</td>
+                                </tr>
+                            @endif
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -355,6 +458,42 @@
             </div>
         </div>
     </div>
+
+    <div id="offerActivityModal" class="analytics-modal" hidden aria-hidden="true">
+        <div class="analytics-modal-backdrop" data-offer-modal-close></div>
+        <div class="analytics-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="offerActivityModalTitle">
+            <div class="analytics-modal-head">
+                <div>
+                    <h3 id="offerActivityModalTitle">Offer Activity</h3>
+                    <p id="offerActivityModalDescription">Customers tied to this offer action.</p>
+                </div>
+                <button type="button" class="analytics-modal-close" data-offer-modal-close aria-label="Close offer activity modal">&times;</button>
+            </div>
+            <div class="analytics-modal-body">
+                <div class="analytics-table-wrap">
+                    <table class="analytics-table" style="min-width: 720px;">
+                        <thead>
+                            <tr>
+                                <th>Customer</th>
+                                <th>Email</th>
+                                <th>Selected Subscription</th>
+                                <th>Step</th>
+                                <th>Paid Before Offer</th>
+                                <th>Amount</th>
+                                <th>Payment</th>
+                                <th>Time</th>
+                            </tr>
+                        </thead>
+                        <tbody id="offerActivityModalRows">
+                            <tr>
+                                <td colspan="8">Select an offer count card to view matching customers.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @section('scripts')
@@ -371,10 +510,25 @@
         const dailyPaidValues = @json($dailyPaidValues);
         const conversionLabels = @json($conversionLabels);
         const conversionValues = @json($conversionValues);
+        const offerActivityGroups = @json($offerActivityGroups);
+        const toggleOfferActivityBtn = document.getElementById('toggleOfferActivityBtn');
+        const offerActivityContent = document.getElementById('offerActivityContent');
+        const offerActivityUpsellFilter = document.getElementById('offerActivityUpsellFilter');
+        const offerActivityDownsellFilter = document.getElementById('offerActivityDownsellFilter');
+        const clearOfferActivityFiltersBtn = document.getElementById('clearOfferActivityFiltersBtn');
+        const offerActivityTableBody = document.getElementById('offerActivityTableBody');
+        const offerActivityTableRows = offerActivityTableBody ? Array.from(offerActivityTableBody.querySelectorAll('tr[data-upsell-status]')) : [];
+        const offerActivityNoMatchRow = document.getElementById('offerActivityNoMatchRow');
         const toggleStepPerformanceBtn = document.getElementById('toggleStepPerformanceBtn');
         const stepPerformanceContent = document.getElementById('stepPerformanceContent');
         const toggleRecentEventsBtn = document.getElementById('toggleRecentEventsBtn');
         const recentEventsContent = document.getElementById('recentEventsContent');
+        const offerActivityModal = document.getElementById('offerActivityModal');
+        const offerActivityModalTitle = document.getElementById('offerActivityModalTitle');
+        const offerActivityModalDescription = document.getElementById('offerActivityModalDescription');
+        const offerActivityModalRows = document.getElementById('offerActivityModalRows');
+        const offerActivityButtons = document.querySelectorAll('[data-offer-activity]');
+        let lastOfferActivityTrigger = null;
 
         function bindCollapsibleSection(button, content) {
             if (!button || !content) {
@@ -389,8 +543,144 @@
             });
         }
 
+        bindCollapsibleSection(toggleOfferActivityBtn, offerActivityContent);
         bindCollapsibleSection(toggleStepPerformanceBtn, stepPerformanceContent);
         bindCollapsibleSection(toggleRecentEventsBtn, recentEventsContent);
+
+        function applyOfferActivityFilters() {
+            if (!offerActivityTableRows.length) {
+                return;
+            }
+
+            const upsellValue = String(offerActivityUpsellFilter?.value || '').trim().toLowerCase();
+            const downsellValue = String(offerActivityDownsellFilter?.value || '').trim().toLowerCase();
+            let visibleCount = 0;
+
+            offerActivityTableRows.forEach((row) => {
+                const rowUpsell = String(row.getAttribute('data-upsell-status') || '').trim().toLowerCase();
+                const rowDownsell = String(row.getAttribute('data-downsell-status') || '').trim().toLowerCase();
+                const visible = (upsellValue === '' || rowUpsell === upsellValue)
+                    && (downsellValue === '' || rowDownsell === downsellValue);
+
+                row.classList.toggle('analytics-table-row-hidden', !visible);
+                if (visible) {
+                    visibleCount += 1;
+                }
+            });
+
+            if (offerActivityNoMatchRow) {
+                offerActivityNoMatchRow.style.display = visibleCount === 0 ? '' : 'none';
+            }
+        }
+
+        if (offerActivityUpsellFilter) {
+            offerActivityUpsellFilter.addEventListener('change', applyOfferActivityFilters);
+        }
+
+        if (offerActivityDownsellFilter) {
+            offerActivityDownsellFilter.addEventListener('change', applyOfferActivityFilters);
+        }
+
+        if (clearOfferActivityFiltersBtn) {
+            clearOfferActivityFiltersBtn.addEventListener('click', function() {
+                if (offerActivityUpsellFilter) {
+                    offerActivityUpsellFilter.value = '';
+                }
+                if (offerActivityDownsellFilter) {
+                    offerActivityDownsellFilter.value = '';
+                }
+                applyOfferActivityFilters();
+            });
+        }
+
+        applyOfferActivityFilters();
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function renderOfferActivityRows(rows) {
+            if (!offerActivityModalRows) {
+                return;
+            }
+
+            if (!rows.length) {
+                offerActivityModalRows.innerHTML = '<tr><td colspan="8">No customers matched this offer action for the current filters.</td></tr>';
+                return;
+            }
+
+            offerActivityModalRows.innerHTML = rows.map((row) => {
+                const selectedOffer = escapeHtml(row.selected_offer || 'N/A');
+                const paidBeforeOffer = Number(row.paid_before_offer || 0).toFixed(2);
+                const amount = Number(row.amount || 0).toFixed(2);
+                const customer = escapeHtml(row.lead_name || row.lead_label || 'Anonymous visitor');
+                const email = escapeHtml(row.lead_email || 'N/A');
+                const step = escapeHtml(row.step_title || 'N/A');
+                const payment = escapeHtml(row.payment_status || 'N/A');
+                const occurredAt = escapeHtml(row.occurred_at_label || 'N/A');
+
+                return `
+                    <tr>
+                        <td><strong>${customer}</strong></td>
+                        <td>${email}</td>
+                        <td>${selectedOffer}</td>
+                        <td>${step}</td>
+                        <td>PHP ${paidBeforeOffer}</td>
+                        <td>PHP ${amount}</td>
+                        <td>${payment}</td>
+                        <td>${occurredAt}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function closeOfferActivityModal() {
+            if (!offerActivityModal) {
+                return;
+            }
+
+            offerActivityModal.hidden = true;
+            offerActivityModal.setAttribute('aria-hidden', 'true');
+
+            if (lastOfferActivityTrigger) {
+                lastOfferActivityTrigger.focus();
+            }
+        }
+
+        function openOfferActivityModal(groupKey, trigger) {
+            const group = offerActivityGroups[groupKey];
+            if (!group || !offerActivityModal || !offerActivityModalTitle || !offerActivityModalDescription) {
+                return;
+            }
+
+            lastOfferActivityTrigger = trigger || null;
+            offerActivityModalTitle.textContent = group.title;
+            offerActivityModalDescription.textContent = group.description;
+            renderOfferActivityRows(Array.isArray(group.rows) ? group.rows : []);
+            offerActivityModal.hidden = false;
+            offerActivityModal.setAttribute('aria-hidden', 'false');
+        }
+
+        offerActivityButtons.forEach((button) => {
+            button.addEventListener('click', function() {
+                openOfferActivityModal(button.getAttribute('data-offer-activity'), button);
+            });
+        });
+
+        document.querySelectorAll('[data-offer-modal-close]').forEach((element) => {
+            element.addEventListener('click', closeOfferActivityModal);
+        });
+
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape' && offerActivityModal && !offerActivityModal.hidden) {
+                closeOfferActivityModal();
+            }
+        });
 
         const stepVisitsCanvas = document.getElementById('stepVisitsChart');
         if (stepVisitsCanvas) {
@@ -443,7 +733,18 @@
                     maintainAspectRatio: false,
                     plugins: {
                         legend: {
-                            display: false
+                            display: true,
+                            position: 'top',
+                            align: 'start',
+                            labels: {
+                                boxWidth: 22,
+                                boxHeight: 12,
+                                padding: 14,
+                                color: '#6B7280',
+                                font: {
+                                    size: 13
+                                }
+                            }
                         },
                         tooltip: {
                             callbacks: {
