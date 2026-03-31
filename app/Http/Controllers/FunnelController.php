@@ -7,6 +7,7 @@ use App\Models\FunnelBuilderAsset;
 use App\Models\FunnelStep;
 use App\Models\FunnelStepRevision;
 use App\Services\FunnelTrackingService;
+use App\Support\TenantPlanEnforcer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -34,16 +35,23 @@ class FunnelController extends Controller
             ->latest()
             ->paginate(10)
             ->withQueryString();
+        $planUsage = app(TenantPlanEnforcer::class)->usageSummary(auth()->user()->tenant);
 
         if ($request->ajax()) {
             return view('funnels._rows', compact('funnels'))->render();
         }
 
-        return view('funnels.index', compact('funnels', 'search'));
+        return view('funnels.index', compact('funnels', 'search', 'planUsage'));
     }
 
     public function create()
     {
+        try {
+            app(TenantPlanEnforcer::class)->ensureCanCreateFunnel(auth()->user()->tenant);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return redirect()->route('funnels.index')->with('error', $e->getMessage());
+        }
+
         return view('funnels.create');
     }
 
@@ -58,6 +66,7 @@ class FunnelController extends Controller
         $user = auth()->user();
 
         try {
+            app(TenantPlanEnforcer::class)->ensureCanCreateFunnel($user->tenant);
             $funnel = Funnel::create([
                 'tenant_id' => $user->tenant_id,
                 'created_by' => $user->id,
@@ -94,6 +103,8 @@ class FunnelController extends Controller
             }
 
             return redirect()->route('funnels.edit', $funnel)->with('success', 'Added Successfully');
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return redirect()->back()->withInput()->with('error', $e->getMessage());
         } catch (\Throwable $e) {
             return redirect()->back()->withInput()->with('error', 'Added Failed');
         }

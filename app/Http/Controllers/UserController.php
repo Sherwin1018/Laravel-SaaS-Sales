@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\Role;
+use App\Support\TenantPlanEnforcer;
 use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
@@ -62,12 +63,13 @@ class UserController extends Controller
         }
 
         $users = $query->latest()->paginate(10);
+        $planUsage = app(TenantPlanEnforcer::class)->usageSummary(auth()->user()->tenant);
 
         if ($request->ajax()) {
             return view('users._rows', compact('users'))->render();
         }
 
-        return view('users.index', compact('users'));
+        return view('users.index', compact('users', 'planUsage'));
     }
 
     /**
@@ -75,6 +77,12 @@ class UserController extends Controller
      */
     public function create()
     {
+        try {
+            app(TenantPlanEnforcer::class)->ensureCanCreateUser(auth()->user()->tenant);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return redirect()->route('users.index')->with('error', $e->getMessage());
+        }
+
         // Get roles assignable by account owner
         $roles = Role::whereIn('slug', ['marketing-manager', 'sales-agent', 'finance', 'customer'])->get();
 
@@ -103,10 +111,10 @@ class UserController extends Controller
             'role' => 'required|exists:roles,slug',
         ], [
             'password.regex' => 'Password must contain uppercase, lowercase, number, and a special character.',
-        ]);
-
+        ]); 
         try {
             $tenantId = auth()->user()->tenant_id;
+            app(TenantPlanEnforcer::class)->ensureCanCreateUser(auth()->user()->tenant);
 
             // Create User
             $user = User::create([
@@ -123,6 +131,8 @@ class UserController extends Controller
             $user->roles()->attach($role);
 
             return redirect()->route('users.index')->with('success', 'Added Successfully');
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return redirect()->back()->withInput()->with('error', $e->getMessage());
         } catch (\Throwable $e) {
             return redirect()->back()->withInput()->with('error', 'Added Failed');
         }

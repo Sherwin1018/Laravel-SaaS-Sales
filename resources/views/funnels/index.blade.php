@@ -55,27 +55,42 @@
         </form>
     </div>
 
-    <div class="card">
-        <h3>Funnels</h3>
-        <div class="funnels-table-scroll">
-        <table class="funnels-table">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Status</th>
-                    <th>Steps</th>
-                    <th>Public URL</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody id="tableBody">
-                @include('funnels._rows', ['funnels' => $funnels])
-            </tbody>
-        </table>
-        </div>
+    @include('partials.plan-usage-summary', [
+        'planUsage' => $planUsage ?? [],
+        'resourceKey' => 'funnels',
+        'title' => 'Funnel Limit',
+    ])
 
-        <div style="margin-top: 18px;" id="paginationLinks">
-            {{ $funnels->links('pagination::bootstrap-4') }}
+    <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px;">
+            <h3 style="margin: 0;">Funnels</h3>
+            <button type="button" id="toggleFunnelsListBtn"
+                style="padding: 10px 16px; background: var(--theme-primary, #240E35); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; min-width: 88px;"
+                aria-expanded="false">
+                Show
+            </button>
+        </div>
+        <div id="funnelsListContent" style="display: none;">
+            <div class="funnels-table-scroll">
+            <table class="funnels-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Status</th>
+                        <th>Steps</th>
+                        <th>Public URL</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    @include('funnels._rows', ['funnels' => $funnels])
+                </tbody>
+            </table>
+            </div>
+
+            <div style="margin-top: 18px;" id="paginationLinks">
+                {{ $funnels->links('pagination::bootstrap-4') }}
+            </div>
         </div>
     </div>
     <div class="fb-modal" id="fbDeleteConfirm" aria-hidden="true">
@@ -96,6 +111,8 @@
     var searchInput=document.getElementById("searchInput");
     var tableBody=document.getElementById("tableBody");
     var paginationLinks=document.getElementById("paginationLinks");
+    var toggleFunnelsListBtn=document.getElementById("toggleFunnelsListBtn");
+    var funnelsListContent=document.getElementById("funnelsListContent");
     var timeout=null;
     var modal=document.getElementById("fbDeleteConfirm");
     if(searchInput&&tableBody){
@@ -121,6 +138,14 @@
                 })
                 .catch(function(error){console.error('Search error:',error);});
             },300);
+        });
+    }
+    if(toggleFunnelsListBtn&&funnelsListContent){
+        toggleFunnelsListBtn.addEventListener("click",function(){
+            var isHidden=funnelsListContent.style.display==="none";
+            funnelsListContent.style.display=isHidden?"block":"none";
+            toggleFunnelsListBtn.textContent=isHidden?"Hide":"Show";
+            toggleFunnelsListBtn.setAttribute("aria-expanded",isHidden?"true":"false");
         });
     }
     if(!modal)return;

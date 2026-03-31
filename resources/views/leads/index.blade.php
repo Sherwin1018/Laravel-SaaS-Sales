@@ -35,6 +35,12 @@
         </div>
     </div>
 
+    @include('partials.plan-usage-summary', [
+        'planUsage' => $planUsage ?? [],
+        'resourceKey' => 'leads',
+        'title' => 'Lead Limit',
+    ])
+
     @include('leads._pipeline_reports', ['pipelineReports' => $pipelineReports])
 
     {{-- Modal: View Lead Pipeline --}}
@@ -73,28 +79,37 @@
     </div>
 
     <div class="card leads-list-card" style="margin-bottom: 20px;">
-        <h3>Leads List</h3>
-        <div class="leads-table-wrap">
-            <table class="leads-table">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Email</th>
-                        <th>Phone</th>
-                        <th>Assigned To</th>
-                        <th>Tags</th>
-                        <th>Status</th>
-                        <th>Score</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="tableBody">
-                    @include('leads._rows', ['leads' => $leads])
-                </tbody>
-            </table>
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px;">
+            <h3 style="margin: 0;">Leads List</h3>
+            <button type="button" id="toggleLeadsListBtn"
+                style="padding: 10px 16px; background: var(--theme-primary, #240E35); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; min-width: 88px;"
+                aria-expanded="false">
+                Show
+            </button>
         </div>
-        <div style="margin-top: 20px;" id="paginationLinks">
-            {{ $leads->links('pagination::bootstrap-4') }}
+        <div id="leadsListContent" style="display: none;">
+            <div class="leads-table-wrap">
+                <table class="leads-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Assigned To</th>
+                            <th>Tags</th>
+                            <th>Status</th>
+                            <th>Score</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        @include('leads._rows', ['leads' => $leads])
+                    </tbody>
+                </table>
+            </div>
+            <div style="margin-top: 20px;" id="paginationLinks">
+                {{ $leads->links('pagination::bootstrap-4') }}
+            </div>
         </div>
     </div>
 
@@ -199,6 +214,8 @@
             const cancelDeleteLeadBtn = document.getElementById('cancelDeleteLeadBtn');
             const togglePipelineReportsBtn = document.getElementById('togglePipelineReportsBtn');
             const pipelineReportsContent = document.getElementById('pipelineReportsContent');
+            const toggleLeadsListBtn = document.getElementById('toggleLeadsListBtn');
+            const leadsListContent = document.getElementById('leadsListContent');
 
             let timeout = null;
 
@@ -397,6 +414,15 @@
                     pipelineReportsContent.style.display = isHidden ? 'block' : 'none';
                     togglePipelineReportsBtn.textContent = isHidden ? 'Hide' : 'Show';
                     togglePipelineReportsBtn.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+                });
+            }
+
+            if (toggleLeadsListBtn && leadsListContent) {
+                toggleLeadsListBtn.addEventListener('click', function() {
+                    var isHidden = leadsListContent.style.display === 'none';
+                    leadsListContent.style.display = isHidden ? 'block' : 'none';
+                    toggleLeadsListBtn.textContent = isHidden ? 'Hide' : 'Show';
+                    toggleLeadsListBtn.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
                 });
             }
 

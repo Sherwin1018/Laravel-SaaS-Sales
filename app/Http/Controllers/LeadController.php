@@ -6,6 +6,7 @@ use App\Models\Lead;
 use App\Models\LeadStageHistory;
 use App\Models\TenantCustomField;
 use App\Models\User;
+use App\Support\TenantPlanEnforcer;
 use Illuminate\Support\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -81,6 +82,7 @@ class LeadController extends Controller
         $pipelineReports = $this->buildPipelineReports($reportQuery->get());
         $assignableAgents = $this->getAssignableAgents($user->tenant_id);
         $availableTags = $this->extractTenantTags($user->tenant_id);
+        $planUsage = app(TenantPlanEnforcer::class)->usageSummary($user->tenant);
 
         // For Assign Lead dropdown: all leads (up to 500) so page 2+ leads appear
         $leadsForDropdown = (clone $query)->latest()->take(500)->get();
@@ -127,6 +129,7 @@ class LeadController extends Controller
             'tagFilter' => $tagFilter,
             'pipelineTagFilter' => $pipelineTagFilter,
             'pipelineReports' => $pipelineReports,
+            'planUsage' => $planUsage,
             'availableTags' => $availableTags,
         ]);
     }
@@ -135,6 +138,11 @@ class LeadController extends Controller
     {
         $user = auth()->user();
         $this->ensureCanCreateLead();
+        try {
+            app(TenantPlanEnforcer::class)->ensureCanCreateLead($user->tenant);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return redirect()->route('leads.index')->with('error', $e->getMessage());
+        }
 
         return view('leads.create', [
             'statuses' => Lead::PIPELINE_STATUSES,
@@ -164,6 +172,7 @@ class LeadController extends Controller
         ]);
 
         try {
+            app(TenantPlanEnforcer::class)->ensureCanCreateLead($user->tenant);
             $assignedTo = $this->normalizeAssignee($validated['assigned_to'] ?? null, $user);
 
             $lead = Lead::create([
@@ -184,6 +193,8 @@ class LeadController extends Controller
             $this->applyStageScore($lead, null, $lead->status);
 
             return redirect()->route('leads.index')->with('success', 'Added Successfully');
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return redirect()->back()->withInput()->with('error', $e->getMessage());
         } catch (\Throwable $e) {
             return redirect()->back()->withInput()->with('error', 'Added Failed');
         }
