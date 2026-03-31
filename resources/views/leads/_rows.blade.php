@@ -33,11 +33,11 @@
                     @endforeach
                 </div>
             @else
-                <span style="font-size: 12px; color: var(--theme-muted, #6B7280);">No tags</span>
+                <span class="lead-no-tags" style="font-size: 12px; color: var(--theme-muted, #6B7280);">No tags</span>
             @endif
         </td>
         <td>
-            <span style="padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; {{ $statusStyles[$lead->status] ?? 'background-color: #E5E7EB; color: #374151;' }}">
+            <span class="lead-status-badge" style="padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; {{ $statusStyles[$lead->status] ?? 'background-color: #E5E7EB; color: #374151;' }}">
                 {{ $statusLabels[$lead->status] ?? ucfirst($lead->status) }}
             </span>
         </td>
@@ -49,10 +49,10 @@
             </a>
 
             @if(auth()->user()->hasRole('account-owner'))
-                <form action="{{ route('leads.destroy', $lead->id) }}" method="POST" onsubmit="return confirm('Are you sure?');">
+                <form action="{{ route('leads.destroy', $lead->id) }}" method="POST" class="lead-delete-form">
                     @csrf
                     @method('DELETE')
-                    <button type="submit" style="background: none; border: none; color: #DC2626; cursor: pointer; padding: 0; font-weight: 600;">
+                    <button type="button" class="lead-delete-trigger" data-delete-action="{{ route('leads.destroy', $lead->id) }}" data-lead-name="{{ $lead->name }}" style="background: none; border: none; color: #DC2626; cursor: pointer; padding: 0; font-weight: 600;">
                         <i class="fas fa-trash"></i> Delete
                     </button>
                 </form>

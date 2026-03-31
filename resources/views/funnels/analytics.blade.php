@@ -11,10 +11,12 @@
         .analytics-actions { display:flex; flex-wrap:wrap; gap:10px; }
         .analytics-btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:10px 14px; border-radius:10px; border:1px solid var(--theme-border, #E6E1EF); background:#fff; color:var(--theme-primary, #240E35); text-decoration:none; font-weight:700; }
         .analytics-btn.primary { background: var(--theme-primary, #240E35); color:#fff; border-color: var(--theme-primary, #240E35); }
+        .analytics-toggle-btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:9px 14px; border-radius:10px; border:1px solid var(--theme-border, #E6E1EF); background:var(--theme-primary, #240E35); color:#fff; font-weight:800; cursor:pointer; }
         .analytics-filters { display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end; }
         .analytics-field { display:grid; gap:6px; min-width:180px; }
         .analytics-field label { font-size:12px; font-weight:800; color: var(--theme-muted, #6B7280); text-transform:uppercase; letter-spacing:.04em; }
-        .analytics-field input { padding:10px 12px; border:1px solid var(--theme-border, #E6E1EF); border-radius:10px; background:#fff; }
+        .analytics-field input,
+        .analytics-field select { padding:10px 12px; border:1px solid var(--theme-border, #E6E1EF); border-radius:10px; background:#fff; }
         .analytics-kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; }
         .analytics-kpi { background:#fff; border:1px solid var(--theme-border, #E6E1EF); border-radius:16px; padding:18px; box-shadow:0 10px 30px rgba(15,23,42,.04); }
         .analytics-kpi-label { font-size:12px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color: var(--theme-muted, #6B7280); }
@@ -26,6 +28,9 @@
         .analytics-card h3 { margin:0 0 14px; color: var(--theme-primary, #240E35); }
         .analytics-chart-wrap { position:relative; min-height:280px; }
         .analytics-chart-wrap canvas { width:100% !important; height:100% !important; display:block; }
+        .analytics-legend { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:12px; margin:0 0 12px; }
+        .analytics-legend-item { display:flex; align-items:center; justify-content:flex-start; text-align:left; gap:8px; }
+        .analytics-legend-swatch { width:16px; height:16px; border-radius:4px; flex:0 0 16px; }
         .analytics-card.analytics-card--step-visits { width:100%; }
         .analytics-card.analytics-card--step-visits .analytics-chart-wrap { min-height: 260px; }
         .analytics-card.analytics-card--offer-rates { width:100%; }
@@ -51,6 +56,7 @@
         }
         @media (max-width: 960px) {
             .analytics-grid { grid-template-columns:1fr; }
+            .analytics-legend { grid-template-columns:1fr; }
         }
     </style>
 @endsection
@@ -63,9 +69,18 @@
         $stepVisits = collect($analytics['step_visits'] ?? []);
         $dropOff = collect($analytics['drop_off'] ?? []);
         $eventBreakdown = collect($analytics['step_event_breakdown'] ?? []);
+        $dailySeries = collect($analytics['daily_series'] ?? []);
+        $conversionFunnel = collect($analytics['conversion_funnel'] ?? []);
         $stepLabels = $stepVisits->map(fn ($row) => $row['step_title'])->values()->all();
         $stepValues = $stepVisits->map(fn ($row) => (int) $row['visits'])->values()->all();
         $stepDropOffValues = $dropOff->map(fn ($row) => (int) ($row['drop_off'] ?? 0))->values()->all();
+        $dailyLabels = $dailySeries->pluck('date')->values()->all();
+        $dailyVisitValues = $dailySeries->pluck('entry_visits')->map(fn ($value) => (int) $value)->values()->all();
+        $dailyOptInValues = $dailySeries->pluck('opt_ins')->map(fn ($value) => (int) $value)->values()->all();
+        $dailyCheckoutValues = $dailySeries->pluck('checkout_starts')->map(fn ($value) => (int) $value)->values()->all();
+        $dailyPaidValues = $dailySeries->pluck('paid')->map(fn ($value) => (int) $value)->values()->all();
+        $conversionLabels = $conversionFunnel->pluck('label')->values()->all();
+        $conversionValues = $conversionFunnel->pluck('count')->map(fn ($value) => (int) $value)->values()->all();
         $offerRateValues = [
             (float) ($rates['upsell_acceptance_rate'] ?? 0),
             (float) ($rates['downsell_acceptance_rate'] ?? 0),
@@ -87,6 +102,7 @@
             <div class="analytics-actions">
                 <a href="{{ route('funnels.index') }}" class="analytics-btn"><i class="fas fa-arrow-left"></i> Back to Funnels</a>
                 <a href="{{ route('funnels.edit', $funnel) }}" class="analytics-btn primary"><i class="fas fa-pen"></i> Open Builder</a>
+                <a href="{{ route('funnels.analytics.export', array_merge(['funnel' => $funnel], request()->query())) }}" class="analytics-btn"><i class="fas fa-file-export"></i> Export CSV</a>
             </div>
         </div>
 
@@ -99,6 +115,28 @@
                 <div class="analytics-field">
                     <label for="to">To</label>
                     <input id="to" type="date" name="to" value="{{ $filters['to'] }}">
+                </div>
+                <div class="analytics-field">
+                    <label for="step_id">Step</label>
+                    <select id="step_id" name="step_id">
+                        <option value="">All steps</option>
+                        @foreach($funnel->steps->sortBy('position') as $step)
+                            <option value="{{ $step->id }}" {{ (string) ($filters['step_id'] ?? '') === (string) $step->id ? 'selected' : '' }}>
+                                {{ $step->title }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="analytics-field">
+                    <label for="event_name">Event</label>
+                    <select id="event_name" name="event_name">
+                        <option value="">All events</option>
+                        @foreach($supportedEvents as $eventName)
+                            <option value="{{ $eventName }}" {{ (string) ($filters['event_name'] ?? '') === (string) $eventName ? 'selected' : '' }}>
+                                {{ $eventName }}
+                            </option>
+                        @endforeach
+                    </select>
                 </div>
                 <button type="submit" class="analytics-btn primary"><i class="fas fa-filter"></i> Apply Filter</button>
                 <a href="{{ route('funnels.analytics', $funnel) }}" class="analytics-btn">Clear</a>
@@ -136,6 +174,16 @@
                 <div class="analytics-kpi-value">{{ number_format((int) ($totals['abandoned_checkout_count'] ?? 0)) }}</div>
                 <div class="analytics-kpi-sub">{{ number_format((float) ($rates['abandoned_checkout_rate'] ?? 0), 2) }}% abandonment</div>
             </div>
+            <div class="analytics-kpi">
+                <div class="analytics-kpi-label">Average Order Value</div>
+                <div class="analytics-kpi-value">PHP {{ number_format((float) ($totals['average_order_value'] ?? 0), 2) }}</div>
+                <div class="analytics-kpi-sub">Average paid order amount</div>
+            </div>
+            <div class="analytics-kpi">
+                <div class="analytics-kpi-label">Revenue Per Visit</div>
+                <div class="analytics-kpi-value">PHP {{ number_format((float) ($totals['revenue_per_visit'] ?? 0), 2) }}</div>
+                <div class="analytics-kpi-sub">Revenue divided by entry visits</div>
+            </div>
         </div>
 
         <div class="analytics-grid analytics-grid--summary">
@@ -148,6 +196,20 @@
             <div class="analytics-card analytics-card--offer-rates">
                 <h3>Offer Rates</h3>
                 @if($hasOfferData)
+                    <div class="analytics-legend">
+                        <div class="analytics-legend-item">
+                            <span class="analytics-legend-swatch" style="background:#240E35;"></span>
+                            <span>Upsell Acceptance</span>
+                        </div>
+                        <div class="analytics-legend-item">
+                            <span class="analytics-legend-swatch" style="background:#6B4A7A;"></span>
+                            <span>Downsell Acceptance</span>
+                        </div>
+                        <div class="analytics-legend-item">
+                            <span class="analytics-legend-swatch" style="background:#F97316;"></span>
+                            <span>Abandoned Checkout</span>
+                        </div>
+                    </div>
                     <div class="analytics-chart-wrap">
                         <canvas id="offerRatesChart"></canvas>
                     </div>
@@ -184,67 +246,94 @@
             </div>
         </div>
 
+        <div class="analytics-grid">
+            <div class="analytics-card">
+                <h3>Daily Funnel Trend</h3>
+                <div class="analytics-chart-wrap">
+                    <canvas id="dailyTrendChart"></canvas>
+                </div>
+            </div>
+
+            <div class="analytics-card">
+                <h3>Conversion Path</h3>
+                <div class="analytics-chart-wrap">
+                    <canvas id="conversionPathChart"></canvas>
+                </div>
+            </div>
+        </div>
+
         <div class="analytics-card">
-            <h3>Step Performance</h3>
-            <div class="analytics-table-wrap">
-                <table class="analytics-table">
-                    <thead>
-                        <tr>
-                            <th>Step</th>
-                            <th>Type</th>
-                            <th>Visits</th>
-                            <th>Drop-off</th>
-                            <th>Event Mix</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($stepVisits as $row)
-                            @php
-                                $rowDropOff = $dropOff->firstWhere('step_id', $row['step_id']);
-                                $rowEvents = $eventBreakdown->firstWhere('step_id', $row['step_id']);
-                            @endphp
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+                <h3 style="margin:0;">Step Performance</h3>
+                <button type="button" id="toggleStepPerformanceBtn" class="analytics-toggle-btn" aria-expanded="false" aria-controls="stepPerformanceContent">Show</button>
+            </div>
+            <div id="stepPerformanceContent" style="display:none;">
+                <div class="analytics-table-wrap">
+                    <table class="analytics-table">
+                        <thead>
                             <tr>
-                                <td>
-                                    <strong>{{ $row['step_title'] }}</strong><br>
-                                    <span style="color:var(--theme-muted, #6B7280); font-size:13px;">/{{ $row['step_slug'] }}</span>
-                                </td>
-                                <td><span class="analytics-pill">{{ ucwords(str_replace('_', ' ', $row['step_type'])) }}</span></td>
-                                <td>{{ number_format((int) $row['visits']) }}</td>
-                                <td>{{ number_format((int) ($rowDropOff['drop_off'] ?? 0)) }}</td>
-                                <td>
-                                    @if(!empty($rowEvents['events']))
-                                        @foreach($rowEvents['events'] as $eventName => $count)
-                                            <div style="margin-bottom:4px;">{{ $eventName }}: {{ $count }}</div>
-                                        @endforeach
-                                    @else
-                                        <span style="color:var(--theme-muted, #6B7280);">No tracked events yet</span>
-                                    @endif
-                                </td>
+                                <th>Step</th>
+                                <th>Type</th>
+                                <th>Visits</th>
+                                <th>Drop-off</th>
+                                <th>Drop-off Rate</th>
+                                <th>Event Mix</th>
                             </tr>
-                        @empty
-                            <tr>
-                                <td colspan="5">No step analytics yet.</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            @forelse($stepVisits as $row)
+                                @php
+                                    $rowDropOff = $dropOff->firstWhere('step_id', $row['step_id']);
+                                    $rowEvents = $eventBreakdown->firstWhere('step_id', $row['step_id']);
+                                @endphp
+                                <tr>
+                                    <td>
+                                        <strong>{{ $row['step_title'] }}</strong><br>
+                                        <span style="color:var(--theme-muted, #6B7280); font-size:13px;">/{{ $row['step_slug'] }}</span>
+                                    </td>
+                                    <td><span class="analytics-pill">{{ ucwords(str_replace('_', ' ', $row['step_type'])) }}</span></td>
+                                    <td>{{ number_format((int) $row['visits']) }}</td>
+                                    <td>{{ number_format((int) ($rowDropOff['drop_off'] ?? 0)) }}</td>
+                                    <td>{{ number_format((float) ($rowDropOff['drop_off_rate'] ?? 0), 2) }}%</td>
+                                    <td>
+                                        @if(!empty($rowEvents['events']))
+                                            @foreach($rowEvents['events'] as $eventName => $count)
+                                                <div style="margin-bottom:4px;">{{ $eventName }}: {{ $count }}</div>
+                                            @endforeach
+                                        @else
+                                            <span style="color:var(--theme-muted, #6B7280);">No tracked events yet</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="6">No step analytics yet.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
         <div class="analytics-card">
             <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px;">
                 <h3 style="margin:0;">Recent Funnel Events</h3>
-                <a href="{{ route('funnels.events', $funnel) }}" class="analytics-btn">Open Raw Events JSON</a>
+                <div style="display:flex;flex-wrap:wrap;gap:10px;">
+                    <a href="{{ route('funnels.events', $funnel) }}" class="analytics-btn">Open Raw Events JSON</a>
+                    <button type="button" id="toggleRecentEventsBtn" class="analytics-toggle-btn" aria-expanded="false" aria-controls="recentEventsContent">Show</button>
+                </div>
             </div>
 
-            @if($events->count() > 0)
-                <div class="analytics-events">
-                    @foreach($events as $event)
-                        <div class="analytics-event">
-                            <div class="analytics-event-head">
-                                <span class="analytics-pill">{{ $event->event_name }}</span>
-                                <strong>{{ optional($event->occurred_at)->format('M j, Y g:i A') }}</strong>
-                            </div>
+            <div id="recentEventsContent" style="display:none;">
+                @if($events->count() > 0)
+                    <div class="analytics-events">
+                        @foreach($events as $event)
+                            <div class="analytics-event">
+                                <div class="analytics-event-head">
+                                    <span class="analytics-pill">{{ $event->event_name }}</span>
+                                    <strong>{{ optional($event->occurred_at)->format('M j, Y g:i A') }}</strong>
+                                </div>
                             <div class="analytics-event-meta">
                                 Step: {{ $event->step->title ?? 'N/A' }}<br>
                                 Step Type: {{ ucwords(str_replace('_', ' ', data_get($event->meta, 'step_type', $event->step->type ?? 'n/a'))) }}<br>
@@ -254,15 +343,16 @@
                                 Payment: {{ $event->payment ? ('PHP ' . number_format((float) $event->payment->amount, 2) . ' / ' . $event->payment->status) : 'N/A' }}
                             </div>
                         </div>
-                    @endforeach
-                </div>
+                        @endforeach
+                    </div>
 
-                <div style="margin-top:16px;">
-                    {{ $events->links('pagination::bootstrap-4') }}
-                </div>
-            @else
-                <div class="analytics-empty">No funnel events have been recorded yet for the selected date range.</div>
-            @endif
+                    <div style="margin-top:16px;">
+                        {{ $events->links('pagination::bootstrap-4') }}
+                    </div>
+                @else
+                    <div class="analytics-empty">No funnel events have been recorded yet for the selected date range.</div>
+                @endif
+            </div>
         </div>
     </div>
 @endsection
@@ -274,6 +364,33 @@
         const stepDropOff = @json($stepDropOffValues);
         const offerRateLabels = ['Upsell Acceptance', 'Downsell Acceptance', 'Abandoned Checkout'];
         const offerRateValues = @json($offerRateValues);
+        const dailyLabels = @json($dailyLabels);
+        const dailyVisitValues = @json($dailyVisitValues);
+        const dailyOptInValues = @json($dailyOptInValues);
+        const dailyCheckoutValues = @json($dailyCheckoutValues);
+        const dailyPaidValues = @json($dailyPaidValues);
+        const conversionLabels = @json($conversionLabels);
+        const conversionValues = @json($conversionValues);
+        const toggleStepPerformanceBtn = document.getElementById('toggleStepPerformanceBtn');
+        const stepPerformanceContent = document.getElementById('stepPerformanceContent');
+        const toggleRecentEventsBtn = document.getElementById('toggleRecentEventsBtn');
+        const recentEventsContent = document.getElementById('recentEventsContent');
+
+        function bindCollapsibleSection(button, content) {
+            if (!button || !content) {
+                return;
+            }
+
+            button.addEventListener('click', function() {
+                const isHidden = content.style.display === 'none';
+                content.style.display = isHidden ? 'block' : 'none';
+                button.textContent = isHidden ? 'Hide' : 'Show';
+                button.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+            });
+        }
+
+        bindCollapsibleSection(toggleStepPerformanceBtn, stepPerformanceContent);
+        bindCollapsibleSection(toggleRecentEventsBtn, recentEventsContent);
 
         const stepVisitsCanvas = document.getElementById('stepVisitsChart');
         if (stepVisitsCanvas) {
@@ -325,6 +442,9 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
+                        legend: {
+                            display: false
+                        },
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
@@ -332,6 +452,63 @@
                                     return context.label + ': ' + value.toFixed(2) + '%';
                                 }
                             }
+                        }
+                    }
+                }
+            });
+        }
+
+        const dailyTrendCanvas = document.getElementById('dailyTrendChart');
+        if (dailyTrendCanvas) {
+            new Chart(dailyTrendCanvas.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: dailyLabels,
+                    datasets: [
+                        { label: 'Visits', data: dailyVisitValues, borderColor: '#240E35', backgroundColor: 'rgba(36,14,53,0.10)', tension: 0.35, fill: false },
+                        { label: 'Opt-ins', data: dailyOptInValues, borderColor: '#0F766E', backgroundColor: 'rgba(15,118,110,0.10)', tension: 0.35, fill: false },
+                        { label: 'Checkout Starts', data: dailyCheckoutValues, borderColor: '#F97316', backgroundColor: 'rgba(249,115,22,0.10)', tension: 0.35, fill: false },
+                        { label: 'Paid', data: dailyPaidValues, borderColor: '#7C3AED', backgroundColor: 'rgba(124,58,237,0.10)', tension: 0.35, fill: false },
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { precision: 0 }
+                        }
+                    }
+                }
+            });
+        }
+
+        const conversionPathCanvas = document.getElementById('conversionPathChart');
+        if (conversionPathCanvas) {
+            new Chart(conversionPathCanvas.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: conversionLabels,
+                    datasets: [{
+                        label: 'Count',
+                        data: conversionValues,
+                        backgroundColor: ['#240E35', '#6B4A7A', '#0F766E', '#F97316'],
+                        borderRadius: 10,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { precision: 0 }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
                         }
                     }
                 }

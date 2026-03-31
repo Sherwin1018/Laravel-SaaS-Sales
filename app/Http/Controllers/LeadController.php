@@ -3,8 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Lead;
+use App\Models\LeadStageHistory;
+use App\Models\TenantCustomField;
 use App\Models\User;
+use App\Support\TenantPlanEnforcer;
+use Illuminate\Support\Collection;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class LeadController extends Controller
@@ -70,8 +75,14 @@ class LeadController extends Controller
             $pipelineQuery->where('assigned_to', $user->id);
         }
         $pipelineLeads = $this->buildPipelineLeads($pipelineQuery, $pipelineSearch, $pipelineTagFilter);
+        $reportQuery = Lead::where('tenant_id', $user->tenant_id)->with('stageHistories');
+        if ($user->hasRole('sales-agent')) {
+            $reportQuery->where('assigned_to', $user->id);
+        }
+        $pipelineReports = $this->buildPipelineReports($reportQuery->get());
         $assignableAgents = $this->getAssignableAgents($user->tenant_id);
         $availableTags = $this->extractTenantTags($user->tenant_id);
+        $planUsage = app(TenantPlanEnforcer::class)->usageSummary($user->tenant);
 
         // For Assign Lead dropdown: all leads (up to 500) so page 2+ leads appear
         $leadsForDropdown = (clone $query)->latest()->take(500)->get();
@@ -117,6 +128,8 @@ class LeadController extends Controller
             'pipelineSearch' => $pipelineSearch,
             'tagFilter' => $tagFilter,
             'pipelineTagFilter' => $pipelineTagFilter,
+            'pipelineReports' => $pipelineReports,
+            'planUsage' => $planUsage,
             'availableTags' => $availableTags,
         ]);
     }
@@ -125,10 +138,16 @@ class LeadController extends Controller
     {
         $user = auth()->user();
         $this->ensureCanCreateLead();
+        try {
+            app(TenantPlanEnforcer::class)->ensureCanCreateLead($user->tenant);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return redirect()->route('leads.index')->with('error', $e->getMessage());
+        }
 
         return view('leads.create', [
             'statuses' => Lead::PIPELINE_STATUSES,
             'assignableAgents' => $this->getAssignableAgents($user->tenant_id),
+            'customFields' => $this->tenantCustomFields($user->tenant_id),
         ]);
     }
 
@@ -136,6 +155,8 @@ class LeadController extends Controller
     {
         $user = auth()->user();
         $this->ensureCanCreateLead();
+
+        $customFields = $this->tenantCustomFields($user->tenant_id);
 
         $validated = $request->validate([
             'name' => 'required|string|max:150',
@@ -145,14 +166,16 @@ class LeadController extends Controller
             'status' => ['required', Rule::in(array_keys(Lead::PIPELINE_STATUSES))],
             'assigned_to' => 'required|integer',
             'tags' => 'nullable|string|max:500',
+            ...$this->customFieldValidationRules($customFields),
         ], [
             'phone.regex' => 'Phone number must be a valid Philippine mobile number (09XXXXXXXXX).',
         ]);
 
         try {
+            app(TenantPlanEnforcer::class)->ensureCanCreateLead($user->tenant);
             $assignedTo = $this->normalizeAssignee($validated['assigned_to'] ?? null, $user);
 
-            Lead::create([
+            $lead = Lead::create([
                 'tenant_id' => $user->tenant_id,
                 'assigned_to' => $assignedTo,
                 'name' => $validated['name'],
@@ -164,7 +187,14 @@ class LeadController extends Controller
                 'score' => 0,
             ]);
 
+            $this->syncCustomFieldValues($lead, $customFields, $validated['custom_fields'] ?? []);
+            $this->recordStageHistory($lead, null, $lead->status, $user->id, ['source' => 'created']);
+            $this->applySourceCampaignScore($lead, $lead->source_campaign);
+            $this->applyStageScore($lead, null, $lead->status);
+
             return redirect()->route('leads.index')->with('success', 'Added Successfully');
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return redirect()->back()->withInput()->with('error', $e->getMessage());
         } catch (\Throwable $e) {
             return redirect()->back()->withInput()->with('error', 'Added Failed');
         }
@@ -175,10 +205,11 @@ class LeadController extends Controller
         $this->ensureTenantLeadAccess($lead);
 
         return view('leads.edit', [
-            'lead' => $lead->load('activities'),
+            'lead' => $lead->load(['activities', 'customFieldValues.customField', 'stageHistories.changedByUser']),
             'statuses' => Lead::PIPELINE_STATUSES,
             'assignableAgents' => $this->getAssignableAgents(auth()->user()->tenant_id),
             'canEditTags' => $this->canEditLeadTags(auth()->user()),
+            'customFields' => $this->tenantCustomFields(auth()->user()->tenant_id),
         ]);
     }
 
@@ -186,6 +217,8 @@ class LeadController extends Controller
     {
         $this->ensureTenantLeadAccess($lead);
         $user = auth()->user();
+
+        $customFields = $this->tenantCustomFields($user->tenant_id);
 
         $validated = $request->validate([
             'name' => 'required|string|max:150',
@@ -196,11 +229,13 @@ class LeadController extends Controller
             'score' => 'nullable|integer|min:0',
             'assigned_to' => 'required|integer',
             'tags' => 'nullable|string|max:500',
+            ...$this->customFieldValidationRules($customFields),
         ], [
             'phone.regex' => 'Phone number must be a valid Philippine mobile number (09XXXXXXXXX).',
         ]);
 
         try {
+            $previousStatus = $lead->status;
             $validated['assigned_to'] = $this->normalizeAssignee($validated['assigned_to'] ?? null, $user, $lead->assigned_to);
             if ($this->canEditLeadTags($user)) {
                 $validated['tags'] = $this->parseTagsInput($validated['tags'] ?? null);
@@ -208,6 +243,12 @@ class LeadController extends Controller
                 unset($validated['tags']);
             }
             $lead->update($validated);
+            $this->syncCustomFieldValues($lead, $customFields, $validated['custom_fields'] ?? []);
+
+            if ($previousStatus !== $lead->status) {
+                $this->recordStageHistory($lead, $previousStatus, $lead->status, $user->id, ['source' => 'updated']);
+                $this->applyStageScore($lead, $previousStatus, $lead->status);
+            }
 
             return redirect()->route('leads.index')->with('success', 'Edited Successfully');
         } catch (\Throwable $e) {
@@ -286,26 +327,16 @@ class LeadController extends Controller
         $this->ensureTenantLeadAccess($lead);
 
         $validated = $request->validate([
-            'event' => ['required', Rule::in(['email_opened', 'link_clicked', 'form_submitted'])],
+            'event' => ['required', Rule::in(array_keys(config('lead_scoring.manual_events', [])))],
         ]);
 
-        $pointsMap = [
-            'email_opened' => 5,
-            'link_clicked' => 10,
-            'form_submitted' => 20,
-        ];
-
-        $eventLabels = [
-            'email_opened' => 'Email Opened',
-            'link_clicked' => 'Link Clicked',
-            'form_submitted' => 'Form Submitted',
-        ];
-
-        $points = $pointsMap[$validated['event']];
+        $config = config('lead_scoring.manual_events.' . $validated['event']);
+        $points = (int) ($config['points'] ?? 0);
+        $label = (string) ($config['label'] ?? Str::headline($validated['event']));
         $lead->increment('score', $points);
         $lead->activities()->create([
             'activity_type' => 'Scoring',
-            'notes' => $eventLabels[$validated['event']] . " (+{$points} points)",
+            'notes' => $label . " (+{$points} points)",
         ]);
 
         return redirect()->back()->with('success', 'Edited Successfully');
@@ -479,5 +510,254 @@ class LeadController extends Controller
             ->all();
 
         return $tags;
+    }
+
+    private function tenantCustomFields(int $tenantId)
+    {
+        return TenantCustomField::query()
+            ->where('tenant_id', $tenantId)
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('label')
+            ->get();
+    }
+
+    private function customFieldValidationRules($fields): array
+    {
+        $rules = [];
+
+        foreach ($fields as $field) {
+            $ruleKey = 'custom_fields.' . $field->id;
+            $fieldRules = [$field->is_required ? 'required' : 'nullable'];
+
+            switch ($field->field_type) {
+                case 'textarea':
+                    $fieldRules[] = 'string';
+                    $fieldRules[] = 'max:2000';
+                    break;
+                case 'number':
+                    $fieldRules[] = 'numeric';
+                    break;
+                case 'date':
+                    $fieldRules[] = 'date';
+                    break;
+                case 'select':
+                    $fieldRules[] = Rule::in($field->options ?? []);
+                    break;
+                case 'checkbox':
+                    $fieldRules[] = 'boolean';
+                    break;
+                case 'text':
+                default:
+                    $fieldRules[] = 'string';
+                    $fieldRules[] = 'max:255';
+                    break;
+            }
+
+            $rules[$ruleKey] = $fieldRules;
+        }
+
+        return $rules;
+    }
+
+    private function syncCustomFieldValues(Lead $lead, $fields, array $payload): void
+    {
+        foreach ($fields as $field) {
+            $rawValue = $payload[$field->id] ?? null;
+            $value = $this->normalizeCustomFieldValue($field, $rawValue);
+
+            if ($value === null) {
+                $lead->customFieldValues()->where('tenant_custom_field_id', $field->id)->delete();
+                continue;
+            }
+
+            $lead->customFieldValues()->updateOrCreate(
+                ['tenant_custom_field_id' => $field->id],
+                ['value' => $value]
+            );
+        }
+    }
+
+    private function normalizeCustomFieldValue(TenantCustomField $field, mixed $value): ?string
+    {
+        if ($field->field_type === 'checkbox') {
+            return $value ? '1' : null;
+        }
+
+        if ($value === null) {
+            return null;
+        }
+
+        $normalized = trim((string) $value);
+
+        if ($normalized === '') {
+            return null;
+        }
+
+        return $normalized;
+    }
+
+    private function recordStageHistory(Lead $lead, ?string $fromStatus, string $toStatus, ?int $changedBy, array $metadata = []): void
+    {
+        LeadStageHistory::create([
+            'lead_id' => $lead->id,
+            'tenant_id' => $lead->tenant_id,
+            'from_status' => $fromStatus,
+            'to_status' => $toStatus,
+            'changed_by' => $changedBy,
+            'metadata' => $metadata,
+            'created_at' => now(),
+        ]);
+    }
+
+    private function applyStageScore(Lead $lead, ?string $fromStatus, string $toStatus): void
+    {
+        if ($fromStatus === $toStatus) {
+            return;
+        }
+
+        $config = config('lead_scoring.stage_events.' . $toStatus);
+        $points = (int) ($config['points'] ?? 0);
+
+        if ($points <= 0) {
+            return;
+        }
+
+        $label = (string) ($config['label'] ?? ('Moved to ' . (Lead::PIPELINE_STATUSES[$toStatus] ?? Str::headline($toStatus))));
+        $lead->increment('score', $points);
+        $lead->activities()->create([
+            'activity_type' => 'Scoring',
+            'notes' => $label . " (+{$points} points)",
+        ]);
+    }
+
+    private function applySourceCampaignScore(Lead $lead, ?string $sourceCampaign): void
+    {
+        $normalizedKey = Str::of((string) $sourceCampaign)->lower()->snake()->toString();
+        $config = config('lead_scoring.source_campaign_events.' . $normalizedKey);
+        $points = (int) ($config['points'] ?? 0);
+
+        if ($points <= 0) {
+            return;
+        }
+
+        $label = (string) ($config['label'] ?? ((string) $sourceCampaign . ' Lead'));
+        $lead->increment('score', $points);
+        $lead->activities()->create([
+            'activity_type' => 'Scoring',
+            'notes' => $label . " (+{$points} points)",
+        ]);
+    }
+
+    private function buildPipelineReports(Collection $leads): array
+    {
+        $statuses = array_keys(Lead::PIPELINE_STATUSES);
+        $stageCounts = [];
+        $stageAging = [];
+        $conversionSeeds = [
+            ['from' => 'new', 'to' => 'contacted'],
+            ['from' => 'contacted', 'to' => 'proposal_sent'],
+            ['from' => 'proposal_sent', 'to' => 'closed_won'],
+            ['from' => 'proposal_sent', 'to' => 'closed_lost'],
+        ];
+        $transitionEligible = [];
+        $transitionConverted = [];
+
+        foreach ($statuses as $status) {
+            $count = $leads->where('status', $status)->count();
+            $stageCounts[$status] = [
+                'label' => Lead::PIPELINE_STATUSES[$status],
+                'count' => $count,
+            ];
+            $stageAging[$status] = [
+                'label' => Lead::PIPELINE_STATUSES[$status],
+                'lead_count' => $count,
+                'average_days' => 0,
+                'older_than_7_days' => 0,
+                'older_than_14_days' => 0,
+                'older_than_30_days' => 0,
+            ];
+        }
+
+        foreach ($conversionSeeds as $seed) {
+            $key = $seed['from'] . '->' . $seed['to'];
+            $transitionEligible[$key] = [];
+            $transitionConverted[$key] = [];
+        }
+
+        foreach ($leads as $lead) {
+            $history = $lead->stageHistories->sortBy('created_at')->values();
+            $enteredAt = optional($history->where('to_status', $lead->status)->last())->created_at ?? $lead->created_at;
+            $ageInDays = round(($enteredAt?->diffInMinutes(now()) ?? 0) / 1440, 1);
+
+            if (isset($stageAging[$lead->status])) {
+                $stageAging[$lead->status]['average_days'] += $ageInDays;
+                $stageAging[$lead->status]['older_than_7_days'] += $ageInDays >= 7 ? 1 : 0;
+                $stageAging[$lead->status]['older_than_14_days'] += $ageInDays >= 14 ? 1 : 0;
+                $stageAging[$lead->status]['older_than_30_days'] += $ageInDays >= 30 ? 1 : 0;
+            }
+
+            $seenStatuses = collect([$lead->status])
+                ->merge($history->pluck('from_status'))
+                ->merge($history->pluck('to_status'))
+                ->filter()
+                ->unique()
+                ->values();
+
+            foreach ($conversionSeeds as $seed) {
+                $key = $seed['from'] . '->' . $seed['to'];
+                if ($seenStatuses->contains($seed['from'])) {
+                    $transitionEligible[$key][$lead->id] = true;
+                }
+
+                if ($history->contains(function ($entry) use ($seed) {
+                    return $entry->from_status === $seed['from'] && $entry->to_status === $seed['to'];
+                })) {
+                    $transitionConverted[$key][$lead->id] = true;
+                }
+            }
+        }
+
+        foreach ($stageAging as $status => $metrics) {
+            $leadCount = max(1, $metrics['lead_count']);
+            $stageAging[$status]['average_days'] = $metrics['lead_count'] > 0
+                ? round($metrics['average_days'] / $leadCount, 1)
+                : 0;
+        }
+
+        $stageConversions = collect($conversionSeeds)->map(function ($seed) use ($transitionEligible, $transitionConverted) {
+            $key = $seed['from'] . '->' . $seed['to'];
+            $eligible = count($transitionEligible[$key]);
+            $converted = count($transitionConverted[$key]);
+
+            return [
+                'from' => $seed['from'],
+                'to' => $seed['to'],
+                'label' => (Lead::PIPELINE_STATUSES[$seed['from']] ?? Str::headline($seed['from']))
+                    . ' to '
+                    . (Lead::PIPELINE_STATUSES[$seed['to']] ?? Str::headline($seed['to'])),
+                'eligible' => $eligible,
+                'converted' => $converted,
+                'rate' => $eligible > 0 ? round(($converted / $eligible) * 100, 1) : 0,
+            ];
+        })->all();
+
+        $won = $stageCounts['closed_won']['count'] ?? 0;
+        $lost = $stageCounts['closed_lost']['count'] ?? 0;
+        $closed = $won + $lost;
+
+        return [
+            'summary' => [
+                'total_leads' => $leads->count(),
+                'open_leads' => $leads->whereNotIn('status', Lead::closedStatusValues())->count(),
+                'won_count' => $won,
+                'lost_count' => $lost,
+                'closed_count' => $closed,
+                'win_rate' => $closed > 0 ? round(($won / $closed) * 100, 1) : 0,
+            ],
+            'stage_counts' => $stageCounts,
+            'stage_conversions' => $stageConversions,
+            'stage_aging' => $stageAging,
+        ];
     }
 }

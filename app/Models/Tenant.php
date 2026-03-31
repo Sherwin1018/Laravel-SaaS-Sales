@@ -7,6 +7,12 @@ use Illuminate\Support\Carbon;
 
 class Tenant extends Model
 {
+    public const STATUSES = [
+        'active' => 'Active',
+        'inactive' => 'Inactive',
+        'trial' => 'Trial',
+    ];
+
     protected $fillable = [
         'company_name',
         'logo_path',
@@ -25,6 +31,18 @@ class Tenant extends Model
         'trial_ends_at' => 'datetime',
     ];
 
+    public function setStatusAttribute($value): void
+    {
+        $this->attributes['status'] = self::normalizeStatus($value);
+    }
+
+    public static function normalizeStatus(mixed $value): string
+    {
+        $normalized = mb_strtolower(trim((string) $value));
+
+        return array_key_exists($normalized, self::STATUSES) ? $normalized : $normalized;
+    }
+
     public function users()
     {
         return $this->hasMany(User::class);
@@ -40,9 +58,19 @@ class Tenant extends Model
         return $this->hasMany(Funnel::class);
     }
 
+    public function customFields()
+    {
+        return $this->hasMany(TenantCustomField::class)->orderBy('sort_order');
+    }
+
     public function isOnTrial(): bool
     {
         return $this->status === 'trial' && $this->trial_ends_at instanceof Carbon;
+    }
+
+    public function isInactive(): bool
+    {
+        return $this->status === 'inactive';
     }
 
     public function isTrialExpired(): bool

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Lead;
 use App\Models\Payment;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class PaymentController extends Controller
 {
@@ -17,7 +18,7 @@ class PaymentController extends Controller
             ->latest('payment_date');
 
         if ($request->filled('status')) {
-            $query->where('status', $request->status);
+            $query->where('status', Payment::normalizeStatus($request->status));
         }
 
         $payments = $query->paginate(10);
@@ -33,7 +34,7 @@ class PaymentController extends Controller
         $validated = $request->validate([
             'lead_id' => 'nullable|integer|exists:leads,id',
             'amount' => 'required|numeric|min:0.01',
-            'status' => 'required|in:pending,paid,failed',
+            'status' => ['required', Rule::in(array_keys(Payment::STATUSES))],
             'payment_date' => 'required|date',
         ]);
 

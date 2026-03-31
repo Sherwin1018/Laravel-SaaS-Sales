@@ -26,8 +26,8 @@ class DashboardController extends Controller
             ->whereMonth('created_at', now()->month)
             ->count();
 
-        $wonStatuses = ['closed_won', 'Closed Won', 'closed won'];
-        $lostStatuses = ['closed_lost', 'Closed Lost', 'closed lost'];
+        $wonStatuses = Lead::wonStatusValues();
+        $lostStatuses = Lead::lostStatusValues();
 
         $wonCount = Lead::where('tenant_id', $tenantId)->whereIn('status', $wonStatuses)->count();
         $lostCount = Lead::where('tenant_id', $tenantId)->whereIn('status', $lostStatuses)->count();
@@ -67,7 +67,7 @@ class DashboardController extends Controller
 
         $trialDaysRemaining = $tenant?->trialDaysRemaining() ?? 0;
         $trialEndsAt = $tenant?->trial_ends_at;
-        $trialActive = $tenant?->status === 'trial' && ! $tenant?->isTrialExpired();
+        $trialActive = $tenant?->isOnTrial() && ! $tenant?->isTrialExpired();
 
         return view('dashboard.account-owner', compact(
             'tenant',
@@ -146,13 +146,13 @@ class DashboardController extends Controller
             ->all();
 
         $overdueLeads = (clone $assignedLeadsQuery)
-            ->whereNotIn('status', ['closed_won', 'closed_lost', 'Closed Won', 'Closed Lost', 'closed won', 'closed lost'])
+            ->whereNotIn('status', Lead::closedStatusValues())
             ->where('updated_at', '<', now()->copy()->subDays(3))
             ->latest('updated_at')
             ->paginate(10, ['id', 'name', 'status', 'updated_at'], 'overdue_page');
 
         $overdueFollowUpsCount = (clone $assignedLeadsQuery)
-            ->whereNotIn('status', ['closed_won', 'closed_lost', 'Closed Won', 'Closed Lost', 'closed won', 'closed lost'])
+            ->whereNotIn('status', Lead::closedStatusValues())
             ->where('updated_at', '<', now()->copy()->subDays(3))
             ->count();
 

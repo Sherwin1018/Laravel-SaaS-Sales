@@ -117,7 +117,7 @@ class AuthController extends Controller
             return redirect()->route('login')->with('error', 'Your workspace trial has ended. Please contact your Account Owner to reactivate access.');
         }
 
-        if ($tenant->status === 'inactive') {
+        if ($tenant->isInactive()) {
             if ($user->hasRole('account-owner')) {
                 return redirect()->intended(route('trial.billing.show'))->with('error', 'Your workspace is inactive. Complete payment to restore access.');
             }

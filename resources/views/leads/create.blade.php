@@ -92,6 +92,20 @@
                 @enderror
             </div>
 
+            @if(($customFields ?? collect())->isNotEmpty())
+                <div style="margin-bottom: 24px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px;">
+                        <h3 style="margin:0;font-size:18px;">Custom Lead Fields</h3>
+                        @if(auth()->user()->hasRole('account-owner') || auth()->user()->hasRole('marketing-manager'))
+                            <a href="{{ route('crm.custom-fields.index') }}" style="font-size:13px;font-weight:700;color:var(--theme-primary, #240E35);">
+                                Manage fields
+                            </a>
+                        @endif
+                    </div>
+                    @include('leads._custom_fields', ['customFields' => $customFields, 'values' => []])
+                </div>
+            @endif
+
             <div style="display: flex; gap: 10px;">
                 <button type="submit"
                     style="padding: 10px 20px; background-color: var(--theme-primary, #240E35); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">

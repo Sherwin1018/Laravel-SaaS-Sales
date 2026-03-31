@@ -6,6 +6,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FunnelController;
 use App\Http\Controllers\FunnelPortalController;
 use App\Http\Controllers\LeadController;
+use App\Http\Controllers\LeadCustomFieldController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PayMongoWebhookController;
 use App\Http\Controllers\PlanController;
@@ -101,6 +102,10 @@ Route::middleware(['auth', 'tenant.subscription', 'role:sales-agent,marketing-ma
     Route::get('/leads', [LeadController::class, 'index'])->name('leads.index');
     Route::get('/leads/create', [LeadController::class, 'create'])->name('leads.create');
     Route::post('/leads', [LeadController::class, 'store'])->name('leads.store');
+    Route::get('/crm/custom-fields', [LeadCustomFieldController::class, 'index'])->name('crm.custom-fields.index');
+    Route::post('/crm/custom-fields', [LeadCustomFieldController::class, 'store'])->name('crm.custom-fields.store');
+    Route::put('/crm/custom-fields/{field}', [LeadCustomFieldController::class, 'update'])->name('crm.custom-fields.update');
+    Route::delete('/crm/custom-fields/{field}', [LeadCustomFieldController::class, 'destroy'])->name('crm.custom-fields.destroy');
     Route::get('/leads/{lead}/edit', [LeadController::class, 'edit'])->name('leads.edit');
     Route::put('/leads/{lead}', [LeadController::class, 'update'])->name('leads.update');
     Route::delete('/leads/{lead}', [LeadController::class, 'destroy'])->name('leads.destroy');
@@ -130,6 +135,7 @@ Route::middleware(['auth', 'tenant.subscription', 'role:sales-agent,marketing-ma
         Route::post('/funnels/{funnel}/publish', [FunnelController::class, 'publish'])->name('funnels.publish');
         Route::post('/funnels/{funnel}/unpublish', [FunnelController::class, 'unpublish'])->name('funnels.unpublish');
         Route::get('/funnels/{funnel}/analytics', [FunnelController::class, 'analytics'])->name('funnels.analytics');
+        Route::get('/funnels/{funnel}/analytics/export', [FunnelController::class, 'exportAnalytics'])->name('funnels.analytics.export');
         Route::get('/funnels/{funnel}/events', [FunnelController::class, 'events'])->name('funnels.events');
         Route::delete('/funnels/{funnel}', [FunnelController::class, 'destroy'])->name('funnels.destroy');
         Route::post('/funnels/{funnel}/steps', [FunnelController::class, 'storeStep'])->name('funnels.steps.store');

@@ -202,6 +202,16 @@ class FunnelTrackingService
             ->paginate($perPage);
     }
 
+    public function eventsCollectionForExport(Funnel $funnel, array $filters = []): Collection
+    {
+        $this->syncAbandonedCheckoutEvents($funnel);
+
+        return $this->baseFunnelQuery($funnel, $filters)
+            ->with(['step:id,funnel_id,title,slug,type', 'lead:id,name,email', 'payment:id,amount,status,payment_date'])
+            ->orderByDesc('occurred_at')
+            ->get();
+    }
+
     public function analyticsForFunnel(Funnel $funnel, array $filters = []): array
     {
         $this->syncAbandonedCheckoutEvents($funnel);
@@ -229,6 +239,7 @@ class FunnelTrackingService
             ->when($filters['from'] ?? null, fn (Builder $query, Carbon $from) => $query->where('created_at', '>=', $from))
             ->when($filters['to'] ?? null, fn (Builder $query, Carbon $to) => $query->where('created_at', '<=', $to))
             ->get();
+        $dailySeries = $this->dailySeries($events, $payments);
 
         $stepVisits = $activeSteps->map(function (FunnelStep $step) use ($stepViewEvents) {
             $visits = $this->uniqueVisitCount($stepViewEvents->where('funnel_step_id', $step->id));
@@ -252,6 +263,7 @@ class FunnelTrackingService
                 'from_visits' => $stepVisit['visits'],
                 'to_next_visits' => $nextVisits,
                 'drop_off' => max(0, $stepVisit['visits'] - $nextVisits),
+                'drop_off_rate' => $this->rate(max(0, $stepVisit['visits'] - $nextVisits), $stepVisit['visits']),
             ];
         })->values();
 
@@ -280,6 +292,8 @@ class FunnelTrackingService
                 'paid_count' => $paidCount,
                 'abandoned_checkout_count' => $abandonedCount,
                 'revenue' => (float) $payments->sum('amount'),
+                'average_order_value' => $paidCount > 0 ? round(((float) $payments->sum('amount')) / $paidCount, 2) : 0.0,
+                'revenue_per_visit' => $entryVisits > 0 ? round(((float) $payments->sum('amount')) / $entryVisits, 2) : 0.0,
             ],
             'rates' => [
                 'opt_in_conversion_rate' => $this->rate($optInCount, $entryVisits),
@@ -295,6 +309,13 @@ class FunnelTrackingService
                 'downsell_accepted' => $downsellAccepted,
                 'downsell_declined' => $downsellDeclined,
             ],
+            'conversion_funnel' => [
+                ['label' => 'Entry Visits', 'count' => $entryVisits],
+                ['label' => 'Opt-ins', 'count' => $optInCount],
+                ['label' => 'Checkout Starts', 'count' => $checkoutStarts],
+                ['label' => 'Paid', 'count' => $paidCount],
+            ],
+            'daily_series' => $dailySeries,
             'step_visits' => $stepVisits,
             'drop_off' => $dropOff,
             'step_event_breakdown' => $events
@@ -499,5 +520,35 @@ class FunnelTrackingService
     private function abandonedAfterSeconds(): int
     {
         return max(60, (int) config('funnels.checkout_abandoned_after_seconds', 86400));
+    }
+
+    private function dailySeries(Collection $events, Collection $payments): array
+    {
+        $days = collect();
+
+        foreach ($events as $event) {
+            $days->push(optional($event->occurred_at)->format('Y-m-d'));
+        }
+
+        foreach ($payments as $payment) {
+            $days->push(optional($payment->created_at)->format('Y-m-d'));
+        }
+
+        $labels = $days
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values();
+
+        return $labels->map(function (string $date) use ($events, $payments) {
+            return [
+                'date' => $date,
+                'entry_visits' => $events->where('event_name', self::EVENT_STEP_VIEWED)->filter(fn (FunnelEvent $event) => optional($event->occurred_at)->format('Y-m-d') === $date)->count(),
+                'opt_ins' => $events->where('event_name', self::EVENT_OPT_IN_SUBMITTED)->filter(fn (FunnelEvent $event) => optional($event->occurred_at)->format('Y-m-d') === $date)->count(),
+                'checkout_starts' => $events->where('event_name', self::EVENT_CHECKOUT_STARTED)->filter(fn (FunnelEvent $event) => optional($event->occurred_at)->format('Y-m-d') === $date)->count(),
+                'paid' => $events->where('event_name', self::EVENT_PAYMENT_PAID)->filter(fn (FunnelEvent $event) => optional($event->occurred_at)->format('Y-m-d') === $date)->count(),
+                'revenue' => round((float) $payments->filter(fn (Payment $payment) => optional($payment->created_at)->format('Y-m-d') === $date)->sum('amount'), 2),
+            ];
+        })->all();
     }
 }

@@ -185,6 +185,64 @@ class FunnelBuilderModuleTest extends TestCase
             ->assertNotFound();
     }
 
+    public function test_funnel_analytics_exposes_enhanced_metrics_and_filter_state(): void
+    {
+        [$tenant, $user] = $this->createTenantUserWithRole('marketing-manager');
+        $funnel = $this->createJourneyFunnel($tenant, $user, 'enhanced-analytics');
+        $steps = $funnel->steps()->orderBy('position')->get()->keyBy('type');
+
+        $this->get(route('funnels.portal.step', ['funnelSlug' => $funnel->slug]))->assertOk();
+        $this->post(route('funnels.portal.optin', ['funnelSlug' => $funnel->slug, 'stepSlug' => $steps['opt_in']->slug]), [
+            'email' => 'metric@example.com',
+            'name' => 'Metric Lead',
+            'website' => '',
+        ])->assertRedirect();
+        $this->post(route('funnels.portal.checkout', ['funnelSlug' => $funnel->slug, 'stepSlug' => $steps['checkout']->slug]), [
+            'amount' => 1499,
+            'website' => '',
+        ])->assertRedirect();
+
+        $response = $this->actingAs($user)->getJson(route('funnels.analytics', [
+            'funnel' => $funnel,
+            'step_id' => $steps['checkout']->id,
+            'event_name' => 'funnel_checkout_started',
+        ]));
+
+        $response->assertOk();
+        $response->assertJsonPath('analytics.filters.step_id', $steps['checkout']->id);
+        $response->assertJsonPath('analytics.filters.event_name', 'funnel_checkout_started');
+        $response->assertJsonPath('analytics.totals.checkout_start_count', 1);
+        $response->assertJsonPath('analytics.totals.average_order_value', 1499.0);
+        $response->assertJsonPath('analytics.totals.revenue_per_visit', 1499.0);
+        $response->assertJsonStructure([
+            'analytics' => [
+                'daily_series',
+                'conversion_funnel',
+            ],
+        ]);
+    }
+
+    public function test_funnel_analytics_export_downloads_csv(): void
+    {
+        [$tenant, $user] = $this->createTenantUserWithRole('marketing-manager');
+        $funnel = $this->createJourneyFunnel($tenant, $user, 'analytics-export');
+        $steps = $funnel->steps()->orderBy('position')->get()->keyBy('type');
+
+        $this->get(route('funnels.portal.step', ['funnelSlug' => $funnel->slug]))->assertOk();
+        $this->post(route('funnels.portal.optin', ['funnelSlug' => $funnel->slug, 'stepSlug' => $steps['opt_in']->slug]), [
+            'email' => 'export@example.com',
+            'name' => 'Export Lead',
+            'website' => '',
+        ])->assertRedirect();
+
+        $response = $this->actingAs($user)->get(route('funnels.analytics.export', $funnel));
+
+        $response->assertOk();
+        $response->assertHeader('content-type', 'text/csv; charset=UTF-8');
+        $response->assertSee('Occurred At,Event,Step,Lead,Payment Status,Amount,Session', false);
+        $response->assertSee('funnel_opt_in_submitted', false);
+    }
+
     private function createTenantUserWithRole(string $roleSlug, string $companyName = 'Tracked Workspace'): array
     {
         $tenant = Tenant::create([

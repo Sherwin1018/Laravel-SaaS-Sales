@@ -8,6 +8,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Payment extends Model
 {
+    public const STATUSES = [
+        'pending' => 'Pending',
+        'paid' => 'Paid',
+        'failed' => 'Failed',
+    ];
+
     protected $fillable = [
         'tenant_id',
         'funnel_id',
@@ -26,6 +32,18 @@ class Payment extends Model
         'amount' => 'decimal:2',
         'payment_date' => 'date',
     ];
+
+    public function setStatusAttribute($value): void
+    {
+        $this->attributes['status'] = self::normalizeStatus($value);
+    }
+
+    public static function normalizeStatus(mixed $value): string
+    {
+        $normalized = mb_strtolower(trim((string) $value));
+
+        return array_key_exists($normalized, self::STATUSES) ? $normalized : $normalized;
+    }
 
     public function tenant(): BelongsTo
     {

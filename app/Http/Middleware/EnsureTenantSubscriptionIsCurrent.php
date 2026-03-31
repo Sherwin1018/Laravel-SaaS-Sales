@@ -36,7 +36,7 @@ class EnsureTenantSubscriptionIsCurrent
                 ->with('error', 'Your 7-day free trial has ended. Complete payment to continue using your workspace.');
         }
 
-        if ($tenant->status === 'inactive') {
+        if ($tenant->isInactive()) {
             if (! $user->hasRole('account-owner')) {
                 Auth::logout();
                 $request->session()->invalidate();

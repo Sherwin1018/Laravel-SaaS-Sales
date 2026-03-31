@@ -7,6 +7,7 @@ use App\Models\FunnelBuilderAsset;
 use App\Models\FunnelStep;
 use App\Models\FunnelStepRevision;
 use App\Services\FunnelTrackingService;
+use App\Support\TenantPlanEnforcer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -17,16 +18,40 @@ class FunnelController extends Controller
     private const MAX_STEP_REVISIONS = 40;
     private const MAX_MANUAL_VERSIONS = 25;
 
-    public function index()
+    public function index(Request $request)
     {
         $tenantId = auth()->user()->tenant_id;
-        $funnels = Funnel::where('tenant_id', $tenantId)->withCount('steps')->latest()->paginate(10);
+        $search = trim((string) $request->query('search', ''));
 
-        return view('funnels.index', compact('funnels'));
+        $funnels = Funnel::where('tenant_id', $tenantId)
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($innerQuery) use ($search) {
+                    $innerQuery->where('name', 'like', "%{$search}%")
+                        ->orWhere('slug', 'like', "%{$search}%")
+                        ->orWhere('description', 'like', "%{$search}%");
+                });
+            })
+            ->withCount('steps')
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
+        $planUsage = app(TenantPlanEnforcer::class)->usageSummary(auth()->user()->tenant);
+
+        if ($request->ajax()) {
+            return view('funnels._rows', compact('funnels'))->render();
+        }
+
+        return view('funnels.index', compact('funnels', 'search', 'planUsage'));
     }
 
     public function create()
     {
+        try {
+            app(TenantPlanEnforcer::class)->ensureCanCreateFunnel(auth()->user()->tenant);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return redirect()->route('funnels.index')->with('error', $e->getMessage());
+        }
+
         return view('funnels.create');
     }
 
@@ -41,6 +66,7 @@ class FunnelController extends Controller
         $user = auth()->user();
 
         try {
+            app(TenantPlanEnforcer::class)->ensureCanCreateFunnel($user->tenant);
             $funnel = Funnel::create([
                 'tenant_id' => $user->tenant_id,
                 'created_by' => $user->id,
@@ -77,6 +103,8 @@ class FunnelController extends Controller
             }
 
             return redirect()->route('funnels.edit', $funnel)->with('success', 'Added Successfully');
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return redirect()->back()->withInput()->with('error', $e->getMessage());
         } catch (\Throwable $e) {
             return redirect()->back()->withInput()->with('error', 'Added Failed');
         }
@@ -155,7 +183,41 @@ class FunnelController extends Controller
             'filters' => [
                 'from' => $request->query('from', ''),
                 'to' => $request->query('to', ''),
+                'step_id' => $request->query('step_id', ''),
+                'event_name' => $request->query('event_name', ''),
             ],
+            'supportedEvents' => $analytics['events_supported'] ?? [],
+        ]);
+    }
+
+    public function exportAnalytics(Request $request, Funnel $funnel, FunnelTrackingService $tracking)
+    {
+        $this->ensureTenantFunnelAccess($funnel);
+
+        $filters = $tracking->normalizeDateFilters($request->only(['from', 'to', 'step_id', 'event_name']));
+        $events = $tracking->eventsCollectionForExport($funnel, $filters);
+
+        $filename = 'funnel-analytics-' . $funnel->slug . '-' . now()->format('Ymd_His') . '.csv';
+
+        return response()->streamDownload(function () use ($events) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, ['Occurred At', 'Event', 'Step', 'Lead', 'Payment Status', 'Amount', 'Session']);
+
+            foreach ($events as $event) {
+                fputcsv($handle, [
+                    optional($event->occurred_at)->toDateTimeString(),
+                    $event->event_name,
+                    $event->step->title ?? '',
+                    $event->lead->email ?? ($event->lead->name ?? ''),
+                    $event->payment->status ?? '',
+                    $event->payment ? number_format((float) $event->payment->amount, 2, '.', '') : '',
+                    $event->session_identifier ?? '',
+                ]);
+            }
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv',
         ]);
     }
 
@@ -572,7 +634,7 @@ class FunnelController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:120',
             'description' => 'nullable|string|max:2000',
-            'status' => ['required', Rule::in(['draft', 'published'])],
+            'status' => ['required', Rule::in(array_keys(Funnel::STATUSES))],
             'default_tags' => 'nullable|string|max:500',
         ]);
 
