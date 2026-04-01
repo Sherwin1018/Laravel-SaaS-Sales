@@ -66,6 +66,9 @@ class LinkTrackingController extends Controller
             $newStatus = 'contacted';
         }
 
+        // Capture UTM data from session (stored by FunnelPortalController)
+        $utmData = $this->getUtmDataForLead($lead);
+
         LeadLinkClick::create([
             'tenant_id' => $tenantId,
             'lead_id' => $leadId,
@@ -74,6 +77,12 @@ class LinkTrackingController extends Controller
             'sequence_step_order' => $sequenceStepOrder ?: null,
             'link_name' => $linkName ?: null,
             'destination_url' => $destinationUrl,
+            'utm_source' => $utmData['utm_source'] ?? null,
+            'utm_medium' => $utmData['utm_medium'] ?? null,
+            'utm_campaign' => $utmData['utm_campaign'] ?? null,
+            'utm_term' => $utmData['utm_term'] ?? null,
+            'utm_content' => $utmData['utm_content'] ?? null,
+            'utm_id' => $utmData['utm_id'] ?? null,
             'click_number' => $clickNumber,
             'clicked_at' => now(),
         ]);
@@ -102,5 +111,34 @@ class LinkTrackingController extends Controller
 
         return redirect()->away($destinationUrl);
     }
-}
 
+    /**
+     * Retrieve UTM data for a lead from session storage.
+     * Since we don't have direct funnel-to-lead relationship, we'll check
+     * all possible UTM session keys and return the most recent one.
+     */
+    private function getUtmDataForLead(Lead $lead): array
+    {
+        // Try to find UTM data from any funnel session
+        $utmData = [];
+        
+        // Check if we have any UTM data stored for this tenant's funnels
+        $sessionKeys = array_filter(session()->all(), function($key) {
+            return str_starts_with($key, 'link_tracking_utm_');
+        }, ARRAY_FILTER_USE_KEY);
+        
+        foreach ($sessionKeys as $sessionKey => $value) {
+            if (is_array($value) && isset($value['utm_source'])) {
+                $utmData = $value;
+                break; // Take the first one found
+            }
+        }
+        
+        // Fallback: try to get from lead's source_campaign if no session UTM
+        if (empty($utmData) && $lead->source_campaign) {
+            $utmData['utm_source'] = $lead->source_campaign;
+        }
+        
+        return $utmData;
+    }
+}

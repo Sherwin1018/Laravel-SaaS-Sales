@@ -28,22 +28,31 @@ class FunnelPortalController extends Controller
 
         abort_if(! $step, 404);
 
-        $utmSource = $this->normalizeSourceCampaign($request->query('utm_source'));
-        $utmMedium = $this->normalizeSourceCampaign($request->query('utm_medium'));
-        $utmCampaign = $this->normalizeSourceCampaign($request->query('utm_campaign'));
+        $utmSource = $this->normalizeUtmParameter($request->query('utm_source'));
+        $utmMedium = $this->normalizeUtmParameter($request->query('utm_medium'));
+        $utmCampaign = $this->normalizeUtmParameter($request->query('utm_campaign'));
+        $utmTerm = $this->normalizeUtmParameter($request->query('utm_term'));
+        $utmContent = $this->normalizeUtmParameter($request->query('utm_content'));
+        $utmId = $this->normalizeUtmParameter($request->query('utm_id'));
         $referrer = $request->header('referer');
         $referrer = $referrer ? mb_substr(trim((string) $referrer), 0, 500) : null;
 
         // Persist attribution so it survives internal redirects between funnel steps.
         // (We only store it when we actually have something useful to store.)
-        if ($utmSource || $utmMedium || $utmCampaign || $referrer) {
+        if ($utmSource || $utmMedium || $utmCampaign || $utmTerm || $utmContent || $utmId || $referrer) {
             session()->put($this->funnelUtmSessionKey($funnel->id), [
                 'utm_source' => $utmSource,
                 'utm_medium' => $utmMedium,
                 'utm_campaign' => $utmCampaign,
+                'utm_term' => $utmTerm,
+                'utm_content' => $utmContent,
+                'utm_id' => $utmId,
                 'referrer' => $referrer,
             ]);
         }
+
+        // Store UTM data for link tracking (separate from funnel UTM for link clicks)
+        $this->storeUtmForLinkTracking($request, $funnel->id);
 
         // Always log funnel landing so the tenant can see “how many times link was clicked”.
         try {
@@ -111,9 +120,9 @@ class FunnelPortalController extends Controller
             $lead->score = 0;
         }
 
-        $utmFromRequest = $this->normalizeSourceCampaign($request->query('utm_source'));
+        $utmFromRequest = $this->normalizeUtmParameter($request->query('utm_source'));
         $storedUtm = session()->get($this->funnelUtmSessionKey($funnel->id), []);
-        $utmFromSession = $this->normalizeSourceCampaign($storedUtm['utm_source'] ?? null);
+        $utmFromSession = $this->normalizeUtmParameter($storedUtm['utm_source'] ?? null);
         $referrerFromSession = $storedUtm['referrer'] ?? null;
 
         $resolvedSource = $utmFromRequest ?: $utmFromSession ?: $this->inferSourceFromReferrer($referrerFromSession);
@@ -428,16 +437,25 @@ class FunnelPortalController extends Controller
         return "funnel_utm_{$funnelId}";
     }
 
-    private function normalizeSourceCampaign(?string $value): ?string
+    private function linkTrackingUtmSessionKey(int $funnelId): string
+    {
+        return "link_tracking_utm_{$funnelId}";
+    }
+
+    private function normalizeUtmParameter(?string $value): ?string
     {
         $v = trim((string) ($value ?? ''));
         if ($v === '') {
             return null;
         }
 
-        // Keep it URL/DB friendly and consistent for analytics breakdowns.
-        $v = preg_replace('/\s+/', '_', $v) ?? '';
-        $v = mb_substr(trim($v), 0, 100);
+        // Enhanced normalization following UTM standards
+        $v = rawurldecode($v);                    // Decode URL-encoded values
+        $v = mb_strtolower($v, 'UTF-8');         // Normalize to lowercase
+        $v = preg_replace('/[^a-z0-9_\-]/', '', $v); // Allow only alphanumeric, underscore, hyphen
+        $v = preg_replace('/_+/', '_', $v);       // Replace multiple underscores with single
+        $v = preg_replace('/^-+|-+$/', '', $v);   // Remove leading/trailing hyphens
+        $v = mb_substr(trim($v), 0, 100);         // Limit to 100 characters
 
         return $v !== '' ? $v : null;
     }
@@ -467,6 +485,24 @@ class FunnelPortalController extends Controller
         }
 
         return null;
+    }
+
+    private function storeUtmForLinkTracking(Request $request, int $funnelId): void
+    {
+        $utmData = [
+            'utm_source' => $this->normalizeUtmParameter($request->query('utm_source')),
+            'utm_medium' => $this->normalizeUtmParameter($request->query('utm_medium')),
+            'utm_campaign' => $this->normalizeUtmParameter($request->query('utm_campaign')),
+            'utm_term' => $this->normalizeUtmParameter($request->query('utm_term')),
+            'utm_content' => $this->normalizeUtmParameter($request->query('utm_content')),
+            'utm_id' => $this->normalizeUtmParameter($request->query('utm_id')),
+        ];
+        
+        // Store UTM data for link tracking if any UTM parameters are present
+        if ($utmData['utm_source'] || $utmData['utm_medium'] || $utmData['utm_campaign'] || 
+            $utmData['utm_term'] || $utmData['utm_content'] || $utmData['utm_id']) {
+            session()->put($this->linkTrackingUtmSessionKey($funnelId), $utmData);
+        }
     }
 
     private function currentLeadId(int $funnelId): ?int

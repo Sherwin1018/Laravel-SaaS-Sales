@@ -12,6 +12,12 @@ class LeadLinkClick extends Model
         'sequence_step_order',
         'link_name',
         'destination_url',
+        'utm_source',
+        'utm_medium',
+        'utm_campaign',
+        'utm_term',
+        'utm_content',
+        'utm_id',
         'click_number',
         'clicked_at',
     ];

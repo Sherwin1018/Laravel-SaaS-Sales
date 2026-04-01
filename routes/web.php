@@ -206,8 +206,10 @@ Route::get('/f/{funnelSlug}/{stepSlug}/paymongo/return/{payment}', [FunnelPortal
     ->name('funnels.portal.paymongo.return');
 Route::post('/f/{funnelSlug}/{stepSlug}/offer', [FunnelPortalController::class, 'offer'])->name('funnels.portal.offer');
 
-Route::get('/register/paymongo/return/{payment}', [PayMongoCheckoutController::class, 'return'])
-    ->middleware('signed')
-    ->name('register.paymongo.return');
+Route::get('/r/{token}', [\App\Http\Controllers\LinkTrackingController::class, 'redirect'])->name('link.tracking');
+
+// Route::get('/register/paymongo/return/{payment}', [PayMongoCheckoutController::class, 'return'])
+//     ->middleware('signed')
+//     ->name('register.paymongo.return');
 
 Route::post('/webhooks/paymongo', PayMongoWebhookController::class)->name('webhooks.paymongo');

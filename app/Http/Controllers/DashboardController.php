@@ -8,6 +8,7 @@ use App\Models\LeadActivity;
 use App\Models\LeadLinkClick;
 use App\Models\Payment;
 use App\Models\TrackedLink;
+use App\Services\UTMAnalyticsService;
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
@@ -141,6 +142,20 @@ class DashboardController extends Controller
             ->take(5)
             ->get();
 
+        // UTM Pipeline Analytics - NEW
+        $utmAnalytics = app(UTMAnalyticsService::class);
+        $sourcePerformance = $utmAnalytics->getSourcePerformance($tenantId);
+        $hotLeads = $utmAnalytics->getHotLeads($tenantId);
+        $kpiMetrics = $utmAnalytics->getKpiMetrics($tenantId);
+        $pipelineFlow = $utmAnalytics->getPipelineFlow($tenantId);
+        $linkPerformance = $utmAnalytics->getLinkPerformance($tenantId);
+
+        // Funnel overview data for General Funnel Overview section
+        $visits = FunnelVisit::where('tenant_id', $tenantId)->count();
+        $optIns = Lead::where('tenant_id', $tenantId)->count(); // Proxy for opt-ins
+        $inPipeline = Lead::where('tenant_id', $tenantId)->whereIn('status', ['new', 'contacted', 'proposal_sent'])->count();
+        $closedWon = Lead::where('tenant_id', $tenantId)->where('status', 'closed_won')->count();
+
         return view('dashboard.marketing', compact(
             'sourceBreakdown',
             'sourceBreakdownChart',
@@ -150,7 +165,18 @@ class DashboardController extends Controller
             'trendValues',
             'mqlThreshold',
             'visitsBySource',
-            'topTrackedLinks'
+            'topTrackedLinks',
+            // NEW UTM Analytics data
+            'sourcePerformance',
+            'hotLeads',
+            'kpiMetrics',
+            'pipelineFlow',
+            'linkPerformance',
+            // Funnel overview data
+            'visits',
+            'optIns',
+            'inPipeline',
+            'closedWon'
         ));
     }
 
