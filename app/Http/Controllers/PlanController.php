@@ -81,6 +81,12 @@ class PlanController extends Controller
             'spotlight' => 'nullable|string|max:120',
             'is_active' => 'nullable|boolean',
             'sort_order' => 'required|integer|min:0',
+            'max_users' => 'nullable|integer|min:1',
+            'max_leads' => 'nullable|integer|min:1',
+            'max_funnels' => 'nullable|integer|min:1',
+            'max_workflows' => 'nullable|integer|min:1',
+            'max_monthly_messages' => 'nullable|integer|min:1',
+            'automation_enabled' => 'nullable|boolean',
         ]);
     }
 
