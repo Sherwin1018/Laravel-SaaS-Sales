@@ -31,7 +31,7 @@
         padding: 10px 16px;
         text-decoration: none;
         font-weight: 600;
-        color: var(--theme-sidebar-text, #1E40AF);
+        color: #000000;
         border-bottom: 3px solid transparent;
         margin-bottom: -1px;
         border-radius: 6px 6px 0 0;
