@@ -6,6 +6,13 @@ use Illuminate\Database\Eloquent\Model;
 
 class SignupIntent extends Model
 {
+    public const STATUSES = [
+        'pending' => 'Pending',
+        'paid' => 'Paid',
+        'completed' => 'Completed',
+        'failed' => 'Failed',
+    ];
+
     protected $fillable = [
         'full_name',
         'company_name',
@@ -27,4 +34,16 @@ class SignupIntent extends Model
         'paid_at' => 'datetime',
         'completed_at' => 'datetime',
     ];
+
+    public function setStatusAttribute($value): void
+    {
+        $this->attributes['status'] = self::normalizeStatus($value);
+    }
+
+    public static function normalizeStatus(mixed $value): string
+    {
+        $normalized = mb_strtolower(trim((string) $value));
+
+        return array_key_exists($normalized, self::STATUSES) ? $normalized : $normalized;
+    }
 }

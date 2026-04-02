@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Payment;
 use App\Models\SignupIntent;
+use App\Services\FunnelTrackingService;
 use App\Services\SignupOnboardingService;
+use App\Services\SubscriptionLifecycleService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -68,6 +70,7 @@ class PayMongoWebhookController extends Controller
                 'payment_method' => $method ?? $payment->payment_method,
                 'payment_date' => now()->toDateString(),
             ]);
+            app(FunnelTrackingService::class)->trackPaymentPaid($payment->fresh(), ['source' => 'paymongo_webhook.checkout_session_paid']);
         }
 
         $metadata = data_get($session, 'attributes.metadata');
@@ -103,6 +106,7 @@ class PayMongoWebhookController extends Controller
                 'payment_method' => is_string($method) ? $method : $payment->payment_method,
                 'payment_date' => now()->toDateString(),
             ]);
+            app(FunnelTrackingService::class)->trackPaymentPaid($payment->fresh(), ['source' => 'paymongo_webhook.payment_paid']);
         }
 
         if (($meta['flow'] ?? null) === 'trial_upgrade' && $payment) {
@@ -130,7 +134,7 @@ class PayMongoWebhookController extends Controller
             return;
         }
 
-        $payment = Payment::query()->where('id', $paymentId)->where('provider', 'paymongo')->where('status', 'pending')->first();
+        $payment = Payment::query()->where('id', $paymentId)->where('provider', 'paymongo')->first();
         if (! $payment) {
             $signupIntentId = isset($meta['signup_intent_id']) ? (int) $meta['signup_intent_id'] : 0;
             if ($signupIntentId > 0) {
@@ -143,7 +147,7 @@ class PayMongoWebhookController extends Controller
             return;
         }
 
-        $payment->update(['status' => 'failed']);
+        app(SubscriptionLifecycleService::class)->markPaymentFailed($payment);
     }
 
     private function completeSignupIntent(SignupIntent $signupIntent, ?string $method = null): void

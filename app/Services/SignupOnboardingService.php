@@ -24,19 +24,23 @@ class SignupOnboardingService
      */
     public function plans(): array
     {
-        if (! Schema::hasTable('plans')) {
+        try {
+            if (! Schema::hasTable('plans')) {
+                return $this->defaultPlans();
+            }
+
+            $plans = Plan::query()
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->orderBy('id')
+                ->get()
+                ->map(fn (Plan $plan) => $this->serializePlan($plan))
+                ->all();
+
+            return $plans !== [] ? $plans : $this->defaultPlans();
+        } catch (\Throwable) {
             return $this->defaultPlans();
         }
-
-        $plans = Plan::query()
-            ->where('is_active', true)
-            ->orderBy('sort_order')
-            ->orderBy('id')
-            ->get()
-            ->map(fn (Plan $plan) => $this->serializePlan($plan))
-            ->all();
-
-        return $plans !== [] ? $plans : $this->defaultPlans();
     }
 
     /**
@@ -164,6 +168,7 @@ class SignupOnboardingService
                 'company_name' => $validated['company_name'],
                 'subscription_plan' => 'Free Trial',
                 'status' => 'trial',
+                'billing_status' => 'trial',
                 'trial_starts_at' => $trialStartsAt,
                 'trial_ends_at' => $trialEndsAt,
             ]);
@@ -309,6 +314,11 @@ class SignupOnboardingService
         $tenant->update([
             'subscription_plan' => $plan['name'],
             'status' => 'active',
+            'billing_status' => 'current',
+            'billing_grace_ends_at' => null,
+            'last_payment_failed_at' => null,
+            'subscription_activated_at' => $tenant->subscription_activated_at ?? now(),
+            'trial_ends_at' => null,
         ]);
 
         return $tenant->fresh();
@@ -316,27 +326,7 @@ class SignupOnboardingService
 
     public function activateTenantSubscriptionFromPayment(Payment $payment, array $plan, ?string $paymentMethod = null): Tenant
     {
-        return DB::transaction(function () use ($payment, $plan, $paymentMethod) {
-            $payment = Payment::query()->lockForUpdate()->findOrFail($payment->id);
-            $tenant = Tenant::query()->lockForUpdate()->findOrFail($payment->tenant_id);
-
-            if ($payment->status !== 'paid') {
-                $payment->update([
-                    'status' => 'paid',
-                    'payment_method' => $paymentMethod ?? $payment->payment_method,
-                    'payment_date' => now()->toDateString(),
-                ]);
-            }
-
-            if ($tenant->status !== 'active' || $tenant->subscription_plan !== $plan['name']) {
-                $tenant->update([
-                    'subscription_plan' => $plan['name'],
-                    'status' => 'active',
-                ]);
-            }
-
-            return $tenant->fresh();
-        });
+        return app(SubscriptionLifecycleService::class)->activateTenantSubscriptionFromPayment($payment, $plan, $paymentMethod);
     }
 
     public function finalize(SignupIntent $intent): User
@@ -365,6 +355,8 @@ class SignupOnboardingService
                 'company_name' => $intent->company_name,
                 'subscription_plan' => $intent->plan_name,
                 'status' => 'active',
+                'billing_status' => 'current',
+                'subscription_activated_at' => now(),
             ]);
 
             $user = User::create([
