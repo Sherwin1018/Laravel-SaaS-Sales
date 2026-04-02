@@ -29,6 +29,18 @@ class Funnel extends Model
         'require_double_opt_in' => 'boolean',
     ];
 
+    public function setStatusAttribute($value): void
+    {
+        $this->attributes['status'] = self::normalizeStatus($value);
+    }
+
+    public static function normalizeStatus(mixed $value): string
+    {
+        $normalized = mb_strtolower(trim((string) $value));
+
+        return array_key_exists($normalized, self::STATUSES) ? $normalized : $normalized;
+    }
+
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
@@ -44,15 +56,8 @@ class Funnel extends Model
         return $this->hasMany(FunnelStep::class)->orderBy('position');
     }
 
-    public function setStatusAttribute($value): void
+    public function events(): HasMany
     {
-        $this->attributes['status'] = self::normalizeStatus($value);
-    }
-
-    public static function normalizeStatus(mixed $value): string
-    {
-        $normalized = mb_strtolower(trim((string) $value));
-
-        return array_key_exists($normalized, self::STATUSES) ? $normalized : $normalized;
+        return $this->hasMany(FunnelEvent::class);
     }
 }

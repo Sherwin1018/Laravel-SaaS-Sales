@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\Role;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class TenantController extends Controller
 {
@@ -43,7 +44,7 @@ class TenantController extends Controller
         $validated = $request->validate([
             'company_name' => 'required|string|max:255',
             'subscription_plan' => 'required|string|max:255',
-            'status' => 'required|in:active,inactive,trial',
+            'status' => ['required', Rule::in(array_keys(Tenant::STATUSES))],
             'admin_name' => 'required|string|max:255',
             'admin_email' => 'required|email|max:255|unique:users,email',
             'admin_password' => [
@@ -110,7 +111,7 @@ class TenantController extends Controller
         $validated = $request->validate([
             'company_name' => 'required|string|max:255',
             'subscription_plan' => 'required|string|max:255',
-            'status' => 'required|in:active,inactive,trial',
+            'status' => ['required', Rule::in(array_keys(Tenant::STATUSES))],
         ]);
 
         try {

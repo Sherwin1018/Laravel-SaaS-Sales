@@ -7,8 +7,7 @@ use App\Models\Lead;
 use App\Models\LeadActivity;
 use App\Models\LeadLinkClick;
 use App\Models\Payment;
-use App\Models\TrackedLink;
-use App\Services\UTMAnalyticsService;
+use App\Services\AnalyticsDashboardService;
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
@@ -20,7 +19,7 @@ class DashboardController extends Controller
             : "DATE_FORMAT({$column}, '%Y-%m')";
     }
 
-    public function owner()
+    public function owner(AnalyticsDashboardService $analytics)
     {
         $tenant = auth()->user()->tenant;
         $tenantId = auth()->user()->tenant_id;
@@ -30,8 +29,8 @@ class DashboardController extends Controller
             ->whereMonth('created_at', now()->month)
             ->count();
 
-        $wonStatuses = ['closed_won', 'Closed Won', 'closed won'];
-        $lostStatuses = ['closed_lost', 'Closed Lost', 'closed lost'];
+        $wonStatuses = Lead::wonStatusValues();
+        $lostStatuses = Lead::lostStatusValues();
 
         $wonCount = Lead::where('tenant_id', $tenantId)->whereIn('status', $wonStatuses)->count();
         $lostCount = Lead::where('tenant_id', $tenantId)->whereIn('status', $lostStatuses)->count();
@@ -71,7 +70,12 @@ class DashboardController extends Controller
 
         $trialDaysRemaining = $tenant?->trialDaysRemaining() ?? 0;
         $trialEndsAt = $tenant?->trial_ends_at;
-        $trialActive = $tenant?->status === 'trial' && ! $tenant?->isTrialExpired();
+        $trialActive = $tenant?->isOnTrial() && ! $tenant?->isTrialExpired();
+        $analyticsSummary = $tenant ? $analytics->tenantOwnerSummary($tenant) : [
+            'usage' => [],
+            'revenue_trend_labels' => [],
+            'revenue_trend_values' => [],
+        ];
 
         return view('dashboard.account-owner', compact(
             'tenant',
@@ -86,7 +90,8 @@ class DashboardController extends Controller
             'teamActivity',
             'trialDaysRemaining',
             'trialEndsAt',
-            'trialActive'
+            'trialActive',
+            'analyticsSummary'
         ));
     }
 
@@ -206,13 +211,13 @@ class DashboardController extends Controller
             ->all();
 
         $overdueLeads = (clone $assignedLeadsQuery)
-            ->whereNotIn('status', ['closed_won', 'closed_lost', 'Closed Won', 'Closed Lost', 'closed won', 'closed lost'])
+            ->whereNotIn('status', Lead::closedStatusValues())
             ->where('updated_at', '<', now()->copy()->subDays(3))
             ->latest('updated_at')
             ->paginate(10, ['id', 'name', 'status', 'updated_at'], 'overdue_page');
 
         $overdueFollowUpsCount = (clone $assignedLeadsQuery)
-            ->whereNotIn('status', ['closed_won', 'closed_lost', 'Closed Won', 'Closed Lost', 'closed won', 'closed lost'])
+            ->whereNotIn('status', Lead::closedStatusValues())
             ->where('updated_at', '<', now()->copy()->subDays(3))
             ->count();
 

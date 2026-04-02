@@ -25,6 +25,10 @@ class Tenant extends Model
         'logo_path',
         'subscription_plan',
         'status',
+        'billing_status',
+        'billing_grace_ends_at',
+        'last_payment_failed_at',
+        'subscription_activated_at',
         'theme_primary_color',
         'theme_accent_color',
         'theme_sidebar_bg',
@@ -36,7 +40,34 @@ class Tenant extends Model
     protected $casts = [
         'trial_starts_at' => 'datetime',
         'trial_ends_at' => 'datetime',
+        'billing_grace_ends_at' => 'datetime',
+        'last_payment_failed_at' => 'datetime',
+        'subscription_activated_at' => 'datetime',
     ];
+
+    public function setStatusAttribute($value): void
+    {
+        $this->attributes['status'] = self::normalizeStatus($value);
+    }
+
+    public function setBillingStatusAttribute($value): void
+    {
+        $this->attributes['billing_status'] = self::normalizeBillingStatus($value);
+    }
+
+    public static function normalizeStatus(mixed $value): string
+    {
+        $normalized = mb_strtolower(trim((string) $value));
+
+        return array_key_exists($normalized, self::STATUSES) ? $normalized : $normalized;
+    }
+
+    public static function normalizeBillingStatus(mixed $value): string
+    {
+        $normalized = mb_strtolower(trim((string) $value));
+
+        return array_key_exists($normalized, self::BILLING_STATUSES) ? $normalized : $normalized;
+    }
 
     public function users()
     {
@@ -53,9 +84,24 @@ class Tenant extends Model
         return $this->hasMany(Funnel::class);
     }
 
+    public function customFields()
+    {
+        return $this->hasMany(TenantCustomField::class)->orderBy('sort_order');
+    }
+
     public function isOnTrial(): bool
     {
         return $this->status === 'trial' && $this->trial_ends_at instanceof Carbon;
+    }
+
+    public function isInactive(): bool
+    {
+        return $this->status === 'inactive';
+    }
+
+    public function isOverdue(): bool
+    {
+        return $this->billing_status === 'overdue';
     }
 
     public function isTrialExpired(): bool
@@ -69,12 +115,26 @@ class Tenant extends Model
             return 0;
         }
 
-        $trialEnd = $this->trial_ends_at->copy()->endOfDay();
-        if (now()->greaterThan($trialEnd)) {
+        $trialEnd = $this->trial_ends_at->copy();
+        $currentTime = now();
+        if ($currentTime->greaterThan($trialEnd)) {
             return 0;
         }
 
-        return now()->startOfDay()->diffInDays($trialEnd->copy()->startOfDay()) + 1;
+        return $currentTime->startOfDay()->diffInDays($trialEnd->copy()->startOfDay()) + 1;
+    }
+
+    public function billingGraceDaysRemaining(): int
+    {
+        if (! $this->billing_grace_ends_at) {
+            return 0;
+        }
+
+        if (now()->greaterThan($this->billing_grace_ends_at)) {
+            return 0;
+        }
+
+        return now()->startOfDay()->diffInDays($this->billing_grace_ends_at->copy()->startOfDay()) + 1;
     }
 
     public function setStatusAttribute($value): void

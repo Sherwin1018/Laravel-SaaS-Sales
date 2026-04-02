@@ -3,8 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Role;
-use App\Models\User;
-use Illuminate\Http\Request;
+use App\Support\TenantPlanEnforcer;
 use Illuminate\Support\Facades\Hash;
 use Throwable;
 
@@ -63,12 +62,13 @@ class UserController extends Controller
         }
 
         $users = $query->latest()->paginate(10);
+        $planUsage = app(TenantPlanEnforcer::class)->usageSummary(auth()->user()->tenant);
 
         if ($request->ajax()) {
             return view('users._rows', compact('users'))->render();
         }
 
-        return view('users.index', compact('users'));
+        return view('users.index', compact('users', 'planUsage'));
     }
 
     /**
@@ -76,6 +76,12 @@ class UserController extends Controller
      */
     public function create()
     {
+        try {
+            app(TenantPlanEnforcer::class)->ensureCanCreateUser(auth()->user()->tenant);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return redirect()->route('users.index')->with('error', $e->getMessage());
+        }
+
         // Get roles assignable by account owner
         $roles = Role::whereIn('slug', ['marketing-manager', 'sales-agent', 'finance', 'customer'])->get();
 
@@ -104,10 +110,10 @@ class UserController extends Controller
             'role' => 'required|exists:roles,slug',
         ], [
             'password.regex' => 'Password must contain uppercase, lowercase, number, and a special character.',
-        ]);
-
+        ]); 
         try {
             $tenantId = auth()->user()->tenant_id;
+            app(TenantPlanEnforcer::class)->ensureCanCreateUser(auth()->user()->tenant);
 
             $role = Role::where('slug', $request->role)->first();
             if (!$role) {
@@ -126,55 +132,9 @@ class UserController extends Controller
 
             $user->roles()->attach($role);
 
-            // Mail misconfiguration must not block team creation
-            try {
-                $user->sendEmailVerificationNotification();
-            } catch (Throwable $e) {
-                report($e);
-
-                return redirect()->route('users.index')->with(
-                    'warning',
-                    'User was added, but the verification email could not be sent. Fix MAIL_* in .env, then run php artisan config:clear. After mail works, they can log in and use “Resend verification email”.'
-                );
-            }
-
-            return redirect()->route('users.index')->with('success', 'User added. They must verify their email before accessing the platform.');
-        } catch (Throwable $e) {
-            report($e);
-
-            $message = config('app.debug')
-                ? 'Could not add user: '.$e->getMessage()
-                : 'Could not add user. Please try again or contact support.';
-
-            return redirect()->back()->withInput()->with('error', $message);
-        }
-    }
-
-    /**
-     * Resend verification email to user.
-     */
-    public function resendVerification(User $user)
-    {
-        // Policy: can only resend to users from own tenant
-        if ($user->tenant_id !== auth()->user()->tenant_id) {
-            abort(403);
-        }
-
-        // Check if user is already verified
-        if ($user->hasVerifiedEmail()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'User has already verified their email address.'
-            ]);
-        }
-
-        try {
-            $user->sendEmailVerificationNotification();
-            
-            return response()->json([
-                'success' => true,
-                'message' => 'Verification email sent successfully to ' . $user->email . '.'
-            ]);
+            return redirect()->route('users.index')->with('success', 'Added Successfully');
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return redirect()->back()->withInput()->with('error', $e->getMessage());
         } catch (\Throwable $e) {
             report($e);
             

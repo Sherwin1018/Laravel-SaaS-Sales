@@ -120,6 +120,21 @@
                     </div>
                 @endif
 
+                @php($customFieldValues = $lead->customFieldValueMap()->all())
+                @if(($customFields ?? collect())->isNotEmpty())
+                    <div style="margin-bottom: 24px;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px;">
+                            <h3 style="margin:0;font-size:18px;">Custom Lead Fields</h3>
+                            @if(auth()->user()->hasRole('account-owner') || auth()->user()->hasRole('marketing-manager'))
+                                <a href="{{ route('crm.custom-fields.index') }}" style="font-size:13px;font-weight:700;color:var(--theme-primary, #240E35);">
+                                    Manage fields
+                                </a>
+                            @endif
+                        </div>
+                        @include('leads._custom_fields', ['customFields' => $customFields, 'values' => $customFieldValues])
+                    </div>
+                @endif
+
                 <div style="display: flex; gap: 10px;">
                     <button type="submit"
                         style="padding: 10px 20px; background-color: var(--theme-primary, #240E35); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
@@ -181,27 +196,34 @@
 
             <h4>Scoring Events</h4>
             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                <form action="{{ route('leads.score-event', $lead->id) }}" method="POST">
-                    @csrf
-                    <input type="hidden" name="event" value="email_opened">
-                    <button type="submit" style="padding: 6px 10px; border: 1px solid var(--theme-border, #E6E1EF); background: var(--theme-surface-soft, #F3EEF7); border-radius: 6px; cursor: pointer; font-weight: 600;">
-                        +5 Email Opened
-                    </button>
-                </form>
-                <form action="{{ route('leads.score-event', $lead->id) }}" method="POST">
-                    @csrf
-                    <input type="hidden" name="event" value="link_clicked">
-                    <button type="submit" style="padding: 6px 10px; border: 1px solid #FDE68A; background: #FFFBEB; border-radius: 6px; cursor: pointer; font-weight: 600;">
-                        +10 Link Clicked
-                    </button>
-                </form>
-                <form action="{{ route('leads.score-event', $lead->id) }}" method="POST">
-                    @csrf
-                    <input type="hidden" name="event" value="form_submitted">
-                    <button type="submit" style="padding: 6px 10px; border: 1px solid #BBF7D0; background: #F0FDF4; border-radius: 6px; cursor: pointer; font-weight: 600;">
-                        +20 Form Submitted
-                    </button>
-                </form>
+                @foreach(config('lead_scoring.manual_events', []) as $eventKey => $event)
+                    <form action="{{ route('leads.score-event', $lead->id) }}" method="POST">
+                        @csrf
+                        <input type="hidden" name="event" value="{{ $eventKey }}">
+                        <button type="submit" style="padding: 6px 10px; border: 1px solid var(--theme-border, #E6E1EF); background: var(--theme-surface-soft, #F3EEF7); border-radius: 6px; cursor: pointer; font-weight: 600;">
+                            +{{ $event['points'] ?? 0 }} {{ $event['label'] ?? $eventKey }}
+                        </button>
+                    </form>
+                @endforeach
+            </div>
+
+            <hr style="border: 0; border-top: 1px solid var(--theme-border, #E6E1EF); margin: 20px 0;">
+
+            <h4>Stage History</h4>
+            <div style="max-height: 220px; overflow-y: auto;">
+                @forelse($lead->stageHistories as $entry)
+                    <div style="border-left: 2px solid var(--theme-accent, #6B4A7A); padding-left: 10px; margin-bottom: 15px;">
+                        <p style="font-size: 12px; color: #6B7280; margin-bottom: 4px;">
+                            {{ $entry->created_at?->format('M d, H:i') }} -
+                            <strong>{{ $entry->changedByUser->name ?? 'System' }}</strong>
+                        </p>
+                        <p style="font-size: 14px; color: #1F2937; margin: 0;">
+                            {{ $statuses[$entry->from_status] ?? 'Created' }} to {{ $statuses[$entry->to_status] ?? ($entry->to_status ?: 'Unknown') }}
+                        </p>
+                    </div>
+                @empty
+                    <p style="color: #6B7280; font-style: italic;">No stage changes recorded yet.</p>
+                @endforelse
             </div>
         </div>
     </div>

@@ -6,6 +6,8 @@ use App\Models\Funnel;
 use App\Models\FunnelBuilderAsset;
 use App\Models\FunnelStep;
 use App\Models\FunnelStepRevision;
+use App\Services\FunnelTrackingService;
+use App\Support\TenantPlanEnforcer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -16,16 +18,40 @@ class FunnelController extends Controller
     private const MAX_STEP_REVISIONS = 40;
     private const MAX_MANUAL_VERSIONS = 25;
 
-    public function index()
+    public function index(Request $request)
     {
         $tenantId = auth()->user()->tenant_id;
-        $funnels = Funnel::where('tenant_id', $tenantId)->withCount('steps')->latest()->paginate(10);
+        $search = trim((string) $request->query('search', ''));
 
-        return view('funnels.index', compact('funnels'));
+        $funnels = Funnel::where('tenant_id', $tenantId)
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($innerQuery) use ($search) {
+                    $innerQuery->where('name', 'like', "%{$search}%")
+                        ->orWhere('slug', 'like', "%{$search}%")
+                        ->orWhere('description', 'like', "%{$search}%");
+                });
+            })
+            ->withCount('steps')
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
+        $planUsage = app(TenantPlanEnforcer::class)->usageSummary(auth()->user()->tenant);
+
+        if ($request->ajax()) {
+            return view('funnels._rows', compact('funnels'))->render();
+        }
+
+        return view('funnels.index', compact('funnels', 'search', 'planUsage'));
     }
 
     public function create()
     {
+        try {
+            app(TenantPlanEnforcer::class)->ensureCanCreateFunnel(auth()->user()->tenant);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return redirect()->route('funnels.index')->with('error', $e->getMessage());
+        }
+
         return view('funnels.create');
     }
 
@@ -40,6 +66,7 @@ class FunnelController extends Controller
         $user = auth()->user();
 
         try {
+            app(TenantPlanEnforcer::class)->ensureCanCreateFunnel($user->tenant);
             $funnel = Funnel::create([
                 'tenant_id' => $user->tenant_id,
                 'created_by' => $user->id,
@@ -77,6 +104,8 @@ class FunnelController extends Controller
             }
 
             return redirect()->route('funnels.edit', $funnel)->with('success', 'Added Successfully');
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return redirect()->back()->withInput()->with('error', $e->getMessage());
         } catch (\Throwable $e) {
             return redirect()->back()->withInput()->with('error', 'Added Failed');
         }
@@ -107,7 +136,7 @@ class FunnelController extends Controller
         ]);
     }
 
-    public function preview(Funnel $funnel, ?FunnelStep $step = null)
+    public function preview(Request $request, Funnel $funnel, ?FunnelStep $step = null)
     {
         $this->ensureTenantFunnelAccess($funnel);
 
@@ -120,6 +149,7 @@ class FunnelController extends Controller
 
         $resolvedStep = $step ?: $steps->first();
         abort_if(!$resolvedStep, 404);
+        $selectedPricing = $this->previewSelectedPricingFromRequest($request, $steps);
 
         return view('funnels.portal.step', [
             'funnel' => $funnel->load('tenant'),
@@ -128,7 +158,80 @@ class FunnelController extends Controller
             'allSteps' => $steps,
             'isFirstStep' => (int) $steps->first()->id === (int) $resolvedStep->id,
             'isPreview' => true,
+            'selectedPricing' => $selectedPricing,
         ]);
+    }
+
+    public function analytics(Request $request, Funnel $funnel, FunnelTrackingService $tracking)
+    {
+        $this->ensureTenantFunnelAccess($funnel);
+
+        $filters = $tracking->normalizeDateFilters($request->only(['from', 'to', 'step_id', 'event_name', 'per_page']));
+        $analytics = $tracking->analyticsForFunnel($funnel, $filters);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'analytics' => $analytics,
+            ]);
+        }
+
+        $events = $tracking->eventsForFunnel($funnel, array_merge($filters, ['per_page' => 15]));
+
+        return view('funnels.analytics', [
+            'funnel' => $funnel->load('steps'),
+            'analytics' => $analytics,
+            'events' => $events,
+            'filters' => [
+                'from' => $request->query('from', ''),
+                'to' => $request->query('to', ''),
+                'step_id' => $request->query('step_id', ''),
+                'event_name' => $request->query('event_name', ''),
+            ],
+            'supportedEvents' => $analytics['events_supported'] ?? [],
+        ]);
+    }
+
+    public function exportAnalytics(Request $request, Funnel $funnel, FunnelTrackingService $tracking)
+    {
+        $this->ensureTenantFunnelAccess($funnel);
+
+        $filters = $tracking->normalizeDateFilters($request->only(['from', 'to', 'step_id', 'event_name']));
+        $events = $tracking->eventsCollectionForExport($funnel, $filters);
+
+        $filename = 'funnel-analytics-' . $funnel->slug . '-' . now()->format('Ymd_His') . '.csv';
+
+        return response()->streamDownload(function () use ($events) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, ['Occurred At', 'Event', 'Step', 'Lead', 'Payment Status', 'Amount', 'Session']);
+
+            foreach ($events as $event) {
+                fputcsv($handle, [
+                    optional($event->occurred_at)->toDateTimeString(),
+                    $event->event_name,
+                    $event->step->title ?? '',
+                    $event->lead->email ?? ($event->lead->name ?? ''),
+                    $event->payment->status ?? '',
+                    $event->payment ? number_format((float) $event->payment->amount, 2, '.', '') : '',
+                    $event->session_identifier ?? '',
+                ]);
+            }
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv',
+        ]);
+    }
+
+    public function events(Request $request, Funnel $funnel, FunnelTrackingService $tracking)
+    {
+        $this->ensureTenantFunnelAccess($funnel);
+
+        return response()->json(
+            $tracking->eventsForFunnel(
+                $funnel,
+                $tracking->normalizeDateFilters($request->only(['from', 'to', 'step_id', 'event_name', 'per_page']))
+            )
+        );
     }
 
     public function saveLayout(Request $request, Funnel $funnel)
@@ -532,7 +635,7 @@ class FunnelController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:120',
             'description' => 'nullable|string|max:2000',
-            'status' => ['required', Rule::in(['draft', 'published'])],
+            'status' => ['required', Rule::in(array_keys(Funnel::STATUSES))],
             'default_tags' => 'nullable|string|max:500',
         ]);
 
@@ -1429,6 +1532,7 @@ class FunnelController extends Controller
             'subtitle' => 300,
             'badge' => 80,
             'ctaLabel' => 120,
+            'ctaActionStepSlug' => 120,
             'ctaLink' => 2048,
             'endAt' => 120,
             'label' => 120,
@@ -1438,6 +1542,9 @@ class FunnelController extends Controller
         ] as $k => $maxLen) {
             $v = $readStringAllowEmpty($k, $maxLen);
             if ($v !== null) {
+                if (in_array($k, ['price', 'regularPrice'], true) && preg_match('/^\s*\$/', $v) === 1) {
+                    $v = preg_replace('/^\s*\$/', '₱', $v) ?? $v;
+                }
                 $safe[$k] = $v;
             }
         }
@@ -1457,6 +1564,7 @@ class FunnelController extends Controller
             'vAlign' => ['top', 'center', 'bottom'],
             'slideshowMode' => ['manual', 'auto'],
             'actionType' => ['next_step', 'step', 'link', 'checkout', 'offer_accept', 'offer_decline'],
+            'ctaActionType' => ['next_step', 'step', 'link', 'checkout'],
             'positionMode' => ['absolute', 'relative', 'flow'],
         ] as $k => $allowed) {
             $v = $readEnum($k, $allowed);
@@ -1777,20 +1885,228 @@ class FunnelController extends Controller
         return $ordered->get($index + 1);
     }
 
+    private function previewSelectedPricingFromRequest(Request $request, $steps): ?array
+    {
+        $sourceStepSlug = strtolower(trim((string) $request->query('offer_step', '')));
+        $pricingId = trim((string) $request->query('offer_pricing', ''));
+        if ($sourceStepSlug === '' || $pricingId === '') {
+            return null;
+        }
+
+        $sourceStep = collect($steps)->first(function ($candidate) use ($sourceStepSlug) {
+            return strtolower(trim((string) ($candidate->slug ?? ''))) === $sourceStepSlug;
+        });
+
+        if ($sourceStep instanceof FunnelStep) {
+            $selection = $this->previewPricingSelectionFromStep($sourceStep, $pricingId);
+            if ($selection !== null) {
+                return $selection;
+            }
+        }
+
+        return $this->previewPricingSelectionSnapshotFromRequest($request, $pricingId, $sourceStepSlug);
+    }
+
+    private function previewPricingSelectionFromStep(FunnelStep $sourceStep, string $pricingId): ?array
+    {
+        $layout = $sourceStep->layout_json;
+        if (! is_array($layout)) {
+            return null;
+        }
+
+        $findInElements = function (array $elements) use (&$findInElements, $pricingId, $sourceStep): ?array {
+            foreach ($elements as $element) {
+                if (! is_array($element)) {
+                    continue;
+                }
+
+                if (
+                    strtolower(trim((string) ($element['type'] ?? ''))) === 'pricing'
+                    && trim((string) ($element['id'] ?? '')) === $pricingId
+                ) {
+                    $settings = is_array($element['settings'] ?? null) ? $element['settings'] : [];
+                    $features = [];
+                    foreach ((is_array($settings['features'] ?? null) ? $settings['features'] : []) as $feature) {
+                        if (! is_scalar($feature)) {
+                            continue;
+                        }
+                        $featureText = mb_substr(trim((string) $feature), 0, 200);
+                        if ($featureText !== '') {
+                            $features[] = $featureText;
+                        }
+                    }
+
+                    return [
+                        'pricingId' => $pricingId,
+                        'sourceStepSlug' => (string) $sourceStep->slug,
+                        'plan' => mb_substr(trim((string) ($settings['plan'] ?? '')), 0, 200),
+                        'price' => $this->normalizePreviewMoneyDisplay($settings['price'] ?? ''),
+                        'regularPrice' => $this->normalizePreviewMoneyDisplay($settings['regularPrice'] ?? ''),
+                        'period' => mb_substr(trim((string) ($settings['period'] ?? '')), 0, 60),
+                        'subtitle' => mb_substr(trim((string) ($settings['subtitle'] ?? '')), 0, 300),
+                        'badge' => mb_substr(trim((string) ($settings['badge'] ?? '')), 0, 80),
+                        'features' => $features,
+                    ];
+                }
+
+                $slides = is_array(data_get($element, 'settings.slides')) ? data_get($element, 'settings.slides') : [];
+                foreach ($slides as $slide) {
+                    $nested = $findInElements(is_array($slide['elements'] ?? null) ? $slide['elements'] : []);
+                    if ($nested !== null) {
+                        return $nested;
+                    }
+                }
+            }
+
+            return null;
+        };
+
+        $findInSections = function (array $sections) use ($findInElements): ?array {
+            foreach ($sections as $section) {
+                if (! is_array($section)) {
+                    continue;
+                }
+
+                $sectionSelection = $findInElements(is_array($section['elements'] ?? null) ? $section['elements'] : []);
+                if ($sectionSelection !== null) {
+                    return $sectionSelection;
+                }
+
+                foreach ((is_array($section['rows'] ?? null) ? $section['rows'] : []) as $row) {
+                    foreach ((is_array($row['columns'] ?? null) ? $row['columns'] : []) as $column) {
+                        $columnSelection = $findInElements(is_array($column['elements'] ?? null) ? $column['elements'] : []);
+                        if ($columnSelection !== null) {
+                            return $columnSelection;
+                        }
+                    }
+                }
+            }
+
+            return null;
+        };
+
+        $rootSelection = $findInSections(is_array($layout['root'] ?? null) ? $layout['root'] : []);
+        if ($rootSelection !== null) {
+            return $rootSelection;
+        }
+
+        return $findInSections(is_array($layout['sections'] ?? null) ? $layout['sections'] : []);
+    }
+
+    private function previewPricingSelectionSnapshotFromRequest(Request $request, string $pricingId = '', string $sourceStepSlug = ''): ?array
+    {
+        $pricingId = trim($pricingId) !== '' ? trim($pricingId) : trim((string) $request->query('offer_pricing', ''));
+        $sourceStepSlug = trim($sourceStepSlug) !== '' ? strtolower(trim($sourceStepSlug)) : strtolower(trim((string) $request->query('offer_step', '')));
+        $plan = mb_substr(trim((string) $request->query('offer_plan', '')), 0, 200);
+        $price = $this->normalizePreviewMoneyDisplay($request->query('offer_price', ''));
+        $regularPrice = $this->normalizePreviewMoneyDisplay($request->query('offer_regular_price', ''));
+        $period = mb_substr(trim((string) $request->query('offer_period', '')), 0, 60);
+        $subtitle = mb_substr(trim((string) $request->query('offer_subtitle', '')), 0, 300);
+        $badge = mb_substr(trim((string) $request->query('offer_badge', '')), 0, 80);
+        $features = [];
+        $rawFeatures = trim((string) $request->query('offer_features', ''));
+        if ($rawFeatures !== '') {
+            $decoded = json_decode($rawFeatures, true);
+            if (is_array($decoded)) {
+                foreach ($decoded as $feature) {
+                    if (! is_scalar($feature)) {
+                        continue;
+                    }
+                    $featureText = mb_substr(trim((string) $feature), 0, 200);
+                    if ($featureText !== '') {
+                        $features[] = $featureText;
+                    }
+                }
+            }
+        }
+
+        if (
+            $pricingId === ''
+            && $sourceStepSlug === ''
+            && $plan === ''
+            && $price === ''
+            && $regularPrice === ''
+            && $period === ''
+            && $subtitle === ''
+            && $badge === ''
+            && $features === []
+        ) {
+            return null;
+        }
+
+        return [
+            'pricingId' => $pricingId,
+            'sourceStepSlug' => $sourceStepSlug,
+            'plan' => $plan,
+            'price' => $price,
+            'regularPrice' => $regularPrice,
+            'period' => $period,
+            'subtitle' => $subtitle,
+            'badge' => $badge,
+            'features' => $features,
+        ];
+    }
+
+    private function normalizePreviewMoneyDisplay(mixed $raw): string
+    {
+        $value = trim((string) $raw);
+        if ($value === '') {
+            return '';
+        }
+
+        if (preg_match('/^\s*\$/', $value) === 1) {
+            $value = preg_replace('/^\s*\$/', '₱', $value) ?? $value;
+        }
+
+        return $value;
+    }
+
     private function validatePublishReadiness($steps): array
     {
         $ordered = collect($steps)->values();
         $issues = [];
+        $requiredTypes = ['landing', 'opt_in', 'sales', 'checkout', 'thank_you'];
+        $activeSlugs = $ordered
+            ->map(fn ($step) => strtolower(trim((string) ($step->slug ?? ''))))
+            ->filter()
+            ->values();
+
+        foreach ($requiredTypes as $requiredType) {
+            if (! $ordered->contains(fn ($step) => strtolower(trim((string) ($step->type ?? ''))) === $requiredType)) {
+                $issues[] = 'Add an active ' . str_replace('_', '-', $requiredType) . ' step.';
+            }
+        }
+
+        $firstStep = $ordered->first();
+        $lastStep = $ordered->last();
+        if ($firstStep && strtolower(trim((string) ($firstStep->type ?? ''))) === 'thank_you') {
+            $issues[] = 'The first active step cannot be a Thank You step.';
+        }
+        if ($lastStep && strtolower(trim((string) ($lastStep->type ?? ''))) !== 'thank_you') {
+            $issues[] = 'The last active step must be a Thank You step so the flow resolves safely.';
+        }
+
+        foreach ($ordered as $idx => $step) {
+            $slug = strtolower(trim((string) ($step->slug ?? '')));
+            if ($slug === '') {
+                $issues[] = 'Every active step must have a valid slug.';
+                continue;
+            }
+            if ($activeSlugs->filter(fn (string $candidate) => $candidate === $slug)->count() > 1) {
+                $issues[] = 'Active step slug "' . $slug . '" is duplicated.';
+            }
+        }
 
         foreach ($ordered as $idx => $step) {
             $type = strtolower(trim((string) ($step->type ?? '')));
             $title = trim((string) ($step->title ?? '')) !== '' ? trim((string) $step->title) : ('Step #' . ($idx + 1));
             $hasNext = $ordered->get($idx + 1) !== null;
-            if (!$hasNext) {
-                continue;
+            $stats = $this->collectStepActionStats(is_array($step->layout_json ?? null) ? $step->layout_json : [], $activeSlugs->all(), $type === 'checkout');
+
+            if (($stats['invalidTargetCount'] ?? 0) > 0) {
+                $issues[] = 'Step "' . $title . '" contains button or pricing actions that point to missing step slugs.';
             }
 
-            $stats = $this->collectStepActionStats(is_array($step->layout_json ?? null) ? $step->layout_json : []);
             if ($type === 'opt_in') {
                 if (($stats['formCount'] ?? 0) <= 0) {
                     $issues[] = 'Step "' . $title . '" (Opt-in) must include at least one Form component.';
@@ -1800,6 +2116,10 @@ class FunnelController extends Controller
             if ($type === 'checkout') {
                 if (($stats['checkoutActionCount'] ?? 0) <= 0) {
                     $issues[] = 'Step "' . $title . '" (Checkout) must include at least one Button with action "Checkout submit".';
+                }
+                $stepAmount = (float) ($step->price ?? 0);
+                if ($stepAmount <= 0 && ($stats['pricingAmountCount'] ?? 0) <= 0) {
+                    $issues[] = 'Step "' . $title . '" (Checkout) must have a valid amount on the step or in a Pricing component.';
                 }
                 continue;
             }
@@ -1812,15 +2132,31 @@ class FunnelController extends Controller
             if ($type === 'thank_you') {
                 continue;
             }
+            if (!$hasNext) {
+                $issues[] = 'Step "' . $title . '" must route to another active step before the Thank You step.';
+                continue;
+            }
             if (($stats['navigateActionCount'] ?? 0) <= 0) {
                 $issues[] = 'Step "' . $title . '" must include at least one Button with action "Next step", "Specific step", or "Custom URL".';
             }
         }
 
-        return $issues;
+        $ordered->values()->each(function ($step, int $index) use ($ordered, &$issues) {
+            $type = strtolower(trim((string) ($step->type ?? '')));
+            if ($type !== 'downsell') {
+                return;
+            }
+
+            $previous = $ordered->get($index - 1);
+            if (! $previous || strtolower(trim((string) ($previous->type ?? ''))) !== 'upsell') {
+                $issues[] = 'Downsell steps must immediately follow an Upsell step so decline routing stays safe.';
+            }
+        });
+
+        return array_values(array_unique($issues));
     }
 
-    private function collectStepActionStats(array $layout): array
+    private function collectStepActionStats(array $layout, array $validStepSlugs = [], bool $isCheckoutStep = false): array
     {
         $stats = [
             'formCount' => 0,
@@ -1828,9 +2164,15 @@ class FunnelController extends Controller
             'checkoutActionCount' => 0,
             'offerAcceptActionCount' => 0,
             'offerDeclineActionCount' => 0,
+            'invalidTargetCount' => 0,
+            'pricingAmountCount' => 0,
         ];
+        $normalizedSlugs = collect($validStepSlugs)
+            ->map(fn ($slug) => strtolower(trim((string) $slug)))
+            ->filter()
+            ->values();
 
-        $visit = function ($node) use (&$visit, &$stats): void {
+        $visit = function ($node) use (&$visit, &$stats, $normalizedSlugs, $isCheckoutStep): void {
             if (!is_array($node)) {
                 return;
             }
@@ -1852,6 +2194,9 @@ class FunnelController extends Controller
                         $stats['navigateActionCount']++;
                     } elseif ($actionType === 'step' && $stepSlug !== '') {
                         $stats['navigateActionCount']++;
+                        if (! $normalizedSlugs->contains(strtolower($stepSlug))) {
+                            $stats['invalidTargetCount']++;
+                        }
                     } elseif ($actionType === 'link' && $link !== '' && $link !== '#') {
                         $stats['navigateActionCount']++;
                     } elseif ($actionType === 'checkout') {
@@ -1860,6 +2205,39 @@ class FunnelController extends Controller
                         $stats['offerAcceptActionCount']++;
                     } elseif ($actionType === 'offer_decline') {
                         $stats['offerDeclineActionCount']++;
+                    }
+                }
+                if ($type === 'pricing') {
+                    $actionType = strtolower(trim((string) ($settings['ctaActionType'] ?? '')));
+                    $link = trim((string) ($settings['ctaLink'] ?? ''));
+                    $stepSlug = trim((string) ($settings['ctaActionStepSlug'] ?? ''));
+                    foreach (['price', 'regularPrice'] as $amountKey) {
+                        $amountText = trim((string) ($settings[$amountKey] ?? ''));
+                        if ($amountText === '') {
+                            continue;
+                        }
+                        $clean = preg_replace('/[^0-9,.\-]/', '', $amountText);
+                        if (is_string($clean) && $clean !== '' && (float) str_replace(',', '', $clean) > 0) {
+                            $stats['pricingAmountCount']++;
+                            break;
+                        }
+                    }
+                    if ($actionType === '') {
+                        $actionType = ($link !== '' && $link !== '#') ? 'link' : 'next_step';
+                    }
+                    if ($actionType === 'next_step') {
+                        $stats['navigateActionCount']++;
+                    } elseif ($actionType === 'step' && $stepSlug !== '') {
+                        $stats['navigateActionCount']++;
+                        if (! $normalizedSlugs->contains(strtolower($stepSlug))) {
+                            $stats['invalidTargetCount']++;
+                        }
+                    } elseif ($actionType === 'link' && $link !== '' && $link !== '#') {
+                        $stats['navigateActionCount']++;
+                    } elseif ($actionType === 'checkout') {
+                        $stats['checkoutActionCount']++;
+                    } elseif ($isCheckoutStep) {
+                        $stats['checkoutActionCount']++;
                     }
                 }
                 if ($type === 'carousel') {

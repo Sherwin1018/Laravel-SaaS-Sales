@@ -11,6 +11,9 @@
         @if(auth()->user()->hasRole('account-owner') || auth()->user()->hasRole('marketing-manager'))
             <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                 <a href="{{ route('leads.create') }}" class="btn-create"><i class="fas fa-plus"></i> Add New Lead</a>
+                <a href="{{ route('crm.custom-fields.index') }}" class="btn-create" style="background-color: var(--theme-primary-dark, #2E1244);">
+                    <i class="fas fa-sliders-h"></i> Manage Custom Fields
+                </a>
                 <button type="button" id="togglePipelineBtn" class="btn-create" style="background-color: var(--theme-accent, var(--theme-accent, #6B4A7A)); color: #fff; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: 600;">
                     <i class="fas fa-columns"></i> View Lead Pipeline
                 </button>
@@ -31,6 +34,14 @@
             </select>
         </div>
     </div>
+
+    @include('partials.plan-usage-summary', [
+        'planUsage' => $planUsage ?? [],
+        'resourceKey' => 'leads',
+        'title' => 'Lead Limit',
+    ])
+
+    @include('leads._pipeline_reports', ['pipelineReports' => $pipelineReports])
 
     {{-- Modal: View Lead Pipeline --}}
     <div id="pipelineModal" class="modal-overlay" style="display: none;">
@@ -68,28 +79,62 @@
     </div>
 
     <div class="card leads-list-card" style="margin-bottom: 20px;">
-        <h3>Leads List</h3>
-        <div class="leads-table-wrap">
-            <table class="leads-table">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Email</th>
-                        <th>Phone</th>
-                        <th>Assigned To</th>
-                        <th>Tags</th>
-                        <th>Status</th>
-                        <th>Score</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="tableBody">
-                    @include('leads._rows', ['leads' => $leads])
-                </tbody>
-            </table>
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px;">
+            <h3 style="margin: 0;">Leads List</h3>
+            <button type="button" id="toggleLeadsListBtn"
+                style="padding: 10px 16px; background: var(--theme-primary, #240E35); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; min-width: 88px;"
+                aria-expanded="false">
+                Show
+            </button>
         </div>
-        <div style="margin-top: 20px;" id="paginationLinks">
-            {{ $leads->links('pagination::bootstrap-4') }}
+        <div id="leadsListContent" style="display: none;">
+            <div class="leads-table-wrap">
+                <table class="leads-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Assigned To</th>
+                            <th>Tags</th>
+                            <th>Status</th>
+                            <th>Score</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        @include('leads._rows', ['leads' => $leads])
+                    </tbody>
+                </table>
+            </div>
+            <div style="margin-top: 20px;" id="paginationLinks">
+                {{ $leads->links('pagination::bootstrap-4') }}
+            </div>
+        </div>
+    </div>
+
+    <div id="deleteLeadModal" class="modal-overlay" style="display: none;">
+        <div class="modal-box delete-lead-modal-box">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h3 style="margin: 0;">Delete Lead</h3>
+                <button type="button" id="closeDeleteLeadModal" class="modal-close-btn">&times;</button>
+            </div>
+            <p style="margin: 0 0 18px 0; color: var(--theme-body-text, #111827); line-height: 1.5;">
+                Are you sure you want to delete <strong id="deleteLeadName">this lead</strong>?
+                This action cannot be undone.
+            </p>
+            <form method="POST" id="deleteLeadModalForm" style="display: flex; justify-content: flex-end; gap: 10px;">
+                @csrf
+                @method('DELETE')
+                <button type="button" id="cancelDeleteLeadBtn"
+                    style="padding: 10px 16px; background: var(--theme-surface-softer, #F7F7FB); color: var(--theme-body-text, #111827); border: 1px solid var(--theme-border, #E6E1EF); border-radius: 6px; cursor: pointer; font-weight: 600;">
+                    Cancel
+                </button>
+                <button type="submit"
+                    style="padding: 10px 16px; background: #DC2626; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 700;">
+                    Delete Lead
+                </button>
+            </form>
         </div>
     </div>
 
@@ -162,6 +207,15 @@
             const togglePipelineBtn = document.getElementById('togglePipelineBtn');
             const toggleAssignBtn = document.getElementById('toggleAssignBtn');
             const leadsTableWrap = document.querySelector('.leads-table-wrap');
+            const deleteLeadModal = document.getElementById('deleteLeadModal');
+            const deleteLeadModalForm = document.getElementById('deleteLeadModalForm');
+            const deleteLeadName = document.getElementById('deleteLeadName');
+            const closeDeleteLeadModal = document.getElementById('closeDeleteLeadModal');
+            const cancelDeleteLeadBtn = document.getElementById('cancelDeleteLeadBtn');
+            const togglePipelineReportsBtn = document.getElementById('togglePipelineReportsBtn');
+            const pipelineReportsContent = document.getElementById('pipelineReportsContent');
+            const toggleLeadsListBtn = document.getElementById('toggleLeadsListBtn');
+            const leadsListContent = document.getElementById('leadsListContent');
 
             let timeout = null;
 
@@ -284,6 +338,20 @@
                 if (leadDropdownWrapper && !leadDropdownWrapper.contains(e.target)) {
                     if (leadDropdownMenu) leadDropdownMenu.style.display = 'none';
                 }
+
+                var deleteTrigger = e.target.closest('.lead-delete-trigger');
+                if (deleteTrigger) {
+                    e.preventDefault();
+                    if (deleteLeadModalForm) {
+                        deleteLeadModalForm.action = deleteTrigger.getAttribute('data-delete-action') || '';
+                    }
+                    if (deleteLeadName) {
+                        deleteLeadName.textContent = deleteTrigger.getAttribute('data-lead-name') || 'this lead';
+                    }
+                    if (deleteLeadModal) {
+                        deleteLeadModal.style.display = 'flex';
+                    }
+                }
             });
 
             if (quickAssignForm && leadSelectHidden) {
@@ -318,6 +386,44 @@
             }
             if (assignModal) {
                 assignModal.addEventListener('click', function(e) { if (e.target === assignModal) assignModal.style.display = 'none'; });
+            }
+
+            if (closeDeleteLeadModal && deleteLeadModal) {
+                closeDeleteLeadModal.addEventListener('click', function() {
+                    deleteLeadModal.style.display = 'none';
+                });
+            }
+
+            if (cancelDeleteLeadBtn && deleteLeadModal) {
+                cancelDeleteLeadBtn.addEventListener('click', function() {
+                    deleteLeadModal.style.display = 'none';
+                });
+            }
+
+            if (deleteLeadModal) {
+                deleteLeadModal.addEventListener('click', function(e) {
+                    if (e.target === deleteLeadModal) {
+                        deleteLeadModal.style.display = 'none';
+                    }
+                });
+            }
+
+            if (togglePipelineReportsBtn && pipelineReportsContent) {
+                togglePipelineReportsBtn.addEventListener('click', function() {
+                    var isHidden = pipelineReportsContent.style.display === 'none';
+                    pipelineReportsContent.style.display = isHidden ? 'block' : 'none';
+                    togglePipelineReportsBtn.textContent = isHidden ? 'Hide' : 'Show';
+                    togglePipelineReportsBtn.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+                });
+            }
+
+            if (toggleLeadsListBtn && leadsListContent) {
+                toggleLeadsListBtn.addEventListener('click', function() {
+                    var isHidden = leadsListContent.style.display === 'none';
+                    leadsListContent.style.display = isHidden ? 'block' : 'none';
+                    toggleLeadsListBtn.textContent = isHidden ? 'Hide' : 'Show';
+                    toggleLeadsListBtn.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+                });
             }
 
             var pipelineSearchInput = document.getElementById('pipelineSearchInput');
@@ -377,6 +483,7 @@
         .pipeline-lead-card { padding: 8px; border-radius: 6px; border: 1px solid var(--theme-border, #E6E1EF); background: var(--theme-surface, #FFFFFF); margin-bottom: 8px; }
         .pipeline-empty { font-size: 12px; color: var(--theme-muted, #6B7280); margin: 0; font-weight: 700; }
         .assign-modal-box { max-width: 600px; width: 100%; }
+        .delete-lead-modal-box { max-width: 460px; width: 100%; }
         .custom-dropdown { position: relative; }
         .custom-dropdown-toggle:hover { border-color: var(--theme-border, #E6E1EF); background: var(--theme-surface-softer, #F7F7FB); }
         .custom-dropdown-option:hover { background: var(--theme-surface-softer, #F7F7FB) !important; }
@@ -389,6 +496,100 @@
             justify-content: flex-start !important;
             padding-right: 0 !important;
             max-width: 100%;
+        }
+        .pipeline-report-card {
+            overflow: visible;
+        }
+        .pipeline-report-toggle-btn {
+            padding: 10px 16px;
+            background: var(--theme-primary, #240E35);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 700;
+            min-width: 88px;
+        }
+        .pipeline-report-toggle-btn:hover {
+            background: var(--theme-primary-dark, #2E1244);
+        }
+        .pipeline-report-summary {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .pipeline-report-metric {
+            background: var(--theme-surface-softer, #F7F7FB);
+            border: 1px solid var(--theme-border, #E6E1EF);
+            border-radius: 10px;
+            padding: 14px;
+        }
+        .pipeline-report-metric strong {
+            display: block;
+            font-size: 26px;
+            color: var(--theme-primary-dark, #2E1244);
+        }
+        .pipeline-report-label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--theme-muted, #6B7280);
+        }
+        .pipeline-report-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+        }
+        .pipeline-report-panel {
+            background: var(--theme-surface-softer, #F7F7FB);
+            border: 1px solid var(--theme-border, #E6E1EF);
+            border-radius: 10px;
+            padding: 16px;
+        }
+        .pipeline-report-panel h4 {
+            margin: 0 0 14px 0;
+            color: var(--theme-primary-dark, #2E1244);
+        }
+        .pipeline-report-list {
+            display: grid;
+            gap: 10px;
+        }
+        .pipeline-report-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            background: var(--theme-surface, #FFFFFF);
+        }
+        .pipeline-report-row-stack {
+            display: grid;
+            justify-content: stretch;
+        }
+        .pipeline-report-table-wrap {
+            overflow-x: auto;
+        }
+        .pipeline-report-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .pipeline-report-table th,
+        .pipeline-report-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--theme-border, #E6E1EF);
+            text-align: left;
+            white-space: nowrap;
+        }
+        .pipeline-report-table th {
+            color: var(--theme-muted, #6B7280);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
         }
         .leads-table-wrap {
             display: block;
@@ -477,8 +678,14 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
+        .leads-table .lead-no-tags {
+            display: inline-block;
+            white-space: nowrap;
+        }
         .leads-table th:nth-child(4),
         .leads-table td:nth-child(4),
+        .leads-table th:nth-child(5),
+        .leads-table td:nth-child(5),
         .leads-table th:nth-child(6),
         .leads-table td:nth-child(6),
         .leads-table th:nth-child(7),
@@ -486,11 +693,13 @@
             white-space: nowrap;
         }
         .leads-table th:nth-child(4), .leads-table td:nth-child(4) { min-width: 110px; }
+        .leads-table th:nth-child(5), .leads-table td:nth-child(5) { min-width: 140px; }
         .leads-table th:nth-child(6), .leads-table td:nth-child(6) { min-width: 120px; }
         .leads-table th:nth-child(7), .leads-table td:nth-child(7) { min-width: 70px; text-align: center; }
-        .leads-table td:nth-child(6) > span {
+        .leads-table .lead-status-badge {
             display: inline-flex;
             align-items: center;
+            justify-content: center;
             white-space: nowrap;
         }
         @media (max-width: 1100px) {
@@ -518,6 +727,10 @@
             }
             .actions .search-box { flex-wrap: nowrap !important; }
             .leads-table th, .leads-table td { width: auto !important; }
+            .pipeline-report-summary,
+            .pipeline-report-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 @endsection

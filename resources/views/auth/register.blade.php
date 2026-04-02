@@ -39,9 +39,18 @@
             <p class="info-subtitle">Create your account, choose your plan, and move into a payment-connected onboarding flow.</p>
 
             <ul class="features">
-                <li><strong>Account Owner Setup:</strong> Successful payment creates the tenant and Account Owner account</li>
-                <li><strong>Pricing Modal:</strong> Choose the best plan before continuing to checkout</li>
-                <li><strong>Direct Dashboard Access:</strong> Paid users are redirected into the Account Owner dashboard</li>
+                <li>
+                    <span class="feature-title">Account Owner Setup:</span>
+                    <span class="feature-text">Successful payment creates the tenant and Account Owner account</span>
+                </li>
+                <li>
+                    <span class="feature-title">Pricing Modal:</span>
+                    <span class="feature-text">Choose the best plan before continuing to checkout</span>
+                </li>
+                <li>
+                    <span class="feature-title">Direct Dashboard Access:</span>
+                    <span class="feature-text">Paid users are redirected into the Account Owner dashboard</span>
+                </li>
             </ul>
         </div>
 

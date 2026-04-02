@@ -9,6 +9,7 @@ use App\Http\Controllers\FunnelController;
 use App\Http\Controllers\FunnelPortalController;
 use App\Http\Controllers\LeadVerificationController;
 use App\Http\Controllers\LeadController;
+use App\Http\Controllers\LeadCustomFieldController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PayMongoWebhookController;
 use App\Http\Controllers\PlanController;
@@ -76,6 +77,8 @@ Route::middleware(['auth'])->group(function () {
 
 Route::middleware(['auth', 'verified', 'role:super-admin'])->group(function () {
     Route::get('/admin/dashboard', [AdminController::class, 'index'])->name('admin.dashboard');
+    Route::post('/admin/landing-hero-video', [AdminController::class, 'updateLandingHeroVideo'])->name('admin.landing-video.update');
+    Route::delete('/admin/landing-hero-video', [AdminController::class, 'deleteLandingHeroVideo'])->name('admin.landing-video.delete');
 
     Route::get('/admin/tenants', [TenantController::class, 'index'])->name('admin.tenants.index');
     Route::get('/admin/tenants/create', [TenantController::class, 'create'])->name('admin.tenants.create');
@@ -119,6 +122,10 @@ Route::middleware(['auth', 'tenant.subscription', 'role:sales-agent,marketing-ma
     Route::get('/leads', [LeadController::class, 'index'])->name('leads.index');
     Route::get('/leads/create', [LeadController::class, 'create'])->name('leads.create');
     Route::post('/leads', [LeadController::class, 'store'])->name('leads.store');
+    Route::get('/crm/custom-fields', [LeadCustomFieldController::class, 'index'])->name('crm.custom-fields.index');
+    Route::post('/crm/custom-fields', [LeadCustomFieldController::class, 'store'])->name('crm.custom-fields.store');
+    Route::put('/crm/custom-fields/{field}', [LeadCustomFieldController::class, 'update'])->name('crm.custom-fields.update');
+    Route::delete('/crm/custom-fields/{field}', [LeadCustomFieldController::class, 'destroy'])->name('crm.custom-fields.destroy');
     Route::get('/leads/{lead}/edit', [LeadController::class, 'edit'])->name('leads.edit');
     Route::put('/leads/{lead}', [LeadController::class, 'update'])->name('leads.update');
     Route::delete('/leads/{lead}', [LeadController::class, 'destroy'])->name('leads.destroy');
@@ -168,6 +175,9 @@ Route::middleware(['auth', 'tenant.subscription', 'role:sales-agent,marketing-ma
         Route::post('/funnels/{funnel}/builder/upload-image', [FunnelController::class, 'uploadBuilderImage'])->name('funnels.builder.image.upload');
         Route::post('/funnels/{funnel}/publish', [FunnelController::class, 'publish'])->name('funnels.publish');
         Route::post('/funnels/{funnel}/unpublish', [FunnelController::class, 'unpublish'])->name('funnels.unpublish');
+        Route::get('/funnels/{funnel}/analytics', [FunnelController::class, 'analytics'])->name('funnels.analytics');
+        Route::get('/funnels/{funnel}/analytics/export', [FunnelController::class, 'exportAnalytics'])->name('funnels.analytics.export');
+        Route::get('/funnels/{funnel}/events', [FunnelController::class, 'events'])->name('funnels.events');
         Route::delete('/funnels/{funnel}', [FunnelController::class, 'destroy'])->name('funnels.destroy');
         Route::post('/funnels/{funnel}/steps', [FunnelController::class, 'storeStep'])->name('funnels.steps.store');
         Route::put('/funnels/{funnel}/steps/{step}', [FunnelController::class, 'updateStep'])->name('funnels.steps.update');
@@ -187,29 +197,16 @@ Route::middleware(['auth', 'verified', 'role:customer'])->group(function () {
     Route::get('/dashboard/customer', [DashboardController::class, 'customer'])->name('dashboard.customer');
 });
 
-// DOI pages must be registered BEFORE the generic step routes (order matters in Laravel routing).
-Route::get('/f/{funnelSlug}/confirm-email', [LeadVerificationController::class, 'confirmEmail'])
-    ->name('funnels.lead.confirm-email');
-Route::get('/f/{funnelSlug}/confirm-email/status', [LeadVerificationController::class, 'confirmEmailStatus'])
-    ->name('funnels.lead.confirm-email.status');
-Route::get('/funnel/verify', [LeadVerificationController::class, 'verify'])
-    ->middleware('signed')
-    ->name('funnels.lead.verify');
-Route::get('/funnel/verified', [LeadVerificationController::class, 'verified'])->name('funnels.lead.verified');
-
-Route::get('/f/{funnelSlug}/{stepSlug?}', [FunnelPortalController::class, 'show'])->name('funnels.portal.step');
-Route::get('/funnel/{funnelSlug}/{stepSlug?}', [FunnelPortalController::class, 'show'])->name('funnels.portal.step.alias');
-Route::post('/f/{funnelSlug}/{stepSlug}/opt-in', [FunnelPortalController::class, 'optIn'])->name('funnels.portal.optin');
-Route::post('/f/{funnelSlug}/{stepSlug}/checkout', [FunnelPortalController::class, 'checkout'])->name('funnels.portal.checkout');
+Route::get('/f/{funnelSlug}/{stepSlug?}', [FunnelPortalController::class, 'show'])->middleware('throttle:funnel-public-view')->name('funnels.portal.step');
+Route::get('/funnel/{funnelSlug}/{stepSlug?}', [FunnelPortalController::class, 'show'])->middleware('throttle:funnel-public-view')->name('funnels.portal.step.alias');
+Route::post('/f/{funnelSlug}/{stepSlug}/opt-in', [FunnelPortalController::class, 'optIn'])->middleware('throttle:funnel-public-submit')->name('funnels.portal.optin');
+Route::post('/f/{funnelSlug}/{stepSlug}/checkout', [FunnelPortalController::class, 'checkout'])->middleware('throttle:funnel-public-submit')->name('funnels.portal.checkout');
 Route::get('/f/{funnelSlug}/{stepSlug}/paymongo/return/{payment}', [FunnelPortalController::class, 'paymongoReturn'])
     ->middleware('signed')
     ->name('funnels.portal.paymongo.return');
-Route::post('/f/{funnelSlug}/{stepSlug}/offer', [FunnelPortalController::class, 'offer'])->name('funnels.portal.offer');
-
-Route::get('/r/{token}', [\App\Http\Controllers\LinkTrackingController::class, 'redirect'])->name('link.tracking');
-
-// Route::get('/register/paymongo/return/{payment}', [PayMongoCheckoutController::class, 'return'])
-//     ->middleware('signed')
-//     ->name('register.paymongo.return');
+Route::post('/f/{funnelSlug}/{stepSlug}/offer', [FunnelPortalController::class, 'offer'])->middleware('throttle:funnel-public-submit')->name('funnels.portal.offer');
+Route::get('/register/paymongo/return/{signupIntent}', [PublicOnboardingController::class, 'paymongoReturn'])
+    ->middleware('signed')
+    ->name('register.paymongo.return');
 
 Route::post('/webhooks/paymongo', PayMongoWebhookController::class)->name('webhooks.paymongo');

@@ -69,6 +69,59 @@
     </div>
 </div>
 
+<div style="margin-bottom: 20px;">
+    <h4 style="margin:0 0 12px 0;color:var(--theme-primary, #240E35);">Plan Limits</h4>
+    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;">
+        <div>
+            <label for="max_users" style="display:block;margin-bottom:8px;font-weight:bold;">Max Users</label>
+            <input type="number" min="1" name="max_users" id="max_users"
+                style="width:100%;padding:10px;border:1px solid var(--theme-border, #E6E1EF);border-radius:6px;"
+                value="{{ old('max_users', $plan->max_users ?? '') }}">
+            <p style="margin-top:6px;color:#475569;font-size:12px;">Leave blank for unlimited.</p>
+            @error('max_users')<span style="color:red;font-size:12px;">{{ $message }}</span>@enderror
+        </div>
+        <div>
+            <label for="max_leads" style="display:block;margin-bottom:8px;font-weight:bold;">Max Leads</label>
+            <input type="number" min="1" name="max_leads" id="max_leads"
+                style="width:100%;padding:10px;border:1px solid var(--theme-border, #E6E1EF);border-radius:6px;"
+                value="{{ old('max_leads', $plan->max_leads ?? '') }}">
+            <p style="margin-top:6px;color:#475569;font-size:12px;">Leave blank for unlimited.</p>
+            @error('max_leads')<span style="color:red;font-size:12px;">{{ $message }}</span>@enderror
+        </div>
+        <div>
+            <label for="max_funnels" style="display:block;margin-bottom:8px;font-weight:bold;">Max Funnels</label>
+            <input type="number" min="1" name="max_funnels" id="max_funnels"
+                style="width:100%;padding:10px;border:1px solid var(--theme-border, #E6E1EF);border-radius:6px;"
+                value="{{ old('max_funnels', $plan->max_funnels ?? '') }}">
+            <p style="margin-top:6px;color:#475569;font-size:12px;">Leave blank for unlimited.</p>
+            @error('max_funnels')<span style="color:red;font-size:12px;">{{ $message }}</span>@enderror
+        </div>
+        <div>
+            <label for="max_workflows" style="display:block;margin-bottom:8px;font-weight:bold;">Max Workflows</label>
+            <input type="number" min="1" name="max_workflows" id="max_workflows"
+                style="width:100%;padding:10px;border:1px solid var(--theme-border, #E6E1EF);border-radius:6px;"
+                value="{{ old('max_workflows', $plan->max_workflows ?? '') }}">
+            <p style="margin-top:6px;color:#475569;font-size:12px;">Leave blank for unlimited.</p>
+            @error('max_workflows')<span style="color:red;font-size:12px;">{{ $message }}</span>@enderror
+        </div>
+        <div>
+            <label for="max_monthly_messages" style="display:block;margin-bottom:8px;font-weight:bold;">Max Monthly Messages</label>
+            <input type="number" min="1" name="max_monthly_messages" id="max_monthly_messages"
+                style="width:100%;padding:10px;border:1px solid var(--theme-border, #E6E1EF);border-radius:6px;"
+                value="{{ old('max_monthly_messages', $plan->max_monthly_messages ?? '') }}">
+            <p style="margin-top:6px;color:#475569;font-size:12px;">Leave blank for unlimited.</p>
+            @error('max_monthly_messages')<span style="color:red;font-size:12px;">{{ $message }}</span>@enderror
+        </div>
+        <div style="display:flex;align-items:flex-end;">
+            <label style="display:flex;align-items:center;gap:10px;font-weight:bold;">
+                <input type="hidden" name="automation_enabled" value="0">
+                <input type="checkbox" name="automation_enabled" value="1" {{ old('automation_enabled', isset($plan) ? (int) $plan->automation_enabled : 1) ? 'checked' : '' }}>
+                Enable automation for this plan
+            </label>
+        </div>
+    </div>
+</div>
+
 <div style="margin-bottom: 24px;">
     <label style="display:flex;align-items:center;gap:10px;font-weight:bold;">
         <input type="hidden" name="is_active" value="0">

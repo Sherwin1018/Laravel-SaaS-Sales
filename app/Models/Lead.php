@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Collection;
 
 class Lead extends Model
 {
@@ -31,6 +31,9 @@ class Lead extends Model
         'proposal_sent' => 'proposal_sent',
         'proposal sent' => 'proposal_sent',
         'closed_won' => 'closed_won',
+        'closed won' => 'closed_won',
+        'closed_lost' => 'closed_lost',
+        'closed lost' => 'closed_lost',
     ];
 
     protected $fillable = [
@@ -89,14 +92,25 @@ class Lead extends Model
         return $this->hasMany(LeadActivity::class);
     }
 
+    public function customFieldValues(): HasMany
+    {
+        return $this->hasMany(LeadCustomFieldValue::class);
+    }
+
+    public function stageHistories(): HasMany
+    {
+        return $this->hasMany(LeadStageHistory::class)->latest('created_at');
+    }
+
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class);
     }
 
-    public function linkClicks(): HasMany
+    public function customFieldValueMap(): Collection
     {
-        return $this->hasMany(LeadLinkClick::class, 'lead_id');
+        return $this->customFieldValues
+            ->mapWithKeys(fn (LeadCustomFieldValue $value) => [$value->tenant_custom_field_id => $value->value]);
     }
 
     public function setStatusAttribute($value): void
@@ -110,5 +124,23 @@ class Lead extends Model
         $normalized = preg_replace('/\s+/', ' ', $normalized) ?? $normalized;
 
         return self::STATUS_ALIASES[$normalized] ?? $normalized;
+    }
+
+    public static function wonStatusValues(): array
+    {
+        return ['closed_won'];
+    }
+
+    public static function lostStatusValues(): array
+    {
+        return ['closed_lost'];
+    }
+
+    public static function closedStatusValues(): array
+    {
+        return array_values(array_unique([
+            ...self::wonStatusValues(),
+            ...self::lostStatusValues(),
+        ]));
     }
 }

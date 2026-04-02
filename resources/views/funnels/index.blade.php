@@ -13,6 +13,19 @@
         .funnels-table {
             min-width: 760px;
         }
+        .funnels-search-form {
+            display:flex;
+            gap:10px;
+            align-items:center;
+            flex-wrap:wrap;
+        }
+        .funnels-search-input {
+            width:min(320px, 100%);
+            padding:10px 12px;
+            border:1px solid var(--theme-border, #E6E1EF);
+            border-radius:10px;
+            background:#fff;
+        }
         .fb-modal{position:fixed;inset:0;background:rgba(15,23,42,.56);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;z-index:1500;padding:18px}
         .fb-modal.open{display:flex}
         .fb-modal-card{width:min(520px,92vw);background:#fff;border-radius:16px;border:1px solid #E6E1EF;box-shadow:0 24px 60px rgba(15,23,42,.2);padding:18px}
@@ -29,67 +42,55 @@
         <h1>Funnel Builder</h1>
     </div>
 
-    <div class="actions" style="justify-content: space-between; align-items: center;">
+    <div class="actions" style="display: flex; justify-content: space-between; align-items: center;">
         <a href="{{ route('funnels.create') }}" class="btn-create"><i class="fas fa-plus"></i> New Funnel</a>
+        <form method="GET" action="{{ route('funnels.index') }}" class="funnels-search-form">
+            <input
+                type="text"
+                id="searchInput"
+                name="search"
+                value="{{ $search ?? '' }}"
+                class="funnels-search-input"
+                placeholder="Search funnels...">
+        </form>
     </div>
 
-    <div class="card">
-        <h3>Funnels</h3>
-        <div class="funnels-table-scroll">
-        <table class="funnels-table">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Status</th>
-                    <th>Steps</th>
-                    <th>Public URL</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($funnels as $funnel)
-                    <tr>
-                        <td>{{ $funnel->name }}</td>
-                        <td>{{ ucfirst($funnel->status) }}</td>
-                        <td>{{ $funnel->steps_count }}</td>
-                        <td>
-                            @if($funnel->status === 'published')
-                                <a href="{{ route('funnels.portal.step', ['funnelSlug' => $funnel->slug, 'stepSlug' => 'landing']) }}" target="_blank">
-                                    {{ route('funnels.portal.step', ['funnelSlug' => $funnel->slug, 'stepSlug' => 'landing']) }}
-                                </a>
-                            @else
-                                <span style="color: var(--theme-muted, #6B7280);">Publish to enable</span>
-                            @endif
-                        </td>
-                        <td style="display:flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-                            <a href="{{ route('funnels.edit', $funnel) }}" style="color:var(--theme-primary, #240E35); text-decoration:none; font-weight:700; font-size: 12px;">
-                                <i class="fas fa-pen"></i> Builder
-                            </a>
-                            @if($funnel->status === 'published')
-                                <button type="button" class="utm-generator-btn" data-funnel-id="{{ $funnel->id }}" data-funnel-slug="{{ $funnel->slug }}" data-funnel-name="{{ $funnel->name }}" style="background: linear-gradient(135deg, #6B4A7A, #8B5A8C); color:#fff; border:none; padding:6px 10px; border-radius:6px; cursor:pointer; font-weight:700; font-size:11px; display: flex; align-items: center; gap: 4px; transition: all 0.2s ease;" onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 12px rgba(107, 74, 122, 0.3)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none';">
-                                    <i class="fas fa-link"></i> UTM
-                                </button>
-                            @endif
-                            <form method="POST" action="{{ route('funnels.destroy', $funnel) }}" data-confirm-message="Delete this funnel?" style="margin: 0;">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" style="background:none;border:none;color:#DC2626;cursor:pointer;font-weight:700; font-size: 12px;">
-                                    <i class="fas fa-trash"></i> Delete
-                                </button>
-                            </form>
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="5" style="text-align:center;">No funnels found.</td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
-        </div>
+    @include('partials.plan-usage-summary', [
+        'planUsage' => $planUsage ?? [],
+        'resourceKey' => 'funnels',
+        'title' => 'Funnel Limit',
+    ])
 
-        <div style="margin-top: 18px;">
-            {{ $funnels->links('pagination::bootstrap-4') }}
+    <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px;">
+            <h3 style="margin: 0;">Funnels</h3>
+            <button type="button" id="toggleFunnelsListBtn"
+                style="padding: 10px 16px; background: var(--theme-primary, #240E35); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; min-width: 88px;"
+                aria-expanded="false">
+                Show
+            </button>
+        </div>
+        <div id="funnelsListContent" style="display: none;">
+            <div class="funnels-table-scroll">
+            <table class="funnels-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Status</th>
+                        <th>Steps</th>
+                        <th>Public URL</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    @include('funnels._rows', ['funnels' => $funnels])
+                </tbody>
+            </table>
+            </div>
+
+            <div style="margin-top: 18px;" id="paginationLinks">
+                {{ $funnels->links('pagination::bootstrap-4') }}
+            </div>
         </div>
     </div>
     
@@ -207,7 +208,46 @@
 @section('scripts')
 <script>
 (function(){
+    var searchInput=document.getElementById("searchInput");
+    var tableBody=document.getElementById("tableBody");
+    var paginationLinks=document.getElementById("paginationLinks");
+    var toggleFunnelsListBtn=document.getElementById("toggleFunnelsListBtn");
+    var funnelsListContent=document.getElementById("funnelsListContent");
+    var timeout=null;
     var modal=document.getElementById("fbDeleteConfirm");
+    if(searchInput&&tableBody){
+        searchInput.addEventListener("keyup",function(){
+            clearTimeout(timeout);
+            var query=searchInput.value;
+            if(query.length>0&&query.length<2)return;
+            timeout=setTimeout(function(){
+                fetch(`{{ route('funnels.index') }}?search=${encodeURIComponent(query)}`,{
+                    headers:{'X-Requested-With':'XMLHttpRequest'}
+                })
+                .then(function(response){return response.text();})
+                .then(function(html){
+                    tableBody.innerHTML=html;
+                    if(paginationLinks){
+                        if(query.length>0){
+                            paginationLinks.style.display='none';
+                        }else{
+                            paginationLinks.style.display='block';
+                            if(query==='')window.location.reload();
+                        }
+                    }
+                })
+                .catch(function(error){console.error('Search error:',error);});
+            },300);
+        });
+    }
+    if(toggleFunnelsListBtn&&funnelsListContent){
+        toggleFunnelsListBtn.addEventListener("click",function(){
+            var isHidden=funnelsListContent.style.display==="none";
+            funnelsListContent.style.display=isHidden?"block":"none";
+            toggleFunnelsListBtn.textContent=isHidden?"Hide":"Show";
+            toggleFunnelsListBtn.setAttribute("aria-expanded",isHidden?"true":"false");
+        });
+    }
     if(!modal)return;
     var desc=document.getElementById("fbDeleteConfirmDesc");
     var btnOk=document.getElementById("fbDeleteConfirmOk");
@@ -238,12 +278,13 @@
         var k=String(e.key||"").toLowerCase();
         if(k==="escape")closeModal();
     });
-    document.querySelectorAll("form[data-confirm-message]").forEach(function(form){
-        form.addEventListener("submit",function(e){
+    document.addEventListener("submit",function(e){
+        var form=e.target.closest("form[data-confirm-message]");
+        if(form){
             e.preventDefault();
             var msg=form.getAttribute("data-confirm-message")||"Delete this item?";
             openModal(msg,form);
-        });
+        }
     });
 })();
 </script>

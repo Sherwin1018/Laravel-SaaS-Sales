@@ -31,28 +31,42 @@
         </div>
     </div>
 
+    @include('partials.plan-usage-summary', [
+        'planUsage' => $planUsage ?? [],
+        'resourceKey' => 'users',
+        'title' => 'Team Member Limit',
+    ])
+
     <div class="card">
-        <h3>Team Members</h3>
-        <div class="team-table-scroll">
-        <table class="team-table">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Role</th>
-                    <th>Date Added</th>
-                    <th>Verification Status</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody id="tableBody">
-                @include('users._rows', ['users' => $users])
-            </tbody>
-        </table>
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px;">
+            <h3 style="margin: 0;">Team Members</h3>
+            <button type="button" id="toggleTeamMembersBtn"
+                style="padding: 10px 16px; background: var(--theme-primary, #240E35); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; min-width: 88px;"
+                aria-expanded="false">
+                Show
+            </button>
         </div>
-        
-        <div style="margin-top: 20px;" id="paginationLinks">
-            {{ $users->links('pagination::bootstrap-4') }}
+        <div id="teamMembersContent" style="display: none;">
+            <div class="team-table-scroll">
+            <table class="team-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Date Added</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    @include('users._rows', ['users' => $users])
+                </tbody>
+            </table>
+            </div>
+            
+            <div style="margin-top: 20px;" id="paginationLinks">
+                {{ $users->links('pagination::bootstrap-4') }}
+            </div>
         </div>
     </div>
 
@@ -132,6 +146,8 @@
             const searchInput = document.getElementById('searchInput');
             const tableBody = document.getElementById('tableBody');
             const paginationLinks = document.getElementById('paginationLinks');
+            const toggleTeamMembersBtn = document.getElementById('toggleTeamMembersBtn');
+            const teamMembersContent = document.getElementById('teamMembersContent');
 
             let timeout = null;
 
@@ -157,6 +173,15 @@
                     .catch(error => console.error('Search error:', error));
                 }, 300);
             });
+
+            if (toggleTeamMembersBtn && teamMembersContent) {
+                toggleTeamMembersBtn.addEventListener('click', function() {
+                    const isHidden = teamMembersContent.style.display === 'none';
+                    teamMembersContent.style.display = isHidden ? 'block' : 'none';
+                    toggleTeamMembersBtn.textContent = isHidden ? 'Hide' : 'Show';
+                    toggleTeamMembersBtn.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+                });
+            }
         });
     </script>
 @endsection

@@ -1,3 +1,59 @@
+@php
+    $publishedFreeformCanvasWidth = 0;
+    $initialLayout = is_array($step->layout_json ?? null) ? $step->layout_json : [];
+    $initialRootItems = is_array($initialLayout['root'] ?? null) ? $initialLayout['root'] : [];
+    if (count($initialRootItems) === 0 && is_array($initialLayout['sections'] ?? null)) {
+        foreach ($initialLayout['sections'] as $legacySection) {
+            if (!is_array($legacySection)) {
+                continue;
+            }
+            $initialRootItems[] = array_merge(['kind' => 'section'], $legacySection);
+        }
+    }
+    $initialFreeformEls = [];
+    foreach ($initialRootItems as $initialRootItem) {
+        if (!is_array($initialRootItem)) {
+            continue;
+        }
+        $initialKind = strtolower((string) ($initialRootItem['kind'] ?? 'section'));
+        if (in_array($initialKind, ['section', 'row', 'column', 'col'], true)) {
+            continue;
+        }
+        $initialFreeformEls[] = $initialRootItem;
+    }
+    $initialEditorMeta = is_array($initialLayout['__editor'] ?? null) ? $initialLayout['__editor'] : [];
+    $initialCanvasWidthRaw = (int) ($initialEditorMeta['canvasWidth'] ?? 0);
+    $initialCanvasInnerWidthRaw = (int) ($initialEditorMeta['canvasInnerWidth'] ?? 0);
+    $publishedFreeformCanvasWidth = $initialCanvasWidthRaw > 0
+        ? max(0, $initialCanvasWidthRaw - 22)
+        : ($initialCanvasInnerWidthRaw > 0 ? max(0, $initialCanvasInnerWidthRaw - 20) : 0);
+    if ($publishedFreeformCanvasWidth <= 0) {
+        $initialDerivedCanvasWidth = 0;
+        foreach ($initialFreeformEls as $initialFreeformEl) {
+            if (!is_array($initialFreeformEl)) {
+                continue;
+            }
+            $initialFreeformStyle = is_array($initialFreeformEl['style'] ?? null) ? $initialFreeformEl['style'] : [];
+            $initialFreeformSettings = is_array($initialFreeformEl['settings'] ?? null) ? $initialFreeformEl['settings'] : [];
+            $initialLeft = (int) ($initialFreeformSettings['freeX'] ?? 0);
+            if ($initialLeft <= 0) {
+                $initialLeft = (int) str_replace('px', '', (string) ($initialFreeformStyle['left'] ?? '0'));
+            }
+            $initialWidth = (int) str_replace('px', '', (string) ($initialFreeformStyle['width'] ?? '0'));
+            if ($initialWidth <= 0) {
+                $initialWidth = (int) ($initialFreeformSettings['fixedWidth'] ?? 0);
+            }
+            if ($initialWidth <= 0) {
+                $initialWidth = 120;
+            }
+            $initialRight = $initialLeft + $initialWidth;
+            if ($initialRight > $initialDerivedCanvasWidth) {
+                $initialDerivedCanvasWidth = $initialRight;
+            }
+        }
+        $publishedFreeformCanvasWidth = $initialDerivedCanvasWidth;
+    }
+@endphp
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -28,6 +84,11 @@
         body.is-published .step-content--full { padding-top: 0; }
         body.is-preview .step-content--full { padding: 10px; overflow-x: hidden; }
         body.is-preview .builder-section--freeform { margin: 0; width: 100%; }
+        body.is-published .builder-section--freeform {
+            margin: 0 auto;
+            width: {{ $publishedFreeformCanvasWidth > 0 ? $publishedFreeformCanvasWidth . 'px' : '100%' }};
+            max-width: none;
+        }
         .step-content--full .builder-section,
         .step-content--full .builder-row,
         .step-content--full .builder-col { max-width: none !important; }
@@ -62,7 +123,7 @@
         .builder-section--freeform { border-radius: 0; padding: 0; margin: 0 -2rem; background: transparent; border: none; width: calc(100% + 4rem); max-width: none; }
         .builder-section--freeform .builder-row { padding: 0; gap: 0; margin: 0; display: block; }
         .builder-section--freeform .builder-row-inner { display: block; gap: 0; }
-        .builder-section--freeform .builder-col { overflow: visible; background: transparent; min-width: 0; min-height: 0; padding: 0; margin: 0 auto; }
+        .builder-section--freeform .builder-col { overflow: visible; background: transparent; min-width: 0; min-height: 0; padding: 0; margin: 0; }
         .builder-section--freeform .builder-col-inner { overflow: visible; position: relative; }
         .builder-section--freeform .builder-el { margin-top: 0 !important; }
         .builder-section-inner { width: 100%; box-sizing: border-box; position: relative; }
@@ -242,21 +303,23 @@
         $editorMeta = is_array($layout['__editor'] ?? null) ? $layout['__editor'] : [];
         $canvasWidthRaw = (int) ($editorMeta['canvasWidth'] ?? 0);
         $canvasInnerWidthRaw = (int) ($editorMeta['canvasInnerWidth'] ?? 0);
-        $editorCanvasWidth = $canvasInnerWidthRaw > 0 ? $canvasInnerWidthRaw : ($canvasWidthRaw > 0 ? max(0, $canvasWidthRaw - 22) : 0);
-        $derivedCanvasWidth = 0;
-        foreach ($freeformEls as $ffEl) {
-            if (!is_array($ffEl)) continue;
-            $ffStyle = is_array($ffEl['style'] ?? null) ? $ffEl['style'] : [];
-            $ffSettings = is_array($ffEl['settings'] ?? null) ? $ffEl['settings'] : [];
-            $ffLeft = (int) ($ffSettings['freeX'] ?? 0);
-            if ($ffLeft <= 0) $ffLeft = (int) str_replace('px', '', (string) ($ffStyle['left'] ?? '0'));
-            $ffWidth = (int) str_replace('px', '', (string) ($ffStyle['width'] ?? '0'));
-            if ($ffWidth <= 0) $ffWidth = (int) ($ffSettings['fixedWidth'] ?? 0);
-            if ($ffWidth <= 0) $ffWidth = 120;
-            $ffRight = $ffLeft + $ffWidth + 20;
-            if ($ffRight > $derivedCanvasWidth) $derivedCanvasWidth = $ffRight;
+        $editorCanvasWidth = $canvasWidthRaw > 0 ? max(0, $canvasWidthRaw - 22) : ($canvasInnerWidthRaw > 0 ? max(0, $canvasInnerWidthRaw - 20) : 0);
+        if ($editorCanvasWidth <= 0) {
+            $derivedCanvasWidth = 0;
+            foreach ($freeformEls as $ffEl) {
+                if (!is_array($ffEl)) continue;
+                $ffStyle = is_array($ffEl['style'] ?? null) ? $ffEl['style'] : [];
+                $ffSettings = is_array($ffEl['settings'] ?? null) ? $ffEl['settings'] : [];
+                $ffLeft = (int) ($ffSettings['freeX'] ?? 0);
+                if ($ffLeft <= 0) $ffLeft = (int) str_replace('px', '', (string) ($ffStyle['left'] ?? '0'));
+                $ffWidth = (int) str_replace('px', '', (string) ($ffStyle['width'] ?? '0'));
+                if ($ffWidth <= 0) $ffWidth = (int) ($ffSettings['fixedWidth'] ?? 0);
+                if ($ffWidth <= 0) $ffWidth = 120;
+                $ffRight = $ffLeft + $ffWidth;
+                if ($ffRight > $derivedCanvasWidth) $derivedCanvasWidth = $ffRight;
+            }
+            $editorCanvasWidth = $derivedCanvasWidth;
         }
-        if ($derivedCanvasWidth > $editorCanvasWidth) $editorCanvasWidth = $derivedCanvasWidth;
         $hasBuilderLayout = count($renderSections) > 0;
         $activeSteps = collect($allSteps ?? [])->values()->filter(fn ($s) => isset($s->id, $s->slug));
         $activeStepsBySlug = $activeSteps->keyBy(fn ($s) => strtolower(trim((string) $s->slug)));
@@ -331,6 +394,9 @@
             if ($currentStepType === 'sales') {
                 return $checkoutStep ?: $thankYouStep ?: $customStep ?: $nextStep ?: $homeStep;
             }
+            if ($currentStepType === 'custom') {
+                return $checkoutStep ?: $salesStep ?: $thankYouStep ?: $nextStep ?: $homeStep ?: $customStep;
+            }
             if ($currentStepType === 'checkout') {
                 return $thankYouStep ?: $customStep ?: $nextStep ?: $homeStep;
             }
@@ -338,20 +404,6 @@
                 return $customStep ?: $homeStep ?: $nextStep ?: $activeSteps->first(fn ($candidate) => (int) $candidate->id !== (int) $step->id);
             }
             return $optInStep ?: $salesStep ?: $checkoutStep ?: $thankYouStep ?: $homeStep ?: $nextStep ?: $activeSteps->first(fn ($candidate) => (int) $candidate->id !== (int) $step->id);
-        };
-        $resolvePricingCtaHref = function (array $settings) use ($choosePricingTarget, $isPreview, $funnel) {
-            $link = trim((string) ($settings['ctaLink'] ?? '#'));
-            if ($link !== '' && $link !== '#') {
-                return $link;
-            }
-            $target = $choosePricingTarget($settings['ctaLabel'] ?? $settings['plan'] ?? '');
-            if (!$target) {
-                return '#';
-            }
-            if ($isPreview) {
-                return route('funnels.preview', ['funnel' => $funnel, 'step' => $target->id]);
-            }
-            return route('funnels.portal.step', ['funnelSlug' => $funnel->slug, 'stepSlug' => $target->slug]);
         };
         $resolveButtonAction = function (array $settings) use ($funnel, $step, $nextStep, $isPreview, $activeStepsBySlug) {
             $link = trim((string) ($settings['link'] ?? '#'));
@@ -411,6 +463,102 @@
             }
 
             return ['kind' => 'link', 'href' => ($link !== '' ? $link : '#')];
+        };
+        $resolvePricingCtaAction = function (array $settings) use ($choosePricingTarget, $resolveButtonAction, $activeStepsBySlug, $step) {
+            $stepType = strtolower(trim((string) ($step->type ?? '')));
+            if ($stepType === 'checkout') {
+                return $resolveButtonAction(['actionType' => 'checkout']);
+            }
+            $actionType = strtolower(trim((string) ($settings['ctaActionType'] ?? '')));
+            $link = trim((string) ($settings['ctaLink'] ?? '#'));
+            if ($actionType === '') {
+                $actionType = ($link !== '' && $link !== '#') ? 'link' : 'next_step';
+            }
+
+            if (in_array($stepType, ['upsell', 'downsell'], true)) {
+                if ($actionType === 'link' && $link !== '' && $link !== '#') {
+                    return ['kind' => 'link', 'href' => $link];
+                }
+
+                if (in_array($actionType, ['offer_accept', 'offer_decline'], true)) {
+                    return $resolveButtonAction(['actionType' => $actionType]);
+                }
+
+                return $resolveButtonAction(['actionType' => 'offer_accept']);
+            }
+
+            if ($actionType === 'link') {
+                return ['kind' => 'link', 'href' => ($link !== '' ? $link : '#')];
+            }
+
+            if ($actionType === 'step') {
+                $targetSlug = strtolower(trim((string) ($settings['ctaActionStepSlug'] ?? '')));
+                if ($targetSlug !== '' && $activeStepsBySlug->has($targetSlug)) {
+                    return $resolveButtonAction([
+                        'actionType' => 'step',
+                        'actionStepSlug' => $targetSlug,
+                    ]);
+                }
+            }
+
+            if ($actionType === 'checkout') {
+                $target = $choosePricingTarget($settings['ctaLabel'] ?? $settings['plan'] ?? 'checkout');
+                if ($target) {
+                    return $resolveButtonAction([
+                        'actionType' => 'step',
+                        'actionStepSlug' => strtolower(trim((string) ($target->slug ?? ''))),
+                    ]);
+                }
+
+                return $resolveButtonAction(['actionType' => 'next_step']);
+            }
+
+            $target = $choosePricingTarget($settings['ctaLabel'] ?? $settings['plan'] ?? '');
+            if ($target) {
+                return $resolveButtonAction([
+                    'actionType' => 'step',
+                    'actionStepSlug' => strtolower(trim((string) ($target->slug ?? ''))),
+                ]);
+            }
+
+            return $resolveButtonAction(['actionType' => 'next_step']);
+        };
+        $appendPricingSelectionHref = function (string $href, array $settings, string $pricingId) use ($step) {
+            $href = trim($href);
+            $pricingId = trim($pricingId);
+            if ($href === '' || $href === '#' || $pricingId === '') {
+                return $href !== '' ? $href : '#';
+            }
+
+            $actionType = strtolower(trim((string) ($settings['ctaActionType'] ?? '')));
+            $link = trim((string) ($settings['ctaLink'] ?? '#'));
+            if ($actionType === 'link' && $link !== '' && $link !== '#') {
+                return $href;
+            }
+
+            $glue = str_contains($href, '?') ? '&' : '?';
+            $features = [];
+            foreach ((is_array($settings['features'] ?? null) ? $settings['features'] : []) as $feature) {
+                if (! is_scalar($feature)) {
+                    continue;
+                }
+                $featureText = mb_substr(trim((string) $feature), 0, 200);
+                if ($featureText !== '') {
+                    $features[] = $featureText;
+                }
+            }
+
+            return $href . $glue . http_build_query([
+                'offer_step' => (string) ($step->slug ?? ''),
+                'offer_pricing' => $pricingId,
+                'offer_plan' => mb_substr(trim((string) ($settings['plan'] ?? '')), 0, 200),
+                'offer_price' => trim((string) ($settings['price'] ?? '')),
+                'offer_regular_price' => trim((string) ($settings['regularPrice'] ?? '')),
+                'offer_period' => mb_substr(trim((string) ($settings['period'] ?? '')), 0, 60),
+                'offer_subtitle' => mb_substr(trim((string) ($settings['subtitle'] ?? '')), 0, 300),
+                'offer_badge' => mb_substr(trim((string) ($settings['badge'] ?? '')), 0, 80),
+                'offer_features' => json_encode($features, JSON_UNESCAPED_UNICODE),
+            ]);
         };
         $resolveMediaUrl = function (?string $src): string {
             $src = trim((string) $src);
@@ -1316,21 +1464,56 @@
                                                 @elseif($type === 'pricing')
                                                     @php
                                                         $plan = trim((string) ($settings['plan'] ?? 'Plan'));
-                                                        $priceVal = trim((string) ($settings['price'] ?? '$0'));
+                                                        $priceVal = trim((string) ($settings['price'] ?? '₱0'));
                                                         $regularPrice = trim((string) ($settings['regularPrice'] ?? ''));
+                                                        if (preg_match('/^\s*\$/', $priceVal) === 1) {
+                                                            $priceVal = preg_replace('/^\s*\$/', "\u{20B1}", $priceVal) ?? $priceVal;
+                                                        }
+                                                        if (preg_match('/^\s*\$/', $regularPrice) === 1) {
+                                                            $regularPrice = preg_replace('/^\s*\$/', "\u{20B1}", $regularPrice) ?? $regularPrice;
+                                                        }
                                                         $period = trim((string) ($settings['period'] ?? ''));
                                                         $subtitle = trim((string) ($settings['subtitle'] ?? ''));
                                                         $badge = trim((string) ($settings['badge'] ?? ''));
                                                         $features = is_array($settings['features'] ?? null) ? $settings['features'] : [];
+                                                        $selectedCheckoutPricing = ($currentStepType === 'checkout' && is_array($selectedPricing ?? null)) ? $selectedPricing : null;
+                                                        if (is_array($selectedCheckoutPricing)) {
+                                                            $selectedPlan = trim((string) ($selectedCheckoutPricing['plan'] ?? ''));
+                                                            $selectedPrice = trim((string) ($selectedCheckoutPricing['price'] ?? ''));
+                                                            $selectedRegularPrice = trim((string) ($selectedCheckoutPricing['regularPrice'] ?? ''));
+                                                            $selectedPeriod = trim((string) ($selectedCheckoutPricing['period'] ?? ''));
+                                                            $selectedSubtitle = trim((string) ($selectedCheckoutPricing['subtitle'] ?? ''));
+                                                            $selectedBadge = trim((string) ($selectedCheckoutPricing['badge'] ?? ''));
+                                                            $selectedFeatures = is_array($selectedCheckoutPricing['features'] ?? null) ? $selectedCheckoutPricing['features'] : [];
+                                                            if ($selectedPlan !== '') $plan = $selectedPlan;
+                                                            if ($selectedPrice !== '') $priceVal = $selectedPrice;
+                                                            if ($selectedRegularPrice !== '') $regularPrice = $selectedRegularPrice;
+                                                            if ($selectedPeriod !== '') $period = $selectedPeriod;
+                                                            if ($selectedSubtitle !== '') $subtitle = $selectedSubtitle;
+                                                            if ($selectedBadge !== '') $badge = $selectedBadge;
+                                                            if (count($selectedFeatures) > 0) $features = $selectedFeatures;
+                                                        }
                                                         if (count($features) === 0) {
                                                             $features = ['Feature one', 'Feature two', 'Feature three'];
                                                         }
                                                         $pricingTextColor = trim((string) ($rawStyle['color'] ?? ''));
                                                         if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $pricingTextColor)) $pricingTextColor = '';
-                                                        $ctaLink = trim((string) ($settings['ctaLink'] ?? '#'));
-                                                        $ctaHref = $resolvePricingCtaHref($settings);
+                                                        $pricingCtaAction = $resolvePricingCtaAction($settings);
                                                         $ctaLabelRaw = array_key_exists('ctaLabel', $settings) ? trim((string) $settings['ctaLabel']) : '';
-                                                        $ctaLabel = $ctaLabelRaw !== '' ? $ctaLabelRaw : ($currentStepType !== 'checkout' ? 'Get Started' : '');
+                                                        $ctaLabel = $currentStepType === 'checkout'
+                                                            ? 'Pay Now'
+                                                            : ($ctaLabelRaw !== '' ? $ctaLabelRaw : ($currentStepType === 'sales' && $plan !== '' ? 'Choose ' . $plan : 'Get Started'));
+                                                        $pricingCtaHref = ($pricingCtaAction['kind'] ?? 'link') === 'link'
+                                                            ? $appendPricingSelectionHref((string) ($pricingCtaAction['href'] ?? '#'), $settings, (string) $elId)
+                                                            : '#';
+                                                        $pricingPostedAmountSource = $priceVal !== '' ? $priceVal : $regularPrice;
+                                                        $pricingPostedAmount = 0.0;
+                                                        if ($pricingPostedAmountSource !== '') {
+                                                            $pricingPostedAmountClean = preg_replace('/[^0-9,.\-]/', '', $pricingPostedAmountSource);
+                                                            if (is_string($pricingPostedAmountClean) && $pricingPostedAmountClean !== '') {
+                                                                $pricingPostedAmount = (float) str_replace(',', '', $pricingPostedAmountClean);
+                                                            }
+                                                        }
                                                         $ctaBg = trim((string) ($settings['ctaBgColor'] ?? '#0f172a'));
                                                         if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $ctaBg)) $ctaBg = '#0f172a';
                                                         $ctaText = trim((string) ($settings['ctaTextColor'] ?? '#ffffff'));
@@ -1374,14 +1557,20 @@
                                                         $featureStyle = 'font-size:' . (int) round(12 * $scale) . 'px;gap:' . (int) round(6 * $scale) . 'px;';
                                                         $featureGapStyle = 'gap:' . (int) round(6 * $scale) . 'px;';
                                                         $ctaStyle = 'font-size:' . (int) round(16 * $scale) . 'px;padding:' . (int) round(8 * $scale) . 'px ' . (int) round(12 * $scale) . 'px;';
+                                                        $pricingFeaturesJson = json_encode(array_values($features), JSON_UNESCAPED_UNICODE);
+                                                        $checkoutSelectionPricingId = trim((string) ($selectedCheckoutPricing['pricingId'] ?? ''));
+                                                        if ($checkoutSelectionPricingId === '') {
+                                                            $checkoutSelectionPricingId = (string) $elId;
+                                                        }
+                                                        $checkoutSelectionSourceStep = trim((string) ($selectedCheckoutPricing['sourceStepSlug'] ?? ''));
                                                     @endphp
-                                                    <div class="builder-pricing" data-pricing-id="{{ $elId }}" data-pricing-key="{{ $promoKey }}" data-pricing-sale="{{ $priceVal }}" data-pricing-regular="{{ $regularPrice }}" style="{{ $scaledContentStyle }}">
+                                                    <div class="builder-pricing" data-pricing-id="{{ $elId }}" data-pricing-key="{{ $promoKey }}" data-pricing-plan="{{ $plan }}" data-pricing-sale="{{ $priceVal }}" data-pricing-regular="{{ $regularPrice }}" data-pricing-period="{{ $period }}" data-pricing-subtitle="{{ $subtitle }}" data-pricing-badge="{{ $badge }}" data-pricing-features="{{ $pricingFeaturesJson }}" style="{{ $scaledContentStyle }}">
                                                         @if($badge !== '')
                                                             <div class="builder-pricing-badge" style="{{ $badgeStyle }}">{{ $badge }}</div>
                                                         @endif
                                                         <div class="builder-pricing-title" style="{{ $titleStyle }}@if($pricingTextColor !== '')color: {{ $pricingTextColor }};@endif">{{ $plan !== '' ? $plan : 'Plan' }}</div>
                                                         <div>
-                                                            <span class="builder-pricing-price" data-pricing-price style="{{ $priceStyle }}@if($pricingTextColor !== '')color: {{ $pricingTextColor }};@endif">{{ $priceVal !== '' ? $priceVal : '$0' }}</span>
+                                                            <span class="builder-pricing-price" data-pricing-price style="{{ $priceStyle }}@if($pricingTextColor !== '')color: {{ $pricingTextColor }};@endif">{{ $priceVal !== '' ? $priceVal : '₱0' }}</span>
                                                             @if($period !== '')
                                                                 <span class="builder-pricing-period" style="{{ $periodStyle }}@if($pricingTextColor !== '')color: {{ $pricingTextColor }}; opacity: 0.7;@endif">{{ $period }}</span>
                                                             @endif
@@ -1399,7 +1588,29 @@
                                                             @endforeach
                                                         </ul>
                                                         @if($ctaLabel !== '')
-                                                            <a class="builder-pricing-cta" href="{{ $ctaHref }}" style="{{ $ctaStyle }}background: {{ $ctaBg }}; color: {{ $ctaText }};">{{ $ctaLabel }}</a>
+                                                            @if(($pricingCtaAction['kind'] ?? 'link') === 'post')
+                                                                <form method="POST" action="{{ $pricingCtaAction['action'] }}" style="margin:0;">
+                                                                    @csrf
+                                                                    @foreach(($pricingCtaAction['fields'] ?? []) as $fieldName => $fieldValue)
+                                                                        <input type="hidden" name="{{ $fieldName }}" value="{{ $fieldName === 'amount' && $pricingPostedAmount > 0 ? $pricingPostedAmount : $fieldValue }}">
+                                                                    @endforeach
+                                                                    <input type="hidden" name="website" value="">
+                                                                    <input type="hidden" name="checkout_pricing_id" value="{{ $checkoutSelectionPricingId }}">
+                                                                    <input type="hidden" name="checkout_pricing_source_step" value="{{ $checkoutSelectionSourceStep }}">
+                                                                    <input type="hidden" name="checkout_pricing_plan" value="{{ $plan }}">
+                                                                    <input type="hidden" name="checkout_pricing_price" value="{{ $priceVal }}">
+                                                                    <input type="hidden" name="checkout_pricing_regular_price" value="{{ $regularPrice }}">
+                                                                    <input type="hidden" name="checkout_pricing_period" value="{{ $period }}">
+                                                                    <input type="hidden" name="checkout_pricing_subtitle" value="{{ $subtitle }}">
+                                                                    <input type="hidden" name="checkout_pricing_badge" value="{{ $badge }}">
+                                                                    <input type="hidden" name="checkout_pricing_features" value="{{ $pricingFeaturesJson }}">
+                                                                    <button type="submit" class="builder-pricing-cta" style="{{ $ctaStyle }}background: {{ $ctaBg }}; color: {{ $ctaText }};">{{ $ctaLabel }}</button>
+                                                                </form>
+                                                            @elseif(($pricingCtaAction['kind'] ?? 'link') === 'disabled')
+                                                                <button type="button" class="builder-pricing-cta" style="{{ $ctaStyle }}background: {{ $ctaBg }}; color: {{ $ctaText }}; opacity:0.7;cursor:not-allowed;" disabled>{{ $ctaLabel }}</button>
+                                                            @else
+                                                                <a class="builder-pricing-cta" href="{{ $pricingCtaHref }}" style="{{ $ctaStyle }}background: {{ $ctaBg }}; color: {{ $ctaText }};">{{ $ctaLabel }}</a>
+                                                            @endif
                                                         @endif
                                                     </div>
                                                 @elseif($type === 'countdown')
@@ -1559,6 +1770,7 @@
                                                     @if($step->type === 'opt_in' && !$isPreview)
                                                         <form method="POST" action="{{ route('funnels.portal.optin', ['funnelSlug' => $funnel->slug, 'stepSlug' => $step->slug]) }}" style="{{ $formInlineStyle }}">
                     @csrf
+                                                            <input type="hidden" name="website" value="">
                                                             @foreach($formFields as $f)
                                                                 @php
                                                                     $ft = strtolower(trim((string) ($f['type'] ?? 'text')));
@@ -1644,6 +1856,207 @@
     </div>
     <script>
     (function(){
+        var pricingStorageKey="funnel_pricing_selection:"+@json((string) ($funnel->slug ?? ''));
+        var currentStepSlug=@json((string) ($step->slug ?? ''));
+        var currentStepType=@json((string) ($currentStepType ?? 'custom'));
+        var hasServerSelectedPricing={{ is_array($selectedPricing ?? null) ? 'true' : 'false' }};
+        var isFirstStep={{ ($isFirstStep ?? false) ? 'true' : 'false' }};
+        function escapeHtml(raw){
+            return String(raw||"")
+                .replace(/&/g,"&amp;")
+                .replace(/</g,"&lt;")
+                .replace(/>/g,"&gt;")
+                .replace(/"/g,"&quot;")
+                .replace(/'/g,"&#39;");
+        }
+        function readStoredPricingSelection(){
+            try{
+                var raw=window.sessionStorage?window.sessionStorage.getItem(pricingStorageKey):"";
+                if(!raw)return null;
+                var parsed=JSON.parse(raw);
+                return parsed&&typeof parsed==="object"?parsed:null;
+            }catch(_e){
+                return null;
+            }
+        }
+        function writeStoredPricingSelection(selection){
+            if(!selection||typeof selection!=="object"||!window.sessionStorage)return;
+            try{
+                window.sessionStorage.setItem(pricingStorageKey,JSON.stringify(selection));
+            }catch(_e){}
+        }
+        function clearStoredPricingSelection(){
+            if(!window.sessionStorage)return;
+            try{
+                window.sessionStorage.removeItem(pricingStorageKey);
+            }catch(_e){}
+        }
+        function parsePricingFeatures(raw){
+            if(Array.isArray(raw))return raw.filter(function(v){return String(v||"").trim()!=="";}).map(function(v){return String(v||"").trim();});
+            var text=String(raw||"").trim();
+            if(!text)return [];
+            try{
+                var parsed=JSON.parse(text);
+                if(Array.isArray(parsed)){
+                    return parsed.filter(function(v){return String(v||"").trim()!=="";}).map(function(v){return String(v||"").trim();});
+                }
+            }catch(_e){}
+            return [];
+        }
+        function extractPricingSelection(card){
+            if(!card)return null;
+            return {
+                pricingId:String(card.getAttribute("data-pricing-id")||"").trim(),
+                sourceStepSlug:currentStepSlug,
+                plan:String(card.getAttribute("data-pricing-plan")||"").trim(),
+                price:String(card.getAttribute("data-pricing-sale")||"").trim(),
+                regularPrice:String(card.getAttribute("data-pricing-regular")||"").trim(),
+                period:String(card.getAttribute("data-pricing-period")||"").trim(),
+                subtitle:String(card.getAttribute("data-pricing-subtitle")||"").trim(),
+                badge:String(card.getAttribute("data-pricing-badge")||"").trim(),
+                features:parsePricingFeatures(card.getAttribute("data-pricing-features")||"")
+            };
+        }
+        function buildPricingHrefWithSelection(href,selection){
+            var rawHref=String(href||"").trim();
+            if(!rawHref||rawHref==="#")return rawHref||"#";
+            if(!selection||!selection.pricingId||!selection.sourceStepSlug)return rawHref;
+            try{
+                var url=new URL(rawHref,window.location.href);
+                if(url.origin!==window.location.origin)return rawHref;
+                url.searchParams.set("offer_step",selection.sourceStepSlug);
+                url.searchParams.set("offer_pricing",selection.pricingId);
+                url.searchParams.set("offer_plan",String(selection.plan||"").trim());
+                url.searchParams.set("offer_price",String(selection.price||"").trim());
+                url.searchParams.set("offer_regular_price",String(selection.regularPrice||"").trim());
+                url.searchParams.set("offer_period",String(selection.period||"").trim());
+                url.searchParams.set("offer_subtitle",String(selection.subtitle||"").trim());
+                url.searchParams.set("offer_badge",String(selection.badge||"").trim());
+                url.searchParams.set("offer_features",JSON.stringify(Array.isArray(selection.features)?selection.features:[]));
+                if(url.origin===window.location.origin){
+                    return url.pathname+url.search+url.hash;
+                }
+                return url.toString();
+            }catch(_e){
+                var glue=rawHref.indexOf("?")>=0?"&":"?";
+                return rawHref+glue
+                    +"offer_step="+encodeURIComponent(selection.sourceStepSlug)
+                    +"&offer_pricing="+encodeURIComponent(selection.pricingId)
+                    +"&offer_plan="+encodeURIComponent(String(selection.plan||"").trim())
+                    +"&offer_price="+encodeURIComponent(String(selection.price||"").trim())
+                    +"&offer_regular_price="+encodeURIComponent(String(selection.regularPrice||"").trim())
+                    +"&offer_period="+encodeURIComponent(String(selection.period||"").trim())
+                    +"&offer_subtitle="+encodeURIComponent(String(selection.subtitle||"").trim())
+                    +"&offer_badge="+encodeURIComponent(String(selection.badge||"").trim())
+                    +"&offer_features="+encodeURIComponent(JSON.stringify(Array.isArray(selection.features)?selection.features:[]));
+            }
+        }
+        function ensurePricingChild(card,selector,tagName,className,beforeNode){
+            var node=card.querySelector(selector);
+            if(node)return node;
+            node=document.createElement(tagName);
+            node.className=className;
+            if(beforeNode&&beforeNode.parentNode===card)card.insertBefore(node,beforeNode);
+            else card.appendChild(node);
+            return node;
+        }
+        function applyPricingSelectionToCard(card,selection){
+            if(!card||!selection)return;
+            var plan=String(selection.plan||"").trim();
+            var price=String(selection.price||"").trim();
+            var regular=String(selection.regularPrice||"").trim();
+            var period=String(selection.period||"").trim();
+            var subtitle=String(selection.subtitle||"").trim();
+            var badge=String(selection.badge||"").trim();
+            var features=parsePricingFeatures(selection.features);
+            if(plan!==""){
+                var title=card.querySelector(".builder-pricing-title");
+                if(title)title.textContent=plan;
+                card.setAttribute("data-pricing-plan",plan);
+            }
+            if(price!==""){
+                var priceNode=card.querySelector("[data-pricing-price]");
+                if(priceNode)priceNode.textContent=price;
+                card.setAttribute("data-pricing-sale",price);
+            }
+            card.setAttribute("data-pricing-regular",regular);
+            card.setAttribute("data-pricing-period",period);
+            card.setAttribute("data-pricing-subtitle",subtitle);
+            card.setAttribute("data-pricing-badge",badge);
+            card.setAttribute("data-pricing-features",JSON.stringify(features));
+            var priceNodeParent=(card.querySelector("[data-pricing-price]")||{}).parentNode||null;
+            var periodNode=card.querySelector(".builder-pricing-period");
+            if(period!==""){
+                if(!periodNode&&priceNodeParent){
+                    periodNode=document.createElement("span");
+                    periodNode.className="builder-pricing-period";
+                    priceNodeParent.appendChild(periodNode);
+                }
+                if(periodNode){
+                    periodNode.textContent=period;
+                    periodNode.style.display="";
+                }
+            }else if(periodNode){
+                periodNode.style.display="none";
+            }
+            var titleNode=card.querySelector(".builder-pricing-title");
+            var badgeNode=card.querySelector(".builder-pricing-badge");
+            if(badge!==""){
+                if(!badgeNode){
+                    badgeNode=document.createElement("div");
+                    badgeNode.className="builder-pricing-badge";
+                    if(titleNode&&titleNode.parentNode===card)card.insertBefore(badgeNode,titleNode);
+                    else card.insertBefore(badgeNode,card.firstChild||null);
+                }
+                badgeNode.textContent=badge;
+                badgeNode.style.display="";
+            }else if(badgeNode){
+                badgeNode.style.display="none";
+            }
+            var featureList=card.querySelector(".builder-pricing-features");
+            if(featureList&&features.length){
+                var liStyle=((featureList.querySelector("li")&&featureList.querySelector("li").getAttribute("style"))||"").trim();
+                featureList.innerHTML=features.map(function(feat){
+                    return "<li"+(liStyle?' style="'+escapeHtml(liStyle)+'"':"")+"><i class=\"fas fa-check\" aria-hidden=\"true\"></i> "+escapeHtml(feat)+"</li>";
+                }).join("");
+            }
+            var subtitleNode=card.querySelector(".builder-pricing-subtitle");
+            if(subtitle!==""){
+                if(!subtitleNode){
+                    subtitleNode=document.createElement("div");
+                    subtitleNode.className="builder-pricing-subtitle";
+                    if(featureList&&featureList.parentNode===card)card.insertBefore(subtitleNode,featureList);
+                    else card.appendChild(subtitleNode);
+                }
+                subtitleNode.textContent=subtitle;
+                subtitleNode.style.display="";
+            }else if(subtitleNode){
+                subtitleNode.style.display="none";
+            }
+        }
+        if(isFirstStep && !/[?&]offer_pricing=/.test(window.location.search||"")){
+            clearStoredPricingSelection();
+        }
+        document.addEventListener("click",function(e){
+            var target=e.target&&e.target.closest?e.target.closest(".builder-pricing-cta"):null;
+            if(!target)return;
+            var card=target.closest("[data-pricing-id]");
+            if(!card)return;
+            var selection=extractPricingSelection(card);
+            if(!selection||!selection.pricingId)return;
+            writeStoredPricingSelection(selection);
+            if(target.tagName==="A"&&currentStepType!=="checkout"){
+                target.setAttribute("href",buildPricingHrefWithSelection(target.getAttribute("href")||"",selection));
+            }
+        },true);
+        if(currentStepType==="checkout"&&!hasServerSelectedPricing){
+            var storedSelection=readStoredPricingSelection();
+            if(storedSelection&&storedSelection.pricingId){
+                document.querySelectorAll("[data-pricing-id]").forEach(function(card){
+                    applyPricingSelectionToCard(card,storedSelection);
+                });
+            }
+        }
         var carousels=document.querySelectorAll("[data-carousel]");
         carousels.forEach(function(car){
             var track=car.querySelector("[data-carousel-track]");
@@ -1853,9 +2266,7 @@
             setInterval(tick,1000);
         }
 
-        // Ensure the posted checkout amount matches the visible pricing (sale/regular) when present.
-        // This makes PayMongo charge what the customer sees on the page.
-        function findVisiblePricingAmount(){
+        function findVisiblePricingCard(){
             var cards=Array.from(document.querySelectorAll("[data-pricing-id]")||[]);
             if(!cards.length)return null;
             var visible=cards.filter(function(p){
@@ -1864,33 +2275,154 @@
                 if(p.style && String(p.style.display).toLowerCase()==="none")return false;
                 return true;
             });
-            var target=(visible[0]||cards[0])||null;
+            return (visible[0]||cards[0])||null;
+        }
+        // Ensure the posted checkout amount matches the visible pricing (sale/regular) when present.
+        // This makes PayMongo charge what the customer sees on the page.
+        function findVisiblePricingAmount(){
+            var target=findVisiblePricingCard();
             if(!target)return null;
             var priceEl=target.querySelector("[data-pricing-price]");
             if(!priceEl)return null;
             return parseMoneyToNumber(priceEl.textContent||"");
+        }
+        function syncCheckoutPricingForm(form){
+            if(!form||!form.querySelector)return;
+            var card=findVisiblePricingCard();
+            if(!card)return;
+            var selection=extractPricingSelection(card)||{};
+            var priceEl=card.querySelector("[data-pricing-price]");
+            var titleEl=card.querySelector(".builder-pricing-title");
+            var periodEl=card.querySelector(".builder-pricing-period");
+            var subtitleEl=card.querySelector(".builder-pricing-subtitle");
+            var badgeEl=card.querySelector(".builder-pricing-badge");
+            var featureEls=Array.from(card.querySelectorAll(".builder-pricing-features li")||[]);
+            if(titleEl)selection.plan=String(titleEl.textContent||selection.plan||"").trim();
+            if(priceEl)selection.price=String(priceEl.textContent||selection.price||"").trim();
+            selection.regularPrice=String(card.getAttribute("data-pricing-regular")||selection.regularPrice||"").trim();
+            selection.period=periodEl&&String(periodEl.style.display||"").toLowerCase()!=="none"?String(periodEl.textContent||"").trim():"";
+            selection.subtitle=subtitleEl&&String(subtitleEl.style.display||"").toLowerCase()!=="none"?String(subtitleEl.textContent||"").trim():"";
+            selection.badge=badgeEl&&String(badgeEl.style.display||"").toLowerCase()!=="none"?String(badgeEl.textContent||"").trim():"";
+            selection.features=featureEls.map(function(li){return String(li.textContent||"").trim();}).filter(Boolean);
+            var amount=findVisiblePricingAmount();
+            var fieldMap={
+                checkout_pricing_id:String(selection.pricingId||"").trim(),
+                checkout_pricing_source_step:String(selection.sourceStepSlug||"").trim(),
+                checkout_pricing_plan:String(selection.plan||"").trim(),
+                checkout_pricing_price:String(selection.price||"").trim(),
+                checkout_pricing_regular_price:String(selection.regularPrice||"").trim(),
+                checkout_pricing_period:String(selection.period||"").trim(),
+                checkout_pricing_subtitle:String(selection.subtitle||"").trim(),
+                checkout_pricing_badge:String(selection.badge||"").trim(),
+                checkout_pricing_features:JSON.stringify(Array.isArray(selection.features)?selection.features:[])
+            };
+            Object.keys(fieldMap).forEach(function(name){
+                var input=form.querySelector('input[name="'+name+'"]');
+                if(input)input.value=fieldMap[name];
+            });
+            var amountInput=form.querySelector('input[name="amount"]');
+            if(amountInput && typeof amount==="number" && amount>0){
+                amountInput.value=String(amount);
+            }
         }
         document.addEventListener("submit",function(e){
             var form=e.target;
             if(!form||form.tagName!=="FORM")return;
             var method=String(form.getAttribute("method")||"").toLowerCase();
             if(method!=="post")return;
+            if(form.getAttribute("data-submitting")==="1"){
+                e.preventDefault();
+                return;
+            }
+            form.setAttribute("data-submitting","1");
+            Array.from(form.querySelectorAll('button[type="submit"], input[type="submit"]')||[]).forEach(function(btn){
+                btn.setAttribute("disabled","disabled");
+                if(btn.tagName==="BUTTON"){
+                    btn.setAttribute("data-original-text",btn.textContent||"");
+                    if((btn.textContent||"").trim()!==""){
+                        btn.textContent="Processing...";
+                    }
+                }
+            });
             var action=String(form.getAttribute("action")||"");
             if(action.indexOf("/checkout")<0)return;
-            var amountInput=form.querySelector('input[name="amount"]');
-            if(!amountInput)return;
-            var amount=findVisiblePricingAmount();
-            if(typeof amount==="number" && amount>0){
-                amountInput.value=String(amount);
-            }
+            syncCheckoutPricingForm(form);
         },true);
+        function syncAbsoluteColumnHeights(){
+            var cols=document.querySelectorAll(".builder-col.builder-col--abs, .builder-section--freeform .builder-col");
+            cols.forEach(function(col){
+                var inner=col.querySelector(".builder-col-inner")||col;
+                if(!inner)return;
+                var children=Array.from(inner.children||[]).filter(function(node){
+                    return !!(node&&node.classList&&node.classList.contains("builder-el"));
+                });
+                if(!children.length)return;
+                var maxBottom=0;
+                var maxRight=0;
+                children.forEach(function(node){
+                    var mb=0,mr=0;
+                    try{
+                        var cs=window.getComputedStyle(node);
+                        mb=parseFloat(cs.marginBottom||"0")||0;
+                        mr=parseFloat(cs.marginRight||"0")||0;
+                    }catch(_e){}
+                    var nodeBottom=(node.offsetTop||0)+Math.max(node.offsetHeight||0,node.scrollHeight||0)+mb+12;
+                    var nodeRight=(node.offsetLeft||0)+Math.max(node.offsetWidth||0,node.scrollWidth||0)+mr+12;
+                    if(nodeBottom>maxBottom)maxBottom=nodeBottom;
+                    if(nodeRight>maxRight)maxRight=nodeRight;
+                });
+                if(maxBottom>0){
+                    var currentMinHeight=parseFloat(col.style.minHeight||"0")||0;
+                    if(maxBottom>currentMinHeight)col.style.minHeight=Math.ceil(maxBottom)+"px";
+                }
+                if(col.closest(".builder-section--freeform")&&maxRight>0){
+                    var currentWidth=parseFloat(col.style.width||"0")||0;
+                    if(currentWidth<=0)col.style.width=Math.ceil(maxRight)+"px";
+                }
+            });
+        }
+        function scheduleAbsoluteLayoutSync(){
+            window.requestAnimationFrame(function(){
+                window.requestAnimationFrame(function(){
+                    syncAbsoluteColumnHeights();
+                });
+            });
+        }
+        scheduleAbsoluteLayoutSync();
+        window.addEventListener("resize",function(){scheduleAbsoluteLayoutSync();});
+        window.addEventListener("load",function(){scheduleAbsoluteLayoutSync();});
+        if(document.fonts&&document.fonts.ready&&typeof document.fonts.ready.then==="function"){
+            document.fonts.ready.then(function(){scheduleAbsoluteLayoutSync();}).catch(function(){});
+        }
+        Array.from(document.images||[]).forEach(function(img){
+            if(!img||img.complete)return;
+            img.addEventListener("load",function(){scheduleAbsoluteLayoutSync();},{once:true});
+            img.addEventListener("error",function(){scheduleAbsoluteLayoutSync();},{once:true});
+        });
         var isPreview={{ ($isPreview ?? false) ? 'true' : 'false' }};
         var editorCanvasWidth={{ (int) ($editorCanvasWidth ?? 0) }};
         if(isPreview&&editorCanvasWidth>0){
+            var measurePreviewContentHeight=function(content){
+                if(!content||!content.getBoundingClientRect)return 0;
+                var rootRect=content.getBoundingClientRect();
+                var maxBottom=Math.max(content.scrollHeight||0,content.offsetHeight||0);
+                Array.from(content.querySelectorAll("*")||[]).forEach(function(node){
+                    if(!node||!node.getBoundingClientRect)return;
+                    var tag=String(node.tagName||"").toLowerCase();
+                    if(tag==="script"||tag==="style")return;
+                    var rect=node.getBoundingClientRect();
+                    if((rect.width<=0&&rect.height<=0)||!isFinite(rect.bottom))return;
+                    var bottom=rect.bottom-rootRect.top;
+                    if(bottom>maxBottom)maxBottom=bottom;
+                });
+                return Math.ceil(maxBottom);
+            };
             var applyPreviewScale=function(){
                 var content=document.querySelector(".step-content--full");
                 if(!content)return;
+                syncAbsoluteColumnHeights();
                 content.style.transform="none";
+                content.style.height="auto";
                 content.style.width=editorCanvasWidth+"px";
                 content.style.maxWidth="none";
                 var targetPad=10;
@@ -1900,14 +2432,30 @@
                 var scale=availW/editorCanvasWidth;
                 if(scale<=0)scale=1;
                 content.style.padding=(targetPad/scale)+"px";
-                var h=content.scrollHeight||content.offsetHeight||0;
+                var h=measurePreviewContentHeight(content);
                 content.style.transformOrigin="top left";
                 content.style.transform="scale("+scale+")";
                 content.style.height=(h*scale)+"px";
                 document.body.style.overflowX="hidden";
             };
-            applyPreviewScale();
-            window.addEventListener("resize",function(){applyPreviewScale();});
+            var schedulePreviewScale=function(){
+                window.requestAnimationFrame(function(){
+                    window.requestAnimationFrame(function(){
+                        applyPreviewScale();
+                    });
+                });
+            };
+            schedulePreviewScale();
+            window.addEventListener("resize",function(){schedulePreviewScale();});
+            window.addEventListener("load",function(){schedulePreviewScale();});
+            if(document.fonts&&document.fonts.ready&&typeof document.fonts.ready.then==="function"){
+                document.fonts.ready.then(function(){schedulePreviewScale();}).catch(function(){});
+            }
+            Array.from(document.images||[]).forEach(function(img){
+                if(!img||img.complete)return;
+                img.addEventListener("load",function(){schedulePreviewScale();},{once:true});
+                img.addEventListener("error",function(){schedulePreviewScale();},{once:true});
+            });
         }
     })();
     </script>

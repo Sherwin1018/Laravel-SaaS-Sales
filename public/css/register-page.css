@@ -11,7 +11,8 @@
 
 body {
     margin: 0;
-    padding: 0;
+    padding: 14px;
+    box-sizing: border-box;
     font-family: 'Inter', sans-serif;
     background: var(--bg-gradient);
     min-height: 100vh;
@@ -29,6 +30,7 @@ body {
     max-width: 95%;
     overflow: hidden;
     min-height: 680px;
+    max-height: calc(100vh - 28px);
 }
 
 .info-panel {
@@ -81,18 +83,22 @@ body {
     padding: 0;
     margin: 0;
     text-align: left;
-    display: inline-block;
+    width: 100%;
+    max-width: 500px;
 }
 
 .features li {
-    margin-bottom: 15px;
-    display: flex;
+    margin-bottom: 16px;
+    display: grid;
+    grid-template-columns: 22px minmax(120px, 150px) minmax(0, 1fr);
     align-items: center;
+    column-gap: 10px;
     font-size: 14px;
+    line-height: 1.35;
 }
 
 .features li::before {
-    content: '✓';
+    content: "\2713";
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -100,9 +106,16 @@ body {
     height: 20px;
     background: rgba(255, 255, 255, 0.2);
     border-radius: 50%;
-    margin-right: 10px;
     font-size: 12px;
     font-weight: bold;
+}
+
+.feature-title {
+    font-weight: 700;
+}
+
+.feature-text {
+    opacity: 0.98;
 }
 
 .login-card {
@@ -113,6 +126,11 @@ body {
     justify-content: center;
     align-items: center;
     background: var(--white);
+}
+
+.register-card {
+    justify-content: flex-start;
+    overflow-y: auto;
 }
 
 .back-link {
@@ -435,7 +453,7 @@ button:hover {
 }
 
 .plan-card li::before {
-    content: '•';
+    content: "\2022";
     position: absolute;
     left: 0;
     top: 0;
@@ -448,11 +466,16 @@ button:hover {
 }
 
 @media (max-width: 768px) {
+    body {
+        padding: 0;
+    }
+
     .login-container {
         flex-direction: column;
         width: 100%;
         max-width: 100%;
         min-height: 100vh;
+        max-height: none;
         border-radius: 0;
     }
 
@@ -472,7 +495,23 @@ button:hover {
         margin-bottom: 16px;
     }
 
+    .features {
+        max-width: 100%;
+    }
+
+    .features li {
+        grid-template-columns: 22px 1fr;
+        row-gap: 4px;
+        align-items: start;
+    }
+
+    .feature-title,
+    .feature-text {
+        grid-column: 2 / 3;
+    }
+
     .modal-grid {
         grid-template-columns: 1fr;
     }
 }
+

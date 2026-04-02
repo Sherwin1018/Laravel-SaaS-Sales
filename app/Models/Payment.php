@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Payment extends Model
 {
@@ -15,6 +16,8 @@ class Payment extends Model
 
     protected $fillable = [
         'tenant_id',
+        'funnel_id',
+        'funnel_step_id',
         'lead_id',
         'amount',
         'status',
@@ -22,22 +25,13 @@ class Payment extends Model
         'provider',
         'provider_reference',
         'payment_method',
+        'session_identifier',
     ];
 
     protected $casts = [
         'amount' => 'decimal:2',
         'payment_date' => 'date',
     ];
-
-    public function tenant(): BelongsTo
-    {
-        return $this->belongsTo(Tenant::class);
-    }
-
-    public function lead(): BelongsTo
-    {
-        return $this->belongsTo(Lead::class);
-    }
 
     public function setStatusAttribute($value): void
     {
@@ -49,5 +43,30 @@ class Payment extends Model
         $normalized = mb_strtolower(trim((string) $value));
 
         return array_key_exists($normalized, self::STATUSES) ? $normalized : $normalized;
+    }
+
+    public function tenant(): BelongsTo
+    {
+        return $this->belongsTo(Tenant::class);
+    }
+
+    public function funnel(): BelongsTo
+    {
+        return $this->belongsTo(Funnel::class);
+    }
+
+    public function step(): BelongsTo
+    {
+        return $this->belongsTo(FunnelStep::class, 'funnel_step_id');
+    }
+
+    public function lead(): BelongsTo
+    {
+        return $this->belongsTo(Lead::class);
+    }
+
+    public function events(): HasMany
+    {
+        return $this->hasMany(FunnelEvent::class);
     }
 }

@@ -71,4 +71,9 @@ class FunnelStep extends Model
     {
         return $this->hasMany(FunnelStepRevision::class)->orderBy('created_at')->orderBy('id');
     }
+
+    public function events(): HasMany
+    {
+        return $this->hasMany(FunnelEvent::class, 'funnel_step_id');
+    }
 }

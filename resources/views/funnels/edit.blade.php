@@ -94,6 +94,64 @@
 .fb-lib button.fb-template-btn{cursor:pointer;background:#ffffff;border-style:dashed}
 .fb-lib button.fb-template-btn:hover{background:#F8F5FB}
 .fb-lib i{width:18px;margin-right:6px;color:#2E1244}
+.fb-comp-drag-ghost{width:240px;padding:12px;border:1px solid #E7D8F0;border-radius:14px;background:linear-gradient(180deg,#ffffff,#FBF8FE);box-shadow:0 18px 38px rgba(36,14,53,.18);display:flex;flex-direction:column;gap:10px;position:fixed;top:-1000px;left:-1000px;pointer-events:none;z-index:2000}
+.fb-comp-drag-ghost__head{display:flex;align-items:flex-start;gap:10px}
+.fb-comp-drag-ghost__icon{width:34px;height:34px;border-radius:10px;background:#F3EEF7;border:1px solid #E7D8F0;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.fb-comp-drag-ghost__icon i{width:auto;margin-right:0;font-size:14px;color:#240E35}
+.fb-comp-drag-ghost__copy{min-width:0;display:grid;gap:3px}
+.fb-comp-drag-ghost__label{display:block;font-size:14px;line-height:1.15;font-weight:800;color:#240E35}
+.fb-comp-drag-ghost__desc{display:block;font-size:11px;line-height:1.35;color:#6B7280;font-weight:600}
+.fb-comp-drag-ghost__preview{display:block;padding:10px;border-radius:12px;border:1px solid #ECE4F3;background:linear-gradient(180deg,#ffffff,#FAF7FD);overflow:hidden}
+.fb-comp-preview-stack{display:grid;gap:5px}
+.fb-comp-preview-line{display:block;height:6px;border-radius:999px;background:#DACDEA}
+.fb-comp-preview-line.is-dark{background:#240E35}
+.fb-comp-preview-line.sm{width:42%}
+.fb-comp-preview-line.md{width:62%}
+.fb-comp-preview-line.lg{width:80%}
+.fb-comp-preview-line.full{width:100%}
+.fb-comp-preview-pill{display:inline-flex;align-items:center;justify-content:center;height:14px;padding:0 8px;border-radius:999px;background:#E9DCF4;color:#5B2A79;font-size:9px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}
+.fb-comp-preview-btn{display:inline-flex;align-items:center;justify-content:center;height:16px;padding:0 12px;border-radius:999px;background:#240E35;color:#fff;font-size:9px;font-weight:800;white-space:nowrap;align-self:flex-start}
+.fb-comp-preview-frame{height:42px;border:1px dashed #D8C8E9;border-radius:10px;background:linear-gradient(180deg,#fff,#F8F5FB);padding:6px;display:flex;align-items:center;justify-content:center}
+.fb-comp-preview-shell{width:100%;height:100%;border-radius:8px;border:1px dashed #D8C8E9;background:rgba(243,238,247,.85)}
+.fb-comp-preview-grid{display:grid;gap:6px;height:42px}
+.fb-comp-preview-grid--two{grid-template-columns:repeat(2,minmax(0,1fr))}
+.fb-comp-preview-grid--three{grid-template-columns:repeat(3,minmax(0,1fr))}
+.fb-comp-preview-cell{border-radius:8px;border:1px solid #E7D8F0;background:#F3EEF7}
+.fb-comp-preview-spacer{height:42px;border-radius:10px;border:1px dashed #D8C8E9;background:linear-gradient(180deg,#fff,#F8F5FB);position:relative}
+.fb-comp-preview-spacer::before,.fb-comp-preview-spacer::after{content:"";position:absolute;top:8px;bottom:8px;width:1px;background:#B99FD2}
+.fb-comp-preview-spacer::before{left:28%}
+.fb-comp-preview-spacer::after{right:28%}
+.fb-comp-preview-spacer-label{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:3px 8px;border-radius:999px;background:#EFE7F7;color:#6B4A7A;font-size:9px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+.fb-comp-preview-button-wrap{height:42px;border-radius:10px;border:1px solid #ECE4F3;background:linear-gradient(180deg,#fff,#FAF7FD);display:flex;align-items:center;justify-content:center}
+.fb-comp-preview-icon-wrap{height:42px;border-radius:10px;border:1px solid #ECE4F3;background:linear-gradient(180deg,#fff,#FAF7FD);display:flex;align-items:center;gap:8px;padding:0 10px}
+.fb-comp-preview-icon-chip{width:22px;height:22px;border-radius:999px;background:#F3EEF7;border:1px solid #E7D8F0;display:flex;align-items:center;justify-content:center;color:#240E35;font-size:11px}
+.fb-comp-preview-nav{display:flex;gap:6px;align-items:center;flex-wrap:nowrap}
+.fb-comp-preview-nav-item{height:14px;border-radius:999px;background:#F3EEF7;border:1px solid #E7D8F0}
+.fb-comp-preview-nav-item.is-wide{width:48px}
+.fb-comp-preview-nav-item.is-mid{width:34px}
+.fb-comp-preview-nav-item.is-cta{width:44px;background:#240E35;border-color:#240E35}
+.fb-comp-preview-media{height:42px;border-radius:10px;border:1px solid #E7D8F0;background:linear-gradient(135deg,#F9F6FC,#E8DDF3);position:relative;overflow:hidden}
+.fb-comp-preview-media-sun{position:absolute;top:7px;right:8px;width:8px;height:8px;border-radius:999px;background:#fff;opacity:.95}
+.fb-comp-preview-media-ridge{position:absolute;left:7px;right:7px;bottom:7px;height:15px;background:linear-gradient(180deg,#D6C4E7,#C4ACDD);clip-path:polygon(0 100%,22% 35%,40% 68%,64% 16%,100% 100%)}
+.fb-comp-preview-media-play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:22px;height:22px;border-radius:999px;background:rgba(36,14,53,.86);display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;box-shadow:0 4px 10px rgba(36,14,53,.18)}
+.fb-comp-preview-carousel{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;align-items:end}
+.fb-comp-preview-slide{height:28px;border-radius:8px;border:1px solid #E7D8F0;background:#F3EEF7}
+.fb-comp-preview-slide.is-tall{height:38px;background:linear-gradient(135deg,#F8F4FC,#E8DDF3)}
+.fb-comp-preview-form{display:grid;gap:5px}
+.fb-comp-preview-input{height:8px;border-radius:999px;background:#EFE7F7;border:1px solid #E7D8F0}
+.fb-comp-preview-card{display:grid;gap:6px;padding:8px;border-radius:12px;background:#fff;border:1px solid #E6E1EF;box-shadow:0 6px 14px rgba(36,14,53,.06)}
+.fb-comp-preview-card--pricing{gap:5px}
+.fb-comp-preview-price-row{display:flex;align-items:flex-end;gap:4px}
+.fb-comp-preview-price{font-size:18px;line-height:1;font-weight:900;color:#16A34A}
+.fb-comp-preview-period{font-size:9px;line-height:1.2;color:#64748B;font-weight:700}
+.fb-comp-preview-avatar-row{display:flex;align-items:center;gap:8px}
+.fb-comp-preview-avatar{width:20px;height:20px;border-radius:999px;background:#E7D8F0;border:1px solid #D8C8E9}
+.fb-comp-preview-faq-item{display:flex;align-items:center;gap:7px}
+.fb-comp-preview-faq-badge{width:16px;height:16px;border-radius:999px;background:#F3EEF7;border:1px solid #E7D8F0;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:900;color:#240E35}
+.fb-comp-preview-timer{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.fb-comp-preview-timer-box{height:34px;border-radius:8px;background:#F3EEF7;border:1px solid #E7D8F0;display:grid;place-items:center}
+.fb-comp-preview-timer-num{font-size:11px;font-weight:900;color:#240E35;line-height:1}
+.fb-comp-preview-timer-unit{font-size:8px;font-weight:800;color:#64748B;line-height:1;text-transform:uppercase}
 .fb-lib-group{margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #E6E1EF}
 .fb-lib-group:last-child{margin-bottom:0;padding-bottom:0;border-bottom:0}
 .fb-lib-group-title{font-size:12px;font-weight:900;letter-spacing:.02em;text-transform:uppercase;color:#2E1244;margin:0 0 8px}
@@ -361,8 +419,12 @@
 .page-mgr-item.is-dragging{opacity:.55}
 .page-mgr-item.drag-before{box-shadow:inset 0 2px 0 #2E1244}
 .page-mgr-item.drag-after{box-shadow:inset 0 -2px 0 #2E1244}
+.page-mgr-item-copy{display:grid;gap:2px;min-width:0}
+.page-mgr-item-title{font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.page-mgr-item-meta{font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#64748b}
 .page-mgr-item-handle{font-size:12px;color:#64748b}
 .page-mgr-item.is-selected .page-mgr-item-handle{color:rgba(255,255,255,.85)}
+.page-mgr-item.is-selected .page-mgr-item-meta{color:rgba(255,255,255,.78)}
 .page-mgr-section{margin-bottom:14px;padding:12px;border:1px solid #E6E1EF;border-radius:12px;background:#F3EEF7}
 .version-modal-card{width:min(460px,96vw)}
 .version-modal-body{padding:18px 20px;background:#F3EEF7;display:flex;flex-direction:column;gap:12px}
@@ -617,6 +679,8 @@
                         <option value="opt_in">Opt-in</option>
                         <option value="sales">Sales</option>
                         <option value="checkout">Checkout</option>
+                        <option value="upsell">Upsell</option>
+                        <option value="downsell">Downsell</option>
                         <option value="thank_you">Thank You</option>
                         <option value="custom">Custom</option>
                     </select>
@@ -630,6 +694,17 @@
                     <h5>Manage Selected Page</h5>
                     <label for="pageMgrRenameTitle">Title</label>
                     <input id="pageMgrRenameTitle" type="text" placeholder="Selected page title">
+                    <label for="pageMgrRenameType">Type</label>
+                    <select id="pageMgrRenameType">
+                        <option value="landing">Landing</option>
+                        <option value="opt_in">Opt-in</option>
+                        <option value="sales">Sales</option>
+                        <option value="checkout">Checkout</option>
+                        <option value="upsell">Upsell</option>
+                        <option value="downsell">Downsell</option>
+                        <option value="thank_you">Thank You</option>
+                        <option value="custom">Custom</option>
+                    </select>
                     <label for="pageMgrRenameSlug">Slug</label>
                     <input id="pageMgrRenameSlug" type="text" placeholder="selected-page-slug">
                     <label for="pageMgrRenameTags">Step tags (comma separated)</label>
@@ -803,7 +878,7 @@ const iconCatalog=[
     {name:"linkedin-in",label:"LinkedIn",keywords:"social",styles:["brands"]},
 ];
 
-const stepSel=document.getElementById("stepSel"),stepAddBtn=document.getElementById("stepAddBtn"),pageMgrModal=document.getElementById("pageMgrModal"),pageMgrClose=document.getElementById("pageMgrClose"),pageMgrList=document.getElementById("pageMgrList"),pageMgrAddType=document.getElementById("pageMgrAddType"),pageMgrAddTitle=document.getElementById("pageMgrAddTitle"),pageMgrAddSlug=document.getElementById("pageMgrAddSlug"),pageMgrCreateBtn=document.getElementById("pageMgrCreateBtn"),pageMgrRenameTitle=document.getElementById("pageMgrRenameTitle"),pageMgrRenameSlug=document.getElementById("pageMgrRenameSlug"),pageMgrRenameTags=document.getElementById("pageMgrRenameTags"),pageMgrRenameBtn=document.getElementById("pageMgrRenameBtn"),pageMgrDeleteBtn=document.getElementById("pageMgrDeleteBtn"),pageMgrUpBtn=document.getElementById("pageMgrUpBtn"),pageMgrDownBtn=document.getElementById("pageMgrDownBtn"),versionModal=document.getElementById("versionModal"),versionModalClose=document.getElementById("versionModalClose"),versionModalCancel=document.getElementById("versionModalCancel"),versionModalSave=document.getElementById("versionModalSave"),versionModalLabel=document.getElementById("versionModalLabel"),versionModalPageName=document.getElementById("versionModalPageName"),canvas=document.getElementById("canvas"),settings=document.getElementById("settings"),saveMsg=document.getElementById("saveMsg"),settingsTitle=document.getElementById("settingsTitle"),canvasBgColor=document.getElementById("canvasBgColor"),canvasBgReset=document.getElementById("canvasBgReset");
+const stepSel=document.getElementById("stepSel"),stepAddBtn=document.getElementById("stepAddBtn"),pageMgrModal=document.getElementById("pageMgrModal"),pageMgrClose=document.getElementById("pageMgrClose"),pageMgrList=document.getElementById("pageMgrList"),pageMgrAddType=document.getElementById("pageMgrAddType"),pageMgrAddTitle=document.getElementById("pageMgrAddTitle"),pageMgrAddSlug=document.getElementById("pageMgrAddSlug"),pageMgrCreateBtn=document.getElementById("pageMgrCreateBtn"),pageMgrRenameTitle=document.getElementById("pageMgrRenameTitle"),pageMgrRenameType=document.getElementById("pageMgrRenameType"),pageMgrRenameSlug=document.getElementById("pageMgrRenameSlug"),pageMgrRenameTags=document.getElementById("pageMgrRenameTags"),pageMgrRenameBtn=document.getElementById("pageMgrRenameBtn"),pageMgrDeleteBtn=document.getElementById("pageMgrDeleteBtn"),pageMgrUpBtn=document.getElementById("pageMgrUpBtn"),pageMgrDownBtn=document.getElementById("pageMgrDownBtn"),versionModal=document.getElementById("versionModal"),versionModalClose=document.getElementById("versionModalClose"),versionModalCancel=document.getElementById("versionModalCancel"),versionModalSave=document.getElementById("versionModalSave"),versionModalLabel=document.getElementById("versionModalLabel"),versionModalPageName=document.getElementById("versionModalPageName"),canvas=document.getElementById("canvas"),settings=document.getElementById("settings"),saveMsg=document.getElementById("saveMsg"),settingsTitle=document.getElementById("settingsTitle"),canvasBgColor=document.getElementById("canvasBgColor"),canvasBgReset=document.getElementById("canvasBgReset");
 let _autoSaveTimer=null;
 let _autoSaveInFlight=false;
 let _autoSavePending=false;
@@ -891,7 +966,7 @@ if(canvasBgReset){
 const uid=p=>p+"_"+Math.random().toString(36).slice(2,10),clone=o=>JSON.parse(JSON.stringify(o));
 const defaults=(stepType)=>{
     const t=String(stepType||"").toLowerCase();
-    if(t==="landing"||t==="opt_in"||t==="sales"||t==="checkout"||t==="thank_you"){
+    if(t==="landing"||t==="opt_in"||t==="sales"||t==="checkout"||t==="upsell"||t==="downsell"||t==="thank_you"){
         return {root:[],sections:[]};
     }
     return {
@@ -1012,16 +1087,13 @@ function templatePricingFaqLayout(){
             makeEl("text","Start today and upgrade anytime.",{fontSize:"16px",color:"#64748b",lineHeight:"1.6",textAlign:"center"},{})
         ],{textAlign:"center"})],{gap:"10px"})]
     });
-    var pricing=makePricingCardEl({plan:"Pro",price:"$49",period:"/month",subtitle:"Best for growing teams",features:["Unlimited pages","Custom domains","Priority support"],badge:"Popular"},makeBareCardStyle());
+    var pricing=makePricingCardEl({plan:"Pro",price:"₱49",period:"/month",subtitle:"Best for growing teams",features:["Unlimited pages","Custom domains","Priority support"],badge:"Popular"},makeBareCardStyle());
     var faq=makeFaqCardEl([{q:"Can I cancel anytime?",a:"Yes, cancel anytime from your account settings."},{q:"Do you offer a free trial?",a:"Yes, you get a 14-day free trial."}],makeBareCardStyle());
     var gridSection=makeSection({
         style:{padding:"28px 24px 64px",backgroundColor:"#ffffff"},
         settings:{contentWidth:"wide"},
         rows:[makeRow([
-            makePanelColumn([
-                pricing,
-                makePrimaryButtonEl("Get Started",{alignment:"left"},{margin:"18px 0 0"})
-            ]),
+            makePanelColumn([pricing]),
             makePanelColumn([faq])
         ],{gap:"20px",alignItems:"stretch"})]
     });
@@ -1089,7 +1161,7 @@ function templateCheckoutLayout(){
     var section=makeSplitInfoSection(
         makePanelColumn([makePricingCardEl({
             plan:"Starter",
-            price:"$29",
+            price:"₱29",
             period:"/month",
             subtitle:"Everything you need to launch",
             features:["Unlimited steps","Custom domains","Email support"],
@@ -1214,11 +1286,13 @@ function makePricingCardEl(opts,style){
         boxShadow:"0 12px 24px rgba(36,14,53,.08)"
     },style||{}),{
         plan:opts.plan||"Growth",
-        price:opts.price||"$49",
+        price:opts.price||"₱49",
         period:opts.period||"/month",
         subtitle:opts.subtitle||"Best for growing teams",
         features:Array.isArray(opts.features)&&opts.features.length?opts.features:["Unlimited funnels","Priority support","Conversion analytics"],
         ctaLabel:opts.ctaLabel||"",
+        ctaActionType:opts.ctaActionType||"next_step",
+        ctaActionStepSlug:opts.ctaActionStepSlug||"",
         ctaLink:opts.ctaLink||"#",
         ctaBgColor:opts.ctaBgColor||"#240E35",
         ctaTextColor:opts.ctaTextColor||"#ffffff",
@@ -1350,16 +1424,14 @@ function makeSplitInfoSection(leftCol,rightCol,opts){
 }
 function makeCardGridSection(opts){
     opts=opts||{};
+    var sectionElements=[];
     var rows=[];
     if(opts.title||opts.body||opts.kicker){
-        rows.push(makeRow([makeColumn(
-            makeIntroElements(opts.kicker,opts.title,opts.body,{
-                align:opts.align||"center",
-                headingSize:opts.headingSize||"32px",
-                bodySize:opts.bodySize||"16px"
-            }),
-            {textAlign:opts.align||"center"}
-        )],{gap:"12px"}));
+        sectionElements=sectionElements.concat(makeIntroElements(opts.kicker,opts.title,opts.body,{
+            align:opts.align||"center",
+            headingSize:opts.headingSize||"32px",
+            bodySize:opts.bodySize||"16px"
+        }));
     }
     if(Array.isArray(opts.columns)&&opts.columns.length){
         rows.push(makeRow(opts.columns,{gap:opts.gap||"18px",alignItems:opts.alignItems||"stretch"}));
@@ -1367,6 +1439,7 @@ function makeCardGridSection(opts){
     return makeSection({
         style:{padding:opts.padding||"0 24px 64px",backgroundColor:opts.backgroundColor||"#ffffff"},
         settings:{contentWidth:opts.contentWidth||"wide"},
+        elements:sectionElements,
         rows:rows
     });
 }
@@ -1380,21 +1453,19 @@ function makeCenteredCtaSection(opts){
     return makeSection({
         style:style,
         settings:{contentWidth:opts.contentWidth||"wide"},
-        rows:[makeRow([makeColumn(
-            makeIntroElements(opts.kicker,opts.heading,opts.body,{
-                align:"center",
-                headingSize:opts.headingSize||"28px",
-                bodySize:opts.bodySize||"15px",
-                button:opts.button?{
-                    label:opts.button.label,
-                    alignment:"center",
-                    settings:opts.button.settings||{},
-                    style:opts.button.style||{}
-                }:null,
-                extraEls:opts.extraEls||[]
-            }),
-            {textAlign:"center"}
-        )],{gap:"12px"})]
+        elements:makeIntroElements(opts.kicker,opts.heading,opts.body,{
+            align:"center",
+            headingSize:opts.headingSize||"28px",
+            bodySize:opts.bodySize||"15px",
+            button:opts.button?{
+                label:opts.button.label,
+                alignment:"center",
+                settings:opts.button.settings||{},
+                style:opts.button.style||{}
+            }:null,
+            extraEls:opts.extraEls||[]
+        }),
+        rows:[]
     });
 }
 function makeNextStepCtaSection(opts){
@@ -1440,7 +1511,7 @@ function templateAuthorityLandingLayout(){
         body:"Use these cards to explain the offer, the process, and the proof.",
         columns:[
             makeFeatureCardColumn("comments","Clear positioning","Show exactly who this page is for and what changes after they say yes."),
-            makeFeatureCardColumn("shield-halved","Trust builders","Add authority, testimonials, and proof elements before the CTA."),
+            makeFeatureCardColumn("shield-halved","Trust builders","Add authority, testimonials, and proof elements before the call to action."),
             makeFeatureCardColumn("paper-plane","Simple next step","End sections with one direct action instead of too many choices.")
         ]
     });
@@ -1478,7 +1549,7 @@ function templateAppShowcaseLayout(){
         columns:[
             makeFeatureCardColumn("bolt","Fast setup","Use this as a clean first draft for SaaS, apps, or digital tools."),
             makeFeatureCardColumn("image","Visual storytelling","Pair screenshots or mockups with short, persuasive copy blocks."),
-            makeFeatureCardColumn("cart-shopping","Stronger CTAs","Move visitors naturally from curiosity to offer review.")
+            makeFeatureCardColumn("cart-shopping","Stronger Call to Actions","Move visitors naturally from curiosity to offer review.")
         ]
     });
     var social=makeCardGridSection({
@@ -1592,13 +1663,12 @@ function templateSalesOfferStackLayout(){
         makeColumn(makeIntroElements(
             "Offer Page",
             "Present the transformation before the price",
-            "Lead with the result, reinforce it with proof, and only then move into the offer details.",
-            {button:{label:"See The Package"}}
+            "Lead with the result, reinforce it with proof, and only then move into the offer details."
         )),
         makePanelColumn([
             makePricingCardEl({
                 plan:"Signature Offer",
-                price:"$1,500",
+                price:"₱1,500",
                 period:"",
                 subtitle:"Ideal for clients who want faster implementation",
                 features:["Strategy kickoff","Custom build","Launch support"],
@@ -1627,9 +1697,8 @@ function templateSalesOfferStackLayout(){
         ]
     });
     var cta=makeCenteredCtaSection({
-        heading:"Guide them to the next step with confidence",
-        body:"Use the CTA below to move visitors toward checkout or an application page.",
-        button:{label:"Continue To Checkout"}
+        heading:"Keep the offer choice clear",
+        body:"Use the pricing card on this page as the real call to action. The chosen offer should carry forward into checkout."
     });
     return buildTemplateLayout("#F3EEF7",[hero,sections,close,cta]);
 }
@@ -1651,7 +1720,7 @@ function templateVideoSalesLetterLayout(){
         columns:[
             makeFeatureCardColumn("play","Lead with movement","Use video when tone, explanation, or demo matters most."),
             makeFeatureCardColumn("shield-halved","Remove friction","Add proof, guarantees, and short objection-handling sections."),
-            makeFeatureCardColumn("cart-shopping","Close clearly","Use a direct CTA after the key proof blocks.")
+            makeFeatureCardColumn("cart-shopping","Close clearly","Use a direct call to action after the key proof blocks.")
         ]
     });
     var offer=makeCardGridSection({
@@ -1659,7 +1728,7 @@ function templateVideoSalesLetterLayout(){
         columns:[
             makePanelColumn([makePricingCardEl({
                 plan:"Launch Intensive",
-                price:"$497",
+                price:"₱497",
                 period:"",
                 subtitle:"Fast-start program with templates and support",
                 features:["Video training","Templates","Q and A session"],
@@ -1675,7 +1744,6 @@ function templateComparisonSalesLayout(){
         kicker:"Offer Comparison",
         heading:"Show the best-fit option and help visitors choose faster",
         body:"This format works when you need to compare plans, bundles, or implementation levels before checkout.",
-        button:{label:"Choose A Plan"},
         headingSize:"38px",
         bodySize:"16px",
         padding:"80px 24px 30px",
@@ -1686,9 +1754,9 @@ function templateComparisonSalesLayout(){
         padding:"0 24px 32px",
         backgroundColor:"#ffffff",
         columns:[
-            makePanelColumn([makePricingCardEl({plan:"Starter",price:"$49",period:"/month",subtitle:"For getting started",features:["Core pages","Email capture","Basic support"]},makeBareCardStyle())]),
-            makePanelColumn([makePricingCardEl({plan:"Growth",price:"$99",period:"/month",subtitle:"For serious launches",features:["Unlimited funnels","Priority support","Analytics"],badge:"Best Value"},makeBareCardStyle())]),
-            makePanelColumn([makePricingCardEl({plan:"Scale",price:"$199",period:"/month",subtitle:"For advanced teams",features:["Advanced insights","Team access","Hands-on onboarding"]},makeBareCardStyle())])
+            makePanelColumn([makePricingCardEl({plan:"Starter",price:"₱49",period:"/month",subtitle:"For getting started",features:["Core pages","Email capture","Basic support"]},makeBareCardStyle())]),
+            makePanelColumn([makePricingCardEl({plan:"Growth",price:"₱99",period:"/month",subtitle:"For serious launches",features:["Unlimited funnels","Priority support","Analytics"],badge:"Best Value"},makeBareCardStyle())]),
+            makePanelColumn([makePricingCardEl({plan:"Scale",price:"₱199",period:"/month",subtitle:"For advanced teams",features:["Advanced insights","Team access","Hands-on onboarding"]},makeBareCardStyle())])
         ]
     });
     var faq=makeCardGridSection({
@@ -1702,18 +1770,16 @@ function templateComparisonSalesLayout(){
         ]
     });
     var cta=makeCenteredCtaSection({
-        heading:"Move the best-fit buyer forward",
-        body:"Use a strong CTA below the comparison so the next action feels obvious.",
-        button:{label:"Go To Checkout"}
+        heading:"Let the selected plan drive checkout",
+        body:"Each pricing button should carry its own plan and amount into the checkout step."
     });
     return buildTemplateLayout("#F3EEF7",[hero,pricing,faq,cta]);
 }
 function templatePremiumCheckoutLayout(){
-    var orderButton=makePrimaryButtonEl("Complete Purchase",{actionType:"checkout",alignment:"left"});
     var summary=makeSplitInfoSection(
         makePanelColumn([makePricingCardEl({
             plan:"Premium Access",
-            price:"$299",
+            price:"₱299",
             period:"",
             subtitle:"Everything needed to launch with confidence",
             features:["Templates included","Priority email support","Bonus training vault"],
@@ -1726,7 +1792,7 @@ function templatePremiumCheckoutLayout(){
                 "Call out refund or guarantee details",
                 "Remind them what happens immediately after purchase"
             ]),{fontSize:"15px",color:"#64748b",lineHeight:"1.7",margin:"0 0 18px"},{}),
-            orderButton,
+            makeEl("text","Use the Pay Now button on the pricing card to complete checkout with the correct amount.",{fontSize:"14px",color:"#1d4ed8",fontWeight:"700",margin:"0 0 10px"},{}),
             makeEl("text","Secure checkout ready. Replace this with your final checkout copy.",{fontSize:"13px",color:"#64748b",margin:"12px 0 0"},{}),
             makeTestimonialCardEl("The checkout finally felt premium and trustworthy instead of rushed.","Ari Flores","Operations Lead",makeBareCardStyle({margin:"18px 0 0"}))
         ]),
@@ -1750,11 +1816,11 @@ function templateWorkshopTicketCheckoutLayout(){
             makeEl("heading","Workshop registration",{fontSize:"28px",color:"#240E35",fontWeight:"800",margin:"0 0 10px"},{}),
             makeEl("text","Use this style for live events, trainings, and intensives where urgency matters.",{fontSize:"15px",color:"#64748b",lineHeight:"1.7",margin:"0 0 16px"},{}),
             countdown,
-            makePrimaryButtonEl("Reserve My Spot",{actionType:"checkout",alignment:"left"},{margin:"16px 0 0"})
+            makeEl("text","Use the pricing card to the right to secure the ticket at the displayed amount.",{fontSize:"14px",color:"#1d4ed8",fontWeight:"700",margin:"16px 0 0"}, {})
         ]),
         makePanelColumn([makePricingCardEl({
             plan:"Workshop Ticket",
-            price:"$97",
+            price:"₱97",
             period:"",
             subtitle:"Live training plus replay and workbook",
             features:["90-minute workshop","Replay access","Action workbook"],
@@ -1788,12 +1854,12 @@ function templateWorkshopTicketCheckoutDiscountLayout(){
             makeEl("heading","Workshop registration",{fontSize:"28px",color:"#240E35",fontWeight:"800",margin:"0 0 10px"},{}),
             makeEl("text","Use this style for live events, trainings, and intensives where urgency matters.",{fontSize:"15px",color:"#64748b",lineHeight:"1.7",margin:"0 0 16px"},{}),
             countdown,
-            makePrimaryButtonEl("Reserve My Spot",{actionType:"checkout",alignment:"left"},{margin:"16px 0 0"})
+            makeEl("text","Use the pricing card to the right to secure the ticket at the displayed amount.",{fontSize:"14px",color:"#1d4ed8",fontWeight:"700",margin:"16px 0 0"}, {})
         ]),
         makePanelColumn([makePricingCardEl({
             plan:"Workshop Ticket",
-            price:"$97",
-            regularPrice:"$117",
+            price:"₱97",
+            regularPrice:"₱117",
             period:"",
             subtitle:"Live training plus replay and workbook",
             features:["90-minute workshop","Replay access","Action workbook"],
@@ -1817,12 +1883,11 @@ function templateBundleCheckoutLayout(){
         makeColumn(makeIntroElements(
             "Bundle Checkout",
             "Increase perceived value with a stacked-offer checkout",
-            "This layout is ideal when you want the main purchase and included bonuses to feel especially clear.",
-            {button:{label:"Complete Bundle",settings:{actionType:"checkout"}}}
+            "This layout is ideal when you want the main purchase and included bonuses to feel especially clear. Use the pricing card to complete checkout at the displayed amount."
         )),
         makePanelColumn([makePricingCardEl({
             plan:"Launch Bundle",
-            price:"$149",
+            price:"₱149",
             period:"",
             subtitle:"Core offer plus valuable bonuses",
             features:["Main product","Bonus template pack","Private Q and A","Quick-start checklist"],
@@ -1845,7 +1910,7 @@ function templateBundleCheckoutLayout(){
             makePanelColumn([makeTestimonialCardEl("The bundle framing made the order feel much more complete and worthwhile.","Jamie Lee","Founder",makeBareCardStyle())]),
             makePanelColumn([makeFaqCardEl([
                 {q:"Should I show every bonus value?",a:"Yes, showing value stacks can make the bundle easier to justify."},
-                {q:"Can the CTA stay simple?",a:"Yes, one strong checkout CTA is usually enough here."}
+                {q:"Can the call to action stay simple?",a:"Yes, one strong checkout call to action is usually enough here."}
             ],makeBareCardStyle())])
         ]
     });
@@ -1855,7 +1920,7 @@ function templateMembershipCheckoutLayout(){
     var section=makeSplitInfoSection(
         makePanelColumn([makePricingCardEl({
             plan:"Membership Access",
-            price:"$39",
+            price:"₱39",
             period:"/month",
             subtitle:"Ongoing training, resources, and support",
             features:["New sessions monthly","Resource vault","Member-only updates"],
@@ -1868,7 +1933,7 @@ function templateMembershipCheckoutLayout(){
                 "Whether they can cancel any time",
                 "What the first week inside looks like"
             ]),{fontSize:"15px",color:"#64748b",lineHeight:"1.7",margin:"0 0 18px"},{}),
-            makePrimaryButtonEl("Join The Membership",{actionType:"checkout",alignment:"left"})
+            makeEl("text","Use the pricing card to start the membership with the displayed monthly amount.",{fontSize:"14px",color:"#1d4ed8",fontWeight:"700",margin:"0"}, {})
         ]),
         {alignItems:"stretch"}
     );
@@ -1883,6 +1948,83 @@ function templateMembershipCheckoutLayout(){
         ]
     });
     return buildTemplateLayout("#F3EEF7",[section,faq]);
+}
+function templateUpsellVipUpgradeLayout(){
+    var hero=makeSplitInfoSection(
+        makePanelColumn([
+            makeEl("heading","Wait. Add the VIP Upgrade before you go.",{fontSize:"30px",color:"#240E35",fontWeight:"800",margin:"0 0 12px"},{}),
+            makeEl("text","This upsell page is built for a fast yes after checkout. Highlight the added transformation, not a whole new pitch.",{fontSize:"15px",color:"#64748b",lineHeight:"1.7",margin:"0 0 18px"},{}),
+            makeEl("text",buildChecklistHtml("Use this space to explain:",[
+                "What buyers get on top of the original purchase",
+                "Why adding it now is the best time",
+                "What result becomes easier or faster with this upgrade"
+            ]),{fontSize:"15px",color:"#64748b",lineHeight:"1.7",margin:"0"},{}),
+            makeEl("button","Yes, Add VIP Access",{backgroundColor:"#0F766E",color:"#ffffff",borderRadius:"999px",padding:"12px 18px",margin:"20px 10px 0 0"},{actionType:"offer_accept",link:"#"}),
+            makeEl("button","No, Keep My Original Order",{backgroundColor:"#E5E7EB",color:"#240E35",borderRadius:"999px",padding:"12px 18px",margin:"20px 0 0"},{actionType:"offer_decline",link:"#"})
+        ]),
+        makePanelColumn([
+            makePricingCardEl({
+                plan:"VIP Upgrade",
+                price:"₱19",
+                period:"",
+                subtitle:"Extra support, premium resources, and a faster path to results",
+                features:["Priority Q and A","Bonus implementation guide","VIP-only template pack"],
+                badge:"One-Time Upgrade"
+            },makeBareCardStyle()),
+            makeTestimonialCardEl("The post-purchase upgrade worked because it felt like the natural next step, not a random extra.","Lia Ramos","Program Creator",makeBareCardStyle({margin:"18px 0 0"}))
+        ]),
+        {alignItems:"stretch"}
+    );
+    var support=makeCardGridSection({
+        title:"What makes a strong upsell page",
+        body:"Keep it specific, immediate, and clearly connected to the product they just bought.",
+        columns:[
+            makeFeatureCardColumn("bolt","Immediate win","Show how the upgrade helps them get results faster."),
+            makeFeatureCardColumn("star","Higher-touch value","Position the upsell as premium support or premium access."),
+            makeFeatureCardColumn("circle-check","Simple choice","Keep the decision focused with one accept and one decline path.")
+        ]
+    });
+    return buildTemplateLayout("#F3FFF8",[hero,support]);
+}
+function templateDownsellLiteLayout(){
+    var hero=makeSplitInfoSection(
+        makePanelColumn([
+            makeEl("heading","Not ready for the full upgrade?",{fontSize:"30px",color:"#240E35",fontWeight:"800",margin:"0 0 12px"},{}),
+            makeEl("text","This downsell page gives a simpler fallback offer after an upsell decline. Make it feel easier, lighter, and lower commitment.",{fontSize:"15px",color:"#64748b",lineHeight:"1.7",margin:"0 0 18px"},{}),
+            makeEl("text",buildChecklistHtml("Use the downsell to offer:",[
+                "A lower price point",
+                "A lighter version of the bonus",
+                "A reduced-commitment alternative"
+            ]),{fontSize:"15px",color:"#64748b",lineHeight:"1.7",margin:"0"},{}),
+            makeEl("button","Yes, Give Me the Lite Version",{backgroundColor:"#2563EB",color:"#ffffff",borderRadius:"999px",padding:"12px 18px",margin:"20px 10px 0 0"},{actionType:"offer_accept",link:"#"}),
+            makeEl("button","No Thanks, Finish My Order",{backgroundColor:"#E5E7EB",color:"#240E35",borderRadius:"999px",padding:"12px 18px",margin:"20px 0 0"},{actionType:"offer_decline",link:"#"})
+        ]),
+        makePanelColumn([
+            makePricingCardEl({
+                plan:"Lite Bonus Pack",
+                price:"₱9",
+                period:"",
+                subtitle:"A smaller add-on for buyers who want one practical extra",
+                features:["Quick-start checklist","Bonus worksheet","Mini resource pack"],
+                badge:"Lower Commitment"
+            },makeBareCardStyle()),
+            makeFaqCardEl([
+                {q:"Why include a downsell?",a:"It gives buyers a softer second option instead of ending the offer sequence immediately."},
+                {q:"What should change from the upsell?",a:"Usually the price, scope, or commitment level should feel easier to accept."}
+            ],makeBareCardStyle({margin:"18px 0 0"}))
+        ]),
+        {alignItems:"stretch"}
+    );
+    var guidance=makeCardGridSection({
+        title:"How to position the downsell",
+        body:"Keep it obviously related to the upsell, but easier to say yes to in the moment.",
+        columns:[
+            makeFeatureCardColumn("tag","Reduce the price","A lower price is the clearest signal that this is the easier option."),
+            makeFeatureCardColumn("layer-group","Trim the scope","Offer a slimmer version instead of the full premium upgrade."),
+            makeFeatureCardColumn("heart","Protect goodwill","Make the fallback feel helpful rather than pushy.")
+        ]
+    });
+    return buildTemplateLayout("#F5F9FF",[hero,guidance]);
 }
 function templateThankYouDownloadLayout(){
     var hero=makeCenteredCtaSection({
@@ -2008,17 +2150,17 @@ function templateContactAuthorityLayout(){
     });
     var close=makeCenteredCtaSection({
         heading:"Keep the next step clear",
-        body:"This final section is a great place for a direct CTA or a concise response-time promise.",
+        body:"This final section is a great place for a direct call to action or a concise response-time promise.",
         button:{label:"Book A Call"},
         backgroundColor:"#F8F5FB"
     });
     return buildTemplateLayout("#F3EEF7",[hero,options,close]);
 }
 const landingTemplates=[
-    {id:"landing_hero_launch",name:"Hero Launch",description:"Classic launch hero with a strong CTA and product visual.",tags:["Landing","SaaS"],preview:"hero",build:templateHeroLayout},
+    {id:"landing_hero_launch",name:"Hero Launch",description:"Classic launch hero with a strong call to action and product visual.",tags:["Landing","SaaS"],preview:"hero",build:templateHeroLayout},
     {id:"landing_feature_grid",name:"Feature Grid",description:"Headline-led landing page with clean proof cards.",tags:["Landing","Product"],preview:"cards",build:templateFeatureGridLayout},
     {id:"landing_story_stats",name:"Story + Stats",description:"Founder-style landing layout with image story and metrics.",tags:["Landing","Brand"],preview:"hero",build:templateStoryLayout},
-    {id:"landing_authority",name:"Authority Page",description:"Professional service-focused landing page with trust and CTA flow.",tags:["Landing","Service"],preview:"hero",build:templateAuthorityLandingLayout},
+    {id:"landing_authority",name:"Authority Page",description:"Professional service-focused landing page with trust and call to action flow.",tags:["Landing","Service"],preview:"hero",build:templateAuthorityLandingLayout},
     {id:"landing_app_showcase",name:"App Showcase",description:"Modern landing layout for apps, tools, and product demos.",tags:["Landing","Showcase"],preview:"cards",build:templateAppShowcaseLayout}
 ];
 const optInTemplates=[
@@ -2043,6 +2185,12 @@ const checkoutTemplates=[
     {id:"checkout_bundle",name:"Bundle Checkout",description:"Stacked-offer checkout for bundles and bonus-heavy offers.",tags:["Checkout","Bundle"],preview:"pricing",build:templateBundleCheckoutLayout},
     {id:"checkout_membership",name:"Membership Checkout",description:"Recurring-offer checkout layout for subscriptions and communities.",tags:["Checkout","Membership"],preview:"pricing",build:templateMembershipCheckoutLayout}
 ];
+const upsellTemplates=[
+    {id:"upsell_vip_upgrade",name:"VIP Upgrade",description:"Post-purchase upgrade page with a premium add-on offer and clear accept/decline actions.",tags:["Upsell","Offer"],preview:"pricing",build:templateUpsellVipUpgradeLayout}
+];
+const downsellTemplates=[
+    {id:"downsell_lite_offer",name:"Lite Offer",description:"Fallback post-purchase page for a lighter, lower-commitment offer after an upsell decline.",tags:["Downsell","Offer"],preview:"pricing",build:templateDownsellLiteLayout}
+];
 const thankYouTemplates=[
     {id:"thankyou_centered",name:"Classic Thank You",description:"Centered confirmation page with a clean next step.",tags:["Thank You","Starter"],preview:"banner",build:templateThankYouLayout},
     {id:"thankyou_download",name:"Download Delivery",description:"Thank-you page for guides, replays, and resource delivery.",tags:["Thank You","Download"],preview:"banner",build:templateThankYouDownloadLayout},
@@ -2062,14 +2210,13 @@ const builtInTemplatesByType={
     opt_in:optInTemplates,
     sales:salesTemplates,
     checkout:checkoutTemplates,
+    upsell:upsellTemplates,
+    downsell:downsellTemplates,
     thank_you:thankYouTemplates,
-    custom:customTemplates,
-    upsell:salesTemplates,
-    downsell:salesTemplates
+    custom:customTemplates
 };
 function normalizeTemplateType(type){
     var t=String(type||"custom").toLowerCase();
-    if(t==="upsell"||t==="downsell")return "sales";
     return builtInTemplatesByType[t]?t:"custom";
 }
 function findTemplateById(type,id){
@@ -2128,6 +2275,18 @@ function findFlowStepByTypes(stepList,currentStep,types){
 }
 function chooseTemplateTargetStep(stepList,currentStep,labelText){
     var text=String(labelText||"").trim().toLowerCase();
+    var nextStep=nextFlowStep(stepList,currentStep);
+    var homeStep=findFlowStepByTypes(stepList,currentStep,["landing"])||firstOtherFlowStep(stepList,currentStep)||null;
+    if(/(^|\s)(home|back)(\s|$)/.test(text)){
+        return homeStep;
+    }
+    if(nextStep){
+        return nextStep;
+    }
+    return homeStep||firstOtherFlowStep(stepList,currentStep);
+}
+function choosePricingTargetStep(stepList,currentStep,labelText){
+    var text=String(labelText||"").trim().toLowerCase();
     var currentType=templateStepType(currentStep);
     var nextStep=nextFlowStep(stepList,currentStep);
     var homeStep=findFlowStepByTypes(stepList,currentStep,["landing"])||firstOtherFlowStep(stepList,currentStep)||null;
@@ -2136,30 +2295,23 @@ function chooseTemplateTargetStep(stepList,currentStep,labelText){
     var checkoutStep=findFlowStepByTypes(stepList,currentStep,["checkout"]);
     var thankYouStep=findFlowStepByTypes(stepList,currentStep,["thank_you"]);
     var customStep=findFlowStepByTypes(stepList,currentStep,["custom"]);
-    // Avoid overly-broad words like "spot/seat" which can incorrectly route thank-you buttons back to checkout.
-    var wantsCheckout=/(checkout|purchase|buy|order|bundle|membership)/.test(text);
-    var wantsOffer=/(price|pricing|offer|package|plan)/.test(text);
-    var wantsResource=/(community|resource|download|calendar)/.test(text);
     if(/(^|\s)(home|back)(\s|$)/.test(text)){
         return homeStep;
     }
-    if(wantsCheckout&&checkoutStep){
+    if(/(checkout|purchase|buy|order|seat|spot|bundle|membership)/.test(text) && checkoutStep){
         return checkoutStep;
     }
-    if(wantsResource&&customStep){
+    if(/(community|resource|download|calendar)/.test(text) && customStep){
         return customStep;
     }
-    if((currentType==="landing"||currentType==="opt_in"||currentType==="custom")&&wantsOffer&&salesStep){
-        return salesStep;
+    if(currentType==="sales"||currentType==="custom"){
+        return checkoutStep||thankYouStep||customStep||nextStep||homeStep||salesStep;
     }
     if(currentType==="landing"){
-        return optInStep||salesStep||checkoutStep||nextStep||thankYouStep||customStep||homeStep;
+        return salesStep||checkoutStep||optInStep||nextStep||thankYouStep||customStep||homeStep;
     }
     if(currentType==="opt_in"){
         return salesStep||checkoutStep||thankYouStep||customStep||nextStep||homeStep;
-    }
-    if(currentType==="sales"){
-        return checkoutStep||thankYouStep||customStep||nextStep||homeStep;
     }
     if(currentType==="checkout"){
         return thankYouStep||customStep||nextStep||homeStep;
@@ -2167,17 +2319,38 @@ function chooseTemplateTargetStep(stepList,currentStep,labelText){
     if(currentType==="thank_you"){
         return customStep||homeStep||nextStep||firstOtherFlowStep(stepList,currentStep);
     }
-    return optInStep||salesStep||checkoutStep||thankYouStep||homeStep||nextStep||firstOtherFlowStep(stepList,currentStep);
+    return checkoutStep||salesStep||thankYouStep||customStep||optInStep||homeStep||nextStep||firstOtherFlowStep(stepList,currentStep);
 }
 function wireButtonElementForStep(el,currentStep,stepList){
     if(!el||typeof el!=="object")return;
     el.settings=(el.settings&&typeof el.settings==="object")?el.settings:{};
     var currentType=templateStepType(currentStep);
+    var currentAction=String(el.settings.actionType||"").trim().toLowerCase();
+    var labelText=String(el.content||"").replace(/<[^>]*>/g," ").replace(/\s+/g," ").trim().toLowerCase();
     if(currentType==="checkout"){
         el.settings.actionType="checkout";
         el.settings.actionStepSlug="";
         el.settings.link="#";
         return;
+    }
+    if(currentType==="upsell"||currentType==="downsell"){
+        if(currentAction==="offer_accept"||currentAction==="offer_decline"){
+            el.settings.actionStepSlug="";
+            el.settings.link="#";
+            return;
+        }
+        if(/(no thanks|skip|finish my order|keep my original order|decline)/.test(labelText)){
+            el.settings.actionType="offer_decline";
+            el.settings.actionStepSlug="";
+            el.settings.link="#";
+            return;
+        }
+        if(/(yes|add|upgrade|vip|lite version|give me|accept)/.test(labelText)){
+            el.settings.actionType="offer_accept";
+            el.settings.actionStepSlug="";
+            el.settings.link="#";
+            return;
+        }
     }
     var target=chooseTemplateTargetStep(stepList,currentStep,el.content);
     if(target&&String(target.id||"")!==String((currentStep&&currentStep.id)||"")){
@@ -2195,16 +2368,30 @@ function wirePricingElementForStep(el,currentStep,stepList){
     el.settings=(el.settings&&typeof el.settings==="object")?el.settings:{};
     var currentType=templateStepType(currentStep);
     if(currentType==="checkout"){
-        el.settings.ctaLabel="";
+        if(String(el.settings.ctaLabel||"").trim()==="")el.settings.ctaLabel="Pay Now";
+        el.settings.ctaActionType="checkout";
+        el.settings.ctaActionStepSlug="";
+        el.settings.ctaLink="#";
+        return;
+    }
+    if(currentType==="upsell"||currentType==="downsell"){
+        if(String(el.settings.ctaLabel||"").trim()===""){
+            el.settings.ctaLabel=currentType==="downsell"?"Yes, Add This Offer":"Yes, Add This Upgrade";
+        }
+        el.settings.ctaActionType="offer_accept";
+        el.settings.ctaActionStepSlug="";
         el.settings.ctaLink="#";
         return;
     }
     var ctaLabel=String(el.settings.ctaLabel||"").trim();
-    var target=chooseTemplateTargetStep(stepList,currentStep,ctaLabel||el.settings.plan);
+    var target=choosePricingTargetStep(stepList,currentStep,ctaLabel||el.settings.plan);
     if(ctaLabel===""){
-        el.settings.ctaLabel="Get Started";
-        ctaLabel="Get Started";
+        var planName=String(el.settings.plan||"").replace(/<[^>]*>/g," ").replace(/\s+/g," ").trim();
+        el.settings.ctaLabel=(currentType==="sales"&&planName!=="")?("Choose "+planName):"Get Started";
+        ctaLabel=el.settings.ctaLabel;
     }
+    el.settings.ctaActionType=(target&&String(target.id||"")!==String((currentStep&&currentStep.id)||""))?"step":"next_step";
+    el.settings.ctaActionStepSlug=(target&&String(target.id||"")!==String((currentStep&&currentStep.id)||""))?String(target.slug||""):"";
     el.settings.ctaLink=(target&&String(target.id||"")!==String((currentStep&&currentStep.id)||""))?buildFunnelStepHref(target):"#";
 }
 function wireTemplateLayoutForStep(layout,currentStep,stepList){
@@ -2220,6 +2407,224 @@ function wireTemplateLayoutForStep(layout,currentStep,stepList){
                 visitElements(slide.elements);
             });
         });
+    }
+    function visitColumns(cols){
+        (Array.isArray(cols)?cols:[]).forEach(function(col){
+            if(!col||typeof col!=="object")return;
+            visitElements(col.elements);
+        });
+    }
+    function visitSections(sections){
+        (Array.isArray(sections)?sections:[]).forEach(function(section){
+            if(!section||typeof section!=="object")return;
+            visitElements(section.elements);
+            (Array.isArray(section.rows)?section.rows:[]).forEach(function(row){
+                if(!row||typeof row!=="object")return;
+                visitColumns(row.columns);
+            });
+        });
+    }
+    if(Array.isArray(layout.root))visitSections(layout.root);
+    if(Array.isArray(layout.sections))visitSections(layout.sections);
+    return layout;
+}
+function isKnownTemplateStepHref(link,stepList){
+    var raw=String(link||"").trim();
+    if(raw==="")return false;
+    var normalized=raw.replace(/\/+$/,"");
+    return (Array.isArray(stepList)?stepList:[]).some(function(step){
+        var href=String(buildFunnelStepHref(step)||"").trim().replace(/\/+$/,"");
+        if(href===""||href==="#")return false;
+        return normalized===href||normalized.indexOf(href+"?")===0;
+    });
+}
+function parseTemplateMoneyValue(raw){
+    var s=String(raw||"").trim();
+    if(s==="")return null;
+    s=s.replace(/[^0-9,.\-]/g,"");
+    if(s==="")return null;
+    var n=parseFloat(s.replace(/,/g,""));
+    return (!isNaN(n)&&isFinite(n)&&n>0)?n:null;
+}
+function derivePrimaryPricingAmountFromLayout(layout){
+    if(!layout||typeof layout!=="object")return null;
+    function findInElements(list){
+        var elements=Array.isArray(list)?list:[];
+        for(var i=0;i<elements.length;i++){
+            var el=elements[i];
+            if(!el||typeof el!=="object")continue;
+            if(String(el.type||"").toLowerCase()==="pricing"){
+                var settings=(el.settings&&typeof el.settings==="object")?el.settings:{};
+                var price=parseTemplateMoneyValue(settings.price);
+                if(price!==null)return price;
+                var regular=parseTemplateMoneyValue(settings.regularPrice);
+                if(regular!==null)return regular;
+            }
+            var slides=(el.settings&&Array.isArray(el.settings.slides))?el.settings.slides:[];
+            for(var j=0;j<slides.length;j++){
+                var slide=slides[j];
+                var nested=findInElements(slide&&slide.elements);
+                if(nested!==null)return nested;
+            }
+        }
+        return null;
+    }
+    function findInSections(list){
+        var sections=Array.isArray(list)?list:[];
+        for(var i=0;i<sections.length;i++){
+            var sec=sections[i];
+            if(!sec||typeof sec!=="object")continue;
+            var sectionAmount=findInElements(sec.elements);
+            if(sectionAmount!==null)return sectionAmount;
+            var rows=Array.isArray(sec.rows)?sec.rows:[];
+            for(var r=0;r<rows.length;r++){
+                var row=rows[r];
+                var cols=Array.isArray(row&&row.columns)?row.columns:[];
+                for(var c=0;c<cols.length;c++){
+                    var amount=findInElements(cols[c]&&cols[c].elements);
+                    if(amount!==null)return amount;
+                }
+            }
+        }
+        return null;
+    }
+    return findInSections(layout.root)||findInSections(layout.sections);
+}
+function normalizeTemplateCurrencyValue(raw){
+    var value=String(raw||"");
+    if(/^\s*\$/.test(value)){
+        return value.replace(/^\s*\$/,"\u20b1");
+    }
+    return value;
+}
+function normalizeTemplateCurrencyLayout(layout){
+    if(!layout||typeof layout!=="object")return layout;
+    function visitElements(list){
+        (Array.isArray(list)?list:[]).forEach(function(el){
+            if(!el||typeof el!=="object")return;
+            if(String(el.type||"").toLowerCase()==="pricing"){
+                el.settings=(el.settings&&typeof el.settings==="object")?el.settings:{};
+                if(typeof el.settings.price==="string")el.settings.price=normalizeTemplateCurrencyValue(el.settings.price);
+                if(typeof el.settings.regularPrice==="string")el.settings.regularPrice=normalizeTemplateCurrencyValue(el.settings.regularPrice);
+            }
+            var slides=(el.settings&&Array.isArray(el.settings.slides))?el.settings.slides:[];
+            slides.forEach(function(slide){
+                if(slide&&Array.isArray(slide.elements))visitElements(slide.elements);
+            });
+        });
+    }
+    function visitSections(list){
+        (Array.isArray(list)?list:[]).forEach(function(sec){
+            if(!sec||typeof sec!=="object")return;
+            visitElements(sec.elements);
+            (Array.isArray(sec.rows)?sec.rows:[]).forEach(function(row){
+                (Array.isArray(row&&row.columns)?row.columns:[]).forEach(function(col){
+                    visitElements(col&&col.elements);
+                });
+            });
+        });
+    }
+    visitSections(layout.root);
+    visitSections(layout.sections);
+    return layout;
+}
+function repairDefaultPricingFlowLayout(layout,currentStep,stepList){
+    if(!layout||typeof layout!=="object")return layout;
+    var currentType=templateStepType(currentStep);
+    function shouldRepairPricing(el){
+        var settings=(el&&el.settings&&typeof el.settings==="object")?el.settings:{};
+        if(currentType==="checkout")return true;
+        var action=String(settings.ctaActionType||"").trim().toLowerCase();
+        var link=String(settings.ctaLink||"").trim();
+        var slug=String(settings.ctaActionStepSlug||"").trim();
+        if(action==="")return true;
+        if(action==="next_step")return true;
+        if(action==="step")return slug==="";
+        if(action==="link")return link===""||link==="#"||isKnownTemplateStepHref(link,stepList);
+        return false;
+    }
+    function visitElements(list){
+        (Array.isArray(list)?list:[]).forEach(function(el){
+            if(!el||typeof el!=="object")return;
+            if(el.type==="pricing"&&shouldRepairPricing(el))wirePricingElementForStep(el,currentStep,stepList);
+            var slideList=(el.settings&&Array.isArray(el.settings.slides))?el.settings.slides:[];
+            slideList.forEach(function(slide){
+                if(slide&&Array.isArray(slide.elements))visitElements(slide.elements);
+            });
+        });
+    }
+    function visitColumns(cols){
+        (Array.isArray(cols)?cols:[]).forEach(function(col){
+            if(!col||typeof col!=="object")return;
+            visitElements(col.elements);
+        });
+    }
+    function visitSections(sections){
+        (Array.isArray(sections)?sections:[]).forEach(function(section){
+            if(!section||typeof section!=="object")return;
+            visitElements(section.elements);
+            (Array.isArray(section.rows)?section.rows:[]).forEach(function(row){
+                if(!row||typeof row!=="object")return;
+                visitColumns(row.columns);
+            });
+        });
+    }
+    if(Array.isArray(layout.root))visitSections(layout.root);
+    if(Array.isArray(layout.sections))visitSections(layout.sections);
+    return layout;
+}
+function repairTemplateFlowLayout(layout,currentStep,stepList){
+    if(!layout||typeof layout!=="object")return layout;
+    var currentType=templateStepType(currentStep);
+    var hasPricing=derivePrimaryPricingAmountFromLayout(layout)!==null;
+    function isRedundantSalesTemplateButton(el){
+        if(currentType!=="sales"||!hasPricing||String(el&&el.type||"").toLowerCase()!=="button")return false;
+        var settings=(el&&el.settings&&typeof el.settings==="object")?el.settings:{};
+        var action=String(settings.actionType||"").trim().toLowerCase();
+        var link=String(settings.link||"").trim();
+        var isInternalNavigate=action===""||action==="next_step"||action==="step"||(action==="link"&&(link===""||link==="#"||isKnownTemplateStepHref(link,stepList)));
+        if(!isInternalNavigate)return false;
+        var label=String(el.content||"").replace(/<[^>]*>/g," ").replace(/\s+/g," ").trim().toLowerCase();
+        return /^(see (the )?(package|plan|plans)|choose (a )?plan|go to checkout|continue to checkout|get started)$/.test(label);
+    }
+    function shouldRepairButton(el){
+        var settings=(el&&el.settings&&typeof el.settings==="object")?el.settings:{};
+        if(currentType==="checkout")return true;
+        var action=String(settings.actionType||"").trim().toLowerCase();
+        var link=String(settings.link||"").trim();
+        if(action==="next_step"||action==="step")return true;
+        if(action==="link")return link===""||link==="#"||isKnownTemplateStepHref(link,stepList);
+        return action==="";
+    }
+    function shouldRepairPricing(el){
+        var settings=(el&&el.settings&&typeof el.settings==="object")?el.settings:{};
+        if(currentType==="checkout")return true;
+        var action=String(settings.ctaActionType||"").trim().toLowerCase();
+        var link=String(settings.ctaLink||"").trim();
+        if(action==="next_step"||action==="step"||action==="checkout")return true;
+        if(action==="link")return link===""||link==="#"||isKnownTemplateStepHref(link,stepList);
+        return action==="";
+    }
+    function visitElements(list){
+        for(var i=(Array.isArray(list)?list:[]).length-1;i>=0;i--){
+            var el=list[i];
+            if(!el||typeof el!=="object")continue;
+            var settings=(el.settings&&typeof el.settings==="object")?el.settings:{};
+            if(currentType==="checkout"&&hasPricing&&String(el.type||"").toLowerCase()==="button"&&String(settings.actionType||"").trim().toLowerCase()==="checkout"){
+                list.splice(i,1);
+                continue;
+            }
+            if(isRedundantSalesTemplateButton(el)){
+                list.splice(i,1);
+                continue;
+            }
+            if(el.type==="button"&&shouldRepairButton(el))wireButtonElementForStep(el,currentStep,stepList);
+            if(el.type==="pricing"&&shouldRepairPricing(el))wirePricingElementForStep(el,currentStep,stepList);
+            var slideList=(el.settings&&Array.isArray(el.settings.slides))?el.settings.slides:[];
+            slideList.forEach(function(slide){
+                if(slide&&Array.isArray(slide.elements))visitElements(slide.elements);
+            });
+        }
     }
     function visitColumns(cols){
         (Array.isArray(cols)?cols:[]).forEach(function(col){
@@ -2356,6 +2761,68 @@ function autoLinkCountdownPricing(layout){
 
     return layout;
 }
+function normalizeTemplateLayout(layout){
+    var out=(layout&&typeof layout==="object")?clone(layout):{root:[],sections:[]};
+    function isEmptyObject(obj){
+        if(!obj||typeof obj!=="object")return true;
+        return Object.keys(obj).length===0;
+    }
+    function hasOnlyDefaultRowStyle(style){
+        if(!style||typeof style!=="object")return true;
+        var keys=Object.keys(style);
+        if(!keys.length)return true;
+        if(keys.length===1&&keys[0]==="gap"){
+            var gap=String(style.gap||"").trim();
+            return gap===""||gap==="8px"||gap==="12px"||gap==="16px";
+        }
+        return false;
+    }
+    function isHoistableColumn(col){
+        if(!col||typeof col!=="object")return false;
+        var style=(col.style&&typeof col.style==="object")?col.style:{};
+        var keys=Object.keys(style);
+        if(!keys.length)return true;
+        var allowed=["textAlign"];
+        return keys.every(function(k){return allowed.indexOf(k)>=0;});
+    }
+    function hoistLeadingSimpleRows(section){
+        if(!section||typeof section!=="object")return section;
+        section.elements=Array.isArray(section.elements)?section.elements:[];
+        section.rows=Array.isArray(section.rows)?section.rows:[];
+        var keepRows=[];
+        var canHoist=true;
+        section.rows.forEach(function(row){
+            var hoisted=false;
+            if(canHoist&&row&&Array.isArray(row.columns)&&row.columns.length===1&&hasOnlyDefaultRowStyle(row.style)&&isEmptyObject(row.settings)){
+                var col=row.columns[0];
+                if(col&&Array.isArray(col.elements)&&col.elements.length&&isHoistableColumn(col)&&isEmptyObject(col.settings)){
+                    section.style=(section.style&&typeof section.style==="object")?section.style:{};
+                    if(col.style&&typeof col.style==="object"&&String(col.style.textAlign||"").trim()!==""&&String(section.style.textAlign||"").trim()===""){
+                        section.style.textAlign=String(col.style.textAlign||"");
+                    }
+                    section.elements=section.elements.concat(col.elements);
+                    hoisted=true;
+                }
+            }
+            if(!hoisted){
+                canHoist=false;
+                keepRows.push(row);
+            }
+        });
+        section.rows=keepRows;
+        return section;
+    }
+    function visitSections(sections){
+        (Array.isArray(sections)?sections:[]).forEach(function(section,idx){
+            if(!section||typeof section!=="object")return;
+            visitSections(section.sections);
+            sections[idx]=hoistLeadingSimpleRows(section);
+        });
+    }
+    if(Array.isArray(out.root))visitSections(out.root);
+    if(Array.isArray(out.sections))visitSections(out.sections);
+    return out;
+}
 function applyFunnelThemeToLayout(layout,theme){
     var out=(layout&&typeof layout==="object")?clone(layout):{root:[],sections:[]};
     var brand=theme&&typeof theme==="object"?theme:{};
@@ -2461,6 +2928,7 @@ function buildPackLayout(pack,stepLike,stepList){
     if(pack&&pack.autoLinkCountdownPricing){
         built=autoLinkCountdownPricing(built);
     }
+    built=normalizeTemplateLayout(built);
     var packBg=normalizeCanvasBgValue(pack&&pack.theme&&pack.theme.canvasBg);
     if(packBg)built=withCanvasBgInLayout(built,packBg);
     normalizeElementStyle(built);
@@ -2566,6 +3034,15 @@ const funnelTemplatePacks=[
         preview:"cards",
         theme:{primary:"#0369A1",accent:"#10B981",heading:"#0F172A",body:"#475569",surface:"#ffffff",soft:"#ECFEFF",border:"#A5F3FC",canvasBg:"#F2FEFF"},
         templates:{landing:"landing_app_showcase",opt_in:"optin_waitlist_launch",sales:"sales_video_letter",checkout:"checkout_membership",thank_you:"thankyou_community",custom:"custom_hero_video"}
+    },
+    {
+        id:"pack_offer_ascension",
+        name:"Offer Ascension",
+        description:"Complete funnel system with checkout, premium upsell, lighter downsell, and a thank-you close for post-purchase monetization.",
+        tags:["All Pages","Upsell","Downsell"],
+        preview:"pricing",
+        theme:{primary:"#0F766E",accent:"#2563EB",heading:"#083344",body:"#52606D",surface:"#ffffff",soft:"#F0FDFA",border:"#BAE6FD",canvasBg:"#F6FFFE"},
+        templates:{landing:"landing_hero_launch",opt_in:"optin_lead_capture",sales:"sales_offer_stack",checkout:"checkout_bundle",upsell:"upsell_vip_upgrade",downsell:"downsell_lite_offer",thank_you:"thankyou_community",custom:"custom_pricing_faq"}
     }
 ];
 function currentTemplateType(){
@@ -2636,6 +3113,11 @@ function applyPageTemplate(tpl){
         layout=withCanvasBgInLayout(layout,state.layout.__editor.canvasBg);
     }
     layout=wireTemplateLayoutForStep(layout,s,steps);
+    layout=normalizeTemplateLayout(layout);
+    var derivedCheckoutAmount=normalizeTemplateType((s&&s.type)||"")==="checkout"?derivePrimaryPricingAmountFromLayout(layout):null;
+    if(derivedCheckoutAmount!==null&&derivedCheckoutAmount>0){
+        s.price=derivedCheckoutAmount;
+    }
     state.sel=null;
     state.carouselSel=null;
     state.editingEl=null;
@@ -2649,44 +3131,134 @@ function applyPageTemplate(tpl){
     syncCanvasBgControls();
     render();
     queueAutoSave();
-    if(saveMsg)saveMsg.textContent="Template applied and CTAs auto-connected. Not saved yet.";
+    if(saveMsg)saveMsg.textContent="Template applied and call to actions auto-connected. Not saved yet.";
 }
 var templateLibraryMode="page";
+const funnelPackStepOrder=["landing","opt_in","sales","checkout","upsell","downsell","thank_you"];
 function setTemplateLibraryMode(mode){
     templateLibraryMode=(String(mode||"").toLowerCase()==="funnel")?"funnel":"page";
     renderTemplateLibrary();
 }
+function funnelPackManagedTypes(pack){
+    var templates=(pack&&pack.templates&&typeof pack.templates==="object")?pack.templates:{};
+    return funnelPackStepOrder.filter(function(type){
+        return !!templates[type];
+    });
+}
+function createStepForPack(type){
+    var normalizedType=String(type||"custom").toLowerCase();
+    var title=defaultStepTitleForType(normalizedType);
+    var slug=uniqueStepSlug(slugifyPage(title));
+    return requestJson(stepStoreUrl,"POST",{
+        title:title,
+        slug:slug,
+        type:normalizedType
+    }).then(function(resp){
+        var created=applyStepUpdate((resp&&resp.step)||resp||{});
+        return created;
+    });
+}
+function desiredOrderIdsForPack(pack){
+    sortStepsByPosition();
+    var managedTypes=funnelPackManagedTypes(pack);
+    var managedSet={};
+    managedTypes.forEach(function(type){managedSet[type]=true;});
+    var ordered=[];
+    managedTypes.forEach(function(type){
+        steps
+            .filter(function(step){return String((step&&step.type)||"").toLowerCase()===type;})
+            .sort(function(a,b){return Number(a.position||0)-Number(b.position||0);})
+            .forEach(function(step){ordered.push(Number(step.id));});
+    });
+    steps
+        .filter(function(step){return !managedSet[String((step&&step.type)||"").toLowerCase()];})
+        .sort(function(a,b){return Number(a.position||0)-Number(b.position||0);})
+        .forEach(function(step){ordered.push(Number(step.id));});
+    return ordered;
+}
+function ensurePackStepsExist(pack){
+    var managedTypes=funnelPackManagedTypes(pack);
+    var sequence=Promise.resolve([]);
+    managedTypes.forEach(function(type){
+        sequence=sequence.then(function(createdTypes){
+            var exists=steps.some(function(step){
+                return String((step&&step.type)||"").toLowerCase()===type;
+            });
+            if(exists)return createdTypes;
+            return createStepForPack(type).then(function(){
+                createdTypes.push(type);
+                return createdTypes;
+            });
+        });
+    });
+    return sequence.then(function(createdTypes){
+        var desiredIds=desiredOrderIdsForPack(pack);
+        var currentIds=orderedStepIdsWithPositions();
+        var needsReorder=desiredIds.length===currentIds.length && desiredIds.some(function(id,idx){
+            return Number(id)!==Number(currentIds[idx]);
+        });
+        var reorderPromise=needsReorder ? persistStepOrder(desiredIds) : Promise.resolve();
+        return reorderPromise.then(function(){
+            renderStepOptions();
+            syncPageManagerList();
+            return createdTypes;
+        });
+    });
+}
 function applyFunnelTemplatePack(pack){
     if(!pack||!steps.length)return;
     var current=cur();
+    var managedTypes=funnelPackManagedTypes(pack);
+    var missingTypes=managedTypes.filter(function(type){
+        return !steps.some(function(step){
+            return String((step&&step.type)||"").toLowerCase()===type;
+        });
+    });
     var pageCount=steps.length;
     var msg='Apply the "'+String(pack.name||"funnel pack")+'" funnel pack to all '+pageCount+' pages? This will replace every page layout in the funnel.';
+    if(missingTypes.length){
+        msg+=' Missing pages will also be created: '+missingTypes.map(pageTypeLabel).join(", ")+'.';
+    }
     confirmTemplateApply(msg).then(function(ok){
         if(!ok)return;
         saveToHistory();
-        var currentStepId=current?+current.id:null;
-        var nextStateLayout=null;
-        steps.forEach(function(step){
-            if(!step)return;
-            var built=buildPackLayout(pack,step,steps);
-            step.layout_json=clone(built.layout);
-            step.background_color=(built.layout&&built.layout.__editor&&built.layout.__editor.canvasBg)?String(built.layout.__editor.canvasBg):"";
-            step.template=String(pack.id||"funnel_pack")+"__"+String((built.template&&built.template.id)||normalizeTemplateType(step.type));
-            if(currentStepId!==null&&+step.id===currentStepId){
-                nextStateLayout=clone(built.layout);
+        ensurePackStepsExist(pack).then(function(createdTypes){
+            var currentStepId=current?+current.id:null;
+            var nextStateLayout=null;
+            steps.forEach(function(step){
+                if(!step)return;
+                var built=buildPackLayout(pack,step,steps);
+                step.layout_json=clone(built.layout);
+                step.background_color=(built.layout&&built.layout.__editor&&built.layout.__editor.canvasBg)?String(built.layout.__editor.canvasBg):"";
+                step.template=String(pack.id||"funnel_pack")+"__"+String((built.template&&built.template.id)||normalizeTemplateType(step.type));
+                if(normalizeTemplateType(step.type)==="checkout"){
+                    var packCheckoutAmount=derivePrimaryPricingAmountFromLayout(built.layout);
+                    if(packCheckoutAmount!==null&&packCheckoutAmount>0){
+                        step.price=packCheckoutAmount;
+                    }
+                }
+                if(currentStepId!==null&&+step.id===currentStepId){
+                    nextStateLayout=clone(built.layout);
+                }
+            });
+            state.sel=null;
+            state.carouselSel=null;
+            state.editingEl=null;
+            state.linkPick=null;
+            if(nextStateLayout)state.layout=nextStateLayout;
+            applyCanvasBgPreference();
+            syncCanvasBgControls();
+            renderTemplateLibrary();
+            render();
+            queueAutoSave();
+            if(saveMsg){
+                saveMsg.textContent=createdTypes.length
+                    ? "Funnel pack applied and created missing pages: "+createdTypes.map(pageTypeLabel).join(", ")+". Not saved yet."
+                    : "Funnel pack applied to all pages with auto-connected call to actions. Not saved yet.";
             }
+        }).catch(function(err){
+            showBuilderToast((err&&err.message)||"Failed to apply funnel pack.","error");
         });
-        state.sel=null;
-        state.carouselSel=null;
-        state.editingEl=null;
-        state.linkPick=null;
-        if(nextStateLayout)state.layout=nextStateLayout;
-        applyCanvasBgPreference();
-        syncCanvasBgControls();
-        renderTemplateLibrary();
-        render();
-        queueAutoSave();
-        if(saveMsg)saveMsg.textContent="Funnel pack applied to all pages with auto-connected CTAs. Not saved yet.";
     });
 }
 function renderTemplateLibrary(){
@@ -2721,7 +3293,7 @@ function renderTemplateLibrary(){
     if(funnelPane)funnelPane.classList.toggle("hidden",mode!=="funnel");
     if(mode==="funnel"){
         if(titleEl)titleEl.textContent="Funnel Packs";
-        if(metaEl)metaEl.textContent="Showing "+funnelTemplatePacks.length+" coordinated template systems. Applying one replaces the layouts across all pages and auto-connects the main CTAs for this funnel.";
+        if(metaEl)metaEl.textContent="Showing "+funnelTemplatePacks.length+" coordinated template systems. Applying one replaces the layouts across all pages and auto-connects the main call to actions for this funnel.";
         if(typePill)typePill.textContent="All Pages";
         if(countPill)countPill.textContent=String(funnelTemplatePacks.length)+" packs";
         if(currentPageEl)currentPageEl.textContent="This will restyle "+steps.length+" page"+(steps.length===1?"":"s")+" in the current funnel with one consistent system and ready-to-use step links.";
@@ -2790,7 +3362,7 @@ const componentTemplates=[
     {id:"hero_split_section",name:"Hero Split",kind:"section",build:function(){
         var leftCol=makeColumn([
             makeEl("heading","Launch your new offer",{fontSize:"38px",color:"#240E35",fontWeight:"800",margin:"0 0 12px",lineHeight:"1.2"},{}),
-            makeEl("text","Explain the value in one short paragraph and add a bold CTA.",{fontSize:"16px",color:"#64748b",lineHeight:"1.6",margin:"0 0 18px"},{}),
+            makeEl("text","Explain the value in one short paragraph and add a bold call to action.",{fontSize:"16px",color:"#64748b",lineHeight:"1.6",margin:"0 0 18px"},{}),
             makeEl("button","Get Started",{backgroundColor:"#240E35",color:"#ffffff",borderRadius:"999px",padding:"12px 22px",fontWeight:"700"},{actionType:"next_step",actionStepSlug:"",link:"#",alignment:"left"})
         ],{flex:"1"});
         var rightCol=makeColumn([
@@ -2822,7 +3394,7 @@ const componentTemplates=[
             ],{gap:"10px",alignItems:"center"})]
         });
     }},
-    {id:"cta_banner",name:"CTA Banner",kind:"section",build:function(){
+    {id:"cta_banner",name:"Call to Actions Banner",kind:"section",build:function(){
         var leftCol=makeColumn([
             makeEl("heading","Ready to launch today?",{fontSize:"26px",color:"#240E35",fontWeight:"800",margin:"0 0 6px"},{}),
             makeEl("text","Start with a template and personalize it in minutes.",{fontSize:"14px",color:"#475569",margin:"0"},{})
@@ -2841,9 +3413,9 @@ const componentTemplates=[
             style:{padding:"56px 24px",backgroundColor:"#ffffff"},
             settings:{contentWidth:"wide"},
             rows:[makeRow([
-                makeColumn([makeEl("pricing","",{width:"100%"},{plan:"Starter",price:"$19",period:"/month",subtitle:"For new teams",features:["1 funnel","Basic support","Email capture"],ctaLabel:"Choose Starter",ctaLink:"#",ctaBgColor:"#240E35",ctaTextColor:"#ffffff",badge:""})],{flex:"1"}),
-                makeColumn([makeEl("pricing","",{width:"100%"},{plan:"Growth",price:"$49",period:"/month",subtitle:"For growing teams",features:["Unlimited funnels","Custom domains","Priority support"],ctaLabel:"Choose Growth",ctaLink:"#",ctaBgColor:"#240E35",ctaTextColor:"#ffffff",badge:"Popular"})],{flex:"1"}),
-                makeColumn([makeEl("pricing","",{width:"100%"},{plan:"Scale",price:"$99",period:"/month",subtitle:"For scale-ups",features:["Advanced analytics","SLA support","Custom onboarding"],ctaLabel:"Choose Scale",ctaLink:"#",ctaBgColor:"#240E35",ctaTextColor:"#ffffff",badge:""})],{flex:"1"})
+                makeColumn([makeEl("pricing","",{width:"100%"},{plan:"Starter",price:"₱19",period:"/month",subtitle:"For new teams",features:["1 funnel","Basic support","Email capture"],ctaLabel:"Choose Starter",ctaLink:"#",ctaBgColor:"#240E35",ctaTextColor:"#ffffff",badge:""})],{flex:"1"}),
+                makeColumn([makeEl("pricing","",{width:"100%"},{plan:"Growth",price:"₱49",period:"/month",subtitle:"For growing teams",features:["Unlimited funnels","Custom domains","Priority support"],ctaLabel:"Choose Growth",ctaLink:"#",ctaBgColor:"#240E35",ctaTextColor:"#ffffff",badge:"Popular"})],{flex:"1"}),
+                makeColumn([makeEl("pricing","",{width:"100%"},{plan:"Scale",price:"₱99",period:"/month",subtitle:"For scale-ups",features:["Advanced analytics","SLA support","Custom onboarding"],ctaLabel:"Choose Scale",ctaLink:"#",ctaBgColor:"#240E35",ctaTextColor:"#ffffff",badge:""})],{flex:"1"})
             ],{gap:"18px",alignItems:"stretch"})]
         });
     }},
@@ -2976,6 +3548,8 @@ function pageTypeLabel(v){
     if(t==="opt_in")return "Opt-in";
     if(t==="thank_you")return "Thank You";
     if(t==="checkout")return "Checkout";
+    if(t==="upsell")return "Upsell";
+    if(t==="downsell")return "Downsell";
     if(t==="sales")return "Sales";
     if(t==="landing")return "Landing";
     if(t==="custom")return "Custom";
@@ -3090,6 +3664,8 @@ function defaultStepTitleForType(type){
     if(t==="opt_in")return "Opt-in";
     if(t==="thank_you")return "Thank You";
     if(t==="checkout")return "Checkout";
+    if(t==="upsell")return "Upsell";
+    if(t==="downsell")return "Downsell";
     if(t==="sales")return "Sales";
     if(t==="landing")return "Landing";
     return "Custom Page";
@@ -3236,11 +3812,13 @@ function syncRenameDraftFromSelected(){
     var s=cur();
     if(!s){
         if(pageMgrRenameTitle)pageMgrRenameTitle.value="";
+        if(pageMgrRenameType)pageMgrRenameType.value="landing";
         if(pageMgrRenameSlug)pageMgrRenameSlug.value="";
         if(pageMgrRenameTags)pageMgrRenameTags.value="";
         return;
     }
     if(pageMgrRenameTitle)pageMgrRenameTitle.value=String(s.title||"");
+    if(pageMgrRenameType)pageMgrRenameType.value=normalizeTemplateType(s.type);
     if(pageMgrRenameSlug)pageMgrRenameSlug.value=String(s.slug||"");
     if(pageMgrRenameTags)pageMgrRenameTags.value=normalizeTagArray(s.step_tags).join(", ");
 }
@@ -3255,7 +3833,7 @@ function syncPageManagerList(){
         item.setAttribute("aria-selected",String(state.sid)===String(s.id)?"true":"false");
         item.setAttribute("data-id",String(s.id));
         item.setAttribute("draggable","true");
-        item.innerHTML='<span>'+String(s.title||("Step "+String(s.id))).replace(/</g,"&lt;").replace(/>/g,"&gt;")+'</span><span class="page-mgr-item-handle"><i class="fas fa-grip-vertical"></i></span>';
+        item.innerHTML='<div class="page-mgr-item-copy"><span class="page-mgr-item-title">'+String(s.title||("Step "+String(s.id))).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")+'</span><span class="page-mgr-item-meta">'+pageTypeLabel(s.type).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")+'</span></div><span class="page-mgr-item-handle"><i class="fas fa-grip-vertical"></i></span>';
         item.addEventListener("click",function(){
             var id=Number(item.getAttribute("data-id")||0);
             if(!id)return;
@@ -3428,6 +4006,7 @@ function renamePageFromManager(){
     var s=cur();
     if(!s){showBuilderToast("No page selected.","error");return;}
     var nextTitle=String((pageMgrRenameTitle&&pageMgrRenameTitle.value)||"").trim();
+    var nextType=normalizeTemplateType((pageMgrRenameType&&pageMgrRenameType.value)||s.type||"custom");
     if(nextTitle===""){
         showBuilderToast("Page title is required.","error");
         if(pageMgrRenameTitle)pageMgrRenameTitle.focus();
@@ -3448,16 +4027,16 @@ function renamePageFromManager(){
         if(!window.confirm(msg))return;
     }
     var nextTags=normalizeTagArray((pageMgrRenameTags&&pageMgrRenameTags.value)||"");
-    var payload=buildStepPayload(s,{title:nextTitle,slug:nextSlug,step_tags:nextTags});
+    var payload=buildStepPayload(s,{title:nextTitle,slug:nextSlug,type:nextType,step_tags:nextTags});
     requestJson(stepUrlFromTpl(stepUpdateTpl,s.id),"PUT",payload).then(function(resp){
         var updated=applyStepUpdate((resp&&resp.step)||payload);
         state.sid=updated.id;
         renderStepOptions();
         syncPageManagerList();
         syncRenameDraftFromSelected();
-        showBuilderToast("Page renamed.","success");
+        showBuilderToast("Page updated.","success");
     }).catch(function(err){
-        showBuilderToast((err&&err.message)||"Failed to rename page.","error");
+        showBuilderToast((err&&err.message)||"Failed to update page.","error");
     });
 }
 function deletePageFromManager(){
@@ -4317,6 +4896,12 @@ function loadStep(id){
     const s=cur();
     const hasSavedLayout=!!(s&&s.layout_json&&typeof s.layout_json==="object"&&!Array.isArray(s.layout_json));
     state.layout=hasSavedLayout?clone(s.layout_json):defaults(s&&s.type);
+    state.layout=normalizeTemplateCurrencyLayout(state.layout);
+    state.layout=normalizeTemplateLayout(state.layout);
+    state.layout=repairDefaultPricingFlowLayout(state.layout,s,steps);
+    if(s&&String(s.template||"").trim()!==""&&String(s.template||"").trim()!=="simple"){
+        state.layout=repairTemplateFlowLayout(state.layout,s,steps);
+    }
     var prefs=editorPrefs();
     var stepBg=(s&&typeof s.background_color==="string")?String(s.background_color).trim():"";
     if(/^#[0-9A-Fa-f]{6}$/.test(stepBg)){
@@ -5840,7 +6425,7 @@ function createDefaultElement(type){
     var _cd=new Date(Date.now()+7*24*60*60*1000);
     var _pad=n=>String(n).padStart(2,"0");
     var countdownEndVal=_cd.getFullYear()+"-"+_pad(_cd.getMonth()+1)+"-"+_pad(_cd.getDate())+"T"+_pad(_cd.getHours())+":"+_pad(_cd.getMinutes());
-    const d={heading:{content:"Heading",style:{fontSize:"32px",color:"#000000",position:"absolute"},settings:{positionMode:"absolute"}},text:{content:"Text",style:{fontSize:"16px",color:"#000000",position:"absolute"},settings:{positionMode:"absolute"}},menu:{content:"",style:{fontSize:"16px",width:"400px",position:"absolute"},settings:{positionMode:"absolute",items:[{label:"Home",url:"#",newWindow:false,hasSubmenu:false},{label:"Contact",url:"/contact",newWindow:false,hasSubmenu:false}],itemGap:13,activeIndex:0,menuAlign:"left",underlineColor:""}},carousel:{content:"",style:{width:"200px",height:"200px",padding:"0px",position:"absolute"},settings:{positionMode:"absolute",slides:[defaultCarouselSlide("Slide #1")],activeSlide:0,vAlign:"center",alignment:"left",showArrows:true,slideshowMode:"manual",controlsColor:"#64748b",arrowColor:"#ffffff",fixedWidth:200,fixedHeight:200}},image:{content:"",style:{width:"300px",position:"absolute"},settings:{positionMode:"absolute",src:"",alt:"Image",alignment:"left"}},button:{content:"Click Me",style:{backgroundColor:"#240E35",color:"#fff",borderRadius:"999px",padding:"10px 18px",textAlign:"center",position:"absolute"},settings:{positionMode:"absolute",actionType:"next_step",actionStepSlug:"",link:"#"}},icon:{content:"",style:{fontSize:"36px",color:"#2E1244",padding:"0px",borderRadius:"0px",position:"absolute"},settings:{positionMode:"absolute",iconName:"star",iconStyle:"solid",alignment:"center",link:""}},form:{content:"Submit",style:{width:"350px",position:"absolute"},settings:{positionMode:"absolute",alignment:"left",width:"350px",buttonAlign:"left",buttonBold:false,buttonItalic:false,labelColor:"#240E35",placeholderColor:"#94a3b8",buttonBgColor:"#240E35",buttonTextColor:"#ffffff",fields:[{type:"text",label:"First name",placeholder:"First name",required:false}]}},video:{content:"",style:{width:"400px",position:"absolute"},settings:{positionMode:"absolute",src:"",alignment:"left"}},spacer:{content:"",style:{height:"24px",width:"200px",position:"absolute"},settings:{positionMode:"absolute"}},testimonial:{content:"",style:{width:"320px",padding:"16px",backgroundColor:"#ffffff",border:"1px solid #E6E1EF",borderRadius:"16px",boxShadow:"0 12px 24px rgba(15,23,42,.08)",position:"absolute"},settings:{positionMode:"absolute",quote:"This product changed how we work.",name:"Alex Johnson",role:"Founder, Startify",avatar:""}},faq:{content:"",style:{width:"420px",padding:"16px",backgroundColor:"#ffffff",border:"1px solid #E6E1EF",borderRadius:"16px",boxShadow:"0 12px 24px rgba(15,23,42,.08)",position:"absolute"},settings:{positionMode:"absolute",items:[{q:"How does it work?",a:"Choose a template, customize, and publish."},{q:"Is there a free trial?",a:"Yes, you can start with a 14-day trial."}],itemGap:10,questionColor:"#240E35",answerColor:"#475569"}},pricing:{content:"",style:{width:"320px",padding:"18px",backgroundColor:"#ffffff",border:"1px solid #E6E1EF",borderRadius:"18px",boxShadow:"0 12px 24px rgba(15,23,42,.08)",position:"absolute"},settings:{positionMode:"absolute",plan:"Pro",price:"$49",period:"/month",subtitle:"Best for growing teams",features:["Unlimited pages","Custom domains","Priority support"],ctaLabel:"Get Started",ctaLink:"#",ctaBgColor:"#240E35",ctaTextColor:"#ffffff",badge:"Popular"}},countdown:{content:"",style:{width:"300px",padding:"16px",backgroundColor:"#ffffff",border:"1px solid #E6E1EF",borderRadius:"16px",boxShadow:"0 12px 24px rgba(15,23,42,.08)",position:"absolute"},settings:{positionMode:"absolute",endAt:countdownEndVal,label:"Offer ends in",expiredText:"Offer ended",numberColor:"#240E35",labelColor:"#64748b",itemGap:8}}}[type]||null;
+    const d={heading:{content:"Heading",style:{fontSize:"32px",color:"#000000",position:"absolute"},settings:{positionMode:"absolute"}},text:{content:"Text",style:{fontSize:"16px",color:"#000000",position:"absolute"},settings:{positionMode:"absolute"}},menu:{content:"",style:{fontSize:"16px",width:"400px",position:"absolute"},settings:{positionMode:"absolute",items:[{label:"Home",url:"#",newWindow:false,hasSubmenu:false},{label:"Contact",url:"/contact",newWindow:false,hasSubmenu:false}],itemGap:13,activeIndex:0,menuAlign:"left",underlineColor:""}},carousel:{content:"",style:{width:"200px",height:"200px",padding:"0px",position:"absolute"},settings:{positionMode:"absolute",slides:[defaultCarouselSlide("Slide #1")],activeSlide:0,vAlign:"center",alignment:"left",showArrows:true,slideshowMode:"manual",controlsColor:"#64748b",arrowColor:"#ffffff",fixedWidth:200,fixedHeight:200}},image:{content:"",style:{width:"300px",position:"absolute"},settings:{positionMode:"absolute",src:"",alt:"Image",alignment:"left"}},button:{content:"Click Me",style:{backgroundColor:"#240E35",color:"#fff",borderRadius:"999px",padding:"10px 18px",textAlign:"center",position:"absolute"},settings:{positionMode:"absolute",actionType:"next_step",actionStepSlug:"",link:"#"}},icon:{content:"",style:{fontSize:"36px",color:"#2E1244",padding:"0px",borderRadius:"0px",position:"absolute"},settings:{positionMode:"absolute",iconName:"star",iconStyle:"solid",alignment:"center",link:""}},form:{content:"Submit",style:{width:"350px",position:"absolute"},settings:{positionMode:"absolute",alignment:"left",width:"350px",buttonAlign:"left",buttonBold:false,buttonItalic:false,labelColor:"#240E35",placeholderColor:"#94a3b8",buttonBgColor:"#240E35",buttonTextColor:"#ffffff",fields:[{type:"text",label:"First name",placeholder:"First name",required:false}]}},video:{content:"",style:{width:"400px",position:"absolute"},settings:{positionMode:"absolute",src:"",alignment:"left"}},spacer:{content:"",style:{height:"24px",width:"200px",position:"absolute"},settings:{positionMode:"absolute"}},testimonial:{content:"",style:{width:"320px",padding:"16px",backgroundColor:"#ffffff",border:"1px solid #E6E1EF",borderRadius:"16px",boxShadow:"0 12px 24px rgba(15,23,42,.08)",position:"absolute"},settings:{positionMode:"absolute",quote:"This product changed how we work.",name:"Alex Johnson",role:"Founder, Startify",avatar:""}},faq:{content:"",style:{width:"420px",padding:"16px",backgroundColor:"#ffffff",border:"1px solid #E6E1EF",borderRadius:"16px",boxShadow:"0 12px 24px rgba(15,23,42,.08)",position:"absolute"},settings:{positionMode:"absolute",items:[{q:"How does it work?",a:"Choose a template, customize, and publish."},{q:"Is there a free trial?",a:"Yes, you can start with a 14-day trial."}],itemGap:10,questionColor:"#240E35",answerColor:"#475569"}},pricing:{content:"",style:{width:"320px",padding:"18px",backgroundColor:"#ffffff",border:"1px solid #E6E1EF",borderRadius:"18px",boxShadow:"0 12px 24px rgba(15,23,42,.08)",position:"absolute"},settings:{positionMode:"absolute",plan:"Pro",price:"₱49",period:"/month",subtitle:"Best for growing teams",features:["Unlimited pages","Custom domains","Priority support"],ctaLabel:"Get Started",ctaActionType:"next_step",ctaActionStepSlug:"",ctaLink:"#",ctaBgColor:"#240E35",ctaTextColor:"#ffffff",badge:"Popular"}},countdown:{content:"",style:{width:"300px",padding:"16px",backgroundColor:"#ffffff",border:"1px solid #E6E1EF",borderRadius:"16px",boxShadow:"0 12px 24px rgba(15,23,42,.08)",position:"absolute"},settings:{positionMode:"absolute",endAt:countdownEndVal,label:"Offer ends in",expiredText:"Offer ended",numberColor:"#240E35",labelColor:"#64748b",itemGap:8}}}[type]||null;
     if(!d)return null;
     return {id:uid("el"),type:type,content:d.content,style:clone(d.style),settings:clone(d.settings)};
 }
@@ -6054,26 +6639,54 @@ function getPreviewSize(type,host){
     return {w:w,h:h};
 }
 
-function showDropPreview(type,host,ev){
-    if(!type||!host){clearDropPreview();return;}
-    var node=ensureDropPreview(host);
-    if(!node)return;
+function getFreeDropLayout(type,host,ev){
     var pos=computeFreeDropPosition(ev,host);
     var size=getPreviewSize(type,host);
-    var hostH=(host.clientHeight||host.offsetHeight)||0;
+    var hostW=(host&&((host.clientWidth||host.offsetWidth)||0))||0;
+    var hostH=(host&&((host.clientHeight||host.offsetHeight)||0))||0;
     if(hostH>0&&size.h>(hostH-12))size.h=Math.max(40,hostH-12);
     var left=Math.round(pos.x-(size.w/2));
     var top=Math.round(pos.y-(size.h/2));
-    var maxX=Math.max(0,(host.clientWidth||0)-size.w);
-    var maxY=Math.max(0,(host.clientHeight||0)-size.h);
+    var maxX=Math.max(0,hostW-size.w);
+    var maxY=Math.max(0,hostH-size.h);
     if(left<0)left=0;
     if(top<0)top=0;
     if(left>maxX)left=maxX;
     if(top>maxY)top=maxY;
-    node.style.width=size.w+"px";
-    node.style.height=size.h+"px";
-    node.style.left=left+"px";
-    node.style.top=top+"px";
+    return {
+        x:pos.x,
+        y:pos.y,
+        snapX:!!pos.snapX,
+        snapY:!!pos.snapY,
+        w:size.w,
+        h:size.h,
+        left:left,
+        top:top
+    };
+}
+
+function buildFreePlacement(type,host,ev){
+    var layout=getFreeDropLayout(type,host,ev);
+    return {
+        mode:"free",
+        x:layout.x,
+        y:layout.y,
+        left:layout.left,
+        top:layout.top,
+        w:layout.w,
+        h:layout.h
+    };
+}
+
+function showDropPreview(type,host,ev){
+    if(!type||!host){clearDropPreview();return;}
+    var node=ensureDropPreview(host);
+    if(!node)return;
+    var layout=getFreeDropLayout(type,host,ev);
+    node.style.width=layout.w+"px";
+    node.style.height=layout.h+"px";
+    node.style.left=layout.left+"px";
+    node.style.top=layout.top+"px";
     node.style.display="block";
     if(dropPreview.line)dropPreview.line.style.display="none";
 }
@@ -6205,12 +6818,18 @@ function applyFreePlacementToElement(it,freePos){
     if(!it||!freePos)return;
     var rawX=Number(freePos.x)||0;
     var rawY=Number(freePos.y)||0;
+    var exactLeft=Number(freePos.left);
+    var exactTop=Number(freePos.top);
+    var hasExactLeft=!isNaN(exactLeft);
+    var hasExactTop=!isNaN(exactTop);
+    var hintedW=Number(freePos.w);
+    var hintedH=Number(freePos.h);
     it.style=it.style||{};
     it.settings=it.settings||{};
-    var elW=parseInt(it.style.width)||250;
-    var elH=parseInt(it.style.height)||50;
-    var x=Math.max(0,Math.round(rawX-elW/2));
-    var y=Math.max(0,Math.round(rawY-elH/2));
+    var elW=hintedW>0?hintedW:(parseInt(it.style.width)||250);
+    var elH=hintedH>0?hintedH:(parseInt(it.style.height)||50);
+    var x=hasExactLeft?Math.max(0,Math.round(exactLeft)):Math.max(0,Math.round(rawX-elW/2));
+    var y=hasExactTop?Math.max(0,Math.round(exactTop)):Math.max(0,Math.round(rawY-elH/2));
     it.style.position="absolute";
     it.style.left=x+"px";
     it.style.top=y+"px";
@@ -7027,8 +7646,7 @@ function renderElement(item,ctx){
         var place;
         if(!isStructureComponent(t)){
             var host=w.parentElement||w;
-            var freePos=computeFreeDropPosition(e,host);
-            place={mode:"free",x:freePos.x,y:freePos.y};
+            place=buildFreePlacement(t,host,e);
             dropTarget=ctx.scope==="section"?{k:"sec",s:ctx.s}:{k:"col",s:ctx.s,r:ctx.r,c:ctx.c};
         }else{
             place=dropPlacement(e,w);
@@ -7250,15 +7868,17 @@ function renderElement(item,ctx){
         var activeStepForPricing=cur();
         var pricingStepType=normalizeTemplateType((activeStepForPricing&&activeStepForPricing.type)||"custom");
         var plan=String(item.settings.plan||"Plan");
-        var salePrice=String(item.settings.price||"");
-        var regularPrice=String(item.settings.regularPrice||"");
-        var price=(salePrice!==""?salePrice:(regularPrice!==""?regularPrice:"$0"));
+        var salePrice=normalizeTemplateCurrencyValue(item.settings.price||"");
+        var regularPrice=normalizeTemplateCurrencyValue(item.settings.regularPrice||"");
+        var price=(salePrice!==""?salePrice:(regularPrice!==""?regularPrice:"₱0"));
         var period=String(item.settings.period||"");
         var subtitle=String(item.settings.subtitle||"");
         var badge=String(item.settings.badge||"");
         var ctaLink=String(item.settings.ctaLink||"#");
         var ctaLabelRaw=(typeof item.settings.ctaLabel==="string")?String(item.settings.ctaLabel).trim():"";
-        var ctaLabel=ctaLabelRaw!==""?ctaLabelRaw:(pricingStepType!=="checkout"?"Get Started":"");
+        var ctaLabel=pricingStepType==="checkout"
+            ?"Pay Now"
+            :(ctaLabelRaw!==""?ctaLabelRaw:(pricingStepType==="sales"&&plan!==""?("Choose "+plan):"Get Started"));
         var ctaBg=String(item.settings.ctaBgColor||"#240E35");
         var ctaText=String(item.settings.ctaTextColor||"#ffffff");
         var customColor2=(item.style&&item.style.color)?String(item.style.color):"";
@@ -8442,8 +9062,7 @@ function renderCanvas(){
             state.carouselSel=null;
             var ok=false;
             if(!isStructureComponent(t)){
-                var freePos=computeFreeDropPosition(e,inner);
-                ok=addComponentAt(t,{k:"sec",s:s.id},{mode:"free",x:freePos.x,y:freePos.y});
+                ok=addComponentAt(t,{k:"sec",s:s.id},buildFreePlacement(t,inner,e));
             }else{
                 ok=addComponentAt(t,{k:"sec",s:s.id},dropPlacement(e,sn));
             }
@@ -8525,8 +9144,7 @@ function renderCanvas(){
                         var nearId=nearest.getAttribute("data-col-id");
                         if(nearId){
                             var nearInner=nearest.querySelector(".col-inner")||nearest;
-                            var freePos=computeFreeDropPosition(e,nearInner);
-                            if(addComponentAt(t,{k:"col",s:s.id,r:r.id,c:nearId},{mode:"free",x:freePos.x,y:freePos.y}))render();
+                            if(addComponentAt(t,{k:"col",s:s.id,r:r.id,c:nearId},buildFreePlacement(t,nearInner,e)))render();
                             clearFreeDropGuides();
                             clearDropPreview();
                             return;
@@ -8580,8 +9198,7 @@ function renderCanvas(){
                     state.carouselSel=null;
                     var ok=false;
                     if(!isStructureComponent(t)){
-                        var freePos=computeFreeDropPosition(e,colInner);
-                        ok=addComponentAt(t,{k:"col",s:s.id,r:r.id,c:c.id},{mode:"free",x:freePos.x,y:freePos.y});
+                        ok=addComponentAt(t,{k:"col",s:s.id,r:r.id,c:c.id},buildFreePlacement(t,colInner,e));
                     }else{
                         ok=addComponentAt(t,{k:"col",s:s.id,r:r.id,c:c.id},dropPlacement(e,cn));
                     }
@@ -8637,7 +9254,7 @@ function renderCanvas(){
         canvas.addEventListener("scroll",function(){drawLinkWires();});
     }
     canvas.ondragover=e=>{e.preventDefault();clearFreeDropGuides();clearDropPreview();};
-    canvas.ondrop=e=>{e.preventDefault();clearFreeDropGuides();clearDropPreview();if(e.target&&e.target.closest&&e.target.closest(".carousel-live-editor"))return;const t=e.dataTransfer.getData("c");if(t){var freePos=computeFreeDropPosition(e,canvas);var ok=(!isStructureComponent(t))?addComponentAt(t,null,{mode:"free",x:freePos.x,y:freePos.y}):addComponentAt(t,null,"after");if(ok)render();}};
+    canvas.ondrop=e=>{e.preventDefault();clearFreeDropGuides();clearDropPreview();if(e.target&&e.target.closest&&e.target.closest(".carousel-live-editor"))return;const t=e.dataTransfer.getData("c");if(t){var ok=(!isStructureComponent(t))?addComponentAt(t,null,buildFreePlacement(t,canvas,e)):addComponentAt(t,null,"after");if(ok)render();}};
 }
 
 function refreshAfterSetting(){
@@ -8754,6 +9371,54 @@ function bind(id,val,cb,opts){
     n.addEventListener("input",fire);
     n.addEventListener("change",fire);
     n.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();fire();}});
+}
+
+function bindCurrency(id,val,cb,opts){
+    const n=document.getElementById(id);if(!n)return;
+    const normalize=v=>{
+        var raw=String(v||"").replace(/\u20b1/g,"");
+        raw=raw.replace(/^\s+/,"");
+        return "\u20b1"+raw;
+    };
+    const keepCaretPastSymbol=()=>{
+        if(!n.setSelectionRange)return;
+        var start=Math.max(1,n.selectionStart||1);
+        var end=Math.max(1,n.selectionEnd||1);
+        n.setSelectionRange(start,end);
+    };
+    n.value=normalize(val||"");
+    const fire=()=>{
+        if(opts&&opts.undo)saveToHistory();
+        const prev=n.value||"";
+        const start=n.selectionStart||0;
+        const end=n.selectionEnd||0;
+        const normalized=normalize(prev);
+        n.value=normalized;
+        if(document.activeElement===n&&n.setSelectionRange){
+            var nextStart=Math.max(1,start+(normalized.length-prev.length));
+            var nextEnd=Math.max(nextStart,end+(normalized.length-prev.length));
+            n.setSelectionRange(Math.min(nextStart,normalized.length),Math.min(nextEnd,normalized.length));
+        }
+        cb(normalized);
+        refreshAfterSetting();
+    };
+    n.addEventListener("input",fire);
+    n.addEventListener("change",fire);
+    n.addEventListener("click",keepCaretPastSymbol);
+    n.addEventListener("focus",keepCaretPastSymbol);
+    n.addEventListener("keydown",e=>{
+        const start=n.selectionStart||0;
+        const end=n.selectionEnd||0;
+        if((e.key==="Backspace"&&start<=1&&end<=1)||(e.key==="Delete"&&start===0&&end<=1)){
+            e.preventDefault();
+            keepCaretPastSymbol();
+            return;
+        }
+        if(e.key==="Enter"){
+            e.preventDefault();
+            fire();
+        }
+    });
 }
 
 function fontSelectHtml(id){
@@ -10377,15 +11042,50 @@ function renderSettings(){
         var padDef=[18,18,18,18],marDef=[0,0,0,0];
         function renderPricingEditor(){
             var pad=parseSpacing(t.style&&t.style.padding,padDef),mar=parseSpacing(t.style&&t.style.margin,marDef);
+            var currentPricingStepType=templateStepType(cur());
+            var isCheckoutPricingEditor=currentPricingStepType==="checkout";
+            var isOfferPricingEditor=currentPricingStepType==="upsell"||currentPricingStepType==="downsell";
             var feats=t.settings.features||[];
             var featCards=feats.map(function(f,idx){
                 var val=String(f||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
                 return '<div class="menu-item-card" data-idx="'+idx+'"><div class="menu-item-head"><strong>Feature '+(idx+1)+'</strong><div class="menu-item-actions"><button type="button" class="priceMoveUp" data-idx="'+idx+'" title="Move up"><i class="fas fa-arrow-up"></i></button><button type="button" class="priceMoveDown" data-idx="'+idx+'" title="Move down"><i class="fas fa-arrow-down"></i></button><button type="button" class="priceDelete menu-del" data-idx="'+idx+'" title="Delete"><i class="fas fa-trash"></i></button></div></div><label>Text</label><input class="priceFeature" data-idx="'+idx+'" value="'+val+'"></div>';
             }).join("");
-            settings.innerHTML='<div class="menu-section-title">Content</div><label>Plan name</label><input id="pricePlan"><label>Sale price</label><input id="priceValue"><label>Regular price (after countdown)</label><input id="priceRegular" placeholder="$79"><label>Period</label><input id="pricePeriod" placeholder="/month"><label>Subtitle</label><input id="priceSubtitle"><label>Badge</label><input id="priceBadge" placeholder="Popular"><label>Promo key (legacy)</label><input id="pricePromo" placeholder="spring-sale"><div class="menu-split"></div><div class="menu-section-title">Features</div>'+featCards+'<button type="button" id="addPriceFeature" class="fb-btn primary" style="width:100%;margin:6px 0 10px;">Add feature</button>'+spacingControlsHtml(pad,mar)+'<div class="menu-split"></div><div class="menu-section-title">CTA</div><label>Button label</label><input id="priceCtaLabel"><label>Button link</label><input id="priceCtaLink" placeholder="https://..."><label>Button color</label><input id="priceCtaBg" type="color"><label>Button text color</label><input id="priceCtaText" type="color"><div class="menu-split"></div><div class="menu-section-title">Style</div><label>Text color</label><input id="priceTextColor" type="color"><label>Background color</label><input id="priceBg" type="color"><label>Border</label><input id="priceBorder">'+radiusHelpLabelHtml("priceRadiusHelp","Border radius")+'<div class="px-wrap"><input id="priceRadius" type="number" min="0" step="1"><span class="px-unit">px</span></div><label>Shadow</label><input id="priceShadow">'+posControls+moveControls+remove;
+            var pricingContentMeta=isCheckoutPricingEditor
+                ? '<div class="meta" style="margin:0 0 10px;">These values are fallback details for checkout. If the buyer selected a pricing card on the sales page, that selected plan and amount will replace these values automatically.</div>'
+                : '';
+            var pricingActionSection=isCheckoutPricingEditor
+                ? '<div class="menu-split"></div><div class="menu-section-title">Payment Action</div><div class="meta" style="margin:0 0 10px;">This checkout pricing card is automatically the Pay Now button. Buyers do not need any extra action setup here.</div><label>Payment button label</label><input id="priceCtaLabel"><label>Button color</label><input id="priceCtaBg" type="color"><label>Button text color</label><input id="priceCtaText" type="color">'
+                : '<div class="menu-split"></div><div class="menu-section-title">Call to Actions</div><label>Button label</label><input id="priceCtaLabel"><label>Button link</label><input id="priceCtaLink" placeholder="https://..."><label>Button color</label><input id="priceCtaBg" type="color"><label>Button text color</label><input id="priceCtaText" type="color">';
+            settings.innerHTML='<div class="menu-section-title">Content</div>'+pricingContentMeta+'<label>Plan name</label><input id="pricePlan"><label>'+(isCheckoutPricingEditor?'Fallback sale price':'Sale price')+'</label><input id="priceValue" placeholder="₱49"><label>'+(isCheckoutPricingEditor?'Fallback regular price (after countdown)':'Regular price (after countdown)')+'</label><input id="priceRegular" placeholder="₱79"><label>Period</label><input id="pricePeriod" placeholder="/month"><label>Subtitle</label><input id="priceSubtitle"><label>Badge</label><input id="priceBadge" placeholder="Popular"><label>Promo key (legacy)</label><input id="pricePromo" placeholder="spring-sale"><div class="menu-split"></div><div class="menu-section-title">Features</div>'+featCards+'<button type="button" id="addPriceFeature" class="fb-btn primary" style="width:100%;margin:6px 0 10px;">Add feature</button>'+spacingControlsHtml(pad,mar)+pricingActionSection+'<div class="menu-split"></div><div class="menu-section-title">Style</div><label>Text color</label><input id="priceTextColor" type="color"><label>Background color</label><input id="priceBg" type="color"><label>Border</label><input id="priceBorder">'+radiusHelpLabelHtml("priceRadiusHelp","Border radius")+'<div class="px-wrap"><input id="priceRadius" type="number" min="0" step="1"><span class="px-unit">px</span></div><label>Shadow</label><input id="priceShadow">'+posControls+moveControls+remove;
+            var priceCtaLabelField=document.getElementById("priceCtaLabel");
+            var priceCtaLinkField=document.getElementById("priceCtaLink");
+            if(priceCtaLabelField&&priceCtaLinkField){
+                var pricingStepType=templateStepType(cur());
+                var isCheckoutPricingStep=pricingStepType==="checkout";
+                var isOfferPricingStep=pricingStepType==="upsell"||pricingStepType==="downsell";
+                var pricingStepOptions=steps.filter(function(s){return String(s.id)!==String(state.sid);}).map(function(s){
+                    var label=String(s.title||s.type||"Step").trim();
+                    var safeLabel=label.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+                    var safeType=String(s.type||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+                    return '<option value="'+String(s.slug||"").replace(/"/g,'&quot;')+'">'+safeLabel+' ('+safeType+')</option>';
+                }).join("");
+                var pricingStepDisabled=pricingStepOptions==="";
+                if(pricingStepOptions==="")pricingStepOptions='<option value="">No other pages found</option>';
+                var pricingActionOptions=isCheckoutPricingStep
+                    ? '<option value="checkout">Checkout submit</option>'
+                    : (isOfferPricingStep
+                    ? '<option value="offer_accept">Accept offer</option><option value="offer_decline">Decline offer</option><option value="link">Custom URL</option>'
+                    : '<option value="next_step">Smart next page</option><option value="step">Specific step</option><option value="link">Custom URL</option>');
+                var pricingActionMeta=isCheckoutPricingStep
+                    ? 'Checkout-step pricing buttons always submit payment to PayMongo.'
+                    : (isOfferPricingStep
+                    ? 'On upsell and downsell pages, pricing buttons should usually record an offer decision instead of acting like checkout.'
+                    : 'On sales pages, pricing buttons automatically carry the selected plan to checkout.');
+                priceCtaLabelField.insertAdjacentHTML("afterend",'<label>Button action</label><select id="priceCtaAction">'+pricingActionOptions+'</select><div id="priceCtaStepWrap" style="display:none;"><label>Target page</label><select id="priceCtaStep"'+(pricingStepDisabled?' disabled':'')+'>'+pricingStepOptions+'</select></div><div class="meta" id="priceCtaMeta" style="margin:6px 0 0;">'+pricingActionMeta+'</div>');
+            }
             bind("pricePlan",(t.settings&&t.settings.plan)||"",v=>{t.settings=t.settings||{};t.settings.plan=v;renderCanvas();},{undo:true});
-            bind("priceValue",(t.settings&&t.settings.price)||"",v=>{t.settings=t.settings||{};t.settings.price=v;renderCanvas();},{undo:true});
-            bind("priceRegular",(t.settings&&t.settings.regularPrice)||"",v=>{t.settings=t.settings||{};t.settings.regularPrice=v;renderCanvas();},{undo:true});
+            bindCurrency("priceValue",(t.settings&&t.settings.price)||"",v=>{t.settings=t.settings||{};t.settings.price=v;renderCanvas();},{undo:true});
+            bindCurrency("priceRegular",(t.settings&&t.settings.regularPrice)||"",v=>{t.settings=t.settings||{};t.settings.regularPrice=v;renderCanvas();},{undo:true});
             bind("pricePeriod",(t.settings&&t.settings.period)||"",v=>{t.settings=t.settings||{};t.settings.period=v;renderCanvas();},{undo:true});
             bind("priceSubtitle",(t.settings&&t.settings.subtitle)||"",v=>{t.settings=t.settings||{};t.settings.subtitle=v;renderCanvas();},{undo:true});
             bind("priceBadge",(t.settings&&t.settings.badge)||"",v=>{t.settings=t.settings||{};t.settings.badge=v;renderCanvas();},{undo:true});
@@ -10445,6 +11145,96 @@ function renderSettings(){
                 renderCanvas();
             };
             bind("priceCtaLabel",(t.settings&&t.settings.ctaLabel)||"",v=>{t.settings=t.settings||{};t.settings.ctaLabel=v;renderCanvas();},{undo:true});
+            t.settings=t.settings||{};
+            var pricingStepType=templateStepType(cur());
+            var isCheckoutPricingStep=pricingStepType==="checkout";
+            var isOfferPricingStep=pricingStepType==="upsell"||pricingStepType==="downsell";
+            var allowedPricingActions=isCheckoutPricingStep?["checkout"]:(isOfferPricingStep?["offer_accept","offer_decline","link"]:["next_step","step","link"]);
+            var curPricingAction=String(t.settings.ctaActionType||"").trim().toLowerCase();
+            if(allowedPricingActions.indexOf(curPricingAction)<0){
+                var legacyPricingLink=String(t.settings.ctaLink||"").trim();
+                curPricingAction=(legacyPricingLink!==""&&legacyPricingLink!=="#")?"link":(isOfferPricingStep?"offer_accept":"next_step");
+            }
+            if(isCheckoutPricingStep){
+                curPricingAction="checkout";
+                if(String(t.settings.ctaLabel||"").trim()==="")t.settings.ctaLabel="Pay Now";
+                t.settings.ctaLink="#";
+                t.settings.ctaActionStepSlug="";
+            }else if(isOfferPricingStep){
+                if(String(t.settings.ctaLabel||"").trim()==="")t.settings.ctaLabel="Yes, Add This Offer";
+                if(curPricingAction!=="link"){
+                    curPricingAction="offer_accept";
+                    t.settings.ctaLink="#";
+                }
+                t.settings.ctaActionStepSlug="";
+            }else if(curPricingAction==="checkout"){
+                var smartTarget=choosePricingTargetStep(steps,cur(),String(t.settings.ctaLabel||"").trim()||t.settings.plan);
+                if(smartTarget&&String(smartTarget.id||"")!==String((cur()&&cur().id)||"")){
+                    curPricingAction="step";
+                    t.settings.ctaActionStepSlug=String(smartTarget.slug||"");
+                    t.settings.ctaLink=buildFunnelStepHref(smartTarget);
+                }else{
+                    curPricingAction="next_step";
+                    t.settings.ctaActionStepSlug="";
+                    t.settings.ctaLink="#";
+                }
+            }
+            t.settings.ctaActionType=curPricingAction;
+            if(typeof t.settings.ctaActionStepSlug!=="string")t.settings.ctaActionStepSlug="";
+            var priceCtaAction=document.getElementById("priceCtaAction");
+            var priceCtaStep=document.getElementById("priceCtaStep");
+            var priceCtaStepWrap=document.getElementById("priceCtaStepWrap");
+            var priceCtaMeta=document.getElementById("priceCtaMeta");
+            var priceCtaLink=document.getElementById("priceCtaLink");
+            var priceCtaLinkLabel=priceCtaLink?priceCtaLink.previousElementSibling:null;
+            function syncPriceCtaControls(){
+                var action=String((t.settings&&t.settings.ctaActionType)||"next_step").trim().toLowerCase();
+                if(priceCtaAction)priceCtaAction.value=action;
+                if(priceCtaAction)priceCtaAction.disabled=isCheckoutPricingStep;
+                if(priceCtaStep)priceCtaStep.value=String((t.settings&&t.settings.ctaActionStepSlug)||"");
+                if(priceCtaStepWrap)priceCtaStepWrap.style.display=action==="step"?"block":"none";
+                if(priceCtaLink)priceCtaLink.style.display=action==="link"?"block":"none";
+                if(priceCtaLinkLabel)priceCtaLinkLabel.style.display=action==="link"?"block":"none";
+                if(priceCtaMeta){
+                    priceCtaMeta.textContent=isCheckoutPricingStep
+                        ? "Checkout-step pricing buttons always submit payment to PayMongo."
+                        : (isOfferPricingStep
+                        ? (action==="link"
+                            ? "Use a custom URL only when you really want to leave the normal offer flow."
+                            : (action==="offer_decline"
+                                ? "This pricing button will submit the offer decline flow for the current upsell or downsell page."
+                                : "This pricing button will submit the offer accept flow for the current upsell or downsell page."))
+                        : (action==="step"
+                        ? "This pricing button will open the chosen page and carry the selected plan and price."
+                        : (action==="link"
+                        ? "Use a custom URL only when you really want to leave the normal funnel flow."
+                        : "Smart next page will send buyers to the best next step, usually checkout, and carry the selected pricing.")));
+                }
+            }
+            if(priceCtaAction){
+                priceCtaAction.addEventListener("change",function(){
+                    saveToHistory();
+                    t.settings=t.settings||{};
+                    t.settings.ctaActionType=String(priceCtaAction.value||"next_step");
+                    if(t.settings.ctaActionType!=="step")t.settings.ctaActionStepSlug="";
+                    if(t.settings.ctaActionType!=="link")t.settings.ctaLink="#";
+                    if(isCheckoutPricingStep&&String(t.settings.ctaLabel||"").trim()==="")t.settings.ctaLabel="Pay Now";
+                    if(isOfferPricingStep&&t.settings.ctaActionType!=="link")t.settings.ctaActionStepSlug="";
+                    syncPriceCtaControls();
+                    renderCanvas();
+                });
+            }
+            if(priceCtaStep){
+                priceCtaStep.addEventListener("change",function(){
+                    saveToHistory();
+                    t.settings=t.settings||{};
+                    t.settings.ctaActionStepSlug=String(priceCtaStep.value||"");
+                    var targetStep=steps.find(function(s){return String(s.slug||"")===String(priceCtaStep.value||"");});
+                    t.settings.ctaLink=targetStep?buildFunnelStepHref(targetStep):"#";
+                    renderCanvas();
+                });
+            }
+            syncPriceCtaControls();
             bind("priceCtaLink",(t.settings&&t.settings.ctaLink)||"#",v=>{t.settings=t.settings||{};t.settings.ctaLink=v;renderCanvas();},{undo:true});
             bind("priceCtaBg",(t.settings&&t.settings.ctaBgColor)||"#240E35",v=>{t.settings=t.settings||{};t.settings.ctaBgColor=v;renderCanvas();},{undo:true});
             bind("priceCtaText",(t.settings&&t.settings.ctaTextColor)||"#ffffff",v=>{t.settings=t.settings||{};t.settings.ctaTextColor=v;renderCanvas();},{undo:true});
@@ -10787,7 +11577,116 @@ function renderSettings(){
     const btnDel=document.getElementById("btnDeleteSelected");if(btnDel)btnDel.onclick=()=>removeSelected();
 }
 
-function render(){renderCanvas();renderSettings();if(state.sel||state.carouselSel)showLeftPanel("settings");}
+function render(){
+    var step=cur();
+    if(step){
+        state.layout=repairDefaultPricingFlowLayout(state.layout,step,steps);
+        if(String(step.template||"").trim()!==""&&String(step.template||"").trim()!=="simple"){
+            state.layout=repairTemplateFlowLayout(state.layout,step,steps);
+        }
+    }
+    renderCanvas();
+    renderSettings();
+    if(state.sel||state.carouselSel)showLeftPanel("settings");
+}
+
+function escapeSidebarHtml(value){
+    return String(value||"")
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;")
+        .replace(/'/g,"&#39;");
+}
+const sidebarComponentMeta={
+    section:{desc:"Main page area that holds rows and freeform blocks."},
+    row:{desc:"Horizontal container for columns and arranged content."},
+    column:{desc:"Flexible column lane inside a row layout."},
+    spacer:{desc:"Adds breathing room between nearby elements."},
+    heading:{desc:"Large headline text for hooks and section titles."},
+    text:{desc:"Paragraph copy, bullets, or supporting details."},
+    button:{desc:"Clickable action button for navigation or checkout."},
+    icon:{desc:"Single icon accent for lists, proof, or features."},
+    image:{desc:"Visual block for screenshots, mockups, or photos."},
+    video:{desc:"Responsive video frame with a clean embed area."},
+    carousel:{desc:"Multi-slide media or content showcase block."},
+    menu:{desc:"Navigation links for headers and simple site menus."},
+    form:{desc:"Lead capture form for opt-ins, bookings, or checkout."},
+    testimonial:{desc:"Social proof card with quote and author details."},
+    faq:{desc:"Question-and-answer block for objections and clarity."},
+    pricing:{desc:"Offer card with plan, price, features, and button."},
+    countdown:{desc:"Urgency timer for expiring offers or launches."}
+};
+function sidebarPreviewMarkup(type){
+    switch(String(type||"")){
+        case "section":
+            return "<span class='fb-comp-drag-ghost__preview' aria-hidden='true'><span class='fb-comp-preview-frame'><span class='fb-comp-preview-shell'></span></span></span>";
+        case "row":
+            return "<span class='fb-comp-drag-ghost__preview' aria-hidden='true'><span class='fb-comp-preview-grid fb-comp-preview-grid--three'><span class='fb-comp-preview-cell'></span><span class='fb-comp-preview-cell'></span><span class='fb-comp-preview-cell'></span></span></span>";
+        case "column":
+            return "<span class='fb-comp-drag-ghost__preview' aria-hidden='true'><span class='fb-comp-preview-grid fb-comp-preview-grid--two'><span class='fb-comp-preview-cell'></span><span class='fb-comp-preview-cell'></span></span></span>";
+        case "spacer":
+            return "<span class='fb-comp-drag-ghost__preview' aria-hidden='true'><span class='fb-comp-preview-spacer'><span class='fb-comp-preview-spacer-label'>Gap</span></span></span>";
+        case "heading":
+            return "<span class='fb-comp-drag-ghost__preview' aria-hidden='true'><span class='fb-comp-preview-stack'><span class='fb-comp-preview-line is-dark lg'></span><span class='fb-comp-preview-line md'></span></span></span>";
+        case "text":
+            return "<span class='fb-comp-drag-ghost__preview' aria-hidden='true'><span class='fb-comp-preview-stack'><span class='fb-comp-preview-line full'></span><span class='fb-comp-preview-line full'></span><span class='fb-comp-preview-line md'></span></span></span>";
+        case "button":
+            return "<span class='fb-comp-drag-ghost__preview' aria-hidden='true'><span class='fb-comp-preview-button-wrap'><span class='fb-comp-preview-btn'>Click</span></span></span>";
+        case "icon":
+            return "<span class='fb-comp-drag-ghost__preview' aria-hidden='true'><span class='fb-comp-preview-icon-wrap'><span class='fb-comp-preview-icon-chip'><i class='fas fa-star'></i></span><span class='fb-comp-preview-line md'></span></span></span>";
+        case "image":
+            return "<span class='fb-comp-drag-ghost__preview' aria-hidden='true'><span class='fb-comp-preview-media'><span class='fb-comp-preview-media-sun'></span><span class='fb-comp-preview-media-ridge'></span></span></span>";
+        case "video":
+            return "<span class='fb-comp-drag-ghost__preview' aria-hidden='true'><span class='fb-comp-preview-media'><span class='fb-comp-preview-media-sun'></span><span class='fb-comp-preview-media-ridge'></span><span class='fb-comp-preview-media-play'><i class='fas fa-play'></i></span></span></span>";
+        case "carousel":
+            return "<span class='fb-comp-drag-ghost__preview' aria-hidden='true'><span class='fb-comp-preview-carousel'><span class='fb-comp-preview-slide'></span><span class='fb-comp-preview-slide is-tall'></span><span class='fb-comp-preview-slide'></span></span></span>";
+        case "menu":
+            return "<span class='fb-comp-drag-ghost__preview' aria-hidden='true'><span class='fb-comp-preview-button-wrap'><span class='fb-comp-preview-nav'><span class='fb-comp-preview-nav-item is-wide'></span><span class='fb-comp-preview-nav-item is-mid'></span><span class='fb-comp-preview-nav-item is-cta'></span></span></span></span>";
+        case "form":
+            return "<span class='fb-comp-drag-ghost__preview' aria-hidden='true'><span class='fb-comp-preview-card'><span class='fb-comp-preview-form'><span class='fb-comp-preview-input'></span><span class='fb-comp-preview-input'></span><span class='fb-comp-preview-btn'>Submit</span></span></span></span>";
+        case "testimonial":
+            return "<span class='fb-comp-drag-ghost__preview' aria-hidden='true'><span class='fb-comp-preview-card'><span class='fb-comp-preview-stack'><span class='fb-comp-preview-line full'></span><span class='fb-comp-preview-line md'></span></span><span class='fb-comp-preview-avatar-row'><span class='fb-comp-preview-avatar'></span><span class='fb-comp-preview-line sm'></span></span></span></span>";
+        case "faq":
+            return "<span class='fb-comp-drag-ghost__preview' aria-hidden='true'><span class='fb-comp-preview-card'><span class='fb-comp-preview-faq-item'><span class='fb-comp-preview-faq-badge'>?</span><span class='fb-comp-preview-line md'></span></span><span class='fb-comp-preview-faq-item'><span class='fb-comp-preview-faq-badge'>?</span><span class='fb-comp-preview-line lg'></span></span></span></span>";
+        case "pricing":
+            return "<span class='fb-comp-drag-ghost__preview' aria-hidden='true'><span class='fb-comp-preview-card fb-comp-preview-card--pricing'><span class='fb-comp-preview-pill'>Popular</span><span class='fb-comp-preview-line sm is-dark'></span><span class='fb-comp-preview-price-row'><span class='fb-comp-preview-price'>₱49</span><span class='fb-comp-preview-period'>/mo</span></span><span class='fb-comp-preview-line md'></span><span class='fb-comp-preview-line sm'></span><span class='fb-comp-preview-btn'>Buy Now</span></span></span>";
+        case "countdown":
+            return "<span class='fb-comp-drag-ghost__preview' aria-hidden='true'><span class='fb-comp-preview-timer'><span class='fb-comp-preview-timer-box'><span><span class='fb-comp-preview-timer-num'>12</span><br><span class='fb-comp-preview-timer-unit'>Hr</span></span></span><span class='fb-comp-preview-timer-box'><span><span class='fb-comp-preview-timer-num'>08</span><br><span class='fb-comp-preview-timer-unit'>Min</span></span></span><span class='fb-comp-preview-timer-box'><span><span class='fb-comp-preview-timer-num'>43</span><br><span class='fb-comp-preview-timer-unit'>Sec</span></span></span><span class='fb-comp-preview-timer-box'><span><span class='fb-comp-preview-timer-num'>05</span><br><span class='fb-comp-preview-timer-unit'>Day</span></span></span></span></span>";
+        default:
+            return "<span class='fb-comp-drag-ghost__preview' aria-hidden='true'><span class='fb-comp-preview-stack'><span class='fb-comp-preview-line full'></span><span class='fb-comp-preview-line md'></span></span></span>";
+    }
+}
+var _sidebarDragGhost=null;
+function clearSidebarDragGhost(){
+    if(_sidebarDragGhost&&_sidebarDragGhost.parentNode){
+        _sidebarDragGhost.parentNode.removeChild(_sidebarDragGhost);
+    }
+    _sidebarDragGhost=null;
+}
+function buildSidebarDragGhost(source){
+    clearSidebarDragGhost();
+    if(!source)return null;
+    var type=String(source.dataset.c||"").trim();
+    var icon=source.querySelector("i");
+    var iconHtml=icon?icon.outerHTML:"";
+    var label=String(source.textContent||type).trim()||type;
+    var meta=sidebarComponentMeta[type]||{};
+    var ghost=document.createElement("div");
+    ghost.className="fb-comp-drag-ghost";
+    ghost.innerHTML=""
+        + "<span class='fb-comp-drag-ghost__head'>"
+        + "<span class='fb-comp-drag-ghost__icon'>"+iconHtml+"</span>"
+        + "<span class='fb-comp-drag-ghost__copy'>"
+        + "<span class='fb-comp-drag-ghost__label'>"+escapeSidebarHtml(label)+"</span>"
+        + "<span class='fb-comp-drag-ghost__desc'>"+escapeSidebarHtml(meta.desc||"Drag into the funnel to add this block.")+"</span>"
+        + "</span>"
+        + "</span>"
+        + sidebarPreviewMarkup(type);
+    document.body.appendChild(ghost);
+    _sidebarDragGhost=ghost;
+    return ghost;
+}
 
 var _sidebarDragActive=false;
 document.querySelectorAll(".fb-lib button").forEach(b=>{
@@ -10796,8 +11695,23 @@ document.querySelectorAll(".fb-lib button").forEach(b=>{
         b.onclick=()=>{applyComponentTemplate(String(b.dataset.compTemplate||""));};
         return;
     }
-    b.ondragstart=e=>{_sidebarDragActive=true;e.dataTransfer.setData("c",b.dataset.c||"");};
-    b.ondragend=e=>{setTimeout(()=>{_sidebarDragActive=false;},100);};
+    b.ondragstart=e=>{
+        _sidebarDragActive=true;
+        if(e.dataTransfer){
+            e.dataTransfer.effectAllowed="copy";
+            e.dataTransfer.setData("c",b.dataset.c||"");
+            e.dataTransfer.setData("text/plain",b.dataset.c||"");
+            if(typeof e.dataTransfer.setDragImage==="function"){
+                var ghost=buildSidebarDragGhost(b);
+                if(ghost){
+                    var hotX=Math.max(0,Math.round((ghost.offsetWidth||240)/2));
+                    var hotY=Math.max(0,Math.round((ghost.offsetHeight||120)/2));
+                    e.dataTransfer.setDragImage(ghost,hotX,hotY);
+                }
+            }
+        }
+    };
+    b.ondragend=e=>{clearSidebarDragGhost();setTimeout(()=>{_sidebarDragActive=false;},100);};
     b.onclick=()=>{if(_sidebarDragActive){_sidebarDragActive=false;return;}addComponent(b.dataset.c||"");render();};
 });
 
@@ -11039,8 +11953,8 @@ document.addEventListener("keydown",e=>{
         redo();
     }
 });
-document.addEventListener("dragend",function(){clearFreeDropGuides();clearDropPreview();});
-document.addEventListener("drop",function(){clearFreeDropGuides();clearDropPreview();});
+document.addEventListener("dragend",function(){clearSidebarDragGhost();clearFreeDropGuides();clearDropPreview();});
+document.addEventListener("drop",function(){clearSidebarDragGhost();clearFreeDropGuides();clearDropPreview();});
 
 initDimTipHover();
 initContextMenu();

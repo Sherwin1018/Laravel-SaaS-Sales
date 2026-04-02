@@ -52,9 +52,18 @@
             <p class="info-subtitle">Manage leads, automate marketing campaigns, and track performance in one platform.</p>
 
             <ul class="features">
-                <li><strong>Lead Management:</strong> Capture and organize all your leads seamlessly</li>
-                <li><strong>Marketing Automation:</strong> Automate email sequences and customer follow-ups</li>
-                <li><strong>Analytics Dashboard:</strong> Monitor campaign performance and conversion rates</li>
+                <li>
+                    <span class="feature-title">Lead Management:</span>
+                    <span class="feature-text">Capture and organize all your leads seamlessly</span>
+                </li>
+                <li>
+                    <span class="feature-title">Marketing Automation:</span>
+                    <span class="feature-text">Automate email sequences and customer follow-ups</span>
+                </li>
+                <li>
+                    <span class="feature-title">Analytics Dashboard:</span>
+                    <span class="feature-text">Monitor campaign performance and conversion rates</span>
+                </li>
             </ul>
         </div>
 
