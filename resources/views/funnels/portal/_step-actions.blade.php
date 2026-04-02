@@ -13,6 +13,7 @@
         <form method="POST" action="{{ route('funnels.portal.checkout', ['funnelSlug' => $funnel->slug, 'stepSlug' => $step->slug]) }}">
             @csrf
             <input type="hidden" name="amount" value="{{ (float) ($step->price ?? 0) }}">
+            <input type="hidden" name="website" value="">
             <button type="submit" class="btn">{{ $step->cta_label ?: 'Complete Checkout' }}</button>
         </form>
     @endif
@@ -28,11 +29,13 @@
             <form method="POST" action="{{ route('funnels.portal.offer', ['funnelSlug' => $funnel->slug, 'stepSlug' => $step->slug]) }}">
                 @csrf
                 <input type="hidden" name="decision" value="accept">
+                <input type="hidden" name="website" value="">
                 <button type="submit" class="btn">{{ $step->cta_label ?: 'Yes, Add This Offer' }}</button>
             </form>
             <form method="POST" action="{{ route('funnels.portal.offer', ['funnelSlug' => $funnel->slug, 'stepSlug' => $step->slug]) }}">
                 @csrf
                 <input type="hidden" name="decision" value="decline">
+                <input type="hidden" name="website" value="">
                 <button type="submit" class="btn gray">No Thanks</button>
             </form>
         </div>

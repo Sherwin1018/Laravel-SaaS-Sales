@@ -8,6 +8,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Funnel extends Model
 {
+    public const STATUSES = [
+        'draft' => 'Draft',
+        'published' => 'Published',
+    ];
+
     protected $fillable = [
         'tenant_id',
         'created_by',
@@ -37,5 +42,17 @@ class Funnel extends Model
     public function steps(): HasMany
     {
         return $this->hasMany(FunnelStep::class)->orderBy('position');
+    }
+
+    public function setStatusAttribute($value): void
+    {
+        $this->attributes['status'] = self::normalizeStatus($value);
+    }
+
+    public static function normalizeStatus(mixed $value): string
+    {
+        $normalized = mb_strtolower(trim((string) $value));
+
+        return array_key_exists($normalized, self::STATUSES) ? $normalized : $normalized;
     }
 }

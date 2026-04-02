@@ -25,6 +25,14 @@ class Lead extends Model
         'closed_lost' => 'Closed Lost',
     ];
 
+    public const STATUS_ALIASES = [
+        'new' => 'new',
+        'contacted' => 'contacted',
+        'proposal_sent' => 'proposal_sent',
+        'proposal sent' => 'proposal_sent',
+        'closed_won' => 'closed_won',
+    ];
+
     protected $fillable = [
         'tenant_id',
         'assigned_to',
@@ -89,5 +97,18 @@ class Lead extends Model
     public function linkClicks(): HasMany
     {
         return $this->hasMany(LeadLinkClick::class, 'lead_id');
+    }
+
+    public function setStatusAttribute($value): void
+    {
+        $this->attributes['status'] = self::normalizeStatus($value);
+    }
+
+    public static function normalizeStatus(mixed $value): string
+    {
+        $normalized = mb_strtolower(trim(str_replace('-', '_', (string) $value)));
+        $normalized = preg_replace('/\s+/', ' ', $normalized) ?? $normalized;
+
+        return self::STATUS_ALIASES[$normalized] ?? $normalized;
     }
 }

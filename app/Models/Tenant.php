@@ -7,6 +7,19 @@ use Illuminate\Support\Carbon;
 
 class Tenant extends Model
 {
+    public const STATUSES = [
+        'active' => 'Active',
+        'inactive' => 'Inactive',
+        'trial' => 'Trial',
+    ];
+
+    public const BILLING_STATUSES = [
+        'current' => 'Current',
+        'overdue' => 'Overdue',
+        'inactive' => 'Inactive',
+        'trial' => 'Trial',
+    ];
+
     protected $fillable = [
         'company_name',
         'logo_path',
@@ -62,5 +75,24 @@ class Tenant extends Model
         }
 
         return now()->startOfDay()->diffInDays($trialEnd->copy()->startOfDay()) + 1;
+    }
+
+    public function setStatusAttribute($value): void
+    {
+        $this->attributes['status'] = self::normalizeStatus($value);
+    }
+
+    public static function normalizeStatus(mixed $value): string
+    {
+        $normalized = mb_strtolower(trim((string) $value));
+
+        return array_key_exists($normalized, self::STATUSES) ? $normalized : $normalized;
+    }
+
+    public static function normalizeBillingStatus(mixed $value): string
+    {
+        $normalized = mb_strtolower(trim((string) $value));
+
+        return array_key_exists($normalized, self::BILLING_STATUSES) ? $normalized : $normalized;
     }
 }
