@@ -131,8 +131,6 @@ class AutomationController extends Controller
                 'step_order' => $i + 1,
                 'type' => $step['type'] ?? 'email',
                 'config' => $config,
-                // For older schemas where a non-null body column still exists
-                'body' => $config['body'] ?? '',
             ]);
         }
 
@@ -199,8 +197,6 @@ class AutomationController extends Controller
                 'step_order' => $i + 1,
                 'type' => $step['type'] ?? 'email',
                 'config' => $config,
-                // For older schemas where a non-null body column still exists
-                'body' => $config['body'] ?? '',
             ]);
         }
 

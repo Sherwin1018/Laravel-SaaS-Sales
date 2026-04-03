@@ -150,7 +150,10 @@ class FunnelPortalController extends Controller
             ]);
         }
 
-        $this->dispatchFunnelOptInWebhook($lead, $funnel->id, $funnel->name ?? null);
+        // Only send webhook if double opt-in is not required or email is already verified
+        if (!$funnel->require_double_opt_in || $lead->hasVerifiedEmail()) {
+            $this->dispatchFunnelOptInWebhook($lead, $funnel->id, $funnel->name ?? null);
+        }
 
         // Handle email verification for first-time users if double opt-in is required
         if ($funnel->require_double_opt_in && !$lead->hasVerifiedEmail()) {
