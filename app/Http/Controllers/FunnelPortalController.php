@@ -118,7 +118,7 @@ class FunnelPortalController extends Controller
             $lead->source_campaign = $resolvedSource;
         }
 
-        $lead->name = $name !== '' ? $name : $lead->name;
+        $lead->name = $name !== '' ? $name : ($lead->name ?? 'Lead');
         $lead->phone = $phone !== '' ? $phone : ($lead->phone ?? '');
         $lead->tags = $this->mergeTags(
             $lead->tags ?? [],
