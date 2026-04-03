@@ -931,4 +931,59 @@ class FunnelPortalController extends Controller
         $payload = $service->buildPaymentPayload($event, $lead, $payment, []);
         $service->dispatchEvent($event, $payload);
     }
+
+    /**
+     * Normalize UTM parameter values by cleaning and validating input
+     */
+    private function normalizeUtmParameter(mixed $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+        
+        $clean = trim((string) $value);
+        $clean = preg_replace('/[^a-zA-Z0-9_\-\.]/', '', $clean);
+        
+        return $clean === '' ? null : mb_strtolower($clean);
+    }
+
+    /**
+     * Generate unique session key for storing UTM data per funnel
+     */
+    private function funnelUtmSessionKey(int $funnelId): string
+    {
+        return "funnel_utm_{$funnelId}";
+    }
+
+    /**
+     * Infer traffic source from referrer URL
+     */
+    private function inferSourceFromReferrer(?string $referrer): ?string
+    {
+        if (!$referrer) {
+            return null;
+        }
+        
+        $domain = parse_url($referrer, PHP_URL_HOST);
+        if (!$domain) {
+            return null;
+        }
+        
+        $domainMap = [
+            'google.com' => 'google',
+            'facebook.com' => 'facebook', 
+            'instagram.com' => 'instagram',
+            'linkedin.com' => 'linkedin',
+            'twitter.com' => 'twitter',
+            'youtube.com' => 'youtube',
+        ];
+        
+        foreach ($domainMap as $fullDomain => $source) {
+            if (str_contains($domain, $fullDomain)) {
+                return $source;
+            }
+        }
+        
+        return $domain;
+    }
 }
