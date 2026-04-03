@@ -209,4 +209,10 @@ Route::get('/register/paymongo/return/{signupIntent}', [PublicOnboardingControll
     ->middleware('signed')
     ->name('register.paymongo.return');
 
+// Lead verification routes
+Route::post('/funnels/lead/verify', [LeadVerificationController::class, 'verify'])->name('funnels.lead.verify');
+Route::get('/funnels/lead/verified', [LeadVerificationController::class, 'verified'])->name('funnels.lead.verified');
+Route::get('/f/{funnelSlug}/confirm-email', [LeadVerificationController::class, 'confirmEmail'])->name('funnels.confirm-email');
+Route::get('/f/{funnelSlug}/confirm-email/status', [LeadVerificationController::class, 'confirmEmailStatus'])->name('funnels.confirm-email.status');
+
 Route::post('/webhooks/paymongo', PayMongoWebhookController::class)->name('webhooks.paymongo');

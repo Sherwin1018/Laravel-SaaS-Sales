@@ -152,6 +152,19 @@ class FunnelPortalController extends Controller
 
         $this->dispatchFunnelOptInWebhook($lead, $funnel->id, $funnel->name ?? null);
 
+        // Handle email verification for first-time users if double opt-in is required
+        if ($funnel->require_double_opt_in && !$lead->hasVerifiedEmail()) {
+            // Store lead ID in session for verification flow
+            session()->put("funnel_lead_{$funnel->id}", $lead->id);
+            session()->put("funnel_pending_step_{$funnel->id}", $this->nextStep($steps, $step->id)?->slug ?? '');
+            
+            // Send verification email
+            $lead->notify(new \App\Notifications\LeadVerifyEmail($lead, $funnel->id, $funnel->name, $step->id));
+            
+            // Redirect to confirmation page instead of next step
+            return redirect()->route('funnels.confirm-email', ['funnelSlug' => $funnel->slug]);
+        }
+
         $next = $this->nextStep($steps, $step->id);
         abort_if(! $next, 422, 'No next step configured.');
         return redirect()->route('funnels.portal.step', ['funnelSlug' => $funnel->slug, 'stepSlug' => $next->slug]);
