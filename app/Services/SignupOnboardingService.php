@@ -263,6 +263,7 @@ class SignupOnboardingService
     {
         $payment = Payment::create([
             'tenant_id' => $tenant->id,
+            'payment_type' => Payment::TYPE_PLATFORM_SUBSCRIPTION,
             'lead_id' => null,
             'amount' => $plan['price'],
             'status' => 'pending',
@@ -381,6 +382,7 @@ class SignupOnboardingService
                     ],
                     [
                         'tenant_id' => $tenant->id,
+                        'payment_type' => Payment::TYPE_PLATFORM_SUBSCRIPTION,
                         'lead_id' => null,
                         'amount' => $intent->amount,
                         'status' => 'paid',
@@ -391,6 +393,7 @@ class SignupOnboardingService
             } else {
                 Payment::create([
                     'tenant_id' => $tenant->id,
+                    'payment_type' => Payment::TYPE_PLATFORM_SUBSCRIPTION,
                     'lead_id' => null,
                     'amount' => $intent->amount,
                     'status' => 'paid',
