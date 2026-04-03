@@ -29,6 +29,27 @@ class FunnelPortalController extends Controller
 
         abort_if(! $step, 404);
 
+        // Capture UTM parameters on first visit
+        $utmSource = $this->normalizeUtmParameter($request->query('utm_source'));
+        $utmMedium = $this->normalizeUtmParameter($request->query('utm_medium'));
+        $utmCampaign = $this->normalizeUtmParameter($request->query('utm_campaign'));
+        $utmTerm = $this->normalizeUtmParameter($request->query('utm_term'));
+        $utmContent = $this->normalizeUtmParameter($request->query('utm_content'));
+        $utmId = $this->normalizeUtmParameter($request->query('utm_id'));
+
+        if ($utmSource || $utmMedium || $utmCampaign || $utmTerm || $utmContent || $utmId) {
+            $utmData = array_filter([
+                'utm_source' => $utmSource,
+                'utm_medium' => $utmMedium,
+                'utm_campaign' => $utmCampaign,
+                'utm_term' => $utmTerm,
+                'utm_content' => $utmContent,
+                'utm_id' => $utmId,
+                'referrer' => $request->header('referer'),
+            ]);
+            session()->put($this->funnelUtmSessionKey($funnel->id), $utmData);
+        }
+
         $isFirstStep = (int) $steps->first()->id === (int) $step->id;
         $selectedPricing = $this->syncSelectedPricingFromRequest($request, $funnel, $steps, $step, $isFirstStep);
         $tracking->trackStepViewed($funnel, $step, $request, [
