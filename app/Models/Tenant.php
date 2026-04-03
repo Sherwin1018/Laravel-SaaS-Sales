@@ -136,23 +136,4 @@ class Tenant extends Model
 
         return now()->startOfDay()->diffInDays($this->billing_grace_ends_at->copy()->startOfDay()) + 1;
     }
-
-    public function setStatusAttribute($value): void
-    {
-        $this->attributes['status'] = self::normalizeStatus($value);
-    }
-
-    public static function normalizeStatus(mixed $value): string
-    {
-        $normalized = mb_strtolower(trim((string) $value));
-
-        return array_key_exists($normalized, self::STATUSES) ? $normalized : $normalized;
-    }
-
-    public static function normalizeBillingStatus(mixed $value): string
-    {
-        $normalized = mb_strtolower(trim((string) $value));
-
-        return array_key_exists($normalized, self::BILLING_STATUSES) ? $normalized : $normalized;
-    }
 }

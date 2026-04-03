@@ -8,6 +8,7 @@ use App\Models\LeadActivity;
 use App\Models\LeadLinkClick;
 use App\Models\Payment;
 use App\Services\AnalyticsDashboardService;
+use App\Services\UTMAnalyticsService;
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller

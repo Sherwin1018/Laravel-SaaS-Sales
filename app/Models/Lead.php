@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Collection;
 
 class Lead extends Model
@@ -105,6 +106,11 @@ class Lead extends Model
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class);
+    }
+
+    public function linkClicks(): HasMany
+    {
+        return $this->hasMany(LeadLinkClick::class);
     }
 
     public function customFieldValueMap(): Collection
