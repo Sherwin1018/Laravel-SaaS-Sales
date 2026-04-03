@@ -311,4 +311,96 @@ class UTMAnalyticsService
             return '❄️'; // Cold
         }
     }
+
+    /**
+     * Get source performance for a specific funnel
+     */
+    public function getSourcePerformanceForFunnel(int $funnelId, array $filters = []): Collection
+    {
+        $tenantId = auth()->user()->tenant_id;
+        
+        // Build date filter conditions
+        $dateConditions = '';
+        $dateConditionsForVisits = '';
+        $params = [];
+        
+        if (!empty($filters['from'])) {
+            $dateConditions .= " AND created_at >= ?";
+            $dateConditionsForVisits .= " AND visited_at >= ?";
+            $params[] = $filters['from'];
+            $params[] = $filters['from'];
+        }
+        if (!empty($filters['to'])) {
+            $dateConditions .= " AND created_at <= ?";
+            $dateConditionsForVisits .= " AND visited_at <= ?";
+            $params[] = $filters['to'] . ' 23:59:59';
+            $params[] = $filters['to'] . ' 23:59:59';
+        }
+        
+        // Updated query to properly count both funnel visits and leads
+        $query = "
+            SELECT 
+                COALESCE(source, 'Unspecified') as source,
+                SUM(visits) as visits,
+                SUM(leads) as leads,
+                SUM(contacted) as contacted,
+                SUM(proposal) as proposal,
+                SUM(won) as won,
+                ROUND(
+                    SUM(won) * 100.0 / 
+                    NULLIF(SUM(leads), 0), 2
+                ) as conversion_rate
+            FROM (
+                -- Count funnel visits
+                SELECT 
+                    COALESCE(utm_source, 'Unspecified') as source,
+                    COUNT(*) as visits,
+                    0 as leads,
+                    0 as contacted,
+                    0 as proposal,
+                    0 as won
+                FROM funnel_visits 
+                WHERE tenant_id = ?
+                    $dateConditionsForVisits
+                GROUP BY COALESCE(utm_source, 'Unspecified')
+                
+                UNION ALL
+                
+                -- Count leads and their status
+                SELECT 
+                    COALESCE(source_campaign, 'Unspecified') as source,
+                    0 as visits,
+                    COUNT(*) as leads,
+                    SUM(CASE WHEN status = 'contacted' THEN 1 ELSE 0 END) as contacted,
+                    SUM(CASE WHEN status = 'proposal_sent' THEN 1 ELSE 0 END) as proposal,
+                    SUM(CASE WHEN status = 'closed_won' THEN 1 ELSE 0 END) as won
+                FROM leads 
+                WHERE tenant_id = ?
+                    AND source_campaign IS NOT NULL
+                    $dateConditions
+                GROUP BY COALESCE(source_campaign, 'Unspecified')
+            ) combined_data
+            GROUP BY source
+            ORDER BY leads DESC, visits DESC
+        ";
+        
+        // Add tenant_id parameters at the end
+        $params[] = $tenantId; // For funnel_visits
+        $params[] = $tenantId; // For leads
+
+        $results = DB::select($query, $params);
+        
+        return collect($results)->map(function($item) {
+            return [
+                'source' => $item->source,
+                'visits' => (int) $item->visits,
+                'leads' => (int) $item->leads,
+                'contacted' => (int) $item->contacted,
+                'proposal' => (int) $item->proposal,
+                'won' => (int) $item->won,
+                'conversion_rate' => (float) $item->conversion_rate,
+                'performance_indicator' => $this->getPerformanceIndicator((float) $item->conversion_rate),
+            ];
+        });
+    }
 }

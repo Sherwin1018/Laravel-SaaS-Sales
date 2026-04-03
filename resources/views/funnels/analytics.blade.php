@@ -182,6 +182,60 @@
             </div>
         </div>
 
+        {{-- UTM Source Performance Analysis --}}
+        <div class="analytics-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid var(--theme-primary, #240E35);">
+                <h3 style="margin: 0; color: var(--theme-primary, #240E35); font-size: 18px; font-weight: 600;">Source Performance Analysis for {{ $funnel->name }}</h3>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="width: 8px; height: 8px; background: #059669; border-radius: 50%;"></div>
+                    <span style="font-size: 12px; color: var(--theme-muted, #6B7280);">≥15%</span>
+                    <div style="width: 8px; height: 8px; background: #D97706; border-radius: 50%;"></div>
+                    <span style="font-size: 12px; color: var(--theme-muted, #6B7280);">8-14%</span>
+                    <div style="width: 8px; height: 8px; background: #DC2626; border-radius: 50%;"></div>
+                    <span style="font-size: 12px; color: var(--theme-muted, #6B7280);">&lt;8%</span>
+                </div>
+            </div>
+            <div style="margin-bottom: 15px; color: var(--theme-muted, #6B7280); font-size: 14px;">
+                Complete journey from visit to conversion by UTM source for this specific funnel
+            </div>
+            <div class="analytics-table-wrap">
+                <table class="analytics-table">
+                    <thead>
+                        <tr>
+                            <th>Source</th>
+                            <th style="text-align: center;">Visits</th>
+                            <th style="text-align: center;">Leads</th>
+                            <th style="text-align: center;">Contacted</th>
+                            <th style="text-align: center;">Proposal</th>
+                            <th style="text-align: center;">Won</th>
+                            <th style="text-align: center;">Conv%</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($sourcePerformance as $source)
+                            <tr>
+                                <td style="font-weight: 600;">{{ $source['source'] }}</td>
+                                <td style="text-align: center;">{{ $source['visits'] }}</td>
+                                <td style="text-align: center;">{{ $source['leads'] }}</td>
+                                <td style="text-align: center;">{{ $source['contacted'] }}</td>
+                                <td style="text-align: center;">{{ $source['proposal'] }}</td>
+                                <td style="text-align: center;">{{ $source['won'] }}</td>
+                                <td style="text-align: center; font-weight: bold; color: {{ $source['conversion_rate'] >= 15 ? '#059669' : ($source['conversion_rate'] >= 8 ? '#D97706' : '#DC2626') }};">
+                                    {{ $source['conversion_rate'] }}%
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="7" style="padding: 20px; text-align: center; color: var(--theme-muted, #6B7280);">
+                                    No UTM data available for this funnel yet. Start driving traffic with UTM parameters to see performance analytics.
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
         <div class="analytics-grid analytics-grid--summary">
             <div class="analytics-card analytics-card--step-visits">
                 <h3>Step Visits</h3>

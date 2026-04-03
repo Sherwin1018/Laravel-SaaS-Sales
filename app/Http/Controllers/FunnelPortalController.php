@@ -52,6 +52,22 @@ class FunnelPortalController extends Controller
 
         $isFirstStep = (int) $steps->first()->id === (int) $step->id;
         $selectedPricing = $this->syncSelectedPricingFromRequest($request, $funnel, $steps, $step, $isFirstStep);
+        
+        // Create funnel visit record for analytics
+        FunnelVisit::create([
+            'tenant_id' => $funnel->tenant_id,
+            'funnel_id' => $funnel->id,
+            'funnel_step_id' => $step->id,
+            'utm_source' => $utmSource,
+            'utm_medium' => $utmMedium,
+            'utm_campaign' => $utmCampaign,
+            'utm_term' => $utmTerm,
+            'utm_content' => $utmContent,
+            'utm_id' => $utmId,
+            'referrer' => $request->header('referer'),
+            'visited_at' => now(),
+        ]);
+        
         $tracking->trackStepViewed($funnel, $step, $request, [
             'is_first_step' => $isFirstStep,
         ]);

@@ -7,6 +7,7 @@ use App\Models\FunnelBuilderAsset;
 use App\Models\FunnelStep;
 use App\Models\FunnelStepRevision;
 use App\Services\FunnelTrackingService;
+use App\Services\UTMAnalyticsService;
 use App\Support\TenantPlanEnforcer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -177,6 +178,10 @@ class FunnelController extends Controller
 
         $events = $tracking->eventsForFunnel($funnel, array_merge($filters, ['per_page' => 15]));
 
+        // NEW: Add UTM analytics for this specific funnel
+        $utmAnalytics = new UTMAnalyticsService();
+        $sourcePerformance = $utmAnalytics->getSourcePerformanceForFunnel($funnel->id, $filters);
+
         return view('funnels.analytics', [
             'funnel' => $funnel->load('steps'),
             'analytics' => $analytics,
@@ -188,6 +193,8 @@ class FunnelController extends Controller
                 'event_name' => $request->query('event_name', ''),
             ],
             'supportedEvents' => $analytics['events_supported'] ?? [],
+            // NEW UTM data
+            'sourcePerformance' => $sourcePerformance,
         ]);
     }
 
