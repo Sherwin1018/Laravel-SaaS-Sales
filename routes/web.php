@@ -197,6 +197,12 @@ Route::middleware(['auth', 'verified', 'role:customer'])->group(function () {
     Route::get('/dashboard/customer', [DashboardController::class, 'customer'])->name('dashboard.customer');
 });
 
+// Lead verification routes - must be before other funnel routes to avoid conflicts
+Route::get('/funnels/lead/verify', [LeadVerificationController::class, 'verify'])->name('funnels.lead.verify');
+Route::get('/funnels/lead/verified', [LeadVerificationController::class, 'verified'])->name('funnels.lead.verified');
+Route::get('/f/{funnelSlug}/confirm-email', [LeadVerificationController::class, 'confirmEmail'])->name('funnels.confirm-email');
+Route::get('/f/{funnelSlug}/confirm-email/status', [LeadVerificationController::class, 'confirmEmailStatus'])->name('funnels.confirm-email.status');
+
 Route::get('/f/{funnelSlug}/{stepSlug?}', [FunnelPortalController::class, 'show'])->middleware('throttle:funnel-public-view')->name('funnels.portal.step');
 Route::get('/funnel/{funnelSlug}/{stepSlug?}', [FunnelPortalController::class, 'show'])->middleware('throttle:funnel-public-view')->name('funnels.portal.step.alias');
 Route::post('/f/{funnelSlug}/{stepSlug}/opt-in', [FunnelPortalController::class, 'optIn'])->middleware('throttle:funnel-public-submit')->name('funnels.portal.optin');
@@ -208,11 +214,5 @@ Route::post('/f/{funnelSlug}/{stepSlug}/offer', [FunnelPortalController::class, 
 Route::get('/register/paymongo/return/{signupIntent}', [PublicOnboardingController::class, 'paymongoReturn'])
     ->middleware('signed')
     ->name('register.paymongo.return');
-
-// Lead verification routes
-Route::post('/funnels/lead/verify', [LeadVerificationController::class, 'verify'])->name('funnels.lead.verify');
-Route::get('/funnels/lead/verified', [LeadVerificationController::class, 'verified'])->name('funnels.lead.verified');
-Route::get('/f/{funnelSlug}/confirm-email', [LeadVerificationController::class, 'confirmEmail'])->name('funnels.confirm-email');
-Route::get('/f/{funnelSlug}/confirm-email/status', [LeadVerificationController::class, 'confirmEmailStatus'])->name('funnels.confirm-email.status');
 
 Route::post('/webhooks/paymongo', PayMongoWebhookController::class)->name('webhooks.paymongo');

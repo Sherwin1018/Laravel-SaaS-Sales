@@ -53,7 +53,7 @@
         <script>
             (function () {
                 const statusEl = document.getElementById('verificationStatus');
-                const statusUrl = "{{ route('funnels.lead.confirm-email.status', ['funnelSlug' => $funnel->slug]) }}";
+                const statusUrl = "{{ route('funnels.confirm-email.status', ['funnelSlug' => $funnel->slug]) }}";
 
                 let polling = false;
 
