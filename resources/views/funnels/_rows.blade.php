@@ -19,6 +19,13 @@
             <a href="{{ route('funnels.analytics', $funnel) }}" style="color:#0F766E; text-decoration:none; font-weight:700;">
                 <i class="fas fa-chart-line"></i> Analytics
             </a>
+            <button type="button" class="utm-generator-btn" 
+                    data-funnel-id="{{ $funnel->id }}" 
+                    data-funnel-slug="{{ $funnel->slug }}" 
+                    data-funnel-name="{{ $funnel->name }}"
+                    style="background:none;border:none;color:#6B4A7A;cursor:pointer;font-weight:700;">
+                <i class="fas fa-link"></i> UTM
+            </button>
             <form method="POST" action="{{ route('funnels.destroy', $funnel) }}" data-confirm-message="Delete this funnel?">
                 @csrf
                 @method('DELETE')
