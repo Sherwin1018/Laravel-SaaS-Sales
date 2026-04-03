@@ -1,5 +1,6 @@
 @php
     $publishedFreeformCanvasWidth = 0;
+    $previewFreeformRightInset = 12;
     $initialLayout = is_array($step->layout_json ?? null) ? $step->layout_json : [];
     $initialRootItems = is_array($initialLayout['root'] ?? null) ? $initialLayout['root'] : [];
     if (count($initialRootItems) === 0 && is_array($initialLayout['sections'] ?? null)) {
@@ -25,8 +26,8 @@
     $initialCanvasWidthRaw = (int) ($initialEditorMeta['canvasWidth'] ?? 0);
     $initialCanvasInnerWidthRaw = (int) ($initialEditorMeta['canvasInnerWidth'] ?? 0);
     $publishedFreeformCanvasWidth = $initialCanvasWidthRaw > 0
-        ? max(0, $initialCanvasWidthRaw - 22)
-        : ($initialCanvasInnerWidthRaw > 0 ? max(0, $initialCanvasInnerWidthRaw - 20) : 0);
+        ? max(0, $initialCanvasWidthRaw)
+        : ($initialCanvasInnerWidthRaw > 0 ? max(0, $initialCanvasInnerWidthRaw) : 0);
     if ($publishedFreeformCanvasWidth <= 0) {
         $initialDerivedCanvasWidth = 0;
         foreach ($initialFreeformEls as $initialFreeformEl) {
@@ -53,6 +54,10 @@
         }
         $publishedFreeformCanvasWidth = $initialDerivedCanvasWidth;
     }
+
+    $portalHasFreeformCanvas = count($initialFreeformEls) > 0;
+
+    $previewIframeMode = (string) request()->query('preview_iframe') === '1';
 @endphp
 <!DOCTYPE html>
 <html lang="en">
@@ -81,13 +86,29 @@
             overflow-x: auto;
             overflow-y: visible;
         }
-        body.is-published .step-content--full { padding-top: 0; }
-        body.is-preview .step-content--full { padding: 10px; overflow-x: hidden; }
-        body.is-preview .builder-section--freeform { margin: 0; width: 100%; }
-        body.is-published .builder-section--freeform {
+        body.is-published:not(.portal-has-freeform-canvas) .step-content--full { padding-top: 0; }
+        /* Published freeform: match builder/preview — center canvas vertically; preview uses JS scale; live uses flex. */
+        body.is-published.portal-has-freeform-canvas .step-content--full {
+            min-height: 100vh;
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: stretch;
+            padding: 32px 1.5rem 48px;
+            box-sizing: border-box;
+        }
+        body.is-preview .step-content--full { padding: 10px; overflow-x: auto; overflow-y: visible; }
+        body.is-preview .builder-section--freeform {
             margin: 0 auto;
-            width: {{ $publishedFreeformCanvasWidth > 0 ? $publishedFreeformCanvasWidth . 'px' : '100%' }};
+            width: {{ $publishedFreeformCanvasWidth > 0 ? ($publishedFreeformCanvasWidth + $previewFreeformRightInset) . 'px' : '100%' }};
             max-width: none;
+        }
+        body.is-published .builder-section--freeform {
+            margin-left: auto;
+            margin-right: auto;
+            width: {{ $publishedFreeformCanvasWidth > 0 ? $publishedFreeformCanvasWidth . 'px' : '100%' }};
+            max-width: 100%;
         }
         .step-content--full .builder-section,
         .step-content--full .builder-row,
@@ -127,11 +148,11 @@
         .builder-section--freeform .builder-col-inner { overflow: visible; position: relative; }
         .builder-section--freeform .builder-el { margin-top: 0 !important; }
         .builder-section-inner { width: 100%; box-sizing: border-box; position: relative; }
-        .builder-row-inner { width: 100%; box-sizing: border-box; display: flex; flex-wrap: wrap; gap: 8px; }
-        .builder-col-inner { width: 100%; box-sizing: border-box; max-width: 100%; overflow: hidden; position: relative; }
+        .builder-row-inner { width: 100%; box-sizing: border-box; display: flex; flex-wrap: wrap; gap: 8px; position: relative; }
+        .builder-col-inner { width: 100%; box-sizing: border-box; max-width: 100%; overflow: visible; position: relative; min-height: 100%; }
         .builder-row { display: flex; gap: 8px; flex-wrap: wrap; padding: 6px; }
-        .builder-col { min-width: 240px; min-height: 24px; flex: 1 1 0; position: relative; overflow: hidden; background: #ffffff; }
-        .builder-col > .builder-col-inner > .builder-el { max-width: 100%; overflow: hidden; }
+        .builder-col { min-width: 0; min-height: 120px; flex: 1 1 0; position: relative; overflow: visible; background: #ffffff; }
+        .builder-col > .builder-col-inner > .builder-el { max-width: 100%; overflow: visible; }
         .builder-col.builder-col--abs { overflow: visible; }
         .builder-col.builder-col--abs > .builder-col-inner { overflow: visible; position: relative; }
         .builder-col.builder-col--abs > .builder-col-inner > .builder-el { max-width: none; overflow: visible; }
@@ -145,6 +166,10 @@
         .builder-text ol,
         .builder-text li { margin: 0; }
         .builder-img { display: block; max-width: 100%; height: auto; border-radius: 10px; object-fit: contain; object-position: top center; }
+        .builder-image-placeholder { width: 100%; min-height: 140px; border: 2px solid #6ea0ff; border-radius: 12px; background: linear-gradient(180deg, #ffffff, #fbfcff); display: flex; align-items: center; justify-content: center; box-sizing: border-box; }
+        .builder-image-placeholder__inner { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 18px; text-align: center; }
+        .builder-image-placeholder__plus { width: 58px; height: 58px; border-radius: 999px; background: #d9d9d9; color: #5f6368; display: flex; align-items: center; justify-content: center; font-size: 40px; font-weight: 300; line-height: 1; box-shadow: 0 6px 18px rgba(15, 23, 42, 0.16); }
+        .builder-image-placeholder__label { font-size: 14px; font-weight: 600; color: #5f6368; letter-spacing: 0.01em; }
         .builder-menu { width: 100%; }
         .builder-menu-list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; }
         .builder-menu-link { text-decoration: none; text-underline-offset: 3px; font: inherit; }
@@ -224,6 +249,86 @@
             display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px;
             border-radius: 999px; font-size: 12px; font-weight: 800; color: #1d4ed8; background: #dbeafe;
         }
+        .preview-toolbar-left{
+            display:flex;
+            align-items:center;
+            gap:12px;
+            min-width: 0;
+        }
+        .preview-device-switcher{
+            display:flex;
+            align-items:center;
+            gap:8px;
+            flex-wrap:wrap;
+            justify-content:flex-end;
+        }
+        .preview-device-btn{
+            appearance:none;
+            border:1px solid #e2e8f0;
+            background:#ffffff;
+            color:#0f172a;
+            border-radius:999px;
+            padding:6px 10px;
+            font-size:12px;
+            font-weight:800;
+            cursor:pointer;
+            box-shadow:none;
+            user-select:none;
+            line-height:1;
+        }
+        .preview-device-btn.is-active{
+            background:#240E35;
+            border-color:#240E35;
+            color:#fff;
+        }
+        .preview-iframe-shell{
+            width:100%;
+            display:flex;
+            justify-content:center;
+            align-items:flex-start;
+            margin:0;
+            padding:0 12px 24px;
+            background:#f8fafc;
+        }
+        .preview-iframe-shell iframe{
+            height:900px;
+            width:100%;
+            border:1px solid #e2e8f0;
+            border-radius:12px;
+            background:#ffffff;
+        }
+        /* Device-aware layout overrides for Preview Mode.
+           We key off `body[data-preview-device="..."]` so it works regardless of the
+           actual browser viewport width (like Google Sites device preview). */
+        body[data-preview-device="tablet"] .builder-row-inner{
+            flex-direction: column !important;
+        }
+        body[data-preview-device="tablet"] .builder-col{
+            flex: 0 0 100% !important;
+            width: 100% !important;
+        }
+        body[data-preview-device="tablet"] .builder-carousel-content-row{
+            flex-direction: column !important;
+        }
+        body[data-preview-device="tablet"] .builder-carousel-content-col{
+            min-width: 0 !important;
+            width: 100% !important;
+        }
+
+        body[data-preview-device="mobile"] .builder-row-inner{
+            flex-direction: column !important;
+        }
+        body[data-preview-device="mobile"] .builder-col{
+            flex: 0 0 100% !important;
+            width: 100% !important;
+        }
+        body[data-preview-device="mobile"] .builder-carousel-content-row{
+            flex-direction: column !important;
+        }
+        body[data-preview-device="mobile"] .builder-carousel-content-col{
+            min-width: 0 !important;
+            width: 100% !important;
+        }
         .preview-toolbar {
             position: relative;
             display: flex;
@@ -239,7 +344,7 @@
         }
     </style>
 </head>
-<body class="{{ ($isPreview ?? false) ? 'is-preview' : 'is-published' }}">
+<body class="{{ ($isPreview ?? false) ? 'is-preview' : 'is-published' }}{{ ($portalHasFreeformCanvas ?? false) ? ' portal-has-freeform-canvas' : '' }}">
     @php
         $isPreview = $isPreview ?? false;
         $layout = is_array($step->layout_json ?? null) ? $step->layout_json : [];
@@ -303,7 +408,7 @@
         $editorMeta = is_array($layout['__editor'] ?? null) ? $layout['__editor'] : [];
         $canvasWidthRaw = (int) ($editorMeta['canvasWidth'] ?? 0);
         $canvasInnerWidthRaw = (int) ($editorMeta['canvasInnerWidth'] ?? 0);
-        $editorCanvasWidth = $canvasWidthRaw > 0 ? max(0, $canvasWidthRaw - 22) : ($canvasInnerWidthRaw > 0 ? max(0, $canvasInnerWidthRaw - 20) : 0);
+        $editorCanvasWidth = $canvasWidthRaw > 0 ? max(0, $canvasWidthRaw) : ($canvasInnerWidthRaw > 0 ? max(0, $canvasInnerWidthRaw) : 0);
         if ($editorCanvasWidth <= 0) {
             $derivedCanvasWidth = 0;
             foreach ($freeformEls as $ffEl) {
@@ -734,12 +839,19 @@
     @endphp
 
     <div class="wrap">
-        @if($isPreview)
+        @if($isPreview && !$previewIframeMode)
         <div class="preview-toolbar">
-            <a class="btn secondary" href="{{ route('funnels.edit', $funnel) }}" style="padding:8px 14px; box-shadow:none;">
-                <i class="fas fa-arrow-left"></i> Back to Builder
-            </a>
-            <span class="preview-badge"><i class="fas fa-eye"></i> Preview Mode</span>
+            <div class="preview-toolbar-left">
+                <a class="btn secondary" href="{{ route('funnels.edit', $funnel) }}" style="padding:8px 14px; box-shadow:none;">
+                    <i class="fas fa-arrow-left"></i> Back to Builder
+                </a>
+                <span class="preview-badge"><i class="fas fa-eye"></i> Preview Mode</span>
+            </div>
+            <div class="preview-device-switcher" role="group" aria-label="Preview device">
+                <button type="button" class="preview-device-btn is-active" data-preview-device="desktop">Desktop</button>
+                <button type="button" class="preview-device-btn" data-preview-device="tablet">Tablet</button>
+                <button type="button" class="preview-device-btn" data-preview-device="mobile">Mobile</button>
+            </div>
         </div>
         @endif
 
@@ -751,6 +863,7 @@
             </div>
         @endif
 
+        @if(!$isPreview || $previewIframeMode)
         <div class="step-content--full">
             @if($hasBuilderLayout)
                 @foreach($renderSections as $section)
@@ -861,7 +974,7 @@
                                         }
                                         $colHeightStyle = $colMinHeight > 0 ? 'min-height:' . $colMinHeight . 'px;' : '';
                                         $freeformWidth = ($isFreeformCanvas && $editorCanvasWidth > 0) ? $editorCanvasWidth : (($isFreeformCanvas && $colMinWidth > 0) ? $colMinWidth : 0);
-                                        $colWidthStyle = $freeformWidth > 0 ? 'width:' . $freeformWidth . 'px;' : '';
+                                        $colWidthStyle = $freeformWidth > 0 ? 'width:' . $freeformWidth . 'px;margin-left:auto;margin-right:auto;' : '';
                                     @endphp
                                     <div class="builder-col{{ $hasAbsEl ? ' builder-col--abs' : '' }}" style="{{ $colStyle }}{{ $colHeightStyle }}{{ $colWidthStyle }}">
                                         <div class="builder-col-inner" @if($colInnerMax !== '') style="max-width: {{ $colInnerMax }}; margin: 0 auto;" @endif>
@@ -893,10 +1006,21 @@
                                                 if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $buttonContainerBg)) {
                                                     $buttonContainerBg = '';
                                                 }
-                                                $btnWrapStyle = ($type === 'button' ? ($alignStyle . ($buttonContainerBg !== '' ? 'background-color:' . $buttonContainerBg . ';' : '')) : '');
+                                                $hasButtonBoxSizing = $type === 'button' && (
+                                                    !empty(trim((string) ($rawStyle['width'] ?? '')))
+                                                    || !empty(trim((string) ($rawStyle['height'] ?? '')))
+                                                );
+                                                $btnWrapStyle = ($type === 'button' ? (($style !== '' ? ($style . ';') : '') . $alignStyle . ($buttonContainerBg !== '' ? 'background-color:' . $buttonContainerBg . ';' : '')) : '');
                                                 $iconWrapStyle = ($type === 'icon' ? $alignStyle : '');
+                                                $imageWrapStyle = ($style !== '' ? ($style . ';') : '');
                                                 $mediaWrapStyle = ($style !== '' ? ($style . ';') : '') . $alignStyle;
-                                                $btnInnerStyle = $contentStyle . ($type === 'button' && $widthBehavior === 'fill' ? (($contentStyle !== '' ? ';' : '') . ' width:100%;display:block;box-sizing:border-box;text-align:center;') : '');
+                                                $btnInnerStyle = $contentStyle;
+                                                if ($type === 'button' && ($widthBehavior === 'fill' || $hasButtonBoxSizing)) {
+                                                    $btnInnerStyle .= ($btnInnerStyle !== '' ? ';' : '') . 'width:100%;display:flex;align-items:center;justify-content:center;box-sizing:border-box;text-align:center;';
+                                                }
+                                                if ($type === 'button' && $hasButtonBoxSizing) {
+                                                    $btnInnerStyle .= 'height:100%;';
+                                                }
                                                 $offsetX = (int) ($settings['offsetX'] ?? 0);
                                                 if ($offsetX !== 0) {
                                                     $mediaWrapStyle .= 'transform: translateX(' . $offsetX . 'px);';
@@ -908,7 +1032,9 @@
                                                 $mediaClipStyle = ($cropTop || $cropRight || $cropBottom || $cropLeft)
                                                     ? ('clip-path: inset(' . $cropTop . 'px ' . $cropRight . 'px ' . $cropBottom . 'px ' . $cropLeft . 'px);')
                                                     : '';
+                                                $hasFixedWidth = !empty(trim((string) ($rawStyle['width'] ?? '')));
                                                 $hasFixedHeight = !empty(trim((string) ($rawStyle['height'] ?? '')));
+                                                $hasSizedImageBox = $type === 'image' && $hasFixedHeight;
                                                 $isAbsPos = (trim((string) ($settings['positionMode'] ?? '')) === 'absolute') || (trim((string) ($rawStyle['position'] ?? '')) === 'absolute');
                                                 $absPosStyle = '';
                                                 if ($isAbsPos) {
@@ -938,7 +1064,13 @@
                                                 } else {
                                                     if ($type === 'button') { $elWrapStyle .= $btnWrapStyle; }
                                                     elseif ($type === 'icon') { $elWrapStyle .= $iconWrapStyle; }
-                                                    elseif ($type === 'image' || $type === 'video') { $elWrapStyle .= $mediaWrapStyle; }
+                                                    elseif ($type === 'image') {
+                                                        $elWrapStyle .= $imageWrapStyle;
+                                                        if ($hasSizedImageBox) {
+                                                            $elWrapStyle .= ($elWrapStyle !== '' ? ';' : '') . 'overflow:hidden;';
+                                                        }
+                                                    }
+                                                    elseif ($type === 'video') { $elWrapStyle .= $mediaWrapStyle; }
                                                     elseif ($type === 'form') { $elWrapStyle .= $alignStyle; }
                                                 }
                                             @endphp
@@ -951,13 +1083,20 @@
                                                     @if($src !== '')
                                                         @php
                                                             $imgStyle = $mediaClipStyle;
-                                                            if ($hasFixedHeight) {
+                                                            if ($hasSizedImageBox) {
                                                                 $imgStyle .= ($imgStyle !== '' ? ';' : '') . 'width:100%;height:100%;object-fit:cover;';
+                                                            } elseif ($hasFixedWidth) {
+                                                                $imgStyle .= ($imgStyle !== '' ? ';' : '') . 'width:100%;height:auto;object-fit:contain;object-position:top center;display:block;';
                                                             }
                                                         @endphp
                                                         <img class="builder-img" src="{{ $src }}" alt="{{ $alt !== '' ? $alt : 'Image' }}" @if($imgStyle !== '') style="{{ $imgStyle }}" @endif>
                                                     @else
-                                                        <div style="padding:12px;border:1px dashed #94a3b8;border-radius:8px;text-align:center;color:#94a3b8;font-size:13px;min-height:60px;display:flex;align-items:center;justify-content:center;width:100%;box-sizing:border-box;">Image placeholder</div>
+                                                        <div class="builder-image-placeholder">
+                                                            <div class="builder-image-placeholder__inner">
+                                                                <div class="builder-image-placeholder__plus">+</div>
+                                                                <div class="builder-image-placeholder__label">Click to upload image</div>
+                                                            </div>
+                                                        </div>
                                                     @endif
                                                 @elseif($type === 'button')
                                                     @php
@@ -1853,6 +1992,11 @@
                 @include('funnels.portal._step-actions', ['funnel' => $funnel, 'step' => $step, 'nextStep' => $nextStep, 'isPreview' => $isPreview])
             @endif
         </div>
+        @else
+        <div class="preview-iframe-shell">
+            <iframe id="previewDeviceFrame" title="Preview device viewport" scrolling="auto" loading="lazy"></iframe>
+        </div>
+        @endif
     </div>
     <script>
     (function(){
@@ -2400,24 +2544,129 @@
             img.addEventListener("error",function(){scheduleAbsoluteLayoutSync();},{once:true});
         });
         var isPreview={{ ($isPreview ?? false) ? 'true' : 'false' }};
-        var editorCanvasWidth={{ (int) ($editorCanvasWidth ?? 0) }};
-        if(isPreview&&editorCanvasWidth>0){
-            var measurePreviewContentHeight=function(content){
-                if(!content||!content.getBoundingClientRect)return 0;
-                var rootRect=content.getBoundingClientRect();
-                var maxBottom=Math.max(content.scrollHeight||0,content.offsetHeight||0);
-                Array.from(content.querySelectorAll("*")||[]).forEach(function(node){
-                    if(!node||!node.getBoundingClientRect)return;
-                    var tag=String(node.tagName||"").toLowerCase();
-                    if(tag==="script"||tag==="style")return;
-                    var rect=node.getBoundingClientRect();
-                    if((rect.width<=0&&rect.height<=0)||!isFinite(rect.bottom))return;
-                    var bottom=rect.bottom-rootRect.top;
-                    if(bottom>maxBottom)maxBottom=bottom;
+        var editorCanvasWidth={{ (int) (($editorCanvasWidth ?? 0) + (($isPreview ?? false) ? $previewFreeformRightInset : 0)) }};
+        var previewDeviceWidths={desktop:null,tablet:768,mobile:375};
+        var previewDevice="desktop";
+        if(isPreview){
+            try{
+                var allowed={desktop:1,tablet:1,mobile:1};
+                var sp=new URLSearchParams(window.location.search||"");
+                var q=sp.get("preview_device")||sp.get("previewDevice")||sp.get("device")||"";
+                q=String(q||"").toLowerCase();
+                if(allowed[q])previewDevice=q;
+            }catch(_e){}
+            try{
+                var stored=localStorage.getItem("fbPreviewDevice");
+                stored=String(stored||"").toLowerCase();
+                if(stored==="tablet"||stored==="mobile"||stored==="desktop")previewDevice=stored;
+            }catch(_e){}
+
+            document.body.setAttribute("data-preview-device", previewDevice);
+            // Outer-mode only: keep the iframe synced with the selected device.
+            var maybeIframe=document.getElementById("previewDeviceFrame");
+            if(maybeIframe){
+                var deviceWidthMap={desktop:"100%",tablet:"768px",mobile:"375px"};
+                maybeIframe.style.width=deviceWidthMap[previewDevice]||"100%";
+                var frameParams=new URLSearchParams(window.location.search||"");
+                frameParams.set("preview_iframe","1");
+                frameParams.set("preview_device",previewDevice);
+                maybeIframe.src=window.location.pathname+"?"+frameParams.toString();
+            }
+
+            var deviceBtns=Array.from(document.querySelectorAll("[data-preview-device]")||[]);
+            var setActiveDeviceUI=function(){
+                deviceBtns.forEach(function(btn){
+                    var d=String(btn.getAttribute("data-preview-device")||"desktop");
+                    if(d===previewDevice)btn.classList.add("is-active");
+                    else btn.classList.remove("is-active");
                 });
-                return Math.ceil(maxBottom);
             };
-            var applyPreviewScale=function(){
+            if(deviceBtns.length){
+                setActiveDeviceUI();
+                deviceBtns.forEach(function(btn){
+                    btn.addEventListener("click",function(){
+                        var d=String(btn.getAttribute("data-preview-device")||"desktop").toLowerCase();
+                        if(!(d==="desktop"||d==="tablet"||d==="mobile"))d="desktop";
+                        previewDevice=d;
+                        try{localStorage.setItem("fbPreviewDevice",previewDevice);}catch(_e){}
+                        document.body.setAttribute("data-preview-device", previewDevice);
+                        setActiveDeviceUI();
+                        var iframe=document.getElementById("previewDeviceFrame");
+                        if(iframe){
+                            var deviceWidthMap={desktop:"100%",tablet:"768px",mobile:"375px"};
+                            iframe.style.width=deviceWidthMap[previewDevice]||"100%";
+                            var frameParams=new URLSearchParams(window.location.search||"");
+                            frameParams.set("preview_iframe","1");
+                            frameParams.set("preview_device",previewDevice);
+                            iframe.src=window.location.pathname+"?"+frameParams.toString();
+                        }
+                        if(typeof window.__fbSchedulePreviewScale==="function"){
+                            window.__fbSchedulePreviewScale();
+                        }
+                    });
+                });
+            }
+        }
+        var measurePreviewContentHeight=function(content){
+            if(!content||!content.getBoundingClientRect)return 0;
+            var rootRect=content.getBoundingClientRect();
+            var maxBottom=Math.max(content.scrollHeight||0,content.offsetHeight||0);
+            Array.from(content.querySelectorAll("*")||[]).forEach(function(node){
+                if(!node||!node.getBoundingClientRect)return;
+                var tag=String(node.tagName||"").toLowerCase();
+                if(tag==="script"||tag==="style")return;
+                var rect=node.getBoundingClientRect();
+                if((rect.width<=0&&rect.height<=0)||!isFinite(rect.bottom))return;
+                var bottom=rect.bottom-rootRect.top;
+                if(bottom>maxBottom)maxBottom=bottom;
+            });
+            return Math.ceil(maxBottom);
+        };
+        var useZoom=function(){
+            try{
+                var test=document.createElement("div");
+                test.style.zoom="1";
+                return test.style.zoom!=="";
+            }catch(_e){}
+            return false;
+        }();
+        function applyCanvasScalePublished(){
+            var content=document.querySelector(".step-content--full");
+            if(!content)return;
+            syncAbsoluteColumnHeights();
+            document.body.style.margin="0";
+            document.body.style.display="block";
+            document.body.style.flexDirection="";
+            document.body.style.alignItems="";
+            document.body.style.minHeight="";
+            content.style.transform="none";
+            content.style.height="auto";
+            content.style.width=editorCanvasWidth+"px";
+            content.style.maxWidth="none";
+            content.style.boxSizing="border-box";
+            var targetPad=10;
+            var viewportW=document.documentElement?document.documentElement.clientWidth:window.innerWidth;
+            var availW=viewportW-(targetPad*2);
+            if(availW<200)availW=viewportW;
+            var scale=availW/editorCanvasWidth;
+            if(scale<=0)scale=1;
+            if(scale>3.0)scale=3.0;
+            content.style.padding=(targetPad/scale)+"px";
+            if(useZoom){
+                content.style.zoom=String(scale);
+                content.style.transform="none";
+                content.style.height="auto";
+            }else{
+                content.style.zoom="";
+                var h=measurePreviewContentHeight(content);
+                content.style.transformOrigin="top left";
+                content.style.transform="scale("+scale+")";
+                content.style.height=(h*scale)+"px";
+            }
+            document.body.style.overflowX="hidden";
+        }
+        if(isPreview&&editorCanvasWidth>0){
+            var applyCanvasScale=function(){
                 var content=document.querySelector(".step-content--full");
                 if(!content)return;
                 syncAbsoluteColumnHeights();
@@ -2426,35 +2675,69 @@
                 content.style.width=editorCanvasWidth+"px";
                 content.style.maxWidth="none";
                 var targetPad=10;
-                var vw=document.documentElement?document.documentElement.clientWidth:window.innerWidth;
-                var availW=vw-(targetPad*2);
-                if(availW<200)availW=window.innerWidth;
+                var viewportW=document.documentElement?document.documentElement.clientWidth:window.innerWidth;
+                var deviceW=previewDeviceWidths[previewDevice];
+                var baseW=(deviceW&&deviceW>0)?deviceW:viewportW;
+                var availW=baseW-(targetPad*2);
+                if(availW<200)availW=viewportW-(targetPad*2);
+                if(availW<200)availW=viewportW;
                 var scale=availW/editorCanvasWidth;
                 if(scale<=0)scale=1;
+                if(scale>3.0)scale=3.0;
                 content.style.padding=(targetPad/scale)+"px";
-                var h=measurePreviewContentHeight(content);
-                content.style.transformOrigin="top left";
-                content.style.transform="scale("+scale+")";
-                content.style.height=(h*scale)+"px";
+                // Using `zoom` makes the browser reflow based on scaled layout, which is
+                // what we need for tablet/mobile "layout adjustment" in preview.
+                // Fallback to `transform` when zoom is not supported.
+                if(useZoom){
+                    content.style.zoom=String(scale);
+                    content.style.transform="none";
+                    content.style.height="auto";
+                }else{
+                    content.style.zoom="";
+                    var h=measurePreviewContentHeight(content);
+                    content.style.transformOrigin="top left";
+                    content.style.transform="scale("+scale+")";
+                    content.style.height=(h*scale)+"px";
+                }
                 document.body.style.overflowX="hidden";
             };
-            var schedulePreviewScale=function(){
+            var scheduleCanvasScale=function(){
                 window.requestAnimationFrame(function(){
                     window.requestAnimationFrame(function(){
-                        applyPreviewScale();
+                        applyCanvasScale();
                     });
                 });
             };
-            schedulePreviewScale();
-            window.addEventListener("resize",function(){schedulePreviewScale();});
-            window.addEventListener("load",function(){schedulePreviewScale();});
+            window.__fbSchedulePreviewScale=scheduleCanvasScale;
+            scheduleCanvasScale();
+            window.addEventListener("resize",function(){scheduleCanvasScale();});
+            window.addEventListener("load",function(){scheduleCanvasScale();});
             if(document.fonts&&document.fonts.ready&&typeof document.fonts.ready.then==="function"){
-                document.fonts.ready.then(function(){schedulePreviewScale();}).catch(function(){});
+                document.fonts.ready.then(function(){scheduleCanvasScale();}).catch(function(){});
             }
             Array.from(document.images||[]).forEach(function(img){
                 if(!img||img.complete)return;
-                img.addEventListener("load",function(){schedulePreviewScale();},{once:true});
-                img.addEventListener("error",function(){schedulePreviewScale();},{once:true});
+                img.addEventListener("load",function(){scheduleCanvasScale();},{once:true});
+                img.addEventListener("error",function(){scheduleCanvasScale();},{once:true});
+            });
+        }else if(!isPreview&&editorCanvasWidth>0){
+            var schedulePublishedScale=function(){
+                window.requestAnimationFrame(function(){
+                    window.requestAnimationFrame(function(){
+                        applyCanvasScalePublished();
+                    });
+                });
+            };
+            schedulePublishedScale();
+            window.addEventListener("resize",function(){schedulePublishedScale();});
+            window.addEventListener("load",function(){schedulePublishedScale();});
+            if(document.fonts&&document.fonts.ready&&typeof document.fonts.ready.then==="function"){
+                document.fonts.ready.then(function(){schedulePublishedScale();}).catch(function(){});
+            }
+            Array.from(document.images||[]).forEach(function(img){
+                if(!img||img.complete)return;
+                img.addEventListener("load",function(){schedulePublishedScale();},{once:true});
+                img.addEventListener("error",function(){schedulePublishedScale();},{once:true});
             });
         }
     })();

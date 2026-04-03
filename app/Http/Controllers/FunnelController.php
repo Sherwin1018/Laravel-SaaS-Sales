@@ -6,6 +6,7 @@ use App\Models\Funnel;
 use App\Models\FunnelBuilderAsset;
 use App\Models\FunnelStep;
 use App\Models\FunnelStepRevision;
+use App\Models\FunnelTemplate;
 use App\Services\FunnelTrackingService;
 use App\Support\TenantPlanEnforcer;
 use Illuminate\Http\Request;
@@ -67,6 +68,7 @@ class FunnelController extends Controller
 
         try {
             app(TenantPlanEnforcer::class)->ensureCanCreateFunnel($user->tenant);
+
             $funnel = Funnel::create([
                 'tenant_id' => $user->tenant_id,
                 'created_by' => $user->id,
@@ -132,7 +134,100 @@ class FunnelController extends Controller
             'stepLayouts' => FunnelStep::LAYOUTS,
             'stepTemplates' => FunnelStep::TEMPLATES,
             'defaultStepId' => $defaultStep?->id,
+            'builderSharedTemplates' => $this->builderSharedTemplatesPayload(),
+            'builderSharedTemplatesUrl' => route('funnels.shared-templates'),
         ]);
+    }
+
+    public function sharedTemplates()
+    {
+        return response()->json([
+            'templates' => $this->builderSharedTemplatesPayload(),
+        ]);
+    }
+
+    private function builderSharedTemplatesPayload(): array
+    {
+        return FunnelTemplate::query()
+            ->where('status', 'published')
+            ->with(['steps' => fn ($query) => $query->orderBy('position')])
+            ->latest('published_at')
+            ->latest('id')
+            ->get()
+            ->map(function (FunnelTemplate $template) {
+                $steps = $template->steps
+                    ->sortBy('position')
+                    ->values()
+                    ->map(function ($step) {
+                        return [
+                            'id' => $step->id,
+                            'title' => $step->title,
+                            'slug' => $step->slug,
+                            'type' => $step->type,
+                            'subtitle' => $step->subtitle,
+                            'content' => $step->content,
+                            'cta_label' => $step->cta_label,
+                            'price' => $step->price,
+                            'position' => $step->position,
+                            'is_active' => (bool) $step->is_active,
+                            'template' => $step->template,
+                            'template_data' => $step->template_data,
+                            'step_tags' => $step->step_tags,
+                            'background_color' => $step->background_color,
+                            'button_color' => $step->button_color,
+                            'layout_style' => $step->layout_style,
+                            'layout_json' => $step->layout_json,
+                        ];
+                    })
+                    ->all();
+
+                $firstType = (string) data_get($steps, '0.type', 'custom');
+                $preview = in_array($firstType, ['checkout', 'sales'], true)
+                    ? 'pricing'
+                    : (in_array($firstType, ['opt_in', 'form'], true) ? 'lead' : 'hero');
+                $stepTypeTags = collect($steps)
+                    ->pluck('type')
+                    ->filter()
+                    ->map(fn ($type) => strtoupper(str_replace('_', ' ', (string) $type)))
+                    ->unique()
+                    ->take(2)
+                    ->values()
+                    ->all();
+
+                return [
+                    'id' => 'shared_template_' . $template->id,
+                    'template_id' => $template->id,
+                    'name' => $template->name,
+                    'description' => $template->description ?: 'Saved super-admin funnel template.',
+                    'status' => (string) $template->status,
+                    'update_url' => null,
+                    'preview' => $preview,
+                    'preview_image' => $template->preview_image,
+                    'tags' => $this->templateCardTags($template, count($steps), $stepTypeTags),
+                    'steps' => $steps,
+                ];
+            })
+            ->all();
+    }
+
+    private function templateCardTags(FunnelTemplate $template, int $stepCount, array $fallbackStepTypeTags): array
+    {
+        $custom = collect($template->template_tags ?? [])
+            ->map(fn ($tag) => trim((string) $tag))
+            ->filter()
+            ->take(6)
+            ->values()
+            ->all();
+
+        if (!empty($custom)) {
+            return $custom;
+        }
+
+        return array_values(array_filter(array_merge(
+            [$stepCount . ' Pages'],
+            $fallbackStepTypeTags,
+            [strtoupper((string) $template->status)]
+        )));
     }
 
     public function preview(Request $request, Funnel $funnel, ?FunnelStep $step = null)

@@ -54,6 +54,21 @@
 #canvas{overflow-x:hidden;overflow-y:auto;box-sizing:border-box}
 #canvas .sec,#canvas .row,#canvas .col,#canvas .el,#canvas .sec-inner,#canvas .row-inner,#canvas .col-inner{max-width:100%;box-sizing:border-box}
 #canvas img,#canvas video,#canvas iframe{max-width:100%;height:auto}
+.fb-image-placeholder{width:100%;min-height:140px;border:2px solid #6ea0ff;border-radius:12px;background:linear-gradient(180deg,#ffffff,#fbfcff);display:block;position:relative;box-sizing:border-box;overflow:hidden}
+.fb-image-placeholder--compact{min-height:84px;border-width:1px;border-style:dashed;border-color:#b9c9ea;border-radius:10px;background:#fcfdff}
+.fb-image-placeholder__center{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:18px}
+.fb-image-placeholder__plus{width:58px;height:58px;border-radius:999px;background:#d9d9d9;color:#5f6368;display:flex;align-items:center;justify-content:center;font-size:40px;font-weight:300;line-height:1;box-shadow:0 6px 18px rgba(15,23,42,.16);border:none}
+.fb-image-placeholder__center .fb-image-placeholder__plus{cursor:pointer}
+.fb-image-placeholder--compact .fb-image-placeholder__center{justify-content:flex-start;gap:12px;position:static;padding:18px;height:100%}
+.fb-image-placeholder--compact .fb-image-placeholder__plus{width:34px;height:34px;font-size:26px;box-shadow:none;background:#ffffff;border:1px solid #240E35;color:#240E35;cursor:default}
+.fb-image-placeholder__label{position:absolute;left:16px;right:16px;bottom:18px;text-align:center;font-size:14px;font-weight:600;color:#5f6368;letter-spacing:.01em;pointer-events:none}
+.fb-image-placeholder--compact .fb-image-placeholder__label{position:static;text-align:left;font-size:13px;color:#1f2937;font-weight:500}
+.fb-image-placeholder--actionable{cursor:pointer}
+.fb-image-placeholder__menu{position:fixed;left:0;top:0;transform:none;margin-top:0;display:flex;flex-direction:column;gap:10px;min-width:230px;padding:14px;border:2px solid #240E35;border-radius:16px;background:rgba(255,255,255,.98);box-shadow:0 22px 48px rgba(36,14,53,.26);z-index:2200;backdrop-filter:blur(8px)}
+.fb-image-placeholder__menu[hidden]{display:none}
+.fb-image-placeholder__menu::before{content:"Choose image";font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#6B4A7A}
+.fb-image-placeholder__menu button{width:100%;min-height:46px;border:2px solid #D8C8EA;border-radius:12px;background:#ffffff;color:#240E35;padding:12px 14px;text-align:left;font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 6px 14px rgba(36,14,53,.08);transition:transform .12s ease,box-shadow .16s ease,border-color .16s ease,background .16s ease}
+.fb-image-placeholder__menu button:hover{background:#F8F5FB;border-color:#240E35;box-shadow:0 10px 22px rgba(36,14,53,.14);transform:translateY(-1px)}
 #fbSettingsCard{display:flex;flex-direction:column;max-height:calc(100vh - 120px);min-height:0}
 #fbSettingsCard .fb-h{flex-shrink:0}
 #fbSettingsCard #settings{overflow-y:auto;overflow-x:hidden;flex:1;min-height:0;padding-right:4px}
@@ -532,29 +547,40 @@
 <div class="fb-top">
     <div><strong>{{ $funnel->name }}</strong> <span style="font-size:12px;opacity:.9;">({{ ucfirst($funnel->status) }})</span></div>
     <div class="fb-actions">
-        <form method="POST" action="{{ route('funnels.update', $funnel) }}" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+        <form method="POST" action="{{ $builderUpdateUrl ?? route('funnels.update', $funnel) }}" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
             @csrf
             @method('PUT')
             <input type="hidden" name="name" value="{{ $funnel->name }}">
-            <input type="hidden" name="description" value="{{ $funnel->description }}">
+            @if(($builderMode ?? 'funnel') === 'template')
+                <input
+                    type="text"
+                    name="description"
+                    value="{{ old('description', $funnel->description) }}"
+                    placeholder="Template description"
+                    style="min-width:320px;padding:6px 8px;border:1px solid #E6E1EF;border-radius:8px;font-size:12px;"
+                >
+            @else
+                <input type="hidden" name="description" value="{{ $funnel->description }}">
+            @endif
             <input type="hidden" name="status" value="{{ $funnel->status }}">
             <input
                 type="text"
                 name="default_tags"
-                value="{{ old('default_tags', implode(', ', $funnel->default_tags ?? [])) }}"
-                placeholder="Funnel tags: e.g. webinar, q1-campaign"
+                value="{{ old('default_tags', $builderTagValue ?? implode(', ', $funnel->default_tags ?? [])) }}"
+                placeholder="{{ $builderTagPlaceholder ?? 'Funnel tags: e.g. webinar, q1-campaign' }}"
+                @if($builderTagInputDisabled ?? false) disabled @endif
                 style="min-width:280px;padding:6px 8px;border:1px solid #E6E1EF;border-radius:8px;font-size:12px;"
             >
-            <button class="fb-btn" type="submit"><i class="fas fa-tags"></i> Save Tags</button>
+            <button class="fb-btn" type="submit"><i class="fas fa-tags"></i> {{ ($builderMode ?? 'funnel') === 'template' ? 'Save Template' : 'Save Tags' }}</button>
         </form>
         <button id="saveBtn" class="fb-btn primary" type="button"><i class="fas fa-save"></i> Save</button>
         <button id="previewBtn" class="fb-btn" type="button"><i class="fas fa-eye"></i> Preview</button>
         @if($funnel->status === 'published')
-            <form method="POST" action="{{ route('funnels.unpublish', $funnel) }}">@csrf<button class="fb-btn danger" type="submit"><i class="fas fa-ban"></i> Unpublish</button></form>
+            <form method="POST" action="{{ $builderUnpublishUrl ?? route('funnels.unpublish', $funnel) }}" id="builderUnpublishForm">@csrf<button class="fb-btn danger" type="submit"><i class="fas fa-ban"></i> Unpublish</button></form>
         @else
-            <form method="POST" action="{{ route('funnels.publish', $funnel) }}">@csrf<button class="fb-btn success" type="submit"><i class="fas fa-upload"></i> Publish</button></form>
+            <form method="POST" action="{{ $builderPublishUrl ?? route('funnels.publish', $funnel) }}" id="builderPublishForm">@csrf<button class="fb-btn success" type="submit" id="builderPublishBtn"><i class="fas fa-upload"></i> {{ ($builderMode ?? 'funnel') === 'template' ? 'Save as Template' : 'Publish' }}</button></form>
         @endif
-        <a href="{{ route('funnels.index') }}" class="fb-btn"><i class="fas fa-door-open"></i> Exit Builder</a>
+        <a href="{{ $builderExitUrl ?? route('funnels.index') }}" class="fb-btn"><i class="fas fa-door-open"></i> Exit Builder</a>
     </div>
 </div>
 
@@ -746,6 +772,27 @@
         </div>
     </div>
 </div>
+<div class="fb-modal" id="fbSharedTemplateEditModal" aria-hidden="true">
+    <div class="fb-modal-card" role="dialog" aria-modal="true" aria-labelledby="fbSharedTemplateEditTitle">
+        <div class="fb-modal-title" id="fbSharedTemplateEditTitle">Edit saved template</div>
+        <p class="fb-modal-desc">Update the builder card description and the chips shown under it.</p>
+        <div style="display:grid;gap:14px;">
+            <div>
+                <label for="fbSharedTemplateEditDescription" style="display:block;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#5d4476;margin-bottom:6px;">Description</label>
+                <textarea id="fbSharedTemplateEditDescription" rows="4" style="width:100%;border:1px solid #d7cce8;border-radius:14px;padding:12px 14px;font:inherit;resize:vertical;background:#fff;color:#240e35;" placeholder="What this template is for"></textarea>
+            </div>
+            <div>
+                <label for="fbSharedTemplateEditTags" style="display:block;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#5d4476;margin-bottom:6px;">Card chips</label>
+                <input id="fbSharedTemplateEditTags" type="text" style="width:100%;border:1px solid #d7cce8;border-radius:14px;padding:12px 14px;font:inherit;background:#fff;color:#240e35;" placeholder="5 Pages, Landing, Opt In, Published">
+                <div style="margin-top:6px;font-size:12px;color:#7a6890;">Use commas to separate each chip.</div>
+            </div>
+        </div>
+        <div class="fb-modal-actions" style="margin-top:18px;">
+            <button type="button" class="fb-btn" id="fbSharedTemplateEditCancel">Cancel</button>
+            <button type="button" class="fb-btn primary" id="fbSharedTemplateEditSave">Save Changes</button>
+        </div>
+    </div>
+</div>
 @endsection
 
 @section('scripts')
@@ -787,20 +834,22 @@
 @endphp
 <script>
 (function(){
-const saveUrl="{{ route('funnels.builder.layout.save',$funnel) }}";
-const assetLibraryUrl="{{ route('funnels.builder.assets.index',$funnel) }}";
-const assetLibraryDeleteUrl="{{ route('funnels.builder.assets.destroy',$funnel) }}";
-const uploadUrl="{{ route('funnels.builder.image.upload',$funnel) }}";
-const previewTpl="{{ route('funnels.preview',['funnel'=>$funnel,'step'=>'__STEP__']) }}";
-const stepVersionTpl="{{ route('funnels.steps.versions.store',['funnel'=>$funnel,'step'=>'__STEP__']) }}";
-const stepStoreUrl="{{ route('funnels.steps.store',$funnel) }}";
-const stepUpdateTpl="{{ route('funnels.steps.update',['funnel'=>$funnel,'step'=>'__STEP__']) }}";
-const stepDeleteTpl="{{ route('funnels.steps.destroy',['funnel'=>$funnel,'step'=>'__STEP__']) }}";
-const stepReorderUrl="{{ route('funnels.steps.reorder',$funnel) }}";
+const saveUrl=@json($builderSaveUrl ?? route('funnels.builder.layout.save',$funnel));
+const assetLibraryUrl=@json($builderAssetLibraryUrl ?? route('funnels.builder.assets.index',$funnel));
+const assetLibraryDeleteUrl=@json($builderAssetDeleteUrl ?? route('funnels.builder.assets.destroy',$funnel));
+const uploadUrl=@json($builderUploadUrl ?? route('funnels.builder.image.upload',$funnel));
+const previewTpl=@json($builderPreviewUrlTemplate ?? route('funnels.preview',['funnel'=>$funnel,'step'=>'__STEP__']));
+const stepVersionTpl=@json($builderStepVersionUrlTemplate ?? route('funnels.steps.versions.store',['funnel'=>$funnel,'step'=>'__STEP__']));
+const stepStoreUrl=@json($builderStepStoreUrl ?? route('funnels.steps.store',$funnel));
+const stepUpdateTpl=@json($builderStepUpdateUrlTemplate ?? route('funnels.steps.update',['funnel'=>$funnel,'step'=>'__STEP__']));
+const stepDeleteTpl=@json($builderStepDeleteUrlTemplate ?? route('funnels.steps.destroy',['funnel'=>$funnel,'step'=>'__STEP__']));
+const stepReorderUrl=@json($builderStepReorderUrl ?? route('funnels.steps.reorder',$funnel));
 const csrf="{{ csrf_token() }}";
 const funnelSlug=@json($funnel->slug);
-const funnelStepUrlTpl=@json(route('funnels.portal.step',['funnelSlug'=>$funnel->slug,'stepSlug'=>'__STEP__']));
+const funnelStepUrlTpl=@json($builderPublicStepUrlTemplate ?? route('funnels.portal.step',['funnelSlug'=>$funnel->slug,'stepSlug'=>'__STEP__']));
 const steps=@json($builderSteps);
+const sharedTemplatesUrl=@json($builderSharedTemplatesUrl ?? null);
+let sharedFunnelTemplates=@json($builderSharedTemplates ?? []);
 const state={sid:{{ (int)($defaultStepId??0) }}||((steps[0]&&steps[0].id)||null),layout:null,sel:null,carouselSel:null,clipboard:null,pasteAnchor:null,editingEl:null,mediaLoading:new Set()};
 const fonts=[
     {value:"Inter, sans-serif",label:"Inter"},
@@ -3100,6 +3149,21 @@ function confirmTemplateApply(message){
         document.addEventListener("keydown",onKey);
     });
 }
+function bindSharedTemplateEditModal(){
+    var modal=document.getElementById("fbSharedTemplateEditModal");
+    var btnCancel=document.getElementById("fbSharedTemplateEditCancel");
+    var btnSave=document.getElementById("fbSharedTemplateEditSave");
+    if(!modal||!btnCancel||!btnSave)return;
+    btnCancel.addEventListener("click",closeSharedTemplateEditModal);
+    btnSave.addEventListener("click",saveSharedTemplateEdit);
+    modal.addEventListener("click",function(e){
+        if(e.target===modal)closeSharedTemplateEditModal();
+    });
+    document.addEventListener("keydown",function(e){
+        var k=String(e.key||"").toLowerCase();
+        if(k==="escape"&&modal.classList.contains("open"))closeSharedTemplateEditModal();
+    });
+}
 function applyPageTemplate(tpl){
     var s=cur();
     if(!s||!tpl||typeof tpl.build!=="function")return;
@@ -3218,7 +3282,7 @@ function applyFunnelTemplatePack(pack){
     confirmTemplateApply(msg).then(function(ok){
         if(!ok)return;
         saveToHistory();
-        ensurePackStepsExist(pack).then(function(createdTypes){
+        return ensurePackStepsExist(pack).then(function(createdTypes){
             var currentStepId=current?+current.id:null;
             var nextStateLayout=null;
             steps.forEach(function(step){
@@ -3246,15 +3310,238 @@ function applyFunnelTemplatePack(pack){
             syncCanvasBgControls();
             renderTemplateLibrary();
             render();
-            queueAutoSave();
-            if(saveMsg){
-                saveMsg.textContent=createdTypes.length
-                    ? "Funnel pack applied and created missing pages: "+createdTypes.map(pageTypeLabel).join(", ")+". Not saved yet."
-                    : "Funnel pack applied to all pages with auto-connected call to actions. Not saved yet.";
-            }
+            return persistStepDefinitions(steps).then(function(){
+                return persistLayoutsForSteps(steps,true);
+            }).then(function(){
+                if(saveMsg){
+                    saveMsg.textContent=createdTypes.length
+                        ? "Funnel pack saved on all "+steps.length+" page(s); created: "+createdTypes.map(pageTypeLabel).join(", ")+"."
+                        : "Funnel pack saved on all "+steps.length+" page(s).";
+                }
+            });
         }).catch(function(err){
             showBuilderToast((err&&err.message)||"Failed to apply funnel pack.","error");
         });
+    });
+}
+function sharedTemplateSteps(template){
+    return ((template&&template.steps)||[]).slice().sort(function(a,b){
+        return Number(a&&a.position||0)-Number(b&&b.position||0);
+    });
+}
+function replaceSharedTemplateSnapshot(template){
+    if(!template||!template.template_id)return;
+    var replaced=false;
+    sharedFunnelTemplates=(sharedFunnelTemplates||[]).map(function(item){
+        if(String(item&&item.template_id||"")===String(template.template_id||"")){
+            replaced=true;
+            return template;
+        }
+        return item;
+    });
+    if(!replaced){
+        sharedFunnelTemplates.push(template);
+    }
+}
+function fetchLatestSharedTemplate(templateId){
+    var id=String(templateId||"");
+    var fallback=(sharedFunnelTemplates||[]).find(function(item){return String(item&&item.template_id||"")===id;})||null;
+    if(!sharedTemplatesUrl)return Promise.resolve(fallback);
+    return requestGetJson(sharedTemplatesUrl).then(function(resp){
+        var templates=(resp&&Array.isArray(resp.templates))?resp.templates:[];
+        if(templates.length){
+            sharedFunnelTemplates=templates;
+        }
+        return templates.find(function(item){return String(item&&item.template_id||"")===id;})||fallback;
+    }).catch(function(){
+        return fallback;
+    });
+}
+function ensureSharedTemplateStepCount(template){
+    var tplSteps=sharedTemplateSteps(template);
+    var need=Math.max(0,tplSteps.length-steps.length);
+    var existingStepCount=steps.length;
+    var seq=Promise.resolve([]);
+    for(var i=0;i<need;i++){
+        (function(idx){
+            seq=seq.then(function(created){
+                var source=tplSteps[existingStepCount+idx]||tplSteps[idx]||{};
+                return createStepForPack(String(source.type||"custom")).then(function(){
+                    created.push(String(source.type||"custom"));
+                    return created;
+                });
+            });
+        })(i);
+    }
+    return seq.then(function(createdTypes){
+        renderStepOptions();
+        syncPageManagerList();
+        return createdTypes;
+    });
+}
+function applySharedFunnelTemplate(template){
+    if(!template)return Promise.resolve(false);
+    replaceSharedTemplateSnapshot(template);
+    var loadPromise=Promise.resolve(template);
+    if(template.template_id&&sharedTemplatesUrl){
+        loadPromise=fetchLatestSharedTemplate(template.template_id).then(function(latest){
+            return latest||template;
+        });
+    }
+    return loadPromise.then(function(resolved){
+        template=resolved||template;
+        replaceSharedTemplateSnapshot(template);
+        var tplSteps=sharedTemplateSteps(template);
+        if(!tplSteps.length){
+            showBuilderToast("This saved template has no pages to apply.","error");
+            return Promise.resolve(false);
+        }
+        var msg='Apply the saved template "'+String(template.name||"template")+'" to this funnel? This will replace the layouts of the first '+tplSteps.length+' page'+(tplSteps.length===1?"":"s")+' and save them to the server.';
+        if(steps.length>tplSteps.length){
+            msg+=' Extra pages in the current funnel will stay after the applied template pages.';
+        }
+        return confirmTemplateApply(msg).then(function(ok){
+            if(!ok)return Promise.resolve(false);
+            saveToHistory();
+            return ensureSharedTemplateStepCount(template).then(function(createdTypes){
+                sortStepsByPosition();
+                var ordered=steps.slice().sort(function(a,b){return Number(a.position||0)-Number(b.position||0);});
+                var currentStepId=cur()?+cur().id:null;
+                var nextStateLayout=null;
+                var appliedIds={};
+                tplSteps.forEach(function(sourceStep,idx){
+                    var targetStep=ordered[idx];
+                    if(!targetStep)return;
+                    appliedIds[String(targetStep.id||"")]=true;
+                    targetStep.position=idx+1;
+                    targetStep.title=String(sourceStep.title||defaultStepTitleForType(sourceStep.type)||"Untitled");
+                    targetStep.subtitle=String(sourceStep.subtitle||"");
+                    targetStep.slug=uniqueStepSlug(sourceStep.slug||targetStep.title,targetStep.id);
+                    targetStep.type=String(sourceStep.type||"custom");
+                    targetStep.template=String(sourceStep.template||"simple");
+                    targetStep.template_data=clone(sourceStep.template_data||null);
+                    targetStep.layout_style=String(sourceStep.layout_style||"centered");
+                    targetStep.content=String(sourceStep.content||"");
+                    targetStep.cta_label=String(sourceStep.cta_label||"");
+                    targetStep.price=(sourceStep.price==null||String(sourceStep.price)==="")?"":String(sourceStep.price);
+                    targetStep.background_color=String(sourceStep.background_color||"");
+                    targetStep.button_color=String(sourceStep.button_color||"");
+                    targetStep.is_active=!(sourceStep.is_active===false||String(sourceStep.is_active)==="0");
+                    targetStep.step_tags=Array.isArray(sourceStep.step_tags)?clone(sourceStep.step_tags):[];
+                    targetStep.layout_json=clone(sourceStep.layout_json||{root:[],sections:[]});
+                });
+                var extraPosition=tplSteps.length+1;
+                ordered.forEach(function(step,idx){
+                    if(appliedIds[String(step&&step.id||"")])return;
+                    step.position=extraPosition;
+                    extraPosition++;
+                });
+                sortStepsByPosition();
+                steps.forEach(function(step){
+                    step.layout_json=wireTemplateLayoutForStep(
+                        clone(step.layout_json||{root:[],sections:[]}),
+                        step,
+                        steps
+                    );
+                    if(currentStepId!==null&&+step.id===currentStepId){
+                        nextStateLayout=clone(step.layout_json||{root:[],sections:[]});
+                    }
+                });
+                var appliedSteps=ordered.filter(function(step){
+                    return !!appliedIds[String(step&&step.id||"")];
+                });
+                return persistStepDefinitions(appliedSteps).then(function(){
+                    return persistStepOrder(orderedStepIdsWithPositions());
+                }).then(function(){
+                    return persistLayoutsForSteps(appliedSteps,true);
+                }).then(function(){
+                    renderStepOptions();
+                    syncPageManagerList();
+                    if(nextStateLayout)state.layout=nextStateLayout;
+                    state.sel=null;
+                    state.carouselSel=null;
+                    state.editingEl=null;
+                    state.linkPick=null;
+                    renderTemplateLibrary();
+                    render();
+                    if(saveMsg){
+                        saveMsg.textContent=createdTypes.length
+                            ? 'Saved template applied to '+appliedSteps.length+' page(s); created: '+createdTypes.map(pageTypeLabel).join(", ")+'.'
+                            : 'Saved template applied to all '+appliedSteps.length+' page(s).';
+                    }
+                    return true;
+                });
+            }).catch(function(err){
+                showBuilderToast((err&&err.message)||"Failed to apply saved template.","error");
+                throw err;
+            });
+        });
+    });
+}
+function editSharedTemplateDescription(template){
+    if(!template||!template.update_url){
+        showBuilderToast("Template description can't be edited here.","error");
+        return;
+    }
+    openSharedTemplateEditModal(template);
+}
+var sharedTemplateEditState={template:null};
+function sharedTemplateTagsInputValue(template){
+    return (template&&Array.isArray(template.tags)?template.tags:[]).map(function(tag){
+        return String(tag||"").trim();
+    }).filter(Boolean).join(", ");
+}
+function openSharedTemplateEditModal(template){
+    var modal=document.getElementById("fbSharedTemplateEditModal");
+    var desc=document.getElementById("fbSharedTemplateEditDescription");
+    var tags=document.getElementById("fbSharedTemplateEditTags");
+    var title=document.getElementById("fbSharedTemplateEditTitle");
+    var saveBtn=document.getElementById("fbSharedTemplateEditSave");
+    if(!modal||!desc||!tags||!saveBtn)return;
+    sharedTemplateEditState.template=template||null;
+    if(title)title.textContent='Edit "'+String((template&&template.name)||"Saved Template")+'"';
+    desc.value=String((template&&template.description)||"");
+    tags.value=sharedTemplateTagsInputValue(template);
+    saveBtn.disabled=false;
+    modal.classList.add("open");
+    modal.setAttribute("aria-hidden","false");
+    setTimeout(function(){ desc.focus(); desc.select(); },10);
+}
+function closeSharedTemplateEditModal(){
+    var modal=document.getElementById("fbSharedTemplateEditModal");
+    if(!modal)return;
+    modal.classList.remove("open");
+    modal.setAttribute("aria-hidden","true");
+    sharedTemplateEditState.template=null;
+}
+function parseSharedTemplateTags(raw){
+    return String(raw||"").split(",").map(function(tag){
+        return String(tag||"").trim();
+    }).filter(Boolean).slice(0,6);
+}
+function saveSharedTemplateEdit(){
+    var template=sharedTemplateEditState.template;
+    var desc=document.getElementById("fbSharedTemplateEditDescription");
+    var tags=document.getElementById("fbSharedTemplateEditTags");
+    var saveBtn=document.getElementById("fbSharedTemplateEditSave");
+    if(!template||!template.update_url||!desc||!tags||!saveBtn)return;
+    var nextDescription=String(desc.value||"").trim();
+    var nextTags=parseSharedTemplateTags(tags.value);
+    saveBtn.disabled=true;
+    requestJson(String(template.update_url),"PUT",{
+        name:String(template.name||"Untitled Template").trim()||"Untitled Template",
+        description:nextDescription,
+        status:String(template.status||"draft").trim()||"draft",
+        template_tags:nextTags
+    }).then(function(){
+        template.description=nextDescription;
+        template.tags=nextTags;
+        closeSharedTemplateEditModal();
+        renderTemplateLibrary();
+        showBuilderToast("Template card updated.","success");
+    }).catch(function(err){
+        saveBtn.disabled=false;
+        showBuilderToast((err&&err.message)||"Failed to update template card.","error");
     });
 }
 function renderTemplateLibrary(){
@@ -3275,6 +3562,7 @@ function renderTemplateLibrary(){
     var templates=currentPageTemplates();
     var pageLabel=pageTypeLabel(pageType);
     var mode=(templateLibraryMode==="funnel")?"funnel":"page";
+    var allFunnelTemplates=(funnelTemplatePacks||[]).concat(sharedFunnelTemplates||[]);
     if(pageModeBtn){
         pageModeBtn.classList.toggle("active",mode==="page");
         pageModeBtn.setAttribute("aria-pressed",mode==="page"?"true":"false");
@@ -3289,9 +3577,9 @@ function renderTemplateLibrary(){
     if(funnelPane)funnelPane.classList.toggle("hidden",mode!=="funnel");
     if(mode==="funnel"){
         if(titleEl)titleEl.textContent="Funnel Packs";
-        if(metaEl)metaEl.textContent="Showing "+funnelTemplatePacks.length+" coordinated template systems. Applying one replaces the layouts across all pages and auto-connects the main call to actions for this funnel.";
+        if(metaEl)metaEl.textContent="Showing "+allFunnelTemplates.length+" coordinated template systems and saved templates. Applying one replaces the layouts across all pages and keeps everything in this builder.";
         if(typePill)typePill.textContent="All Pages";
-        if(countPill)countPill.textContent=String(funnelTemplatePacks.length)+" packs";
+        if(countPill)countPill.textContent=String(allFunnelTemplates.length)+" templates";
         if(currentPageEl)currentPageEl.textContent="This will restyle "+steps.length+" page"+(steps.length===1?"":"s")+" in the current funnel with one consistent system and ready-to-use step links.";
     }else{
         if(titleEl)titleEl.textContent=pageLabel+" Templates";
@@ -3330,7 +3618,7 @@ function renderTemplateLibrary(){
         });
     });
     if(funnelGrid){
-        funnelGrid.innerHTML=(funnelTemplatePacks||[]).map(function(pack){
+        var packCards=(funnelTemplatePacks||[]).map(function(pack){
             var tags=(pack.tags||[]).map(function(tag){return '<span class="fb-template-tag">'+String(tag)+'</span>';}).join("");
             return '<div class="fb-template-card">'
                 +'<div class="fb-template-preview">'+templatePreviewHtml(pack.preview)+'</div>'
@@ -3344,12 +3632,62 @@ function renderTemplateLibrary(){
                 +'</div>'
                 +'</div>';
         }).join("");
+        var sharedCards=(sharedFunnelTemplates||[]).map(function(template){
+            var tags=(template.tags||[]).map(function(tag){return '<span class="fb-template-tag">'+String(tag)+'</span>';}).join("");
+            var editBtn=template.update_url
+                ? '<button type="button" class="fb-btn" data-edit-shared-template-id="'+String(template.template_id||"")+'" style="font-size:12px;padding:8px 10px;">Edit Card</button>'
+                : '';
+            return '<div class="fb-template-card">'
+                +'<div class="fb-template-preview">'+templatePreviewHtml(template.preview)+'</div>'
+                +'<div>'
+                +'<p class="fb-template-title">'+String(template.name||"Saved Template")+'</p>'
+                +'<p class="fb-template-desc">'+String(template.description||"")+'</p>'
+                +'<p class="fb-template-desc" style="margin-top:6px;font-size:12px;color:#64748b;">Applies the saved super-admin template across '+String(sharedTemplateSteps(template).length||0)+' page(s) in this funnel.</p>'
+                +'</div>'
+                +'<div class="fb-template-actions">'
+                +'<div class="fb-template-tags">'+tags+'</div>'
+                +'<div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end;">'
+                +editBtn
+                +'<button type="button" class="fb-btn primary" data-shared-template-id="'+String(template.template_id||"")+'">Apply To All Pages</button>'
+                +'</div>'
+                +'</div>'
+                +'</div>';
+        }).join("");
+        funnelGrid.innerHTML=packCards+sharedCards;
         funnelGrid.querySelectorAll("[data-funnel-pack-id]").forEach(function(btn){
             btn.addEventListener("click",function(){
                 var id=String(btn.getAttribute("data-funnel-pack-id")||"");
                 var pack=(funnelTemplatePacks||[]).find(function(item){return String(item.id||"")===id;});
                 if(!pack)return;
                 applyFunnelTemplatePack(pack);
+            });
+        });
+        funnelGrid.querySelectorAll("[data-shared-template-id]").forEach(function(btn){
+            btn.addEventListener("click",function(){
+                if(btn.disabled)return;
+                var id=String(btn.getAttribute("data-shared-template-id")||"");
+                var originalLabel=btn.innerHTML;
+                btn.disabled=true;
+                btn.textContent="Applying...";
+                fetchLatestSharedTemplate(id).then(function(template){
+                    if(!template){
+                        throw new Error("Saved template could not be loaded.");
+                    }
+                    return applySharedFunnelTemplate(template);
+                }).catch(function(err){
+                    showBuilderToast((err&&err.message)||"Failed to load the latest template.","error");
+                }).finally(function(){
+                    btn.disabled=false;
+                    btn.innerHTML=originalLabel;
+                });
+            });
+        });
+        funnelGrid.querySelectorAll("[data-edit-shared-template-id]").forEach(function(btn){
+            btn.addEventListener("click",function(){
+                var id=String(btn.getAttribute("data-edit-shared-template-id")||"");
+                var template=(sharedFunnelTemplates||[]).find(function(item){return String(item.template_id||"")===id;});
+                if(!template)return;
+                editSharedTemplateDescription(template);
             });
         });
     }
@@ -3600,6 +3938,25 @@ function requestJson(url,method,data){
         });
     });
 }
+function requestGetJson(url){
+    return fetch(url,{
+        method:"GET",
+        headers:{
+            "X-CSRF-TOKEN":csrf,
+            "Accept":"application/json"
+        }
+    }).then(function(r){
+        return r.text().then(function(t){
+            var data={};
+            try{data=t?JSON.parse(t):{};}catch(_e){data={message:t||"Request failed"};}
+            if(!r.ok){
+                var msg=(data&&data.message)?data.message:("HTTP "+r.status);
+                throw new Error(msg);
+            }
+            return data||{};
+        });
+    });
+}
 function extractLinksFromLayout(layout){
     var out=[];
     function visit(node){
@@ -3654,6 +4011,75 @@ function buildStepPayload(stepLike,overrides){
         is_active:((s.is_active===false||String(s.is_active)==="0")?0:1),
         step_tags:normalizeTagArray(s.step_tags).join(", ")
     };
+}
+function persistStepDefinition(stepLike){
+    var s=stepLike||{};
+    if(!s.id)return Promise.resolve(null);
+    return requestJson(stepUrlFromTpl(stepUpdateTpl,s.id),"PUT",buildStepPayload(s)).then(function(resp){
+        return applyStepUpdate((resp&&resp.step)||s);
+    });
+}
+function persistStepDefinitions(stepList){
+    var queue=Promise.resolve([]);
+    (Array.isArray(stepList)?stepList:[]).forEach(function(step){
+        queue=queue.then(function(saved){
+            return persistStepDefinition(step).then(function(updated){
+                if(updated)saved.push(updated);
+                return saved;
+            });
+        });
+    });
+    return queue;
+}
+/** Persist layout_json + background via builder save endpoint (PUT updateStep ignores layout). */
+function postStepLayoutSave(stepId,layoutJson,bgColor,skipRevision){
+    var requestHeaders={"Content-Type":"application/json","X-CSRF-TOKEN":csrf,"Accept":"application/json"};
+    var bg=bgColor;
+    if(typeof bg==="string"&&bg.trim()==="")bg=null;
+    return fetch(saveUrl,{
+        method:"POST",
+        headers:requestHeaders,
+        body:JSON.stringify({
+            step_id:stepId,
+            layout_json:layoutJson,
+            background_color:bg,
+            skip_revision:!!skipRevision
+        })
+    }).then(function(r){
+        if(!r.ok){
+            return r.text().then(function(t){
+                var msg=t||("HTTP "+r.status);
+                try{var j=JSON.parse(t);if(j&&j.message)msg=j.message;}catch(_e){}
+                throw new Error(msg);
+            });
+        }
+        return r.json();
+    });
+}
+function persistLayoutsForSteps(stepList,skipRevision){
+    var list=Array.isArray(stepList)?stepList:[];
+    var sr=skipRevision!==false;
+    var queue=Promise.resolve(true);
+    list.forEach(function(step){
+        if(!step||!step.id)return;
+        queue=queue.then(function(){
+            var layout=(step.layout_json&&typeof step.layout_json==="object"&&!Array.isArray(step.layout_json))
+                ?clone(step.layout_json)
+                :{root:[],sections:[]};
+            var bg=(typeof step.background_color==="string"&&step.background_color.trim()!=="")?step.background_color.trim():null;
+            if(!bg&&layout&&layout.__editor&&typeof layout.__editor.canvasBg==="string"&&layout.__editor.canvasBg.trim()!==""){
+                bg=layout.__editor.canvasBg.trim();
+            }
+            return postStepLayoutSave(step.id,layout,bg,sr).then(function(resp){
+                if(resp&&resp.layout_json)step.layout_json=resp.layout_json;
+                if(resp&&typeof resp.background_color==="string"){
+                    step.background_color=resp.background_color.trim()||null;
+                }
+                return true;
+            });
+        });
+    });
+    return queue;
 }
 function defaultStepTitleForType(type){
     var t=String(type||"custom").toLowerCase();
@@ -5933,7 +6359,7 @@ function titleCase(v){
 }
 function isAdvancedScaleComponent(t){
     var type=String(t||"").toLowerCase();
-    return type==="testimonial"||type==="faq"||type==="pricing"||type==="countdown";
+    return type==="testimonial"||type==="faq"||type==="pricing"||type==="countdown"||type==="form";
 }
 function parsePxVal(v){
     var n=Number(String(v||"0").replace("px","").trim());
@@ -6040,6 +6466,26 @@ function applyAdvancedScaleToNode(node,item,scale){
         boxes.forEach(function(el){el.style.padding=Math.round(8*s)+"px";});
         nums.forEach(function(el){el.style.fontSize=Math.round(20*s)+"px";});
         units.forEach(function(el){el.style.fontSize=Math.round(10*s)+"px";});
+    }
+    if(type==="form"){
+        var labels=node.querySelectorAll("label");
+        var inputs=node.querySelectorAll(".fb-form-input");
+        var submit=node.querySelector("button");
+        labels.forEach(function(el){
+            el.style.fontSize=Math.round(12*s)+"px";
+            el.style.marginBottom=Math.round(4*s)+"px";
+        });
+        inputs.forEach(function(el){
+            el.style.fontSize=Math.round(14*s)+"px";
+            el.style.padding=Math.round(8*s)+"px";
+            el.style.borderRadius=Math.max(4,Math.round(8*s))+"px";
+            el.style.marginBottom=Math.round(8*s)+"px";
+        });
+        if(submit){
+            submit.style.fontSize=Math.round(14*s)+"px";
+            submit.style.padding=Math.round(8*s)+"px "+Math.round(12*s)+"px";
+            submit.style.borderRadius=Math.max(6,Math.round(8*s))+"px";
+        }
     }
 }
 function syncAdvancedElementHeight(node,item){
@@ -6306,7 +6752,7 @@ function renderCarouselPreviewItem(item,onDelete,onSelect,isSelected){
         wrap.appendChild(p);
     }else if(type==="image"){
         var imgBody=document.createElement("div");
-        imgBody.innerHTML=(item.settings&&item.settings.src)?'<img src="'+item.settings.src+'" alt="'+(item.settings.alt||"Image")+'" style="max-width:100%;height:auto;display:block;">':'<div style="padding:12px;border:1px dashed #94a3b8;border-radius:8px;">Image placeholder</div>';
+        imgBody.innerHTML=(item.settings&&item.settings.src)?'<img src="'+item.settings.src+'" alt="'+(item.settings.alt||"Image")+'" style="max-width:100%;height:auto;display:block;">':'<div class="fb-image-placeholder fb-image-placeholder--compact"><div class="fb-image-placeholder__plus">+</div><div class="fb-image-placeholder__label">Image placeholder</div></div>';
         wrap.appendChild(imgBody);
     }else if(type==="video"){
         const raw=(item.settings&&item.settings.src)||"";
@@ -6432,25 +6878,57 @@ function addComponent(type){
     const p=state.sel||{};
     ensureRootModel();
     const rs=rootItems();
+    function convertToFlowElement(node){
+        if(!node)return node;
+        node.style=node.style||{};
+        node.settings=node.settings||{};
+        ["position","left","top","right","bottom","zIndex"].forEach(function(key){
+            if(Object.prototype.hasOwnProperty.call(node.style,key))delete node.style[key];
+        });
+        ["positionMode","freeX","freeY"].forEach(function(key){
+            if(Object.prototype.hasOwnProperty.call(node.settings,key))delete node.settings[key];
+        });
+        return node;
+    }
+    function ensureSectionForLooseComponent(){
+        var existing=(state.layout.sections||[]).find(function(secNode){
+            return secNode && !secNode.__rootWrap && !secNode.__freeformCanvas;
+        })||null;
+        if(existing)return existing;
+        var newSection=createRootItem("section");
+        rs.push(newSection);
+        syncSectionsFromRoot();
+        return sec(newSection.id)||newSection;
+    }
     if(!p||!p.k){
+        if(!isStructureComponent(type)){
+            let targetSection=ensureSectionForLooseComponent();
+            targetSection.elements=Array.isArray(targetSection.elements)?targetSection.elements:[];
+            const freeEl=convertToFlowElement(createDefaultElement(type));
+            if(!freeEl)return;
+            targetSection.elements.push(freeEl);
+            state.sel={k:"el",scope:"section",s:targetSection.id,e:freeEl.id};
+            return;
+        }
         const rootIt=createRootItem(type);
         if(!rootIt)return;
-        if(!isStructureComponent(type)){
-            var freeEls=rs.filter(function(r){return String((r&&r.kind)||"").toLowerCase()==="el";});
-            autoPlaceElement(rootIt,{elements:freeEls});
-        }
         rs.push(rootIt);
         syncSectionsFromRoot();
         return;
     }
     const pRootCtx=sectionRootContext(p.s);
     if(pRootCtx.isWrap||pRootCtx.isFreeform){
+        if(!isStructureComponent(type)){
+            let targetSection=ensureSectionForLooseComponent();
+            targetSection.elements=Array.isArray(targetSection.elements)?targetSection.elements:[];
+            const freeEl2=convertToFlowElement(createDefaultElement(type));
+            if(!freeEl2)return;
+            targetSection.elements.push(freeEl2);
+            state.sel={k:"el",scope:"section",s:targetSection.id,e:freeEl2.id};
+            return;
+        }
         const rootIt=createRootItem(type);
         if(!rootIt)return;
-        if(!isStructureComponent(type)){
-            var freeEls2=rs.filter(function(r){return String((r&&r.kind)||"").toLowerCase()==="el";});
-            autoPlaceElement(rootIt,{elements:freeEls2});
-        }
         rs.push(rootIt);
         syncSectionsFromRoot();
         return;
@@ -6458,12 +6936,17 @@ function addComponent(type){
     if(type==="section"){rs.push(createRootItem("section"));syncSectionsFromRoot();return;}
     let s=sec(p.s)||state.layout.sections[0];
     if(!s){
+        if(!isStructureComponent(type)){
+            let targetSection=ensureSectionForLooseComponent();
+            targetSection.elements=Array.isArray(targetSection.elements)?targetSection.elements:[];
+            const freeEl3=convertToFlowElement(createDefaultElement(type));
+            if(!freeEl3)return;
+            targetSection.elements.push(freeEl3);
+            state.sel={k:"el",scope:"section",s:targetSection.id,e:freeEl3.id};
+            return;
+        }
         const rootIt=createRootItem(type);
         if(!rootIt)return;
-        if(!isStructureComponent(type)){
-            var freeEls3=rs.filter(function(r){return String((r&&r.kind)||"").toLowerCase()==="el";});
-            autoPlaceElement(rootIt,{elements:freeEls3});
-        }
         rs.push(rootIt);
         syncSectionsFromRoot();
         return;
@@ -6887,7 +7370,7 @@ function attachElResizeHandles(w,item){
     function parsePx(v){var n=Number(String(v||"0").replace("px","").trim());return isNaN(n)?0:n;}
     function clamp(n,mn,mx){return Math.max(mn,Math.min(mx,n));}
     var isCorner=function(h){return h==="nw"||h==="ne"||h==="sw"||h==="se";};
-    var isScalable=function(){return item.type==="heading"||item.type==="text"||item.type==="button"||item.type==="icon";};
+    var isScalable=function(){return item.type==="heading"||item.type==="text"||item.type==="icon";};
     var scaleAdvanced=isAdvancedScaleComponent(item.type);
     function startResize(handle,e){
         e.preventDefault();
@@ -6903,6 +7386,7 @@ function attachElResizeHandles(w,item){
         var hadHeight=!!(item.style&&String(item.style.height||"").trim()!=="");
         var startW=Math.max(30,rect.width||parsePx(item.style.width)||200);
         var startH=Math.max(20,rect.height||parsePx(item.style.height)||100);
+        var wasAbsolute=((item.settings&&item.settings.positionMode)==="absolute"||String((item.style&&item.style.position)||"").toLowerCase()==="absolute");
         var hasLeft=!!(item.style&&String(item.style.left||"").trim()!=="");
         var hasTop=!!(item.style&&String(item.style.top||"").trim()!=="");
         var startX=hasLeft?parsePx(item.style.left):(Number(item.settings&&item.settings.freeX)||0);
@@ -6925,7 +7409,7 @@ function attachElResizeHandles(w,item){
         var contentEl=w.querySelector("[data-editable],i.fa,i.fas,i.far,i.fab,svg");
         var sx=e.clientX,sy=e.clientY;
         var didSave=false;
-        var lockRatio=isCorner(handle)&&(isScalable()||item.type==="image"||item.type==="video"||item.type==="carousel");
+        var lockRatio=isCorner(handle)&&(item.type==="carousel");
         var doScale=isCorner(handle)&&isScalable();
         var affectsW=(handle==="e"||handle==="w"||isCorner(handle));
         var affectsH=(handle==="n"||handle==="s"||isCorner(handle));
@@ -6974,25 +7458,41 @@ function attachElResizeHandles(w,item){
                 item.settings.contentScale=clamp(startScale*scaleFactor,0.5,3);
                 applyAdvancedScaleToNode(w,item,item.settings.contentScale);
             }
-            item.style.position="absolute";
-            item.settings.positionMode="absolute";
-            item.style.left=Math.round(nx)+"px";
-            item.style.top=Math.round(ny)+"px";
-            item.settings.freeX=Math.round(nx);
-            item.settings.freeY=Math.round(ny);
-            w.style.position="absolute";
-            w.style.left=item.style.left;
-            w.style.top=item.style.top;
+            if(wasAbsolute){
+                item.style.position="absolute";
+                item.settings.positionMode="absolute";
+                item.style.left=Math.round(nx)+"px";
+                item.style.top=Math.round(ny)+"px";
+                item.settings.freeX=Math.round(nx);
+                item.settings.freeY=Math.round(ny);
+                w.style.position="absolute";
+                w.style.left=item.style.left;
+                w.style.top=item.style.top;
+            }else{
+                if(item.style&&Object.prototype.hasOwnProperty.call(item.style,"position"))delete item.style.position;
+                if(item.style&&Object.prototype.hasOwnProperty.call(item.style,"left"))delete item.style.left;
+                if(item.style&&Object.prototype.hasOwnProperty.call(item.style,"top"))delete item.style.top;
+                if(item.settings){
+                    if(Object.prototype.hasOwnProperty.call(item.settings,"positionMode"))delete item.settings.positionMode;
+                    if(Object.prototype.hasOwnProperty.call(item.settings,"freeX"))delete item.settings.freeX;
+                    if(Object.prototype.hasOwnProperty.call(item.settings,"freeY"))delete item.settings.freeY;
+                }
+                w.style.position="";
+                w.style.left="";
+                w.style.top="";
+            }
             if(affectsW || hadWidth){
                 item.style.width=Math.round(nw)+"px";
                 w.style.width=item.style.width;
             }
-            if(affectsH || hadHeight){
+            if((affectsH || hadHeight) && !isScalable()){
                 item.style.height=Math.round(nh)+"px";
                 w.style.height=item.style.height;
             }
             if(doScale&&startW>0){
-                var scale=nw/startW;
+                var wr=nw/startW;
+                var hr=startH>0?(nh/startH):wr;
+                var scale=(handle==="e"||handle==="w")?wr:((handle==="n"||handle==="s")?hr:Math.max(wr,hr));
                 var newFs=Math.max(8,Math.round(startFontSize*scale*10)/10);
                 item.style.fontSize=newFs+"px";
                 if(contentEl)contentEl.style.fontSize=newFs+"px";
@@ -7004,8 +7504,13 @@ function attachElResizeHandles(w,item){
                     item.style.borderRadius=newBR+"px";
                     if(contentEl)contentEl.style.borderRadius=newBR+"px";
                 }
+                if(item.style&&Object.prototype.hasOwnProperty.call(item.style,"height"))delete item.style.height;
+                w.style.height="auto";
             }
             if(scaleAdvanced)syncAdvancedElementHeight(w,item);
+            if(!wasAbsolute){
+                syncFlowContainerMinHeights(w,nh);
+            }
             drawLinkWires();
         }
         function onUp(){
@@ -7035,6 +7540,65 @@ function attachElResizeHandles(w,item){
         d.addEventListener("mousedown",function(ev){startResize(def.h,ev);});
         w.appendChild(d);
     });
+}
+
+function getNodeContentMinHeight(containerNode){
+    if(!containerNode)return 0;
+    var minNeeded=0;
+    Array.from(containerNode.children||[]).forEach(function(child){
+        if(!child)return;
+        if(child.classList&&(
+            child.classList.contains("section-resize-handle-y")
+            || child.classList.contains("row-resize-handle-y")
+        ))return;
+        var mb=0;
+        try{
+            mb=parseFloat((window.getComputedStyle(child).marginBottom)||"0")||0;
+        }catch(_e){mb=0;}
+        var bottom=(Number(child.offsetTop)||0)+(Number(child.offsetHeight)||0)+mb;
+        if(bottom>minNeeded)minNeeded=bottom;
+    });
+    var padTop=0,padBottom=0;
+    try{
+        var css=window.getComputedStyle(containerNode);
+        padTop=parseFloat(css.paddingTop||"0")||0;
+        padBottom=parseFloat(css.paddingBottom||"0")||0;
+    }catch(_e){}
+    return Math.max(0,Math.round(minNeeded+padTop+padBottom));
+}
+
+function syncFlowContainerMinHeights(node,preferredHeight){
+    if(!node)return;
+    var flowCol=node.closest(".col");
+    var flowRow=node.closest(".row");
+    var flowSec=node.closest(".sec");
+    if(flowCol){
+        flowCol.style.minHeight=Math.max(58,Number(preferredHeight)||0,getNodeContentMinHeight(flowCol))+"px";
+    }
+    if(flowRow){
+        requestAnimationFrame(function(){
+            flowRow.style.minHeight=Math.max(58,getNodeContentMinHeight(flowRow))+"px";
+        });
+    }
+    if(flowSec){
+        requestAnimationFrame(function(){
+            applySectionMinHeight(flowSec,Math.max(80,getSectionContentMinHeight(flowSec)));
+        });
+    }
+}
+
+function applySectionMinHeight(sectionNode,nextMin){
+    if(!sectionNode)return;
+    var value=Math.max(80,Number(nextMin)||0)+"px";
+    sectionNode.style.minHeight=value;
+    var inner=sectionNode.querySelector(".sec-inner");
+    if(inner)inner.style.minHeight=value;
+    var secId=String(sectionNode.getAttribute("data-sec-id")||"");
+    var sObj=secId?sec(secId):null;
+    if(sObj){
+        sObj.style=sObj.style||{};
+        sObj.style.minHeight=value;
+    }
 }
 
 /* ─── Canva-style drag-to-move system ─── */
@@ -7262,12 +7826,12 @@ function addComponentAt(type,target,place){
     const rs=rootItems();
     state.layout.sections=Array.isArray(state.layout.sections)?state.layout.sections:[];
     if(!t||!t.k){
+        if(!isStructureComponent(type)){
+            showBuilderToast("Add a section first before dropping this component.","error");
+            return false;
+        }
         var rootNew=createRootItem(type);
         if(!rootNew)return false;
-        if(!isStructureComponent(type)){
-            if(freePlacement)applyFreePlacementToElement(rootNew,freePlacement);
-            else{var freeElsAt=rs.filter(function(r){return String((r&&r.kind)||"").toLowerCase()==="el";});autoPlaceElement(rootNew,{elements:freeElsAt});}
-        }
         rs.push(rootNew);
         syncSectionsFromRoot();
         return true;
@@ -7275,12 +7839,12 @@ function addComponentAt(type,target,place){
     var tRootCtx=sectionRootContext(t.s);
     var isNestedGridTarget=(t.k==="row"||t.k==="col"||(t.k==="el"&&!!t.c));
     if((tRootCtx.isWrap||tRootCtx.isFreeform)&&tRootCtx.index>=0&&!isNestedGridTarget){
+        if(!isStructureComponent(type)){
+            showBuilderToast("Drop this component inside a section.","error");
+            return false;
+        }
         var wrapInsert=createRootItem(type);
         if(!wrapInsert)return false;
-        if(!isStructureComponent(type)){
-            if(freePlacement)applyFreePlacementToElement(wrapInsert,freePlacement);
-            else{var freeElsAt2=rs.filter(function(r){return String((r&&r.kind)||"").toLowerCase()==="el";});autoPlaceElement(wrapInsert,{elements:freeElsAt2});}
-        }
         var wrapIdx=(place==="before"?tRootCtx.index:tRootCtx.index+1);
         rs.splice(Math.max(0,Math.min(wrapIdx,rs.length)),0,wrapInsert);
         syncSectionsFromRoot();
@@ -7655,11 +8219,16 @@ function renderElement(item,ctx){
     else if(item.type==="button"){
         var wb=(item.settings&&item.settings.widthBehavior)||"fluid",al=(item.settings&&item.settings.alignment)||((item.style&&item.style.textAlign)||"center");
         var wrapBg=(item.settings&&item.settings.containerBgColor)||"";
+        var hasManualWidth=!!(item.style&&String(item.style.width||"").trim()!=="");
+        var hasManualHeight=!!(item.style&&String(item.style.height||"").trim()!=="");
         w.classList.add(wb==="fill"?"el--button-fill":"el--button");
         w.style.display="flex";w.style.justifyContent=al==="right"?"flex-end":al==="center"?"center":"flex-start";
+        w.style.alignItems=hasManualHeight?"stretch":"center";
         w.style.backgroundColor=wrapBg||"";
+        if(hasManualWidth)w.style.width=String(item.style.width);
+        if(hasManualHeight)w.style.height=String(item.style.height);
         const b=document.createElement("button");b.type="button";b.setAttribute("data-editable","1");b.contentEditable=isEditing?"true":"false";b.style.cursor=isEditing?"text":"move";b.innerHTML=item.content||"Button";
-        contentStyleApply(b,item.style||{});b.style.border="none";b.style.display=wb==="fill"?"flex":"inline-flex";b.style.width=wb==="fill"?"100%":"auto";b.style.alignItems="center";b.style.justifyContent="center";if(!(item.style&&item.style.backgroundColor))b.style.backgroundColor="#240E35";if(!(item.style&&item.style.color))b.style.color="#fff";if(!(item.style&&item.style.padding))b.style.padding="10px 18px";if(!(item.style&&item.style.borderRadius))b.style.borderRadius="999px";
+        contentStyleApply(b,item.style||{});b.style.border="none";b.style.display="flex";b.style.width=(wb==="fill"||hasManualWidth)?"100%":"auto";b.style.height=hasManualHeight?"100%":"auto";b.style.boxSizing="border-box";b.style.alignItems="center";b.style.justifyContent="center";if(!(item.style&&item.style.backgroundColor))b.style.backgroundColor="#240E35";if(!(item.style&&item.style.color))b.style.color="#fff";if(!(item.style&&item.style.padding))b.style.padding="10px 18px";if(!(item.style&&item.style.borderRadius))b.style.borderRadius="999px";
         b.oninput=()=>{item.content=b.innerHTML||"";queueAutoSave();};onRichTextKeys(b,()=>{item.content=b.innerHTML||"";queueAutoSave();});w.appendChild(b);
     }
     else if(item.type==="icon"){
@@ -7689,6 +8258,7 @@ function renderElement(item,ctx){
     }
     else if(item.type==="image"){
         var hasFixedH=!!(item.style&&String(item.style.height||"").trim()!=="");
+        var hasFixedW=!!(item.style&&String(item.style.width||"").trim()!=="");
         var _imgLoading=state.mediaLoading.has(item.id);
         if(item.settings&&item.settings.src){
             var imgWrap=document.createElement("div");
@@ -7706,6 +8276,7 @@ function renderElement(item,ctx){
                 img.style.height="100%";
                 img.style.objectFit="cover";
             }else{
+                if(hasFixedW)img.style.width="100%";
                 img.style.height="auto";
                 img.style.objectFit="contain";
                 img.style.objectPosition="top center";
@@ -7722,15 +8293,78 @@ function renderElement(item,ctx){
             w.innerHTML="";
             w.appendChild(imgWrap);
         }else if(_imgLoading){
-            w.innerHTML='<div style="position:relative;padding:30px 12px;border:1px dashed #94a3b8;border-radius:8px;width:100%;box-sizing:border-box;min-height:80px;"><div class="el-loading-overlay"><div class="el-loading-spinner"></div></div></div>';
+            w.innerHTML='<div class="fb-image-placeholder" style="min-height:120px;"><div class="fb-image-placeholder__center"><div class="fb-image-placeholder__plus">+</div></div><div class="fb-image-placeholder__label">Loading image...</div><div class="el-loading-overlay"><div class="el-loading-spinner"></div></div></div>';
         }else{
-            w.innerHTML='<div style="padding:12px;border:1px dashed #94a3b8;border-radius:8px;width:100%;box-sizing:border-box;">Image placeholder</div>';
+            w.innerHTML="";
+            var ph=document.createElement("div");
+            ph.className="fb-image-placeholder fb-image-placeholder--actionable";
+            var center=document.createElement("div");
+            center.className="fb-image-placeholder__center";
+            var plusBtn=document.createElement("button");
+            plusBtn.type="button";
+            plusBtn.className="fb-image-placeholder__plus";
+            plusBtn.setAttribute("aria-label","Choose image action");
+            plusBtn.textContent="+";
+            var label=document.createElement("div");
+            label.className="fb-image-placeholder__label";
+            label.textContent="Click to upload image";
+            var menu=document.createElement("div");
+            menu.className="fb-image-placeholder__menu";
+            menu.hidden=true;
+            var uploadBtn=document.createElement("button");
+            uploadBtn.type="button";
+            uploadBtn.textContent="Upload image";
+            var libraryBtn=document.createElement("button");
+            libraryBtn.type="button";
+            libraryBtn.textContent="Choose from library";
+            center.appendChild(plusBtn);
+            ph.appendChild(center);
+            ph.appendChild(label);
+            menu.appendChild(uploadBtn);
+            menu.appendChild(libraryBtn);
+            ph.appendChild(menu);
+            [plusBtn,menu,uploadBtn,libraryBtn].forEach(function(node){
+                node.addEventListener("mousedown",function(ev){
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                });
+            });
+            var openPicker=function(ev){
+                if(ev){
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                }
+                openImagePlaceholderMenu(item,ph,menu);
+            };
+            plusBtn.addEventListener("click",openPicker);
+            uploadBtn.addEventListener("click",function(ev){
+                ev.preventDefault();
+                ev.stopPropagation();
+                menu.hidden=true;
+                promptImageUploadForElement(item, ph);
+            });
+            libraryBtn.addEventListener("click",function(ev){
+                ev.preventDefault();
+                ev.stopPropagation();
+                menu.hidden=true;
+                openAssetLibraryModal({
+                    kind:"image",
+                    title:"Image Asset Library",
+                    subtitle:"Reuse stored images or upload a new one.",
+                    onSelect:function(url){
+                        saveToHistory();
+                        applyUploadedImageToElement(item,ph,url);
+                    }
+                });
+            });
+            w.appendChild(ph);
         }
     }
     else if(item.type==="form"){
         item.settings=item.settings||{};
         var fal=(item.settings.alignment)||"left";
         var fw=(item.style&&item.style.width)||(item.settings&&item.settings.width)||"100%";
+        var hasFormHeight=!!(item.style&&String(item.style.height||"").trim()!=="");
         var flabelColor=String(item.settings.labelColor||"#240E35");
         var fplaceholderColor=String(item.settings.placeholderColor||"#94a3b8");
         var fbtnBg=String(item.settings.buttonBgColor||"#240E35");
@@ -7754,6 +8388,9 @@ function renderElement(item,ctx){
         formBox.style.maxWidth="100%";
         formBox.style.boxSizing="border-box";
         formBox.style.textAlign="left";
+        formBox.style.display="grid";
+        formBox.style.alignContent="start";
+        if(hasFormHeight)formBox.style.height="100%";
         flist.forEach(function(f){
             var lbl=(f&&f.label)?String(f.label):"Field";
             var lab=document.createElement("label");
@@ -7777,6 +8414,7 @@ function renderElement(item,ctx){
         var btnWrap=document.createElement("div");
         btnWrap.style.display="flex";
         btnWrap.style.justifyContent=fbtnJustify;
+        btnWrap.style.marginTop="4px";
         var btn=document.createElement("button");
         btn.type="button";
         btn.className="fb-btn primary";
@@ -7790,6 +8428,19 @@ function renderElement(item,ctx){
         formBox.appendChild(btnWrap);
         w.innerHTML="";
         w.appendChild(formBox);
+        var neededFormHeight=Math.ceil(formBox.scrollHeight||formBox.getBoundingClientRect().height||0);
+        if(neededFormHeight>0){
+            if(hasFormHeight){
+                var currentFormHeight=parsePxVal(item.style&&item.style.height);
+                if(currentFormHeight<neededFormHeight){
+                    item.style.height=neededFormHeight+"px";
+                }
+                w.style.height=String(item.style.height||neededFormHeight+"px");
+            }else{
+                if(item.style&&Object.prototype.hasOwnProperty.call(item.style,"height"))delete item.style.height;
+                w.style.height=neededFormHeight+"px";
+            }
+        }
     }
     else if(item.type==="testimonial"){
         item.settings=item.settings||{};
@@ -8914,7 +9565,11 @@ function attachSectionHeightResizeHandle(sectionNode,sectionObj){
         sectionObj.style=sectionObj.style||{};
         var cssMin=String(sectionObj.style.minHeight||"").trim();
         var startH=0;
-        if(cssMin.endsWith("px")){
+        var liveMin=String(sectionNode.style.minHeight||"").trim();
+        if(liveMin.endsWith("px")){
+            var liveN=Number(liveMin.replace("px","").trim());
+            if(!isNaN(liveN))startH=liveN;
+        }else if(cssMin.endsWith("px")){
             var n=Number(cssMin.replace("px","").trim());
             if(!isNaN(n))startH=n;
         }else if(cssMin.endsWith("vh")){
@@ -8924,22 +9579,33 @@ function attachSectionHeightResizeHandle(sectionNode,sectionObj){
         if(startH<=0){
             startH=Math.max(120,Math.round(sectionNode.getBoundingClientRect().height||0));
         }
+        var latestH=startH;
         var didSave=false;
         function onMove(ev){
             if(!didSave){saveToHistory();didSave=true;}
             var dy=(Number(ev.clientY)||0)-startY;
-            var next=Math.max(80,Math.min(2200,Math.round(startH+dy)));
-            sectionObj.style.minHeight=next+"px";
-            sectionNode.style.minHeight=sectionObj.style.minHeight;
+            var contentMin=getSectionContentMinHeight(sectionNode);
+            var next=Math.max(contentMin,Math.min(2200,Math.round(startH+dy)));
+            latestH=next;
+            applySectionMinHeight(sectionNode,next);
+            fitFlowImagesWithinSection(sectionNode,next);
         }
         function onUp(){
             document.removeEventListener("mousemove",onMove);
             document.removeEventListener("mouseup",onUp);
+            applySectionMinHeight(sectionNode,latestH);
+            fitFlowImagesWithinSection(sectionNode,latestH);
         }
         document.addEventListener("mousemove",onMove);
         document.addEventListener("mouseup",onUp);
     });
     sectionNode.appendChild(hHandle);
+}
+
+function getSectionContentMinHeight(sectionNode){
+    if(!sectionNode)return 80;
+    var inner=sectionNode.querySelector(".sec-inner")||sectionNode;
+    return Math.max(80,getNodeContentMinHeight(inner));
 }
 
 function applyColumnImageFit(colNode,colInner,colObj){
@@ -8966,6 +9632,62 @@ function applyColumnImageFit(colNode,colInner,colObj){
     img.style.maxHeight="";
     img.style.objectFit="contain";
     img.style.objectPosition="top center";
+}
+
+function fitFlowImagesWithinSection(sectionNode,targetHeight){
+    if(!sectionNode)return;
+    var inner=sectionNode.querySelector(".sec-inner")||sectionNode;
+    var innerRect=inner.getBoundingClientRect();
+    if(!innerRect||!(innerRect.width>0)||!(innerRect.height>0))return;
+    var requestedHeight=Number(targetHeight)||0;
+    if(requestedHeight<=0){
+        var cssH=String(sectionNode.style.minHeight||"").trim();
+        if(cssH.endsWith("px")){
+            var parsed=Number(cssH.replace("px","").trim());
+            if(!isNaN(parsed))requestedHeight=parsed;
+        }
+    }
+    if(requestedHeight<=0)requestedHeight=Math.round(innerRect.height||0);
+    var innerTop=innerRect.top;
+    Array.from(inner.querySelectorAll('.el[data-el-type="image"]')).forEach(function(node){
+        if(!node||node.classList.contains("el--abs"))return;
+        var item=findElementById(node.getAttribute("data-el-id"));
+        if(!item||item.type!=="image")return;
+        var nodeRect=node.getBoundingClientRect();
+        var currentW=Math.max(1,Math.round(nodeRect.width||0));
+        var currentH=Math.max(1,Math.round(nodeRect.height||0));
+        if(currentW<=1||currentH<=1)return;
+        var host=node.parentElement||inner;
+        var hostRect=host.getBoundingClientRect();
+        var offsetTop=Math.max(0,Math.round(nodeRect.top-innerTop));
+        var availableW=Math.max(40,Math.min(
+            Math.round(hostRect.width||currentW),
+            Math.round(innerRect.right-nodeRect.left)
+        ));
+        var availableH=Math.max(40,requestedHeight-offsetTop);
+        var shrink=Math.min(1,availableW/currentW,availableH/currentH);
+        if(!(shrink<0.999))return;
+        var nextW=Math.max(30,Math.round(currentW*shrink));
+        var nextH=Math.max(20,Math.round(currentH*shrink));
+        item.style=item.style||{};
+        item.style.width=nextW+"px";
+        item.style.height=nextH+"px";
+        node.style.width=item.style.width;
+        node.style.height=item.style.height;
+        var imgWrap=node.firstElementChild;
+        if(imgWrap){
+            imgWrap.style.width="100%";
+            imgWrap.style.height="100%";
+        }
+        var img=node.querySelector("img");
+        if(img){
+            img.style.width="100%";
+            img.style.height="100%";
+            img.style.maxWidth="100%";
+            img.style.objectFit="contain";
+            img.style.objectPosition="top center";
+        }
+    });
 }
 
 function renderCanvas(){
@@ -9477,6 +10199,72 @@ function uploadImage(file,done,label,onFail,elId){
             if(typeof onFail==="function")onFail("Check your connection and try again.");
             alert(msg+" failed. Check your connection and try again.");
         });
+}
+
+function applyUploadedImageToElement(item,hostEl,url){
+    item.settings=item.settings||{};
+    item.settings.imageSourceType="upload";
+    item.settings.src=url;
+    item.style=item.style||{};
+    var hostW=hostEl&&hostEl.clientWidth?hostEl.clientWidth:0;
+    var hostH=hostEl&&hostEl.clientHeight?hostEl.clientHeight:0;
+    if(hostW>0 && (!String(item.style.width||"").trim() || String(item.style.width||"").trim()==="100%")){
+        item.style.width=Math.max(120,hostW)+"px";
+        item.settings.width=item.style.width;
+    }
+    if(hostH>0 && (!String(item.style.height||"").trim() || String(item.style.height||"").trim()==="auto")){
+        item.style.height=Math.max(80,hostH)+"px";
+    }
+    render();
+}
+
+function promptImageUploadForElement(item,hostEl){
+    if(!item)return;
+    var input=document.createElement("input");
+    input.type="file";
+    input.accept="image/*";
+    input.style.display="none";
+    document.body.appendChild(input);
+    input.addEventListener("change",function(){
+        var file=input.files&&input.files[0]?input.files[0]:null;
+        if(!file){
+            if(input.parentNode)input.parentNode.removeChild(input);
+            return;
+        }
+        saveToHistory();
+        uploadImage(file,function(url){
+            applyUploadedImageToElement(item,hostEl,url);
+        },"Image upload",null,item.id);
+        if(input.parentNode)input.parentNode.removeChild(input);
+    },{once:true});
+    input.click();
+}
+
+function openImagePlaceholderMenu(item,hostEl,menuEl){
+    if(!item||!hostEl||!menuEl)return;
+    var hostRect=hostEl.getBoundingClientRect();
+    var preferredLeft=Math.round(hostRect.left+((hostRect.width||0)/2)-115);
+    var preferredTop=Math.round(hostRect.top+((hostRect.height||0)/2)+18);
+    menuEl.hidden=false;
+    menuEl.style.left="0px";
+    menuEl.style.top="0px";
+    var menuW=menuEl.offsetWidth||230;
+    var menuH=menuEl.offsetHeight||140;
+    var vw=Math.max(document.documentElement.clientWidth||0,window.innerWidth||0);
+    var vh=Math.max(document.documentElement.clientHeight||0,window.innerHeight||0);
+    var nextLeft=Math.max(12,Math.min(preferredLeft,vw-menuW-12));
+    var nextTop=Math.max(12,Math.min(preferredTop,vh-menuH-12));
+    menuEl.style.left=nextLeft+"px";
+    menuEl.style.top=nextTop+"px";
+    function closeOnOutside(ev){
+        if(hostEl.contains(ev.target))return;
+        if(menuEl.contains(ev.target))return;
+        menuEl.hidden=true;
+        document.removeEventListener("mousedown",closeOnOutside,true);
+    }
+    setTimeout(function(){
+        document.addEventListener("mousedown",closeOnOutside,true);
+    },0);
 }
 
 const assetLibraryCtx={modal:null,title:null,sub:null,uploadInput:null,status:null,grid:null,onSelect:null,kind:"image",titleText:"Asset Library",actions:null,selectBtn:null,selectAllBtn:null,deleteBtn:null,cancelBtn:null,assets:[],selectionMode:false,selectedPaths:new Set(),statusBase:"Loading library...",statusOverride:"",busy:false};
@@ -11375,7 +12163,11 @@ function renderSettings(){
         var buttonBgControl=(t.type==="button")?'<label>Button color</label><input id="btnBg" type="color">':'';
         var buttonWrapBgControl=(t.type==="button")?'<label>Background color</label><input id="btnWrapBg" type="color">':'';
         var buttonTextStyleControl=(t.type==="button")?'<label>Text style</label><div class="menu-style-row"><button type="button" id="btnBold" class="menu-align-btn" title="Bold (Ctrl+B)"><i class="fas fa-bold"></i></button><button type="button" id="btnItalic" class="menu-align-btn" title="Italic (Ctrl+I)"><i class="fas fa-italic"></i></button></div>':'';
-        var buttonRadiusControl=(t.type==="button")?(radiusHelpLabelHtml("btnRadiusHelp","Border radius")+'<div class="px-wrap"><input id="btnRadius" type="number" min="0" step="1"><span class="px-unit">px</span></div>'):'';
+        var buttonRadiusControl=(t.type==="button")
+            ? ('<label>Button shape</label><select id="btnShape"><option value="square">Square</option><option value="rounded">Rounded</option><option value="pill">Pill</option><option value="custom">Custom</option></select>'
+                + radiusHelpLabelHtml("btnRadiusHelp","Border radius")
+                + '<div class="px-wrap"><input id="btnRadius" type="number" min="0" step="1"><span class="px-unit">px</span></div>')
+            : '';
         var buttonStepOptions=(t.type==="button")?steps.filter(function(s){return String(s.id)!==String(state.sid);}).map(function(s){
             var sl=String(s.slug||"").replace(/"/g,'&quot;');
             var tt=String(s.title||s.slug||"Untitled").replace(/"/g,'&quot;');
@@ -11512,6 +12304,43 @@ function renderSettings(){
             bind("btnLink",(t.settings&&t.settings.link)||"#",v=>{t.settings=t.settings||{};var u=String(v||"").trim();t.settings.link=(u==="")?"#":u;},{undo:true});
             bindPx("btnRadius",(t.style&&t.style.borderRadius)||"",v=>sty().borderRadius=v,{undo:true});
             bindRadiusHelpButton("btnRadiusHelp");
+            var btnShape=document.getElementById("btnShape");
+            var btnRadiusInput=document.getElementById("btnRadius");
+            function getButtonShape(){
+                var raw=String((t.style&&t.style.borderRadius)||"").trim().toLowerCase();
+                if(raw===""||raw==="0"||raw==="0px")return "square";
+                if(raw==="999px"||raw==="9999px")return "pill";
+                var n=parseFloat(raw);
+                if(!isNaN(n) && n>0 && n<=40)return "rounded";
+                return "custom";
+            }
+            function syncButtonShapeUi(){
+                if(btnShape)btnShape.value=getButtonShape();
+                if(btnRadiusInput){
+                    btnRadiusInput.disabled=!!btnShape && btnShape.value!=="custom";
+                }
+            }
+            if(btnShape){
+                syncButtonShapeUi();
+                btnShape.addEventListener("change",function(){
+                    saveToHistory();
+                    var selected=String(btnShape.value||"rounded");
+                    if(selected==="square")sty().borderRadius="0px";
+                    else if(selected==="rounded")sty().borderRadius="16px";
+                    else if(selected==="pill")sty().borderRadius="999px";
+                    else if(!String((t.style&&t.style.borderRadius)||"").trim())sty().borderRadius="16px";
+                    syncButtonShapeUi();
+                    renderCanvas();
+                });
+            }
+            if(btnRadiusInput){
+                btnRadiusInput.addEventListener("input",function(){
+                    if(btnShape && btnShape.value==="custom"){
+                        btnShape.value=getButtonShape();
+                        if(btnShape.value!=="custom")btnShape.value="custom";
+                    }
+                });
+            }
             var btnBg=document.getElementById("btnBg");
             if(btnBg){
                 btnBg.value=(t.style&&t.style.backgroundColor)||"#240E35";
@@ -11858,6 +12687,30 @@ function persistCurrentStep(){
 document.getElementById("saveBtn").onclick=()=>{
     persistCurrentStep().catch(()=>{saveMsg.textContent="Save failed";alert("Save failed.");});
 };
+function bindPublishForm(){
+    var form=document.getElementById("builderPublishForm");
+    var btn=document.getElementById("builderPublishBtn");
+    if(!form||!btn)return;
+    var submitting=false;
+    form.addEventListener("submit",function(e){
+        if(submitting)return;
+        e.preventDefault();
+        submitting=true;
+        btn.disabled=true;
+        var originalLabel=btn.innerHTML;
+        btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Saving...';
+        flushAutoSave()
+            .then(function(){ return persistCurrentStep(); })
+            .then(function(){ form.submit(); })
+            .catch(function(){
+                submitting=false;
+                btn.disabled=false;
+                btn.innerHTML=originalLabel;
+                saveMsg.textContent="Save failed";
+                showBuilderToast("Save failed before publish. Please try again.","error");
+            });
+    });
+}
 document.getElementById("previewBtn").onclick=()=>{
     const s=cur();if(!s)return;
     flushAutoSave()
@@ -11954,6 +12807,8 @@ document.addEventListener("drop",function(){clearSidebarDragGhost();clearFreeDro
 
 initDimTipHover();
 initContextMenu();
+bindSharedTemplateEditModal();
+bindPublishForm();
 loadStep(state.sid);
 })();
 </script>
