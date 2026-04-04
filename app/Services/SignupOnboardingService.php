@@ -95,7 +95,7 @@ class SignupOnboardingService
                     'Basic funnel analytics and payment monitoring',
                     'Email and landing-page-ready funnel journeys',
                 ],
-                'spotlight' => null,
+                'spotlight' => 'Best for New Teams',
             ],
             [
                 'code' => 'growth',
@@ -109,7 +109,7 @@ class SignupOnboardingService
                     'Role-based dashboards and pipeline visibility',
                     'PayMongo-ready checkout journeys for your offers',
                 ],
-                'spotlight' => 'Most Popular',
+                'spotlight' => 'Recommended',
             ],
             [
                 'code' => 'scale',
