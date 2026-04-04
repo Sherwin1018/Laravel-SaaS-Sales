@@ -31,7 +31,7 @@
                     <a href="#pricing">Pricing</a>
                     <a href="#faq">FAQ</a>
                     <a href="{{ route('login') }}" class="landing-nav__signin">Sign In</a>
-                    <a href="{{ route('register') }}" class="landing-nav__cta">Get Started</a>
+                    <a href="#" class="landing-nav__cta" data-open-onboarding data-plan-code="{{ request('plan', 'growth') }}">Get Started</a>
                 </nav>
             </div>
         </header>
@@ -47,7 +47,7 @@
                     </p>
 
                     <div class="hero__actions">
-                        <a href="{{ route('register') }}" class="button button--primary">Get Started</a>
+                        <a href="#" class="button button--primary" data-open-onboarding data-plan-code="{{ request('plan', 'growth') }}">Get Started</a>
                         <a href="{{ route('register', ['trial' => 1]) }}" class="button button--trial">Free Trial</a>
                         <a href="#services" class="button button--secondary">Explore Services</a>
                     </div>
@@ -113,19 +113,19 @@
                         <div class="service-card__icon">01</div>
                         <h3>Funnel Design</h3>
                         <p>Design opt-in, checkout, upsell, downsell, and thank-you steps that match your conversion path.</p>
-                        <a href="{{ route('register') }}">Learn More</a>
+                        <a href="#" data-open-onboarding data-plan-code="growth">Learn More</a>
                     </article>
                     <article class="service-card" data-aos="fade-up" data-aos-delay="100">
                         <div class="service-card__icon">02</div>
                         <h3>Website and Page Building</h3>
                         <p>Structure branded landing experiences that guide visitors into lead capture and registration.</p>
-                        <a href="{{ route('register') }}">Learn More</a>
+                        <a href="#" data-open-onboarding data-plan-code="growth">Learn More</a>
                     </article>
                     <article class="service-card" data-aos="fade-up" data-aos-delay="200">
                         <div class="service-card__icon">03</div>
                         <h3>Digital Marketing Flow</h3>
                         <p>Connect campaigns, lead qualification, and team actions so marketing and sales work from one system.</p>
-                        <a href="{{ route('register') }}">Learn More</a>
+                        <a href="#" data-open-onboarding data-plan-code="growth">Learn More</a>
                     </article>
                 </div>
             </section>
@@ -203,7 +203,7 @@
                                     <li>{{ $feature }}</li>
                                 @endforeach
                             </ul>
-                            <a href="{{ route('register', ['plan' => $plan['code']]) }}" class="button {{ $plan['spotlight'] ? 'button--primary' : 'button--secondary' }}">
+                            <a href="#" data-open-onboarding data-plan-code="{{ $plan['code'] }}" class="button {{ $plan['spotlight'] ? 'button--primary' : 'button--secondary' }}">
                                 Get Started
                             </a>
                         </article>
@@ -220,7 +220,7 @@
                 <div class="faq__list">
                     <details class="faq__item" open data-aos="fade-up" data-aos-delay="0">
                         <summary>What happens after the user completes payment?</summary>
-                        <p>After successful payment, the system creates the tenant, records the registration, assigns the Account Owner role, and redirects the user to the Account Owner dashboard.</p>
+                        <p>After successful payment, the system creates the tenant and Account Owner in pending activation, then sends a setup email. The user must verify and set password before dashboard access.</p>
                     </details>
                     <details class="faq__item" data-aos="fade-up" data-aos-delay="100">
                         <summary>Will the super admin see the new account?</summary>
@@ -237,6 +237,55 @@
                 </div>
             </section>
         </main>
+
+        <div id="onboardingModal" style="position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); display: none; align-items: center; justify-content: center; padding: 18px; z-index: 9999;">
+            <div role="dialog" aria-modal="true" aria-labelledby="onboardingModalTitle" style="width: min(100%, 620px); max-height: 92vh; overflow: auto; background: #ffffff; border-radius: 18px; box-shadow: 0 25px 80px rgba(15, 23, 42, 0.25); padding: 22px;">
+                <div style="display: flex; justify-content: space-between; align-items: start; gap: 12px; margin-bottom: 16px;">
+                    <div>
+                        <h3 id="onboardingModalTitle" style="margin: 0 0 6px; font-size: 1.3rem;">Start Your Account Owner Onboarding</h3>
+                        <p style="margin: 0; color: #475569;">Complete this short form, then proceed to payment.</p>
+                    </div>
+                    <button type="button" id="onboardingModalClose" aria-label="Close onboarding modal" style="width: 38px; height: 38px; border: none; border-radius: 999px; background: #E2E8F0; color: #0F172A; font-size: 22px; cursor: pointer;">&times;</button>
+                </div>
+
+                <form method="POST" action="{{ route('register.post') }}">
+                    @csrf
+                    <input type="hidden" name="plan" id="onboardingPlanInput" value="{{ request('plan', 'growth') }}">
+
+                    <div style="display: grid; gap: 12px;">
+                        <div>
+                            <label for="full_name" style="display:block;margin-bottom:6px;font-weight:600;color:#0F172A;">Full Name</label>
+                            <input id="full_name" name="full_name" type="text" maxlength="255" required value="{{ old('full_name') }}" style="width:100%;padding:10px 12px;border:1px solid #CBD5E1;border-radius:10px;">
+                        </div>
+
+                        <div>
+                            <label for="email" style="display:block;margin-bottom:6px;font-weight:600;color:#0F172A;">Email Address</label>
+                            <input id="email" name="email" type="email" maxlength="255" required value="{{ old('email') }}" style="width:100%;padding:10px 12px;border:1px solid #CBD5E1;border-radius:10px;">
+                        </div>
+
+                        <div>
+                            <label for="mobile" style="display:block;margin-bottom:6px;font-weight:600;color:#0F172A;">Mobile Number (PH)</label>
+                            <input id="mobile" name="mobile" type="text" pattern="^09\d{9}$" placeholder="09XXXXXXXXX" required value="{{ old('mobile') }}" style="width:100%;padding:10px 12px;border:1px solid #CBD5E1;border-radius:10px;">
+                        </div>
+
+                        <div>
+                            <label for="company_name" style="display:block;margin-bottom:6px;font-weight:600;color:#0F172A;">Company Name</label>
+                            <input id="company_name" name="company_name" type="text" maxlength="255" required value="{{ old('company_name') }}" style="width:100%;padding:10px 12px;border:1px solid #CBD5E1;border-radius:10px;">
+                        </div>
+
+                        <div>
+                            <label for="onboardingPlanPreview" style="display:block;margin-bottom:6px;font-weight:600;color:#0F172A;">Selected Plan</label>
+                            <input id="onboardingPlanPreview" type="text" readonly value="{{ strtoupper((string) request('plan', 'growth')) }}" style="width:100%;padding:10px 12px;border:1px solid #CBD5E1;border-radius:10px;background:#F8FAFC;">
+                        </div>
+                    </div>
+
+                    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px;flex-wrap:wrap;">
+                        <button type="button" id="onboardingModalCancel" style="padding:10px 16px;border:none;border-radius:10px;background:#E2E8F0;color:#0F172A;font-weight:600;cursor:pointer;">Cancel</button>
+                        <button type="submit" style="padding:10px 16px;border:none;border-radius:10px;background:#240E35;color:#ffffff;font-weight:700;cursor:pointer;">Continue to Payment</button>
+                    </div>
+                </form>
+            </div>
+        </div>
 
         <footer class="landing-footer">
             <div class="landing-footer__top" data-aos="fade-up">
@@ -259,7 +308,7 @@
                     </div>
                     <div class="landing-footer__column">
                         <h4>Company</h4>
-                        <a href="{{ route('register') }}">Register</a>
+                        <a href="#" data-open-onboarding data-plan-code="{{ request('plan', 'growth') }}">Register</a>
                         <a href="{{ route('login') }}">Sign In</a>
                         <a href="{{ route('register', ['trial' => 1]) }}">Free Trial</a>
                     </div>
@@ -267,7 +316,7 @@
                         <h4>Support</h4>
                         <a href="#faq">FAQ</a>
                         <a href="#pricing">Plans</a>
-                        <a href="{{ route('register') }}">Contact Team</a>
+                        <a href="#" data-open-onboarding data-plan-code="{{ request('plan', 'growth') }}">Contact Team</a>
                     </div>
                 </div>
             </div>
@@ -298,6 +347,60 @@
         const workFilterButtons = document.querySelectorAll('[data-work-filter]');
         const workCards = document.querySelectorAll('[data-work-card]');
         const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const onboardingModal = document.getElementById('onboardingModal');
+        const onboardingPlanInput = document.getElementById('onboardingPlanInput');
+        const onboardingPlanPreview = document.getElementById('onboardingPlanPreview');
+        const onboardingOpeners = document.querySelectorAll('[data-open-onboarding]');
+        const onboardingModalClose = document.getElementById('onboardingModalClose');
+        const onboardingModalCancel = document.getElementById('onboardingModalCancel');
+
+        const openOnboardingModal = (planCode) => {
+            if (!onboardingModal) return;
+            if (onboardingPlanInput) {
+                onboardingPlanInput.value = planCode || 'growth';
+            }
+            if (onboardingPlanPreview) {
+                onboardingPlanPreview.value = String(planCode || 'growth').toUpperCase();
+            }
+            onboardingModal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        };
+
+        const closeOnboardingModal = () => {
+            if (!onboardingModal) return;
+            onboardingModal.style.display = 'none';
+            document.body.style.overflow = '';
+        };
+
+        onboardingOpeners.forEach((opener) => {
+            opener.addEventListener('click', (event) => {
+                event.preventDefault();
+                openOnboardingModal(opener.dataset.planCode || 'growth');
+            });
+        });
+
+        if (onboardingModalClose) {
+            onboardingModalClose.addEventListener('click', closeOnboardingModal);
+        }
+        if (onboardingModalCancel) {
+            onboardingModalCancel.addEventListener('click', closeOnboardingModal);
+        }
+        if (onboardingModal) {
+            onboardingModal.addEventListener('click', (event) => {
+                if (event.target === onboardingModal) {
+                    closeOnboardingModal();
+                }
+            });
+        }
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                closeOnboardingModal();
+            }
+        });
+
+        @if(session('open_onboarding_modal') || $errors->any())
+            openOnboardingModal(@json((string) request('plan', 'growth')));
+        @endif
 
         const setActiveNavHash = (hash) => {
             if (!landingNav) return;

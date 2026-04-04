@@ -43,6 +43,12 @@ class PublicOnboardingController extends Controller
 
         $trialMode = $request->boolean('trial');
 
+        if (! $trialMode) {
+            return redirect()
+                ->route('landing', ['plan' => (string) $request->query('plan', 'growth')])
+                ->with('open_onboarding_modal', true);
+        }
+
         return view('auth.register', [
             'plans' => $onboarding->plans(),
             'selectedPlan' => (string) $request->query('plan', 'growth'),
@@ -62,7 +68,8 @@ class PublicOnboardingController extends Controller
             'full_name' => 'required|string|max:255',
             'company_name' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email',
-            'password' => [
+            'mobile' => $trialMode ? 'nullable|string|max:32' : ['required', 'regex:/^09\d{9}$/'],
+            'password' => $trialMode ? [
                 'required',
                 'string',
                 'min:12',
@@ -72,11 +79,12 @@ class PublicOnboardingController extends Controller
                 'regex:/[0-9]/',
                 'regex:/[^A-Za-z0-9]/',
                 'confirmed',
-            ],
+            ] : 'nullable|string',
             'plan' => $trialMode ? 'nullable|string' : 'required|string',
             'trial_mode' => 'nullable|boolean',
         ], [
             'password.regex' => 'Password must contain uppercase, lowercase, number, and a special character.',
+            'mobile.regex' => 'Mobile number must be a valid PH format (09XXXXXXXXX).',
         ]);
 
         try {
@@ -103,14 +111,11 @@ class PublicOnboardingController extends Controller
             }
 
             $intent = $onboarding->markPaid($intent, 'manual');
-            $user = $onboarding->finalize($intent);
-
-            Auth::login($user, true);
-            $request->session()->regenerate();
+            $onboarding->finalize($intent);
 
             return redirect()
-                ->route('dashboard.owner')
-                ->with('success', 'Registration completed successfully. Your Account Owner dashboard is ready.');
+                ->route('login')
+                ->with('success', 'Payment Successful. Please check your email to activate your account.');
         } catch (\Throwable $e) {
             report($e);
 
@@ -125,16 +130,10 @@ class PublicOnboardingController extends Controller
         PayMongoCheckoutService $payMongo,
     ) {
         try {
-            if ($signupIntent->status === 'completed') {
-                $user = User::query()->where('email', $signupIntent->email)->first();
-                if ($user) {
-                    Auth::login($user, true);
-                    $request->session()->regenerate();
-
-                    return redirect()
-                        ->route('dashboard.owner')
-                        ->with('success', 'Payment confirmed successfully. Welcome to your Account Owner dashboard.');
-                }
+            if ($signupIntent->status === 'completed' || $signupIntent->lifecycle_state === 'email_sent') {
+                return redirect()
+                    ->route('login')
+                    ->with('success', 'Payment Successful. Please check your email to activate your account.');
             }
 
             if ($signupIntent->status !== 'paid') {
@@ -173,14 +172,11 @@ class PublicOnboardingController extends Controller
                 $signupIntent = $onboarding->markPaid($signupIntent, $method);
             }
 
-            $user = $onboarding->finalize($signupIntent);
-
-            Auth::login($user, true);
-            $request->session()->regenerate();
+            $onboarding->finalize($signupIntent);
 
             return redirect()
-                ->route('dashboard.owner')
-                ->with('success', 'Registration completed successfully. Welcome to your Account Owner dashboard.');
+                ->route('login')
+                ->with('success', 'Payment Successful. Please check your email to activate your account.');
         } catch (\Throwable $e) {
             report($e);
 

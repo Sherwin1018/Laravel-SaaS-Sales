@@ -5,14 +5,17 @@ namespace App\Services;
 use App\Models\Plan;
 use App\Models\Payment;
 use App\Models\Role;
+use App\Models\SetupToken;
 use App\Models\SignupIntent;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Str;
 use RuntimeException;
 
 class SignupOnboardingService
@@ -31,6 +34,7 @@ class SignupOnboardingService
 
             $plans = Plan::query()
                 ->where('is_active', true)
+                ->where('code', '!=', 'free-trial')
                 ->orderBy('sort_order')
                 ->orderBy('id')
                 ->get()
@@ -125,29 +129,64 @@ class SignupOnboardingService
     }
 
     /**
-     * @param  array{full_name:string,company_name:string,email:string,password:string,plan:string}  $validated
+     * @param  array{full_name:string,company_name:string,email:string,mobile?:string,plan:string}  $validated
      */
     public function upsertIntent(array $validated): SignupIntent
     {
         $plan = $this->findPlan($validated['plan']);
 
-        return SignupIntent::updateOrCreate(
-            ['email' => $validated['email']],
-            [
-                'full_name' => $validated['full_name'],
-                'company_name' => $validated['company_name'],
-                'password_encrypted' => Crypt::encryptString($validated['password']),
-                'plan_code' => $plan['code'],
-                'plan_name' => $plan['name'],
-                'amount' => $plan['price'],
-                'status' => 'pending',
-                'provider' => null,
-                'provider_reference' => null,
-                'payment_method' => null,
-                'paid_at' => null,
-                'completed_at' => null,
-            ]
-        );
+        $intent = SignupIntent::query()->where('email', $validated['email'])->first();
+        if ($intent && in_array($intent->lifecycle_state, [
+            SignupIntent::STATE_PAYMENT_PAID,
+            SignupIntent::STATE_ACCOUNT_CREATED_PENDING_ACTIVATION,
+            SignupIntent::STATE_EMAIL_SENT,
+            SignupIntent::STATE_EMAIL_VERIFIED,
+            SignupIntent::STATE_PASSWORD_SET,
+            SignupIntent::STATE_ACTIVE,
+        ], true)) {
+            throw new RuntimeException('This signup has already moved past payment pending. Please continue account activation from your email.');
+        }
+
+        if (! $intent) {
+            $intent = new SignupIntent([
+                'email' => $validated['email'],
+                'lifecycle_state' => SignupIntent::STATE_SIGNUP_INTENT_CREATED,
+                'email_delivery_attempts' => 0,
+            ]);
+        }
+
+        $intent->fill([
+            'full_name' => $validated['full_name'],
+            'company_name' => $validated['company_name'],
+            'mobile' => (string) ($validated['mobile'] ?? ''),
+            // Password is created via setup link after payment.
+            'password_encrypted' => Crypt::encryptString(Str::random(40)),
+            'plan_code' => $plan['code'],
+            'plan_name' => $plan['name'],
+            'amount' => $plan['price'],
+            'status' => 'pending',
+            'provider' => null,
+            'provider_reference' => null,
+            'payment_method' => null,
+            'paid_at' => null,
+            'email_sent_at' => null,
+            'email_delivery_status' => null,
+            'email_delivery_attempts' => 0,
+            'email_last_attempt_at' => null,
+            'email_last_error' => null,
+            'completed_at' => null,
+            'activated_at' => null,
+        ])->save();
+
+        if (! in_array($intent->lifecycle_state, SignupIntent::LIFECYCLE_STATES, true)) {
+            $intent->update(['lifecycle_state' => SignupIntent::STATE_SIGNUP_INTENT_CREATED]);
+        }
+
+        if ($intent->lifecycle_state === SignupIntent::STATE_SIGNUP_INTENT_CREATED) {
+            $this->transitionIntentOrFail($intent, SignupIntent::STATE_PAYMENT_PENDING);
+        }
+
+        return $intent->fresh();
     }
 
     /**
@@ -243,6 +282,7 @@ class SignupOnboardingService
             'payment_method' => $paymentMethod ?? $intent->payment_method,
             'paid_at' => $intent->paid_at ?? now(),
         ]);
+        $this->transitionIntentOrFail($intent, SignupIntent::STATE_PAYMENT_PAID);
 
         return $intent->fresh();
     }
@@ -332,7 +372,7 @@ class SignupOnboardingService
 
     public function finalize(SignupIntent $intent): User
     {
-        return DB::transaction(function () use ($intent) {
+        [$user, $setupToken] = DB::transaction(function () use ($intent) {
             $intent = SignupIntent::query()->lockForUpdate()->findOrFail($intent->id);
 
             $existingUser = User::query()->where('email', $intent->email)->first();
@@ -355,7 +395,7 @@ class SignupOnboardingService
             $tenant = Tenant::create([
                 'company_name' => $intent->company_name,
                 'subscription_plan' => $intent->plan_name,
-                'status' => 'active',
+                'status' => 'inactive',
                 'billing_status' => 'current',
                 'subscription_activated_at' => now(),
             ]);
@@ -364,9 +404,11 @@ class SignupOnboardingService
                 'tenant_id' => $tenant->id,
                 'name' => $intent->full_name,
                 'email' => $intent->email,
-                'password' => Crypt::decryptString($intent->password_encrypted),
+                'phone' => $intent->mobile,
+                'password' => Str::random(40),
                 'role' => 'account-owner',
-                'status' => 'active',
+                'status' => 'inactive',
+                'activation_state' => 'pending_activation',
             ]);
 
             $role = Role::query()->where('slug', 'account-owner')->first();
@@ -404,12 +446,170 @@ class SignupOnboardingService
                 ]);
             }
 
-            $intent->update([
-                'status' => 'completed',
-                'completed_at' => now(),
-            ]);
+            $setupTokenData = app(SetupTokenService::class)->createForUser(
+                $user,
+                'account_owner_onboarding',
+                ['signup_intent_id' => $intent->id]
+            );
 
-            return $user;
+            $intent->update([
+                'email_delivery_status' => 'queued',
+                'email_delivery_attempts' => 0,
+                'email_last_attempt_at' => null,
+                'email_last_error' => null,
+                'completed_at' => null,
+                'activated_at' => null,
+            ]);
+            $this->transitionIntentOrFail($intent, SignupIntent::STATE_ACCOUNT_CREATED_PENDING_ACTIVATION);
+
+            return [$user->fresh(['roles']), $setupTokenData['token']];
         });
+
+        $this->queueSetupEmail($user, 'account_owner_paid_signup_created', app(SetupTokenService::class), [
+            'token' => $setupToken,
+        ]);
+
+        if ((bool) config('services.n8n.send_payment_success_event', false)) {
+            app(N8nEmailOrchestrator::class)->dispatch('payment_successful', [
+                'signup_intent_id' => $intent->id,
+                'user_id' => $user->id,
+                'tenant_id' => $user->tenant_id,
+                'email' => $user->email,
+                'name' => $user->name,
+                'plan_code' => $intent->plan_code,
+                'plan_name' => $intent->plan_name,
+                'amount' => (float) $intent->amount,
+                'payment_method' => $intent->payment_method,
+                'paid_at' => optional($intent->paid_at ?? now())->toIso8601String(),
+                // Kept for optional template compatibility when this event is enabled.
+                'setup_url' => route('login'),
+                'expires_at' => now()->addHours(24)->toIso8601String(),
+                'login_url' => route('login'),
+            ]);
+        }
+
+        return $user;
+    }
+
+    /**
+     * @param  array<string, mixed>  $meta
+     */
+    public function queueSetupEmail(
+        User $user,
+        string $eventName,
+        SetupTokenService $setupTokenService,
+        array $meta = [],
+    ): bool {
+        $purpose = $this->purposeFromEvent($eventName);
+
+        if (! isset($meta['token']) || ! is_string($meta['token']) || $meta['token'] === '') {
+            SetupToken::query()
+                ->where('user_id', $user->id)
+                ->where('purpose', $purpose)
+                ->whereNull('used_at')
+                ->update(['used_at' => now()]);
+
+            $tokenData = $setupTokenService->createForUser($user, $purpose);
+            $token = $tokenData['token'];
+            $expiresAt = $tokenData['setupToken']->expires_at;
+        } else {
+            $token = $meta['token'];
+            $tokenRecord = $setupTokenService->resolveByPlainToken($token);
+            $expiresAt = $tokenRecord?->expires_at ?? now()->addHours(24);
+        }
+
+        $setupUrl = route('setup.show', [
+            'token' => $token,
+            'email' => $user->email,
+        ]);
+
+        $sent = app(N8nEmailOrchestrator::class)->dispatch($eventName, [
+            'user_id' => $user->id,
+            'tenant_id' => $user->tenant_id,
+            'email' => $user->email,
+            'name' => $user->name,
+            'role' => $user->role,
+            'setup_url' => $setupUrl,
+            'expires_at' => $expiresAt?->toIso8601String(),
+            'login_url' => route('login'),
+        ]);
+
+        if ($sent) {
+            $user->update(['activation_state' => 'email_sent']);
+            $intent = SignupIntent::query()
+                ->where('email', $user->email)
+                ->where('status', 'paid')
+                ->latest('id')
+                ->first();
+            if ($intent) {
+                $intent->update([
+                    'email_sent_at' => now(),
+                    'email_delivery_status' => 'sent',
+                    'email_delivery_attempts' => (int) $intent->email_delivery_attempts + 1,
+                    'email_last_attempt_at' => now(),
+                    'email_last_error' => null,
+                ]);
+                if ($intent->lifecycle_state === SignupIntent::STATE_ACCOUNT_CREATED_PENDING_ACTIVATION) {
+                    $this->transitionIntentOrFail($intent, SignupIntent::STATE_EMAIL_SENT);
+                }
+            }
+            app(OnboardingAuditService::class)->record(
+                'onboarding_email_sent',
+                'success',
+                'Onboarding email dispatched to n8n successfully.',
+                $user,
+                $intent,
+                ['event_name' => $eventName]
+            );
+        } else {
+            $intent = SignupIntent::query()
+                ->where('email', $user->email)
+                ->whereIn('status', ['pending', 'paid'])
+                ->latest('id')
+                ->first();
+            if ($intent) {
+                $intent->update([
+                    'email_delivery_status' => 'failed',
+                    'email_delivery_attempts' => (int) $intent->email_delivery_attempts + 1,
+                    'email_last_attempt_at' => now(),
+                    'email_last_error' => 'n8n dispatch failed',
+                ]);
+            }
+            Log::warning('Setup email dispatch skipped/failed.', [
+                'user_id' => $user->id,
+                'event_name' => $eventName,
+            ]);
+            app(OnboardingAuditService::class)->record(
+                'onboarding_email_failed',
+                'failed',
+                'Onboarding email dispatch to n8n failed.',
+                $user,
+                $intent,
+                ['event_name' => $eventName]
+            );
+        }
+
+        return $sent;
+    }
+
+    private function transitionIntentOrFail(SignupIntent $intent, string $nextState): void
+    {
+        $current = (string) $intent->lifecycle_state;
+        if ($current === $nextState) {
+            return;
+        }
+
+        if (! $intent->transitionTo($nextState)) {
+            throw new RuntimeException("Invalid signup lifecycle transition: {$current} -> {$nextState}");
+        }
+    }
+
+    private function purposeFromEvent(string $eventName): string
+    {
+        return match ($eventName) {
+            'team_member_invited' => 'team_member_invite',
+            'customer_portal_invited' => 'customer_portal_invite',
+            default => 'account_owner_onboarding',
+        };
     }
 }

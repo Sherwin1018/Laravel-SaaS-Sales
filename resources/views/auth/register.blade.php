@@ -81,19 +81,24 @@
                 <label for="email">Email Address</label>
                 <input type="email" name="email" id="email" value="{{ old('email') }}" placeholder="Email Address" required>
 
-                <label for="password">Password</label>
-                <div class="password-container">
-                    <input type="password" name="password" id="passwordField" placeholder="Password" required>
-                    <i class="fas fa-eye toggle-password" data-target="passwordField"></i>
-                </div>
+                <label for="mobile">PH Mobile Number</label>
+                <input type="text" name="mobile" id="mobile" value="{{ old('mobile') }}" placeholder="09XXXXXXXXX" {{ $trialMode ? '' : 'required' }}>
 
-                <label for="password_confirmation">Confirm Password</label>
-                <div class="password-container">
-                    <input type="password" name="password_confirmation" id="passwordConfirmationField" placeholder="Confirm Password" required>
-                    <i class="fas fa-eye toggle-password" data-target="passwordConfirmationField"></i>
-                </div>
+                @if($trialMode)
+                    <label for="password">Password</label>
+                    <div class="password-container">
+                        <input type="password" name="password" id="passwordField" placeholder="Password" required>
+                        <i class="fas fa-eye toggle-password" data-target="passwordField"></i>
+                    </div>
 
-                <p class="password-hint">Use 12 to 64 characters with uppercase, lowercase, number, and special character.</p>
+                    <label for="password_confirmation">Confirm Password</label>
+                    <div class="password-container">
+                        <input type="password" name="password_confirmation" id="passwordConfirmationField" placeholder="Confirm Password" required>
+                        <i class="fas fa-eye toggle-password" data-target="passwordConfirmationField"></i>
+                    </div>
+
+                    <p class="password-hint">Use 12 to 64 characters with uppercase, lowercase, number, and special character.</p>
+                @endif
 
                 <button type="button" id="openPricingModalButton">{{ $trialMode ? 'Start Free Trial' : 'Register and Choose Plan' }}</button>
             </form>
@@ -180,6 +185,7 @@
                 full_name: form.querySelector('[name="full_name"]').value,
                 company_name: form.querySelector('[name="company_name"]').value,
                 email: form.querySelector('[name="email"]').value,
+                mobile: form.querySelector('[name="mobile"]').value,
                 plan: selectedPlanInput.value
             };
 
@@ -189,7 +195,7 @@
         function restoreFormState() {
             try {
                 const payload = JSON.parse(localStorage.getItem(storageKey) || '{}');
-                ['full_name', 'company_name', 'email'].forEach((field) => {
+                ['full_name', 'company_name', 'email', 'mobile'].forEach((field) => {
                     const input = form.querySelector(`[name="${field}"]`);
                     if (input && !input.value && payload[field]) {
                         input.value = payload[field];
@@ -220,6 +226,19 @@
                 return false;
             }
 
+            const mobileField = document.getElementById('mobile');
+            if (!isTrialMode && mobileField) {
+                const mobileValue = (mobileField.value || '').trim();
+                const isMobileValid = /^09\d{9}$/.test(mobileValue);
+                if (!isMobileValid) {
+                    mobileField.setCustomValidity('Mobile number must be in 09XXXXXXXXX format.');
+                    form.reportValidity();
+                    return false;
+                }
+                mobileField.setCustomValidity('');
+            }
+
+            if (isTrialMode) {
             const password = document.getElementById('passwordField').value;
             const confirmation = document.getElementById('passwordConfirmationField').value;
             if (password !== confirmation) {
@@ -229,6 +248,7 @@
             }
 
             document.getElementById('passwordConfirmationField').setCustomValidity('');
+            }
             return true;
         }
 

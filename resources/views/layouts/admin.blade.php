@@ -96,6 +96,9 @@
                 <a href="{{ route('admin.plans.index') }}" class="{{ request()->routeIs('admin.plans.*') ? 'active' : '' }}">
                     <i class="fas fa-tags"></i> <span>Plans</span>
                 </a>
+                <a href="{{ route('admin.automation.index') }}" class="{{ request()->routeIs('admin.automation.*') ? 'active' : '' }}">
+                    <i class="fas fa-clipboard-list"></i> <span>Automation</span>
+                </a>
             @endif
 
             {{-- TENANT LINKS (Account Owner, Marketing, Sales, Finance, Customer) --}}
@@ -148,7 +151,7 @@
             {{-- Funnels & Automation (Owner, Marketing) --}}
             @if(auth()->user()->hasRole('account-owner') || auth()->user()->hasRole('marketing-manager'))
                 <a href="{{ route('funnels.index') }}" class="{{ request()->routeIs('funnels.*') ? 'active' : '' }}"><i class="fas fa-filter"></i> <span>Funnels</span></a>
-                <a href="#"><i class="fas fa-clipboard-list"></i> <span>Automation</span></a>
+                <a href="{{ route('automation.index') }}" class="{{ request()->routeIs('automation.*') ? 'active' : '' }}"><i class="fas fa-clipboard-list"></i> <span>Automation</span></a>
             @endif
 
             {{-- Billing (Owner, Finance) --}}

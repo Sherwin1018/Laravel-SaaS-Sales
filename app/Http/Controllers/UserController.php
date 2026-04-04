@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\Role;
+use App\Services\SetupTokenService;
+use App\Services\SignupOnboardingService;
 use App\Support\TenantPlanEnforcer;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class UserController extends Controller
 {
@@ -97,21 +99,10 @@ class UserController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users',
-            'password' => [
-                'required',
-                'string',
-                'min:12',
-                'max:64',
-                'regex:/[a-z]/',
-                'regex:/[A-Z]/',
-                'regex:/[0-9]/',
-                'regex:/[^A-Za-z0-9]/',
-                'confirmed',
-            ],
+            'phone' => 'nullable|string|max:32',
             'role' => 'required|exists:roles,slug',
-        ], [
-            'password.regex' => 'Password must contain uppercase, lowercase, number, and a special character.',
-        ]); 
+        ]);
+
         try {
             $tenantId = auth()->user()->tenant_id;
             app(TenantPlanEnforcer::class)->ensureCanCreateUser(auth()->user()->tenant);
@@ -121,20 +112,39 @@ class UserController extends Controller
                 'tenant_id' => $tenantId,
                 'name' => $request->name,
                 'email' => $request->email,
-                'password' => Hash::make($request->password),
+                'phone' => $request->phone,
+                'password' => Str::random(40),
                 'role' => $request->role, // Store slug directly (e.g. 'marketing-manager')
-                'status' => 'active',
+                'status' => 'inactive',
+                'activation_state' => 'invited',
+                'invited_by' => auth()->id(),
+                'invited_at' => now(),
+                'is_customer_portal_user' => $request->role === 'customer',
             ]);
 
             // Attach Role
             $role = Role::where('slug', $request->role)->first();
-            $user->roles()->attach($role);
+            if ($role) {
+                $user->roles()->syncWithoutDetaching([$role->id]);
+            }
 
-            return redirect()->route('users.index')->with('success', 'Added Successfully');
+            $eventName = $request->role === 'customer'
+                ? 'customer_portal_invited'
+                : 'team_member_invited';
+
+            app(SignupOnboardingService::class)->queueSetupEmail(
+                $user,
+                $eventName,
+                app(SetupTokenService::class),
+            );
+
+            return redirect()->route('users.index')->with('success', 'Invitation sent successfully.');
         } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
             return redirect()->back()->withInput()->with('error', $e->getMessage());
         } catch (\Throwable $e) {
-            return redirect()->back()->withInput()->with('error', 'Added Failed');
+            report($e);
+
+            return redirect()->back()->withInput()->with('error', 'Invitation could not be sent.');
         }
     }
 

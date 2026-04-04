@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -11,10 +12,19 @@ class User extends Authenticatable
 {
     use HasFactory, Notifiable;
 
+    public const ACTIVATION_STATES = [
+        'invited',
+        'pending_activation',
+        'email_sent',
+        'email_verified',
+        'password_set',
+        'active',
+    ];
+
     /**
      * User belongs to a tenant
      */
-    public function tenant()
+    public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
     }
@@ -30,6 +40,16 @@ class User extends Authenticatable
     public function assignedLeads(): HasMany
     {
         return $this->hasMany(Lead::class, 'assigned_to');
+    }
+
+    public function setupTokens(): HasMany
+    {
+        return $this->hasMany(SetupToken::class);
+    }
+
+    public function inviter(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'invited_by');
     }
 
     /**
@@ -57,6 +77,13 @@ class User extends Authenticatable
         'secondary_phone',
         'profile_photo_path',
         'last_login_at',
+        'activation_state',
+        'invited_by',
+        'invited_at',
+        'activation_completed_at',
+        'google_id',
+        'must_change_password',
+        'is_customer_portal_user',
     ];
 
     /**
@@ -78,5 +105,9 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'password' => 'hashed', // Laravel hashes automatically
         'last_login_at' => 'datetime',
+        'invited_at' => 'datetime',
+        'activation_completed_at' => 'datetime',
+        'must_change_password' => 'boolean',
+        'is_customer_portal_user' => 'boolean',
     ];
 }

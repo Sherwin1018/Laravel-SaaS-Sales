@@ -1,17 +1,21 @@
 <?php
 
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\AutomationController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FunnelController;
 use App\Http\Controllers\FunnelPortalController;
+use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\LeadCustomFieldController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\N8nWebhookController;
 use App\Http\Controllers\PayMongoWebhookController;
 use App\Http\Controllers\PlanController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicOnboardingController;
+use App\Http\Controllers\SetupAccessController;
 use App\Http\Controllers\TenantController;
 use App\Http\Controllers\TrialSubscriptionController;
 use App\Http\Controllers\UserController;
@@ -25,6 +29,11 @@ Route::middleware('guest')->group(function () {
     Route::post('/register', [PublicOnboardingController::class, 'startRegistrationCheckout'])->name('register.post');
     Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
     Route::post('/login', [AuthController::class, 'login'])->name('login.post');
+    Route::get('/auth/google/redirect', [GoogleAuthController::class, 'redirect'])->name('auth.google.redirect');
+    Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback'])->name('auth.google.callback');
+    Route::post('/setup/resend', [SetupAccessController::class, 'resend'])->middleware('throttle:setup-resend')->name('setup.resend');
+    Route::get('/setup/{token}', [SetupAccessController::class, 'show'])->middleware('throttle:setup-link-show')->name('setup.show');
+    Route::post('/setup/{token}', [SetupAccessController::class, 'complete'])->middleware('throttle:setup-link-complete')->name('setup.complete');
 });
 Route::get('/logout', function () {
     if (! Auth::check()) {
@@ -91,6 +100,8 @@ Route::middleware(['auth', 'tenant.subscription', 'role:super-admin'])->group(fu
     Route::get('/admin/users', [UserController::class, 'adminIndex'])->name('admin.users.index');
     Route::patch('/admin/users/{user}/status', [UserController::class, 'toggleOwnerStatus'])->name('admin.users.status');
     Route::get('/admin/leads', [LeadController::class, 'adminIndex'])->name('admin.leads.index');
+    Route::get('/admin/automation', [AutomationController::class, 'index'])->name('admin.automation.index');
+    Route::post('/admin/automation/toggle', [AutomationController::class, 'toggle'])->name('admin.automation.toggle');
 });
 
 Route::middleware(['auth', 'tenant.subscription', 'role:sales-agent,marketing-manager,account-owner,finance'])->group(function () {
@@ -144,6 +155,9 @@ Route::middleware(['auth', 'tenant.subscription', 'role:sales-agent,marketing-ma
         Route::post('/funnels/{funnel}/steps/{step}/versions', [FunnelController::class, 'storeVersion'])->name('funnels.steps.versions.store');
         Route::post('/funnels/{funnel}/steps/reorder', [FunnelController::class, 'reorderSteps'])->name('funnels.steps.reorder');
 
+        Route::get('/automation', [AutomationController::class, 'index'])->name('automation.index');
+        Route::post('/automation/toggle', [AutomationController::class, 'toggle'])->name('automation.toggle');
+
     });
 
     Route::middleware(['role:account-owner,finance'])->group(function () {
@@ -169,3 +183,4 @@ Route::get('/register/paymongo/return/{signupIntent}', [PublicOnboardingControll
     ->name('register.paymongo.return');
 
 Route::post('/webhooks/paymongo', PayMongoWebhookController::class)->name('webhooks.paymongo');
+Route::post('/api/n8n/email-status', [N8nWebhookController::class, 'emailStatus'])->name('api.n8n.email-status');

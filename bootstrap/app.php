@@ -17,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->validateCsrfTokens(except: [
             'webhooks/paymongo',
+            'api/n8n/email-status',
         ]);
 
         $middleware->alias([
