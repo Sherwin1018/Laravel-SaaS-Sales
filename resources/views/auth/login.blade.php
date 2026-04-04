@@ -79,7 +79,7 @@
             <h1>Login to Funnel System</h1>
             <p class="subtitle">Access your sales and marketing dashboard</p>
 
-            <form method="POST" action="{{ route('login.post') }}">
+            <form id="loginForm" method="POST" action="{{ route('login.post') }}">
                 @csrf
                 <label for="email">Email Address</label>
                 <input type="email" name="email" placeholder="Email" required>
@@ -90,9 +90,9 @@
                     <i class="fas fa-eye toggle-password" onclick="togglePassword()"></i>
                 </div>
 
-                <button type="submit">Login</button>
+                <button id="loginSubmitButton" type="submit">Login</button>
             </form>
-            <a href="{{ route('auth.google.redirect') }}" style="display:flex;align-items:center;justify-content:center;gap:10px;margin-top:12px;padding:12px;border-radius:10px;border:1px solid #E6E1EF;background:#fff;color:#111827;text-decoration:none;font-weight:600;">
+            <a id="googleLoginLink" href="{{ route('auth.google.redirect') }}" style="display:flex;align-items:center;justify-content:center;gap:10px;margin-top:12px;padding:12px;border-radius:10px;border:1px solid #E6E1EF;background:#fff;color:#111827;text-decoration:none;font-weight:600;">
                 <i class="fab fa-google" style="color:#ea4335;"></i>
                 Continue with Google
             </a>
@@ -100,6 +100,13 @@
             <p class="register-link">
                 Don't have an account? <a href="{{ route('register') }}">Register here</a>
             </p>
+        </div>
+    </div>
+
+    <div id="loginSplash" class="login-splash" aria-hidden="true">
+        <div class="login-splash__panel">
+            <img src="{{ asset('images/nehemiahlogo.png') }}" alt="Nehemiah Solutions" class="login-splash__logo">
+            <p class="login-splash__text">Signing you in...</p>
         </div>
     </div>
 
@@ -117,6 +124,73 @@
                 icon.classList.add('fa-eye');
             }
         }
+
+        (function () {
+            const loginForm = document.getElementById('loginForm');
+            const submitButton = document.getElementById('loginSubmitButton');
+            const googleLoginLink = document.getElementById('googleLoginLink');
+            const splash = document.getElementById('loginSplash');
+            const defaultButtonLabel = submitButton ? submitButton.textContent : 'Login';
+            const splashDisplayMs = 900;
+            const googleSplashDisplayMs = 700;
+            let isSubmitting = false;
+            let isGoogleRedirecting = false;
+
+            if (!loginForm || !submitButton || !splash) {
+                return;
+            }
+
+            const resetSubmitUi = () => {
+                splash.classList.remove('is-visible');
+                splash.setAttribute('aria-hidden', 'true');
+                submitButton.disabled = false;
+                submitButton.textContent = defaultButtonLabel;
+                isSubmitting = false;
+            };
+
+            loginForm.addEventListener('submit', function (event) {
+                if (isSubmitting) {
+                    return;
+                }
+
+                event.preventDefault();
+                isSubmitting = true;
+                splash.classList.add('is-visible');
+                splash.setAttribute('aria-hidden', 'false');
+                submitButton.disabled = true;
+                submitButton.textContent = 'Signing In...';
+
+                window.setTimeout(function () {
+                    loginForm.submit();
+                }, splashDisplayMs);
+
+                window.setTimeout(function () {
+                    if (document.body.contains(splash)) {
+                        resetSubmitUi();
+                    }
+                }, 12000);
+            });
+
+            if (googleLoginLink) {
+                googleLoginLink.addEventListener('click', function (event) {
+                    if (isGoogleRedirecting || isSubmitting) {
+                        event.preventDefault();
+                        return;
+                    }
+
+                    event.preventDefault();
+                    isGoogleRedirecting = true;
+                    splash.classList.add('is-visible');
+                    splash.setAttribute('aria-hidden', 'false');
+
+                    window.setTimeout(function () {
+                        window.location.href = googleLoginLink.href;
+                    }, googleSplashDisplayMs);
+                });
+            }
+
+            window.addEventListener('pageshow', resetSubmitUi);
+        })();
     </script>
 
 </body>

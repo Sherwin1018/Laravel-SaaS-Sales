@@ -216,7 +216,7 @@
                             <h3>{{ $plan['name'] }}</h3>
                             <p class="pricing-card__summary">{{ $plan['summary'] }}</p>
                             <div class="pricing-card__price">
-                                <strong>PHP {{ number_format($plan['price'], 0) }}</strong>
+                                <strong>{{ (float) $plan['price'] <= 0 ? 'Free' : 'PHP ' . number_format($plan['price'], 0) }}</strong>
                                 <span>{{ $plan['period'] }}</span>
                             </div>
                             <ul>
@@ -288,10 +288,11 @@
                         <div>
                             <label for="email" style="display:block;margin-bottom:6px;font-weight:600;color:#0F172A;">Email Address</label>
                             <input id="email" name="email" type="email" maxlength="255" required value="{{ old('email') }}" style="width:100%;padding:10px 12px;border:1px solid #CBD5E1;border-radius:10px;">
+                            <small style="display:block;margin-top:6px;color:#280137;">Please enter a valid email address</small>
                         </div>
 
                         <div>
-                            <label for="mobile" style="display:block;margin-bottom:6px;font-weight:600;color:#0F172A;">Mobile Number (PH)</label>
+                            <label for="mobile" style="display:block;margin-bottom:6px;font-weight:600;color:#0F172A;">Mobile Number</label>
                             <input id="mobile" name="mobile" type="text" pattern="^09\d{9}$" placeholder="09XXXXXXXXX" required value="{{ old('mobile') }}" style="width:100%;padding:10px 12px;border:1px solid #CBD5E1;border-radius:10px;">
                         </div>
 
@@ -302,7 +303,7 @@
 
                         <div>
                             <label for="onboardingPlanPreview" style="display:block;margin-bottom:6px;font-weight:600;color:#0F172A;">Selected Plan</label>
-                            <input id="onboardingPlanPreview" type="text" readonly value="{{ strtoupper((string) request('plan', 'growth')) }}" style="width:100%;padding:10px 12px;border:1px solid #CBD5E1;border-radius:10px;background:#F8FAFC;">
+                            <input id="onboardingPlanPreview" type="text" readonly value="{{ strtoupper((string) request('plan', 'growth')) }}" style="width:100%;padding:10px 12px;border:1px solid #CBD5E1;border-radius:10px;background:#F8FAFC;font-weight:700;">
                         </div>
                     </div>
 
