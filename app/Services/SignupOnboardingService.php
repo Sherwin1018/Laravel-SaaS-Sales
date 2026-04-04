@@ -23,32 +23,62 @@ class SignupOnboardingService
     public const TRIAL_DAYS = 7;
 
     /**
-     * @return array<int, array{code: string, name: string, price: float, period: string, summary: string, features: array<int, string>, spotlight: string|null}>
+     * @return array<int, array{
+     *   code: string,
+     *   name: string,
+     *   price: float,
+     *   period: string,
+     *   summary: string,
+     *   features: array<int, string>,
+     *   spotlight: string|null,
+     *   max_users: int|null,
+     *   max_leads: int|null,
+     *   max_funnels: int|null,
+     *   max_workflows: int|null,
+     *   max_monthly_messages: int|null
+     * }>
      */
-    public function plans(): array
+    public function plans(bool $includeFreeTrial = false): array
     {
         try {
             if (! Schema::hasTable('plans')) {
-                return $this->defaultPlans();
+                return $this->defaultPlans($includeFreeTrial);
             }
 
-            $plans = Plan::query()
+            $query = Plan::query()
                 ->where('is_active', true)
-                ->where('code', '!=', 'free-trial')
                 ->orderBy('sort_order')
-                ->orderBy('id')
-                ->get()
+                ->orderBy('id');
+
+            if (! $includeFreeTrial) {
+                $query->where('code', '!=', 'free-trial');
+            }
+
+            $plans = $query->get()
                 ->map(fn (Plan $plan) => $this->serializePlan($plan))
                 ->all();
 
-            return $plans !== [] ? $plans : $this->defaultPlans();
+            return $plans !== [] ? $plans : $this->defaultPlans($includeFreeTrial);
         } catch (\Throwable) {
-            return $this->defaultPlans();
+            return $this->defaultPlans($includeFreeTrial);
         }
     }
 
     /**
-     * @return array{code: string, name: string, price: float, period: string, summary: string, features: array<int, string>, spotlight: string|null}
+     * @return array{
+     *   code: string,
+     *   name: string,
+     *   price: float,
+     *   period: string,
+     *   summary: string,
+     *   features: array<int, string>,
+     *   spotlight: string|null,
+     *   max_users: int|null,
+     *   max_leads: int|null,
+     *   max_funnels: int|null,
+     *   max_workflows: int|null,
+     *   max_monthly_messages: int|null
+     * }
      */
     public function findPlan(string $code): array
     {
@@ -62,7 +92,20 @@ class SignupOnboardingService
     }
 
     /**
-     * @return array{code: string, name: string, price: float, period: string, summary: string, features: array<int, string>, spotlight: string|null}
+     * @return array{
+     *   code: string,
+     *   name: string,
+     *   price: float,
+     *   period: string,
+     *   summary: string,
+     *   features: array<int, string>,
+     *   spotlight: string|null,
+     *   max_users: int|null,
+     *   max_leads: int|null,
+     *   max_funnels: int|null,
+     *   max_workflows: int|null,
+     *   max_monthly_messages: int|null
+     * }
      */
     private function serializePlan(Plan $plan): array
     {
@@ -74,15 +117,33 @@ class SignupOnboardingService
             'summary' => $plan->summary,
             'features' => array_values(array_filter((array) $plan->features, fn ($feature) => is_string($feature) && trim($feature) !== '')),
             'spotlight' => $plan->spotlight,
+            'max_users' => $plan->max_users,
+            'max_leads' => $plan->max_leads,
+            'max_funnels' => $plan->max_funnels,
+            'max_workflows' => $plan->max_workflows,
+            'max_monthly_messages' => $plan->max_monthly_messages,
         ];
     }
 
     /**
-     * @return array<int, array{code: string, name: string, price: float, period: string, summary: string, features: array<int, string>, spotlight: string|null}>
+     * @return array<int, array{
+     *   code: string,
+     *   name: string,
+     *   price: float,
+     *   period: string,
+     *   summary: string,
+     *   features: array<int, string>,
+     *   spotlight: string|null,
+     *   max_users: int|null,
+     *   max_leads: int|null,
+     *   max_funnels: int|null,
+     *   max_workflows: int|null,
+     *   max_monthly_messages: int|null
+     * }>
      */
-    private function defaultPlans(): array
+    private function defaultPlans(bool $includeFreeTrial = false): array
     {
-        return [
+        $plans = [
             [
                 'code' => 'starter',
                 'name' => 'Starter',
@@ -96,6 +157,11 @@ class SignupOnboardingService
                     'Email and landing-page-ready funnel journeys',
                 ],
                 'spotlight' => 'Best for New Teams',
+                'max_users' => 5,
+                'max_leads' => 1000,
+                'max_funnels' => 3,
+                'max_workflows' => 1,
+                'max_monthly_messages' => 2000,
             ],
             [
                 'code' => 'growth',
@@ -110,6 +176,11 @@ class SignupOnboardingService
                     'PayMongo-ready checkout journeys for your offers',
                 ],
                 'spotlight' => 'Recommended',
+                'max_users' => 20,
+                'max_leads' => 10000,
+                'max_funnels' => null,
+                'max_workflows' => 10,
+                'max_monthly_messages' => 30000,
             ],
             [
                 'code' => 'scale',
@@ -124,8 +195,37 @@ class SignupOnboardingService
                     'Built for aggressive campaign and revenue targets',
                 ],
                 'spotlight' => 'Best For Teams',
+                'max_users' => null,
+                'max_leads' => null,
+                'max_funnels' => null,
+                'max_workflows' => null,
+                'max_monthly_messages' => null,
             ],
         ];
+
+        if ($includeFreeTrial) {
+            array_unshift($plans, [
+                'code' => 'free-trial',
+                'name' => 'Free Trial',
+                'price' => 0.00,
+                'period' => '7 days',
+                'summary' => 'Account Owner dashboard access during trial period with limited team, leads, and funnel usage.',
+                'features' => [
+                    'Account Owner dashboard access during trial period',
+                    'Limited team, leads, and funnel usage',
+                    'Upgrade to Starter, Growth, or Scale anytime',
+                    'No onboarding email dispatch required for trial signup',
+                ],
+                'spotlight' => 'Trial',
+                'max_users' => 3,
+                'max_leads' => 300,
+                'max_funnels' => 1,
+                'max_workflows' => 1,
+                'max_monthly_messages' => 500,
+            ]);
+        }
+
+        return $plans;
     }
 
     /**

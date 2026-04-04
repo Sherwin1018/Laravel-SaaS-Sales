@@ -171,7 +171,7 @@
                             <h3>Map every stage from traffic source to payment conversion before launch.</h3>
                             <p>Design the route for opt-ins, upsells, downsells, and onboarding touchpoints with clear ownership.</p>
                         </article>
-                        <article class="work-panel work-panel--research" data-work-card data-work-category="research" hidden>
+                        <article class="work-panel work-panel--wide work-panel--research" data-work-card data-work-category="research" hidden>
                             <span>Performance Research</span>
                             <h3>Use funnel visibility to see what converts, what stalls, and what needs optimization.</h3>
                             <p>Review acquisition quality, pipeline movement, and checkout completion so the next campaign is sharper.</p>
@@ -189,6 +189,27 @@
                 <div class="pricing__grid">
                     @foreach($plans as $index => $plan)
                         <article class="pricing-card {{ $plan['spotlight'] ? 'pricing-card--featured' : '' }}" data-aos="fade-up" data-aos-delay="{{ $index * 100 }}">
+                            @php
+                                $isTrialPlan = $plan['code'] === 'free-trial';
+                                $formatLimit = static fn ($value) => is_null($value) ? 'Unlimited' : number_format((int) $value);
+                            @endphp
+
+                            <div class="pricing-card__limits">
+                                <button type="button" class="pricing-card__limits-trigger" aria-label="View {{ $plan['name'] }} plan limits">
+                                    <span aria-hidden="true">i</span>
+                                </button>
+                                <div class="pricing-card__limits-panel">
+                                    <h4>Plan Limits</h4>
+                                    <ul>
+                                        <li><span>Max Users</span><strong>{{ $formatLimit($plan['max_users'] ?? null) }}</strong></li>
+                                        <li><span>Max Leads</span><strong>{{ $formatLimit($plan['max_leads'] ?? null) }}</strong></li>
+                                        <li><span>Max Funnels</span><strong>{{ $formatLimit($plan['max_funnels'] ?? null) }}</strong></li>
+                                        <li><span>Max Workflows</span><strong>{{ $formatLimit($plan['max_workflows'] ?? null) }}</strong></li>
+                                        <li><span>Max Monthly Messages</span><strong>{{ $formatLimit($plan['max_monthly_messages'] ?? null) }}</strong></li>
+                                    </ul>
+                                </div>
+                            </div>
+
                             @if($plan['spotlight'])
                                 <span class="pricing-card__badge">{{ $plan['spotlight'] }}</span>
                             @endif
@@ -203,9 +224,15 @@
                                     <li>{{ $feature }}</li>
                                 @endforeach
                             </ul>
-                            <a href="#" data-open-onboarding data-plan-code="{{ $plan['code'] }}" class="button {{ $plan['spotlight'] ? 'button--primary' : 'button--secondary' }}">
-                                Get Started
-                            </a>
+                            @if($isTrialPlan)
+                                <a href="{{ route('register', ['trial' => 1]) }}" class="button button--trial-card">
+                                    Start Free Trial
+                                </a>
+                            @else
+                                <a href="#" data-open-onboarding data-plan-code="{{ $plan['code'] }}" class="button {{ $plan['spotlight'] ? 'button--primary' : 'button--secondary' }}">
+                                    Get Started
+                                </a>
+                            @endif
                         </article>
                     @endforeach
                 </div>
@@ -338,6 +365,7 @@
                 duration: 800,
                 easing: 'ease-out-cubic',
                 once: false,
+                mirror: true,
                 offset: 80,
             });
         }
@@ -441,67 +469,39 @@
 
         if (landingNav) {
             const navLinks = Array.from(landingNav.querySelectorAll('a[href^="#"]'));
-            const sectionIds = navLinks.map((link) => link.getAttribute('href')).filter(Boolean);
-            const sections = sectionIds
-                .map((id) => document.querySelector(id))
+            const sections = navLinks
+                .map((link) => {
+                    const href = link.getAttribute('href') || '';
+                    return href.length > 1 ? document.querySelector(href) : null;
+                })
                 .filter((section) => section && section.id);
 
-            // Always start in default state on hero/top.
-            setActiveNavHash('');
-
-            if ('IntersectionObserver' in window && sections.length) {
-                const observer = new IntersectionObserver(
-                    (entries) => {
-                        // Pick the most visible intersecting section (handles fast scroll).
-                        const visible = entries
-                            .filter((entry) => entry.isIntersecting)
-                            .sort((a, b) => (b.intersectionRatio || 0) - (a.intersectionRatio || 0));
-
-                        if (!visible.length) {
-                            setActiveNavHash('');
-                            return;
-                        }
-
-                        const section = visible[0].target;
-                        if (section && section.id) {
-                            setActiveNavHash(`#${section.id}`);
-                        }
-                    },
-                    {
-                        root: null,
-                        // Trigger when a section crosses the middle of the viewport.
-                        rootMargin: '-45% 0px -55% 0px',
-                        threshold: [0, 0.1, 0.25, 0.5, 0.75, 1],
-                    }
-                );
-
-                sections.forEach((section) => observer.observe(section));
-            } else if (sections.length) {
-                // Fallback for older browsers without IntersectionObserver.
-                const onScroll = () => {
-                    const viewportMiddle = window.scrollY + window.innerHeight / 2;
-                    let activeSection = null;
-
-                    sections.forEach((section) => {
-                        const rect = section.getBoundingClientRect();
-                        const top = rect.top + window.scrollY;
-                        const bottom = top + rect.height;
-                        if (viewportMiddle >= top && viewportMiddle < bottom) {
-                            activeSection = section;
-                        }
-                    });
-
-                    if (activeSection && activeSection.id) {
-                        setActiveNavHash(`#${activeSection.id}`);
-                        return;
-                    }
-
+            const updateActiveSection = () => {
+                if (!sections.length) {
                     setActiveNavHash('');
-                };
+                    return;
+                }
 
-                window.addEventListener('scroll', onScroll, { passive: true });
-                onScroll();
-            }
+                const headerHeight = document.querySelector('.landing-header')?.offsetHeight || 0;
+                const viewportProbe = window.scrollY + headerHeight + 140;
+                let activeHash = '';
+
+                sections.forEach((section) => {
+                    const top = section.offsetTop;
+                    const bottom = top + section.offsetHeight;
+                    if (viewportProbe >= top && viewportProbe < bottom) {
+                        activeHash = `#${section.id}`;
+                    }
+                });
+
+                setActiveNavHash(activeHash);
+            };
+
+            setActiveNavHash('');
+            window.addEventListener('scroll', updateActiveSection, { passive: true });
+            window.addEventListener('resize', updateActiveSection);
+            window.addEventListener('hashchange', updateActiveSection);
+            updateActiveSection();
         }
 
         if (workFilterButtons.length && workCards.length) {
@@ -510,13 +510,23 @@
                     button.classList.toggle('work-chip--active', button.dataset.workFilter === filter);
                 });
 
+                let visibleCount = 0;
                 workCards.forEach((card) => {
                     const categories = (card.dataset.workCategory || '').split(' ').filter(Boolean);
                     const shouldShow = filter === 'all' || categories.includes(filter);
 
                     card.hidden = !shouldShow;
                     card.classList.toggle('work-panel--visible', shouldShow);
+                    if (shouldShow) {
+                        visibleCount += 1;
+                    }
                 });
+
+                const worksGallery = document.querySelector('.featured-works__gallery');
+                if (worksGallery) {
+                    worksGallery.dataset.visibleCount = String(visibleCount);
+                    worksGallery.classList.toggle('is-filtered', filter !== 'all');
+                }
 
                 if (window.AOS) {
                     AOS.refresh();

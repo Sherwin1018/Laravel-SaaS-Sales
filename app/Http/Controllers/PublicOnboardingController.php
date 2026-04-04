@@ -28,7 +28,7 @@ class PublicOnboardingController extends Controller
         }
 
         return view('marketing.landing', [
-            'plans' => $onboarding->plans(),
+            'plans' => $onboarding->plans(includeFreeTrial: true),
             'landingHeroVideoUrl' => $landingHeroVideoUrl,
             'landingHeroVideoWidth' => max(1, $landingHeroVideoWidth),
             'landingHeroVideoHeight' => max(1, $landingHeroVideoHeight),
