@@ -160,7 +160,7 @@ class GoogleAuthController extends Controller
 
         $existingUser = User::query()->whereRaw('LOWER(email) = ?', [$googleEmail])->first();
         if ($existingUser) {
-            return redirect()->route('login')->with('error', 'This Google email is already registered. Please login instead.');
+            return redirect()->route('login')->with('error', 'This email is already registered. Please use another email or log in.');
         }
 
         $resolvedName = trim((string) ($context['full_name'] ?? ''));

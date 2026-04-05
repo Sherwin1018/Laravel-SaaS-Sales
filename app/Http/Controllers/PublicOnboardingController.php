@@ -87,6 +87,7 @@ class PublicOnboardingController extends Controller
         ], [
             'password.regex' => 'Password must contain uppercase, lowercase, number, and a special character.',
             'mobile.regex' => 'Mobile number must be a valid PH format (09XXXXXXXXX).',
+            'email.unique' => 'This email is already registered. Please use another email or log in.',
         ]);
 
         try {

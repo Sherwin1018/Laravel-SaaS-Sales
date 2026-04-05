@@ -11,6 +11,25 @@
     <link rel="stylesheet" href="{{ asset('css/landing-page.css') }}">
 </head>
 <body>
+    @if(session('success') || session('error') || $errors->any())
+        <div id="statusToastContainer" style="position:fixed;top:18px;right:18px;z-index:99999;">
+            <div style="display:flex;gap:12px;align-items:center;background:#fff;border-radius:14px;width:min(90vw,420px);padding:12px 38px 12px 12px;border:1px solid #E6E1EF;box-shadow:0 18px 38px rgba(15,23,42,.2);position:relative;">
+                <i aria-hidden="true" style="font-size:22px;color:{{ session('success') ? '#65A30D' : '#B91C1C' }};">{{ session('success') ? '✓' : '!' }}</i>
+                <div>
+                    <h4 style="margin:0 0 6px 0;font-size:15px;font-weight:800;color:{{ session('success') ? '#65A30D' : '#B91C1C' }};">
+                        {{ session('success') ? 'Success' : 'Attention' }}
+                    </h4>
+                    <p style="margin:0;color:#334155;font-size:14px;font-weight:500;line-height:1.25;">
+                        {{ $errors->any() ? $errors->first() : (session('success') ?? session('error')) }}
+                    </p>
+                </div>
+                <button type="button" onclick="landingCloseStatusToast()" aria-label="Close notification"
+                    style="position:absolute;top:8px;right:8px;border:none;background:transparent;color:#334155;font-size:16px;cursor:pointer;line-height:1;">
+                    x
+                </button>
+            </div>
+        </div>
+    @endif
     <div class="landing-page">
         <header class="landing-header">
             <div class="landing-header__inner">
@@ -378,6 +397,16 @@
 
     <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
     <script>
+        function landingCloseStatusToast() {
+            const toastContainer = document.getElementById('statusToastContainer');
+            if (toastContainer) {
+                toastContainer.style.display = 'none';
+            }
+        }
+        if (document.getElementById('statusToastContainer')) {
+            setTimeout(landingCloseStatusToast, 3500);
+        }
+
         if (window.AOS) {
             AOS.init({
                 duration: 800,
