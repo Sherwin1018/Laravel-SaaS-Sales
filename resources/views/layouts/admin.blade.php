@@ -72,7 +72,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     @yield('styles')
 </head>
-<body class="@if(request()->routeIs('funnels.edit')) builder-full-width @endif">
+<body class="@if(request()->routeIs('funnels.edit') || request()->routeIs('admin.funnel-templates.edit')) builder-full-width @endif">
     @php
         $primaryRole = auth()->user()->roles->first();
         $roleLabel = $primaryRole ? $primaryRole->name : ucwords(str_replace('-', ' ', auth()->user()->role ?? 'User'));
@@ -88,7 +88,7 @@
     @endphp
 
     <!-- Sidebar (hidden in funnel builder; use Exit Builder to leave) -->
-    @unless(request()->routeIs('funnels.edit'))
+    @unless(request()->routeIs('funnels.edit') || request()->routeIs('admin.funnel-templates.edit'))
     <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <div class="logo-container">
@@ -117,6 +117,9 @@
                 </a>
                 <a href="{{ route('admin.automation.index') }}" class="{{ request()->routeIs('admin.automation.*') ? 'active' : '' }}">
                     <i class="fas fa-clipboard-list"></i> <span>Automation</span>
+                </a>
+                <a href="{{ route('admin.funnel-templates.index') }}" class="{{ request()->routeIs('admin.funnel-templates.*') ? 'active' : '' }}">
+                    <i class="fas fa-layer-group"></i> <span>Templates</span>
                 </a>
             @endif
 

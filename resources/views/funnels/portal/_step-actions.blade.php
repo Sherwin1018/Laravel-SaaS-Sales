@@ -1,4 +1,11 @@
-@php $isPreview = $isPreview ?? false; @endphp
+@php
+    $isPreview = $isPreview ?? false;
+    $nextStepUrl = $nextStepUrl ?? ($nextStep ? route('funnels.portal.step', ['funnelSlug' => $funnel->slug, 'stepSlug' => $nextStep->slug]) : null);
+    $restartStepUrl = $restartStepUrl ?? route('funnels.portal.step', ['funnelSlug' => $funnel->slug]);
+    $optInActionUrl = $optInActionUrl ?? route('funnels.portal.optin', ['funnelSlug' => $funnel->slug, 'stepSlug' => $step->slug]);
+    $checkoutActionUrl = $checkoutActionUrl ?? route('funnels.portal.checkout', ['funnelSlug' => $funnel->slug, 'stepSlug' => $step->slug]);
+    $offerActionUrl = $offerActionUrl ?? route('funnels.portal.offer', ['funnelSlug' => $funnel->slug, 'stepSlug' => $step->slug]);
+@endphp
 @if($isPreview)
     {{-- In builder preview, render only explicit builder content (no auto fallback actions/buttons). --}}
 @else
@@ -10,7 +17,7 @@
     @if($isPreview)
         <button type="button" class="btn" disabled style="opacity:0.7; cursor:not-allowed;">{{ $step->cta_label ?: 'Complete Checkout' }} (preview)</button>
     @else
-        <form method="POST" action="{{ route('funnels.portal.checkout', ['funnelSlug' => $funnel->slug, 'stepSlug' => $step->slug]) }}">
+        <form method="POST" action="{{ $checkoutActionUrl }}">
             @csrf
             <input type="hidden" name="amount" value="{{ (float) ($step->price ?? 0) }}">
             <input type="hidden" name="website" value="">
@@ -26,32 +33,50 @@
         </div>
     @else
         <div class="row">
-            <form method="POST" action="{{ route('funnels.portal.offer', ['funnelSlug' => $funnel->slug, 'stepSlug' => $step->slug]) }}">
+            <form method="POST" action="{{ $offerActionUrl }}">
                 @csrf
                 <input type="hidden" name="decision" value="accept">
                 <input type="hidden" name="website" value="">
+                <input type="hidden" name="checkout_pricing_id" value="">
+                <input type="hidden" name="checkout_pricing_source_step" value="">
+                <input type="hidden" name="checkout_pricing_plan" value="">
+                <input type="hidden" name="checkout_pricing_price" value="">
+                <input type="hidden" name="checkout_pricing_regular_price" value="">
+                <input type="hidden" name="checkout_pricing_period" value="">
+                <input type="hidden" name="checkout_pricing_subtitle" value="">
+                <input type="hidden" name="checkout_pricing_badge" value="">
+                <input type="hidden" name="checkout_pricing_features" value="">
                 <button type="submit" class="btn">{{ $step->cta_label ?: 'Yes, Add This Offer' }}</button>
             </form>
-            <form method="POST" action="{{ route('funnels.portal.offer', ['funnelSlug' => $funnel->slug, 'stepSlug' => $step->slug]) }}">
+            <form method="POST" action="{{ $offerActionUrl }}">
                 @csrf
                 <input type="hidden" name="decision" value="decline">
                 <input type="hidden" name="website" value="">
+                <input type="hidden" name="checkout_pricing_id" value="">
+                <input type="hidden" name="checkout_pricing_source_step" value="">
+                <input type="hidden" name="checkout_pricing_plan" value="">
+                <input type="hidden" name="checkout_pricing_price" value="">
+                <input type="hidden" name="checkout_pricing_regular_price" value="">
+                <input type="hidden" name="checkout_pricing_period" value="">
+                <input type="hidden" name="checkout_pricing_subtitle" value="">
+                <input type="hidden" name="checkout_pricing_badge" value="">
+                <input type="hidden" name="checkout_pricing_features" value="">
                 <button type="submit" class="btn gray">No Thanks</button>
             </form>
         </div>
     @endif
 @elseif($step->type === 'thank_you')
     <p style="font-weight: 700; color: #065f46;">Flow completed successfully.</p>
-    <a class="btn secondary" href="{{ route('funnels.portal.step', ['funnelSlug' => $funnel->slug]) }}">
+    <a class="btn secondary" href="{{ $restartStepUrl }}">
         <i class="fas fa-rotate-left"></i> Restart Funnel
     </a>
 @else
     @if($nextStep)
-        <a class="btn" href="{{ route('funnels.portal.step', ['funnelSlug' => $funnel->slug, 'stepSlug' => $nextStep->slug]) }}">
+        <a class="btn" href="{{ $nextStepUrl }}">
             {{ $step->cta_label ?: 'Continue' }}
         </a>
     @else
-        <a class="btn secondary" href="{{ route('funnels.portal.step', ['funnelSlug' => $funnel->slug]) }}">Back to Start</a>
+        <a class="btn secondary" href="{{ $restartStepUrl }}">Back to Start</a>
     @endif
 @endif
 @endif

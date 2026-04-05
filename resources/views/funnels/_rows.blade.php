@@ -1,6 +1,7 @@
 @forelse($funnels as $funnel)
     <tr>
         <td>{{ $funnel->name }}</td>
+        <td>{{ method_exists($funnel, 'purposeLabel') ? $funnel->purposeLabel() : ucfirst(str_replace('_', ' ', $funnel->purpose ?? 'service')) }}</td>
         <td>{{ ucfirst($funnel->status) }}</td>
         <td>{{ $funnel->steps_count }}</td>
         <td>
@@ -30,6 +31,6 @@
     </tr>
 @empty
     <tr>
-        <td colspan="5" style="text-align:center;">No funnels found.</td>
+        <td colspan="6" style="text-align:center;">No funnels found.</td>
     </tr>
 @endforelse

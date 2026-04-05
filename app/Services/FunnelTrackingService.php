@@ -217,7 +217,13 @@ class FunnelTrackingService
         $this->syncAbandonedCheckoutEvents($funnel);
 
         $funnel->loadMissing('steps');
-        $events = $this->baseFunnelQuery($funnel, $filters)->get();
+        $events = $this->baseFunnelQuery($funnel, $filters)
+            ->with([
+                'step:id,funnel_id,title,slug,type',
+                'lead:id,name,email',
+                'payment:id,amount,status,payment_date',
+            ])
+            ->get();
         $activeSteps = $funnel->steps->where('is_active', true)->sortBy('position')->values();
         $stepMap = $activeSteps->keyBy('id');
         $stepViewEvents = $events->where('event_name', self::EVENT_STEP_VIEWED);
@@ -303,6 +309,19 @@ class FunnelTrackingService
                 'downsell_acceptance_rate' => $this->rate($downsellAccepted, $downsellAccepted + $downsellDeclined),
                 'abandoned_checkout_rate' => $this->rate($abandonedCount, $checkoutStarts),
             ],
+            'offer_counts' => [
+                'upsell_accepted' => $upsellAccepted,
+                'upsell_declined' => $upsellDeclined,
+                'downsell_accepted' => $downsellAccepted,
+                'downsell_declined' => $downsellDeclined,
+            ],
+            'offer_activity' => [
+                'upsell_accepted' => $this->offerActivityRows($events, self::EVENT_UPSELL_ACCEPTED),
+                'upsell_declined' => $this->offerActivityRows($events, self::EVENT_UPSELL_DECLINED),
+                'downsell_accepted' => $this->offerActivityRows($events, self::EVENT_DOWNSELL_ACCEPTED),
+                'downsell_declined' => $this->offerActivityRows($events, self::EVENT_DOWNSELL_DECLINED),
+            ],
+            'offer_customer_summary' => $this->offerCustomerSummaryRows($events),
             'conversion_funnel' => [
                 ['label' => 'Entry Visits', 'count' => $entryVisits],
                 ['label' => 'Opt-ins', 'count' => $optInCount],
@@ -310,12 +329,6 @@ class FunnelTrackingService
                 ['label' => 'Paid', 'count' => $paidCount],
             ],
             'daily_series' => $dailySeries,
-            'offer_counts' => [
-                'upsell_accepted' => $upsellAccepted,
-                'upsell_declined' => $upsellDeclined,
-                'downsell_accepted' => $downsellAccepted,
-                'downsell_declined' => $downsellDeclined,
-            ],
             'step_visits' => $stepVisits,
             'drop_off' => $dropOff,
             'step_event_breakdown' => $events
@@ -334,6 +347,189 @@ class FunnelTrackingService
                 ->values()
                 ->all(),
         ];
+    }
+
+    private function offerActivityRows(Collection $events, string $eventName): array
+    {
+        return $events
+            ->where('event_name', $eventName)
+            ->sortByDesc(fn (FunnelEvent $event) => optional($event->occurred_at)?->getTimestamp() ?? 0)
+            ->take(50)
+            ->map(function (FunnelEvent $event) {
+                $leadName = trim((string) ($event->lead->name ?? ''));
+                $leadEmail = trim((string) ($event->lead->email ?? ''));
+                $leadLabel = $leadName !== '' ? $leadName : ($leadEmail !== '' ? $leadEmail : 'Anonymous visitor');
+                $paidBeforeOffer = $this->paidBeforeOffer($event);
+                $selectedOffer = $this->selectedOfferLabel($event);
+
+                return [
+                    'event_name' => $event->event_name,
+                    'occurred_at' => optional($event->occurred_at)?->toIso8601String(),
+                    'occurred_at_label' => optional($event->occurred_at)?->format('M j, Y g:i A') ?? 'N/A',
+                    'lead_name' => $leadName !== '' ? $leadName : null,
+                    'lead_email' => $leadEmail !== '' ? $leadEmail : null,
+                    'lead_label' => $leadLabel,
+                    'selected_offer' => $selectedOffer,
+                    'step_title' => $event->step->title ?? 'N/A',
+                    'step_slug' => $event->step->slug ?? data_get($event->meta, 'step_slug'),
+                    'amount' => $event->payment ? (float) $event->payment->amount : (float) data_get($event->meta, 'amount', 0),
+                    'paid_before_offer' => $paidBeforeOffer,
+                    'payment_status' => $event->payment->status ?? null,
+                    'session_identifier' => $event->session_identifier,
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    private function offerCustomerSummaryRows(Collection $events): array
+    {
+        $relevantEvents = $events->filter(function (FunnelEvent $event) {
+            return in_array($event->event_name, [
+                self::EVENT_CHECKOUT_STARTED,
+                self::EVENT_PAYMENT_PAID,
+                self::EVENT_UPSELL_ACCEPTED,
+                self::EVENT_UPSELL_DECLINED,
+                self::EVENT_DOWNSELL_ACCEPTED,
+                self::EVENT_DOWNSELL_DECLINED,
+            ], true);
+        });
+
+        return $relevantEvents
+            ->groupBy(function (FunnelEvent $event) {
+                $sessionId = trim((string) ($event->session_identifier ?? ''));
+                if ($sessionId !== '') {
+                    return 'session:'.$sessionId;
+                }
+
+                if ($event->lead_id) {
+                    return 'lead:'.$event->lead_id;
+                }
+
+                return 'event:'.$event->id;
+            })
+            ->map(function (Collection $group) {
+                $ordered = $group->sortBy(fn (FunnelEvent $event) => optional($event->occurred_at)?->getTimestamp() ?? 0)->values();
+                $latest = $ordered->last();
+                $leadEvent = $ordered->first(fn (FunnelEvent $event) => $event->lead !== null);
+                $leadName = trim((string) ($leadEvent?->lead?->name ?? ''));
+                $leadEmail = trim((string) ($leadEvent?->lead?->email ?? ''));
+                $leadLabel = $leadName !== '' ? $leadName : ($leadEmail !== '' ? $leadEmail : 'Anonymous visitor');
+
+                $selectedOffer = $ordered
+                    ->map(function (FunnelEvent $event) {
+                        return trim((string) (data_get($event->meta, 'selected_pricing.plan')
+                            ?? data_get($event->meta, 'pricing.plan')
+                            ?? ''));
+                    })
+                    ->first(fn (?string $value) => $value !== null && $value !== '');
+
+                $checkoutStarted = $ordered->first(fn (FunnelEvent $event) => $event->event_name === self::EVENT_CHECKOUT_STARTED);
+                $checkoutAmount = $checkoutStarted
+                    ? (float) data_get($checkoutStarted->meta, 'amount', $checkoutStarted->payment?->amount ?? 0)
+                    : 0.0;
+
+                $upsellAccepted = $ordered->first(fn (FunnelEvent $event) => $event->event_name === self::EVENT_UPSELL_ACCEPTED);
+                $upsellDeclined = $ordered->first(fn (FunnelEvent $event) => $event->event_name === self::EVENT_UPSELL_DECLINED);
+                $downsellAccepted = $ordered->first(fn (FunnelEvent $event) => $event->event_name === self::EVENT_DOWNSELL_ACCEPTED);
+                $downsellDeclined = $ordered->first(fn (FunnelEvent $event) => $event->event_name === self::EVENT_DOWNSELL_DECLINED);
+
+                return [
+                    'customer' => $leadLabel,
+                    'email' => $leadEmail !== '' ? $leadEmail : null,
+                    'selected_offer' => $selectedOffer !== '' ? $selectedOffer : null,
+                    'checkout_amount' => round($checkoutAmount, 2),
+                    'upsell_status' => $this->offerStatusLabel($upsellAccepted, $upsellDeclined),
+                    'downsell_status' => $this->offerStatusLabel($downsellAccepted, $downsellDeclined),
+                    'last_activity' => optional($latest?->occurred_at)?->format('M j, Y g:i A') ?? 'N/A',
+                    'last_activity_at' => optional($latest?->occurred_at)?->toIso8601String(),
+                ];
+            })
+            ->sortByDesc(fn (array $row) => strtotime((string) ($row['last_activity_at'] ?? '')) ?: 0)
+            ->values()
+            ->all();
+    }
+
+    private function offerStatusLabel(?FunnelEvent $acceptedEvent, ?FunnelEvent $declinedEvent): string
+    {
+        if ($acceptedEvent) {
+            $amount = $acceptedEvent->payment ? (float) $acceptedEvent->payment->amount : (float) data_get($acceptedEvent->meta, 'amount', 0);
+
+            return $amount > 0
+                ? 'Accepted - PHP '.number_format($amount, 2)
+                : 'Accepted';
+        }
+
+        if ($declinedEvent) {
+            return 'Declined';
+        }
+
+        return 'Did not avail';
+    }
+
+    private function paidBeforeOffer(FunnelEvent $event): float
+    {
+        $query = Payment::query()
+            ->where('funnel_id', $event->funnel_id)
+            ->where('status', 'paid');
+
+        $sessionId = trim((string) ($event->session_identifier ?? ''));
+        if ($sessionId !== '') {
+            $query->where('session_identifier', $sessionId);
+        } elseif ($event->lead_id) {
+            $query->where('lead_id', $event->lead_id);
+        } else {
+            return 0.0;
+        }
+
+        if ($event->occurred_at) {
+            $query->where('created_at', '<=', $event->occurred_at);
+        }
+
+        if ($event->payment_id) {
+            $query->whereKeyNot($event->payment_id);
+        }
+
+        return round((float) $query->sum('amount'), 2);
+    }
+
+    private function selectedOfferLabel(FunnelEvent $event): ?string
+    {
+        $directPlan = trim((string) (data_get($event->meta, 'selected_pricing.plan')
+            ?? data_get($event->meta, 'pricing.plan')
+            ?? ''));
+        if ($directPlan !== '') {
+            return $directPlan;
+        }
+
+        $query = FunnelEvent::query()
+            ->where('funnel_id', $event->funnel_id)
+            ->where('event_name', self::EVENT_CHECKOUT_STARTED);
+
+        $sessionId = trim((string) ($event->session_identifier ?? ''));
+        if ($sessionId !== '') {
+            $query->where('session_identifier', $sessionId);
+        } elseif ($event->lead_id) {
+            $query->where('lead_id', $event->lead_id);
+        } else {
+            return null;
+        }
+
+        if ($event->occurred_at) {
+            $query->where('occurred_at', '<=', $event->occurred_at);
+        }
+
+        /** @var FunnelEvent|null $checkoutEvent */
+        $checkoutEvent = $query->latest('occurred_at')->first();
+        if (! $checkoutEvent) {
+            return null;
+        }
+
+        $checkoutPlan = trim((string) (data_get($checkoutEvent->meta, 'pricing.plan')
+            ?? data_get($checkoutEvent->meta, 'selected_pricing.plan')
+            ?? ''));
+
+        return $checkoutPlan !== '' ? $checkoutPlan : null;
     }
 
     public function syncAbandonedCheckoutEvents(?Funnel $funnel = null): int

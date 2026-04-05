@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AutomationController;
+use App\Http\Controllers\AdminFunnelTemplateController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FunnelController;
@@ -84,6 +85,29 @@ Route::middleware(['auth', 'tenant.subscription', 'role:super-admin'])->group(fu
     Route::get('/admin/dashboard', [AdminController::class, 'index'])->name('admin.dashboard');
     Route::post('/admin/landing-hero-video', [AdminController::class, 'updateLandingHeroVideo'])->name('admin.landing-video.update');
     Route::delete('/admin/landing-hero-video', [AdminController::class, 'deleteLandingHeroVideo'])->name('admin.landing-video.delete');
+    Route::get('/admin/funnel-templates', [AdminFunnelTemplateController::class, 'index'])->name('admin.funnel-templates.index');
+    Route::get('/admin/funnel-templates/create', [AdminFunnelTemplateController::class, 'create'])->name('admin.funnel-templates.create');
+    Route::get('/admin/funnel-templates/import', [AdminFunnelTemplateController::class, 'import'])->name('admin.funnel-templates.import');
+    Route::post('/admin/funnel-templates', [AdminFunnelTemplateController::class, 'store'])->name('admin.funnel-templates.store');
+    Route::post('/admin/funnel-templates/import', [AdminFunnelTemplateController::class, 'importStore'])->name('admin.funnel-templates.import.store');
+    Route::get('/admin/funnel-templates/{funnel_template}/edit', [AdminFunnelTemplateController::class, 'edit'])->name('admin.funnel-templates.edit');
+    Route::put('/admin/funnel-templates/{funnel_template}', [AdminFunnelTemplateController::class, 'update'])->name('admin.funnel-templates.update');
+    Route::post('/admin/funnel-templates/{funnel_template}/publish', [AdminFunnelTemplateController::class, 'publish'])->name('admin.funnel-templates.publish');
+    Route::post('/admin/funnel-templates/{funnel_template}/unpublish', [AdminFunnelTemplateController::class, 'unpublish'])->name('admin.funnel-templates.unpublish');
+    Route::get('/admin/funnel-templates/{funnel_template}/preview/{step?}', [AdminFunnelTemplateController::class, 'preview'])->name('admin.funnel-templates.preview');
+    Route::get('/admin/funnel-templates/{funnel_template}/test/{step?}', [AdminFunnelTemplateController::class, 'test'])->name('admin.funnel-templates.test');
+    Route::post('/admin/funnel-templates/{funnel_template}/test/{step}/opt-in', [AdminFunnelTemplateController::class, 'testOptIn'])->name('admin.funnel-templates.test.optin');
+    Route::post('/admin/funnel-templates/{funnel_template}/test/{step}/checkout', [AdminFunnelTemplateController::class, 'testCheckout'])->name('admin.funnel-templates.test.checkout');
+    Route::post('/admin/funnel-templates/{funnel_template}/test/{step}/offer', [AdminFunnelTemplateController::class, 'testOffer'])->name('admin.funnel-templates.test.offer');
+    Route::post('/admin/funnel-templates/{funnel_template}/builder/layout', [AdminFunnelTemplateController::class, 'saveLayout'])->name('admin.funnel-templates.builder.layout.save');
+    Route::get('/admin/funnel-templates/{funnel_template}/builder/assets', [AdminFunnelTemplateController::class, 'builderAssets'])->name('admin.funnel-templates.builder.assets.index');
+    Route::post('/admin/funnel-templates/{funnel_template}/builder/assets/delete', [AdminFunnelTemplateController::class, 'destroyBuilderAssets'])->name('admin.funnel-templates.builder.assets.destroy');
+    Route::post('/admin/funnel-templates/{funnel_template}/builder/upload-image', [AdminFunnelTemplateController::class, 'uploadBuilderImage'])->name('admin.funnel-templates.builder.image.upload');
+    Route::post('/admin/funnel-templates/{funnel_template}/steps', [AdminFunnelTemplateController::class, 'storeStep'])->name('admin.funnel-templates.steps.store');
+    Route::put('/admin/funnel-templates/{funnel_template}/steps/{step}', [AdminFunnelTemplateController::class, 'updateStep'])->name('admin.funnel-templates.steps.update');
+    Route::delete('/admin/funnel-templates/{funnel_template}/steps/{step}', [AdminFunnelTemplateController::class, 'destroyStep'])->name('admin.funnel-templates.steps.destroy');
+    Route::post('/admin/funnel-templates/{funnel_template}/steps/{step}/versions', [AdminFunnelTemplateController::class, 'storeVersion'])->name('admin.funnel-templates.steps.versions.store');
+    Route::post('/admin/funnel-templates/{funnel_template}/steps/reorder', [AdminFunnelTemplateController::class, 'reorderSteps'])->name('admin.funnel-templates.steps.reorder');
 
     Route::get('/admin/tenants', [TenantController::class, 'index'])->name('admin.tenants.index');
     Route::get('/admin/tenants/create', [TenantController::class, 'create'])->name('admin.tenants.create');
@@ -136,6 +160,7 @@ Route::middleware(['auth', 'tenant.subscription', 'role:sales-agent,marketing-ma
     Route::middleware(['role:account-owner,marketing-manager'])->group(function () {
         Route::get('/funnels', [FunnelController::class, 'index'])->name('funnels.index');
         Route::get('/funnels/create', [FunnelController::class, 'create'])->name('funnels.create');
+        Route::get('/funnels/shared-templates', [FunnelController::class, 'sharedTemplates'])->name('funnels.shared-templates');
         Route::post('/funnels', [FunnelController::class, 'store'])->name('funnels.store');
         Route::get('/funnels/{funnel}/edit', [FunnelController::class, 'edit'])->name('funnels.edit');
         Route::get('/funnels/{funnel}/preview/{step?}', [FunnelController::class, 'preview'])->name('funnels.preview');

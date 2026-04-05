@@ -1,5 +1,6 @@
 @php
     $publishedFreeformCanvasWidth = 0;
+    $previewFreeformRightInset = 12;
     $initialLayout = is_array($step->layout_json ?? null) ? $step->layout_json : [];
     $initialRootItems = is_array($initialLayout['root'] ?? null) ? $initialLayout['root'] : [];
     if (count($initialRootItems) === 0 && is_array($initialLayout['sections'] ?? null)) {
@@ -25,8 +26,8 @@
     $initialCanvasWidthRaw = (int) ($initialEditorMeta['canvasWidth'] ?? 0);
     $initialCanvasInnerWidthRaw = (int) ($initialEditorMeta['canvasInnerWidth'] ?? 0);
     $publishedFreeformCanvasWidth = $initialCanvasWidthRaw > 0
-        ? max(0, $initialCanvasWidthRaw - 22)
-        : ($initialCanvasInnerWidthRaw > 0 ? max(0, $initialCanvasInnerWidthRaw - 20) : 0);
+        ? max(0, $initialCanvasWidthRaw)
+        : ($initialCanvasInnerWidthRaw > 0 ? max(0, $initialCanvasInnerWidthRaw) : 0);
     if ($publishedFreeformCanvasWidth <= 0) {
         $initialDerivedCanvasWidth = 0;
         foreach ($initialFreeformEls as $initialFreeformEl) {
@@ -53,6 +54,10 @@
         }
         $publishedFreeformCanvasWidth = $initialDerivedCanvasWidth;
     }
+
+    $portalHasFreeformCanvas = count($initialFreeformEls) > 0;
+
+    $previewIframeMode = (string) request()->query('preview_iframe') === '1';
 @endphp
 <!DOCTYPE html>
 <html lang="en">
@@ -81,13 +86,29 @@
             overflow-x: auto;
             overflow-y: visible;
         }
-        body.is-published .step-content--full { padding-top: 0; }
-        body.is-preview .step-content--full { padding: 10px; overflow-x: hidden; }
-        body.is-preview .builder-section--freeform { margin: 0; width: 100%; }
-        body.is-published .builder-section--freeform {
+        body.is-published:not(.portal-has-freeform-canvas) .step-content--full { padding-top: 0; }
+        /* Published freeform: match builder/preview — center canvas vertically; preview uses JS scale; live uses flex. */
+        body.is-published.portal-has-freeform-canvas .step-content--full {
+            min-height: 100vh;
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: stretch;
+            padding: 32px 1.5rem 48px;
+            box-sizing: border-box;
+        }
+        body.is-preview .step-content--full { padding: 10px; overflow-x: auto; overflow-y: visible; }
+        body.is-preview .builder-section--freeform {
             margin: 0 auto;
-            width: {{ $publishedFreeformCanvasWidth > 0 ? $publishedFreeformCanvasWidth . 'px' : '100%' }};
+            width: {{ $publishedFreeformCanvasWidth > 0 ? ($publishedFreeformCanvasWidth + $previewFreeformRightInset) . 'px' : '100%' }};
             max-width: none;
+        }
+        body.is-published .builder-section--freeform {
+            margin-left: auto;
+            margin-right: auto;
+            width: {{ $publishedFreeformCanvasWidth > 0 ? $publishedFreeformCanvasWidth . 'px' : '100%' }};
+            max-width: 100%;
         }
         .step-content--full .builder-section,
         .step-content--full .builder-row,
@@ -127,11 +148,11 @@
         .builder-section--freeform .builder-col-inner { overflow: visible; position: relative; }
         .builder-section--freeform .builder-el { margin-top: 0 !important; }
         .builder-section-inner { width: 100%; box-sizing: border-box; position: relative; }
-        .builder-row-inner { width: 100%; box-sizing: border-box; display: flex; flex-wrap: wrap; gap: 8px; }
-        .builder-col-inner { width: 100%; box-sizing: border-box; max-width: 100%; overflow: hidden; position: relative; }
+        .builder-row-inner { width: 100%; box-sizing: border-box; display: flex; flex-wrap: wrap; gap: 8px; position: relative; }
+        .builder-col-inner { width: 100%; box-sizing: border-box; max-width: 100%; overflow: visible; position: relative; min-height: 100%; }
         .builder-row { display: flex; gap: 8px; flex-wrap: wrap; padding: 6px; }
-        .builder-col { min-width: 240px; min-height: 24px; flex: 1 1 0; position: relative; overflow: hidden; background: #ffffff; }
-        .builder-col > .builder-col-inner > .builder-el { max-width: 100%; overflow: hidden; }
+        .builder-col { min-width: 0; min-height: 120px; flex: 1 1 0; position: relative; overflow: visible; background: #ffffff; }
+        .builder-col > .builder-col-inner > .builder-el { max-width: 100%; overflow: visible; }
         .builder-col.builder-col--abs { overflow: visible; }
         .builder-col.builder-col--abs > .builder-col-inner { overflow: visible; position: relative; }
         .builder-col.builder-col--abs > .builder-col-inner > .builder-el { max-width: none; overflow: visible; }
@@ -145,6 +166,10 @@
         .builder-text ol,
         .builder-text li { margin: 0; }
         .builder-img { display: block; max-width: 100%; height: auto; border-radius: 10px; object-fit: contain; object-position: top center; }
+        .builder-image-placeholder { width: 100%; min-height: 140px; border: 2px solid #6ea0ff; border-radius: 12px; background: linear-gradient(180deg, #ffffff, #fbfcff); display: flex; align-items: center; justify-content: center; box-sizing: border-box; }
+        .builder-image-placeholder__inner { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 18px; text-align: center; }
+        .builder-image-placeholder__plus { width: 58px; height: 58px; border-radius: 999px; background: #d9d9d9; color: #5f6368; display: flex; align-items: center; justify-content: center; font-size: 40px; font-weight: 300; line-height: 1; box-shadow: 0 6px 18px rgba(15, 23, 42, 0.16); }
+        .builder-image-placeholder__label { font-size: 14px; font-weight: 600; color: #5f6368; letter-spacing: 0.01em; }
         .builder-menu { width: 100%; }
         .builder-menu-list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; }
         .builder-menu-link { text-decoration: none; text-underline-offset: 3px; font: inherit; }
@@ -160,6 +185,124 @@
         .builder-faq-question { font-weight: 800; color: #0f172a; }
         .builder-faq-answer { color: #475569; font-size: 13px; margin-top: 4px; white-space: pre-wrap; }
         .builder-pricing { display: grid; gap: 12px; }
+        .builder-product-offer { display: grid; gap: 4px; }
+        .builder-product-offer .builder-pricing-badge { padding: 2px 6px; font-size: 9px; }
+        .builder-product-offer .builder-pricing-title { font-size: 13px; line-height: 1.25; }
+        .builder-product-offer .builder-pricing-price { font-size: 20px; line-height: 1; }
+        .builder-product-offer .builder-pricing-period { font-size: 10px; }
+        .builder-product-offer .builder-pricing-subtitle { font-size: 10px; line-height: 1.3; }
+        .builder-product-offer .builder-pricing-features { gap: 4px; }
+        .builder-product-offer .builder-pricing-features li { font-size: 10px; gap: 4px; }
+        .builder-product-offer .builder-product-actions { display: grid; gap: 6px; }
+        .builder-product-offer .builder-product-utility { display: grid; grid-template-columns: minmax(0, 1fr) 32px; gap: 6px; }
+        .builder-product-offer .builder-pricing-cta { width: 100%; padding: 7px 8px; font-size: 11px; }
+        .builder-product-offer .builder-product-secondary { display:inline-flex; align-items:center; justify-content:center; width:100%; padding: 6px 8px; font-size:10px; border-radius:999px; border:1px solid #d7cdea; background:#ffffff; color:#240E35; font-weight:700; cursor:pointer; text-decoration:none; }
+        .builder-product-offer .builder-product-cart { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:999px; border:1px solid #d7cdea; background:#ffffff; color:#240E35; font-size:12px; cursor:pointer; transition: transform .16s ease, background-color .18s ease, color .18s ease, border-color .18s ease, box-shadow .18s ease; }
+        .builder-product-offer .builder-product-cart.is-in-cart { background:#16a34a; color:#ffffff; border-color:#16a34a; box-shadow:0 8px 18px rgba(22,163,74,.22); }
+        .builder-product-offer .builder-product-cart.is-bump { transform: scale(1.12); }
+        @keyframes cartPop {
+            0% { transform: scale(1); }
+            45% { transform: scale(1.16); }
+            100% { transform: scale(1); }
+        }
+        .builder-product-media { position: relative; border-radius: 14px; overflow: hidden; background: #f8fafc; border: 1px solid #e2e8f0; }
+        .builder-product-media .builder-carousel-wrap { min-height: 88px; border-radius: 0; }
+        .builder-product-media .builder-carousel-slide { background: #ffffff !important; }
+        .builder-product-media .builder-carousel-dots { padding-bottom: 6px; }
+        .builder-product-media .builder-carousel-arrow { width: 24px !important; height: 24px !important; min-width: 24px; min-height: 24px; }
+        .builder-product-media .builder-carousel-arrow i { font-size: 10px !important; }
+        .builder-product-media .builder-carousel-arrow.is-left { left: 8px !important; }
+        .builder-product-media .builder-carousel-arrow.is-right { right: 8px !important; }
+        .builder-product-media .builder-carousel-dot { width: 6px; height: 6px; }
+        .builder-product-media .builder-carousel-dots { gap: 5px; bottom: 5px; }
+        .builder-product-media__placeholder { width: 100%; min-height: 88px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #64748b; text-align: center; padding: 8px; font-size: 10px; background: linear-gradient(180deg, #ffffff, #f8fafc); }
+        .builder-product-media__placeholder i { font-size: 16px; color: #94a3b8; }
+        .product-quick-view-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.58); z-index: 2000; display: none; align-items: center; justify-content: center; padding: 20px; }
+        .product-quick-view-backdrop.is-open { display: flex; }
+        .product-quick-view-modal { width: min(920px, 100%); max-height: min(88vh, 920px); overflow: auto; background: #ffffff; border-radius: 24px; box-shadow: 0 28px 70px rgba(15, 23, 42, 0.28); padding: 22px; position: relative; }
+        .product-quick-view-close { position: sticky; top: 0; margin-left: auto; width: 38px; height: 38px; border-radius: 999px; border: 1px solid #e2e8f0; background: #ffffff; color: #0f172a; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; z-index: 2; }
+        .product-quick-view-layout { display: grid; grid-template-columns: minmax(260px, 360px) minmax(0, 1fr); gap: 24px; align-items: start; }
+        .product-quick-view-media { border: 1px solid #e2e8f0; border-radius: 20px; overflow: hidden; background: #f8fafc; }
+        .product-quick-view-media .builder-carousel-wrap { min-height: 280px; border-radius: 0; }
+        .product-quick-view-copy { display: grid; gap: 14px; color: #0f172a; }
+        .product-quick-view-copy h3 { margin: 0; font-size: 28px; line-height: 1.15; }
+        .product-quick-view-price { display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; }
+        .product-quick-view-price .builder-pricing-price { font-size: 34px; }
+        .product-quick-view-price .builder-pricing-period { font-size: 14px; margin-left: 0; }
+        .product-quick-view-description { white-space: pre-wrap; color: #475569; line-height: 1.6; font-size: 14px; }
+        .product-quick-view-features { list-style:none; margin:0; padding:0; display:grid; gap:8px; }
+        .product-quick-view-features li { display:flex; gap:8px; align-items:flex-start; color:#334155; font-size:14px; }
+        .product-quick-view-features li i { color:#16a34a; margin-top: 2px; }
+        .portal-cart-fab { position: fixed; right: 20px; bottom: 20px; z-index: 1900; width: 52px; height: 52px; border-radius: 999px; border: none; background: #240E35; color: #ffffff; display: none; align-items: center; justify-content: center; box-shadow: 0 16px 36px rgba(15, 23, 42, 0.26); cursor: pointer; }
+        .portal-cart-fab.is-visible { display: inline-flex; }
+        .portal-cart-count { position: absolute; top: -4px; right: -4px; min-width: 20px; height: 20px; border-radius: 999px; background: #ef4444; color: #ffffff; font-size: 11px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; padding: 0 5px; }
+        .portal-cart-backdrop { position: fixed; inset: 0; z-index: 1950; background: rgba(15, 23, 42, 0.42); display: none; }
+        .portal-cart-backdrop.is-open { display: block; }
+        .portal-cart-drawer { position: fixed; top: 0; right: 0; width: min(380px, 100%); height: 100vh; height: 100dvh; z-index: 1960; background: #ffffff; box-shadow: -18px 0 40px rgba(15, 23, 42, 0.18); transform: translateX(100%); transition: transform .24s ease; display: grid; grid-template-rows: auto 1fr auto; }
+        .portal-cart-drawer.is-open { transform: translateX(0); }
+        .portal-cart-head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px 18px; border-bottom:1px solid #e2e8f0; }
+        .portal-cart-head h3 { margin:0; font-size:18px; }
+        .portal-cart-close { width:36px; height:36px; border-radius:999px; border:1px solid #e2e8f0; background:#fff; cursor:pointer; }
+        .portal-cart-items { overflow:auto; padding:14px 16px; display:grid; gap:12px; }
+        .portal-cart-item { display:grid; grid-template-columns:64px 1fr auto; gap:10px; padding:10px; border:1px solid #e2e8f0; border-radius:16px; background:#fff; }
+        .portal-cart-thumb { width:64px; height:64px; border-radius:12px; overflow:hidden; background:#f8fafc; border:1px solid #e2e8f0; display:flex; align-items:center; justify-content:center; }
+        .portal-cart-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
+        .portal-cart-thumb i { color:#94a3b8; font-size:18px; }
+        .portal-cart-meta { min-width:0; display:grid; gap:6px; }
+        .portal-cart-title { font-size:13px; font-weight:800; color:#0f172a; line-height:1.3; }
+        .portal-cart-price { font-size:13px; color:#16a34a; font-weight:800; }
+        .portal-cart-sub { font-size:11px; color:#64748b; }
+        .portal-cart-qty { display:inline-flex; align-items:center; gap:6px; font-size:11px; color:#475569; }
+        .portal-cart-qty-btn { width:26px; height:26px; border-radius:999px; border:1px solid #d7cdea; background:#fff; color:#240E35; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; }
+        .portal-cart-qty-num { min-width:18px; text-align:center; font-weight:800; color:#0f172a; }
+        .portal-cart-remove { align-self:start; width:30px; height:30px; border:none; background:#fff1f2; color:#e11d48; border-radius:999px; cursor:pointer; }
+        .portal-cart-empty { padding:26px 12px; text-align:center; color:#64748b; font-size:13px; }
+        .portal-cart-foot { border-top:1px solid #e2e8f0; padding:16px 18px; display:grid; gap:10px; }
+        .portal-cart-total { display:flex; align-items:center; justify-content:space-between; font-weight:800; color:#0f172a; }
+        .portal-cart-actions { display:grid; gap:8px; }
+        .portal-cart-btn { display:inline-flex; align-items:center; justify-content:center; width:100%; padding:10px 12px; border-radius:999px; border:none; text-decoration:none; font-weight:800; cursor:pointer; }
+        .portal-cart-btn.primary { background:#240E35; color:#ffffff; }
+        .portal-cart-btn.secondary { background:#ffffff; color:#240E35; border:1px solid #d7cdea; }
+        .builder-checkout-summary { position: relative; }
+        .checkout-cart-lines { display:grid; gap:8px; }
+        .checkout-cart-line { display:grid; grid-template-columns:48px 1fr auto; gap:10px; align-items:center; padding:8px 0; border-bottom:1px solid #eef2f7; }
+        .checkout-cart-line:last-child { border-bottom:0; padding-bottom:0; }
+        .checkout-cart-line-thumb { width:48px; height:48px; border-radius:12px; overflow:hidden; background:#f8fafc; border:1px solid #e2e8f0; display:flex; align-items:center; justify-content:center; }
+        .checkout-cart-line-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
+        .checkout-cart-line-meta { min-width:0; display:grid; gap:2px; }
+        .checkout-cart-line-title { font-size:12px; font-weight:800; color:#0f172a; line-height:1.3; }
+        .checkout-cart-line-sub { font-size:11px; color:#64748b; }
+        .checkout-cart-line-total { font-size:12px; font-weight:800; color:#0f172a; }
+        .builder-checkout-summary--physical { gap:14px; padding:18px; }
+        .builder-checkout-summary--physical .builder-pricing-badge { background:#eaf2ff; color:#1d4ed8; }
+        .checkout-physical-head { display:grid; gap:4px; }
+        .checkout-physical-label { font-size:11px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#64748b; }
+        .checkout-physical-product { display:grid; grid-template-columns:72px minmax(0,1fr); gap:12px; align-items:center; padding:12px; border:1px solid #e6eaf2; border-radius:18px; background:linear-gradient(180deg,#ffffff,#faf8fd); }
+        .checkout-physical-thumb { width:72px; height:72px; border-radius:18px; overflow:hidden; background:#f8fafc; border:1px solid #e2e8f0; display:flex; align-items:center; justify-content:center; }
+        .checkout-physical-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
+        .checkout-physical-thumb i { font-size:24px; color:#94a3b8; }
+        .checkout-physical-meta { min-width:0; display:grid; gap:4px; }
+        .checkout-physical-meta .builder-pricing-title { font-size:18px; line-height:1.2; }
+        .checkout-physical-price { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
+        .checkout-physical-price .builder-pricing-price { font-size:30px; }
+        .checkout-physical-price .builder-pricing-period { margin-left:0; }
+        .checkout-physical-rows { display:grid; gap:8px; padding:10px 0; border-top:1px solid #eef2f7; border-bottom:1px solid #eef2f7; }
+        .checkout-physical-row { display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:12px; color:#475569; }
+        .checkout-physical-row strong { color:#0f172a; font-size:13px; }
+        .checkout-physical-row--total strong:last-child { font-size:18px; color:#16a34a; }
+        .builder-checkout-summary--physical .builder-pricing-features { gap:5px; }
+        .builder-checkout-summary--physical .builder-pricing-features li { font-size:11px; }
+        .builder-checkout-summary--physical .builder-pricing-cta { width:100%; padding:11px 14px; border-radius:12px; }
+        @media (max-width: 720px) {
+            .product-quick-view-modal { padding: 16px; border-radius: 18px; }
+            .product-quick-view-layout { grid-template-columns: 1fr; gap: 16px; }
+            .product-quick-view-media .builder-carousel-wrap { min-height: 220px; }
+            .product-quick-view-copy h3 { font-size: 22px; }
+            .product-quick-view-price .builder-pricing-price { font-size: 28px; }
+            .portal-cart-fab { right: 14px; bottom: 14px; }
+            .checkout-physical-product { grid-template-columns:60px minmax(0,1fr); gap:10px; padding:10px; }
+            .checkout-physical-thumb { width:60px; height:60px; border-radius:16px; }
+        }
         .builder-pricing-badge { align-self: flex-start; background: #e2e8f0; color: #0f172a; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; }
         .builder-pricing-title { font-size: 18px; font-weight: 900; color: #0f172a; }
         .builder-pricing-price { font-size: 32px; font-weight: 900; color: #16a34a; }
@@ -224,6 +367,86 @@
             display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px;
             border-radius: 999px; font-size: 12px; font-weight: 800; color: #1d4ed8; background: #dbeafe;
         }
+        .preview-toolbar-left{
+            display:flex;
+            align-items:center;
+            gap:12px;
+            min-width: 0;
+        }
+        .preview-device-switcher{
+            display:flex;
+            align-items:center;
+            gap:8px;
+            flex-wrap:wrap;
+            justify-content:flex-end;
+        }
+        .preview-device-btn{
+            appearance:none;
+            border:1px solid #e2e8f0;
+            background:#ffffff;
+            color:#0f172a;
+            border-radius:999px;
+            padding:6px 10px;
+            font-size:12px;
+            font-weight:800;
+            cursor:pointer;
+            box-shadow:none;
+            user-select:none;
+            line-height:1;
+        }
+        .preview-device-btn.is-active{
+            background:#240E35;
+            border-color:#240E35;
+            color:#fff;
+        }
+        .preview-iframe-shell{
+            width:100%;
+            display:flex;
+            justify-content:center;
+            align-items:flex-start;
+            margin:0;
+            padding:0 12px 24px;
+            background:#f8fafc;
+        }
+        .preview-iframe-shell iframe{
+            height:900px;
+            width:100%;
+            border:1px solid #e2e8f0;
+            border-radius:12px;
+            background:#ffffff;
+        }
+        /* Device-aware layout overrides for Preview Mode.
+           We key off `body[data-preview-device="..."]` so it works regardless of the
+           actual browser viewport width (like Google Sites device preview). */
+        body[data-preview-device="tablet"] .builder-row-inner{
+            flex-direction: column !important;
+        }
+        body[data-preview-device="tablet"] .builder-col{
+            flex: 0 0 100% !important;
+            width: 100% !important;
+        }
+        body[data-preview-device="tablet"] .builder-carousel-content-row{
+            flex-direction: column !important;
+        }
+        body[data-preview-device="tablet"] .builder-carousel-content-col{
+            min-width: 0 !important;
+            width: 100% !important;
+        }
+
+        body[data-preview-device="mobile"] .builder-row-inner{
+            flex-direction: column !important;
+        }
+        body[data-preview-device="mobile"] .builder-col{
+            flex: 0 0 100% !important;
+            width: 100% !important;
+        }
+        body[data-preview-device="mobile"] .builder-carousel-content-row{
+            flex-direction: column !important;
+        }
+        body[data-preview-device="mobile"] .builder-carousel-content-col{
+            min-width: 0 !important;
+            width: 100% !important;
+        }
         .preview-toolbar {
             position: relative;
             display: flex;
@@ -239,7 +462,7 @@
         }
     </style>
 </head>
-<body class="{{ ($isPreview ?? false) ? 'is-preview' : 'is-published' }}">
+<body class="{{ ($isPreview ?? false) ? 'is-preview' : 'is-published' }}{{ ($portalHasFreeformCanvas ?? false) ? ' portal-has-freeform-canvas' : '' }}">
     @php
         $isPreview = $isPreview ?? false;
         $layout = is_array($step->layout_json ?? null) ? $step->layout_json : [];
@@ -303,7 +526,7 @@
         $editorMeta = is_array($layout['__editor'] ?? null) ? $layout['__editor'] : [];
         $canvasWidthRaw = (int) ($editorMeta['canvasWidth'] ?? 0);
         $canvasInnerWidthRaw = (int) ($editorMeta['canvasInnerWidth'] ?? 0);
-        $editorCanvasWidth = $canvasWidthRaw > 0 ? max(0, $canvasWidthRaw - 22) : ($canvasInnerWidthRaw > 0 ? max(0, $canvasInnerWidthRaw - 20) : 0);
+        $editorCanvasWidth = $canvasWidthRaw > 0 ? max(0, $canvasWidthRaw) : ($canvasInnerWidthRaw > 0 ? max(0, $canvasInnerWidthRaw) : 0);
         if ($editorCanvasWidth <= 0) {
             $derivedCanvasWidth = 0;
             foreach ($freeformEls as $ffEl) {
@@ -323,6 +546,7 @@
         $hasBuilderLayout = count($renderSections) > 0;
         $activeSteps = collect($allSteps ?? [])->values()->filter(fn ($s) => isset($s->id, $s->slug));
         $activeStepsBySlug = $activeSteps->keyBy(fn ($s) => strtolower(trim((string) $s->slug)));
+        $isTemplateTest = (bool) ($isTemplateTest ?? false);
         $normalizeStepType = function (?string $type): string {
             $type = strtolower(trim((string) $type));
             if (in_array($type, ['upsell', 'downsell'], true)) {
@@ -405,7 +629,32 @@
             }
             return $optInStep ?: $salesStep ?: $checkoutStep ?: $thankYouStep ?: $homeStep ?: $nextStep ?: $activeSteps->first(fn ($candidate) => (int) $candidate->id !== (int) $step->id);
         };
-        $resolveButtonAction = function (array $settings) use ($funnel, $step, $nextStep, $isPreview, $activeStepsBySlug) {
+        $isAdminTemplatePreview = request()->routeIs('admin.funnel-templates.preview');
+        $stepRoute = function ($targetStep) use ($funnel, $isPreview, $isTemplateTest, $isAdminTemplatePreview) {
+            if ($isPreview) {
+                if ($isAdminTemplatePreview || $isTemplateTest) {
+                    return route('admin.funnel-templates.preview', ['funnel_template' => $funnel, 'step' => $targetStep]);
+                }
+                return route('funnels.preview', ['funnel' => $funnel, 'step' => $targetStep]);
+            }
+            if ($isTemplateTest) {
+                return route('admin.funnel-templates.test', ['funnel_template' => $funnel, 'step' => $targetStep]);
+            }
+            return route('funnels.portal.step', ['funnelSlug' => $funnel->slug, 'stepSlug' => $targetStep->slug]);
+        };
+        $checkoutActionUrl = $isTemplateTest
+            ? route('admin.funnel-templates.test.checkout', ['funnel_template' => $funnel, 'step' => $step])
+            : route('funnels.portal.checkout', ['funnelSlug' => $funnel->slug, 'stepSlug' => $step->slug]);
+        $offerActionUrl = $isTemplateTest
+            ? route('admin.funnel-templates.test.offer', ['funnel_template' => $funnel, 'step' => $step])
+            : route('funnels.portal.offer', ['funnelSlug' => $funnel->slug, 'stepSlug' => $step->slug]);
+        $optInActionUrl = $isTemplateTest
+            ? route('admin.funnel-templates.test.optin', ['funnel_template' => $funnel, 'step' => $step])
+            : route('funnels.portal.optin', ['funnelSlug' => $funnel->slug, 'stepSlug' => $step->slug]);
+        $restartStepUrl = $stepRoute($activeSteps->first());
+        $cartCheckoutStep = $findStepByTypes(['checkout']);
+        $cartCheckoutUrl = $cartCheckoutStep ? $stepRoute($cartCheckoutStep) : null;
+        $resolveButtonAction = function (array $settings) use ($step, $nextStep, $isPreview, $activeStepsBySlug, $stepRoute, $checkoutActionUrl, $offerActionUrl) {
             $link = trim((string) ($settings['link'] ?? '#'));
             $actionType = strtolower(trim((string) ($settings['actionType'] ?? '')));
             if ($actionType === '') {
@@ -416,10 +665,7 @@
                 if (!$nextStep) {
                     return ['kind' => 'link', 'href' => '#'];
                 }
-                if ($isPreview) {
-                    return ['kind' => 'link', 'href' => route('funnels.preview', ['funnel' => $funnel, 'step' => $nextStep->id])];
-                }
-                return ['kind' => 'link', 'href' => route('funnels.portal.step', ['funnelSlug' => $funnel->slug, 'stepSlug' => $nextStep->slug])];
+                return ['kind' => 'link', 'href' => $stepRoute($nextStep)];
             }
 
             if ($actionType === 'step') {
@@ -428,10 +674,7 @@
                 if (!$target) {
                     return ['kind' => 'link', 'href' => '#'];
                 }
-                if ($isPreview) {
-                    return ['kind' => 'link', 'href' => route('funnels.preview', ['funnel' => $funnel, 'step' => $target->id])];
-                }
-                return ['kind' => 'link', 'href' => route('funnels.portal.step', ['funnelSlug' => $funnel->slug, 'stepSlug' => $target->slug])];
+                return ['kind' => 'link', 'href' => $stepRoute($target)];
             }
 
             if ($actionType === 'checkout') {
@@ -443,7 +686,7 @@
                 }
                 return [
                     'kind' => 'post',
-                    'action' => route('funnels.portal.checkout', ['funnelSlug' => $funnel->slug, 'stepSlug' => $step->slug]),
+                    'action' => $checkoutActionUrl,
                     'fields' => ['amount' => (float) ($step->price ?? 0)],
                 ];
             }
@@ -457,7 +700,7 @@
                 }
                 return [
                     'kind' => 'post',
-                    'action' => route('funnels.portal.offer', ['funnelSlug' => $funnel->slug, 'stepSlug' => $step->slug]),
+                    'action' => $offerActionUrl,
                     'fields' => ['decision' => $actionType === 'offer_accept' ? 'accept' : 'decline'],
                 ];
             }
@@ -734,12 +977,19 @@
     @endphp
 
     <div class="wrap">
-        @if($isPreview)
+        @if($isPreview && !$previewIframeMode)
         <div class="preview-toolbar">
-            <a class="btn secondary" href="{{ route('funnels.edit', $funnel) }}" style="padding:8px 14px; box-shadow:none;">
-                <i class="fas fa-arrow-left"></i> Back to Builder
-            </a>
-            <span class="preview-badge"><i class="fas fa-eye"></i> Preview Mode</span>
+            <div class="preview-toolbar-left">
+                <a class="btn secondary" href="{{ route('funnels.edit', $funnel) }}" style="padding:8px 14px; box-shadow:none;">
+                    <i class="fas fa-arrow-left"></i> Back to Builder
+                </a>
+                <span class="preview-badge"><i class="fas fa-eye"></i> Preview Mode</span>
+            </div>
+            <div class="preview-device-switcher" role="group" aria-label="Preview device">
+                <button type="button" class="preview-device-btn is-active" data-preview-device="desktop">Desktop</button>
+                <button type="button" class="preview-device-btn" data-preview-device="tablet">Tablet</button>
+                <button type="button" class="preview-device-btn" data-preview-device="mobile">Mobile</button>
+            </div>
         </div>
         @endif
 
@@ -751,6 +1001,7 @@
             </div>
         @endif
 
+        @if(!$isPreview || $previewIframeMode)
         <div class="step-content--full">
             @if($hasBuilderLayout)
                 @foreach($renderSections as $section)
@@ -778,11 +1029,11 @@
                         if (count($sectionElements) > 0) {
                             array_unshift($rows, [
                                 'id' => 'sec_el_row_' . md5((string) ($section['id'] ?? uniqid('', true))),
-                                'style' => ['gap' => '8px'],
+                                'style' => ['gap' => '0', 'padding' => '0', 'backgroundColor' => 'transparent'],
                                 'settings' => ['contentWidth' => 'full'],
                                 'columns' => [[
                                     'id' => 'sec_el_col_' . md5((string) ($section['id'] ?? uniqid('', true))),
-                                    'style' => ['flex' => '1 1 240px'],
+                                    'style' => ['flex' => '1 1 auto', 'backgroundColor' => 'transparent', 'minHeight' => '0', 'padding' => '0'],
                                     'settings' => [],
                                     'elements' => $sectionElements,
                                 ]],
@@ -861,7 +1112,7 @@
                                         }
                                         $colHeightStyle = $colMinHeight > 0 ? 'min-height:' . $colMinHeight . 'px;' : '';
                                         $freeformWidth = ($isFreeformCanvas && $editorCanvasWidth > 0) ? $editorCanvasWidth : (($isFreeformCanvas && $colMinWidth > 0) ? $colMinWidth : 0);
-                                        $colWidthStyle = $freeformWidth > 0 ? 'width:' . $freeformWidth . 'px;' : '';
+                                        $colWidthStyle = $freeformWidth > 0 ? 'width:' . $freeformWidth . 'px;margin-left:auto;margin-right:auto;' : '';
                                     @endphp
                                     <div class="builder-col{{ $hasAbsEl ? ' builder-col--abs' : '' }}" style="{{ $colStyle }}{{ $colHeightStyle }}{{ $colWidthStyle }}">
                                         <div class="builder-col-inner" @if($colInnerMax !== '') style="max-width: {{ $colInnerMax }}; margin: 0 auto;" @endif>
@@ -893,10 +1144,21 @@
                                                 if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $buttonContainerBg)) {
                                                     $buttonContainerBg = '';
                                                 }
-                                                $btnWrapStyle = ($type === 'button' ? ($alignStyle . ($buttonContainerBg !== '' ? 'background-color:' . $buttonContainerBg . ';' : '')) : '');
+                                                $hasButtonBoxSizing = $type === 'button' && (
+                                                    !empty(trim((string) ($rawStyle['width'] ?? '')))
+                                                    || !empty(trim((string) ($rawStyle['height'] ?? '')))
+                                                );
+                                                $btnWrapStyle = ($type === 'button' ? (($style !== '' ? ($style . ';') : '') . $alignStyle . ($buttonContainerBg !== '' ? 'background-color:' . $buttonContainerBg . ';' : '')) : '');
                                                 $iconWrapStyle = ($type === 'icon' ? $alignStyle : '');
+                                                $imageWrapStyle = ($style !== '' ? ($style . ';') : '');
                                                 $mediaWrapStyle = ($style !== '' ? ($style . ';') : '') . $alignStyle;
-                                                $btnInnerStyle = $contentStyle . ($type === 'button' && $widthBehavior === 'fill' ? (($contentStyle !== '' ? ';' : '') . ' width:100%;display:block;box-sizing:border-box;text-align:center;') : '');
+                                                $btnInnerStyle = $contentStyle;
+                                                if ($type === 'button' && ($widthBehavior === 'fill' || $hasButtonBoxSizing)) {
+                                                    $btnInnerStyle .= ($btnInnerStyle !== '' ? ';' : '') . 'width:100%;display:flex;align-items:center;justify-content:center;box-sizing:border-box;text-align:center;';
+                                                }
+                                                if ($type === 'button' && $hasButtonBoxSizing) {
+                                                    $btnInnerStyle .= 'height:100%;';
+                                                }
                                                 $offsetX = (int) ($settings['offsetX'] ?? 0);
                                                 if ($offsetX !== 0) {
                                                     $mediaWrapStyle .= 'transform: translateX(' . $offsetX . 'px);';
@@ -908,7 +1170,9 @@
                                                 $mediaClipStyle = ($cropTop || $cropRight || $cropBottom || $cropLeft)
                                                     ? ('clip-path: inset(' . $cropTop . 'px ' . $cropRight . 'px ' . $cropBottom . 'px ' . $cropLeft . 'px);')
                                                     : '';
+                                                $hasFixedWidth = !empty(trim((string) ($rawStyle['width'] ?? '')));
                                                 $hasFixedHeight = !empty(trim((string) ($rawStyle['height'] ?? '')));
+                                                $hasSizedImageBox = $type === 'image' && $hasFixedHeight;
                                                 $isAbsPos = (trim((string) ($settings['positionMode'] ?? '')) === 'absolute') || (trim((string) ($rawStyle['position'] ?? '')) === 'absolute');
                                                 $absPosStyle = '';
                                                 if ($isAbsPos) {
@@ -938,7 +1202,13 @@
                                                 } else {
                                                     if ($type === 'button') { $elWrapStyle .= $btnWrapStyle; }
                                                     elseif ($type === 'icon') { $elWrapStyle .= $iconWrapStyle; }
-                                                    elseif ($type === 'image' || $type === 'video') { $elWrapStyle .= $mediaWrapStyle; }
+                                                    elseif ($type === 'image') {
+                                                        $elWrapStyle .= $imageWrapStyle;
+                                                        if ($hasSizedImageBox) {
+                                                            $elWrapStyle .= ($elWrapStyle !== '' ? ';' : '') . 'overflow:hidden;';
+                                                        }
+                                                    }
+                                                    elseif ($type === 'video') { $elWrapStyle .= $mediaWrapStyle; }
                                                     elseif ($type === 'form') { $elWrapStyle .= $alignStyle; }
                                                 }
                                             @endphp
@@ -951,13 +1221,20 @@
                                                     @if($src !== '')
                                                         @php
                                                             $imgStyle = $mediaClipStyle;
-                                                            if ($hasFixedHeight) {
+                                                            if ($hasSizedImageBox) {
                                                                 $imgStyle .= ($imgStyle !== '' ? ';' : '') . 'width:100%;height:100%;object-fit:cover;';
+                                                            } elseif ($hasFixedWidth) {
+                                                                $imgStyle .= ($imgStyle !== '' ? ';' : '') . 'width:100%;height:auto;object-fit:contain;object-position:top center;display:block;';
                                                             }
                                                         @endphp
                                                         <img class="builder-img" src="{{ $src }}" alt="{{ $alt !== '' ? $alt : 'Image' }}" @if($imgStyle !== '') style="{{ $imgStyle }}" @endif>
                                                     @else
-                                                        <div style="padding:12px;border:1px dashed #94a3b8;border-radius:8px;text-align:center;color:#94a3b8;font-size:13px;min-height:60px;display:flex;align-items:center;justify-content:center;width:100%;box-sizing:border-box;">Image placeholder</div>
+                                                        <div class="builder-image-placeholder">
+                                                            <div class="builder-image-placeholder__inner">
+                                                                <div class="builder-image-placeholder__plus">+</div>
+                                                                <div class="builder-image-placeholder__label">Click to upload image</div>
+                                                            </div>
+                                                        </div>
                                                     @endif
                                                 @elseif($type === 'button')
                                                     @php
@@ -1484,6 +1761,7 @@
                                                             $selectedPeriod = trim((string) ($selectedCheckoutPricing['period'] ?? ''));
                                                             $selectedSubtitle = trim((string) ($selectedCheckoutPricing['subtitle'] ?? ''));
                                                             $selectedBadge = trim((string) ($selectedCheckoutPricing['badge'] ?? ''));
+                                                            $selectedImage = trim((string) ($selectedCheckoutPricing['image'] ?? ''));
                                                             $selectedFeatures = is_array($selectedCheckoutPricing['features'] ?? null) ? $selectedCheckoutPricing['features'] : [];
                                                             if ($selectedPlan !== '') $plan = $selectedPlan;
                                                             if ($selectedPrice !== '') $priceVal = $selectedPrice;
@@ -1492,6 +1770,8 @@
                                                             if ($selectedSubtitle !== '') $subtitle = $selectedSubtitle;
                                                             if ($selectedBadge !== '') $badge = $selectedBadge;
                                                             if (count($selectedFeatures) > 0) $features = $selectedFeatures;
+                                                        } else {
+                                                            $selectedImage = '';
                                                         }
                                                         if (count($features) === 0) {
                                                             $features = ['Feature one', 'Feature two', 'Feature three'];
@@ -1611,6 +1891,472 @@
                                                             @else
                                                                 <a class="builder-pricing-cta" href="{{ $pricingCtaHref }}" style="{{ $ctaStyle }}background: {{ $ctaBg }}; color: {{ $ctaText }};">{{ $ctaLabel }}</a>
                                                             @endif
+                                                        @endif
+                                                    </div>
+                                                @elseif($type === 'product_offer')
+                                                    @php
+                                                        $plan = trim((string) ($settings['plan'] ?? 'Product'));
+                                                        $priceVal = trim((string) ($settings['price'] ?? '₱0'));
+                                                        $regularPrice = trim((string) ($settings['regularPrice'] ?? ''));
+                                                        if (preg_match('/^\s*\$/', $priceVal) === 1) {
+                                                            $priceVal = preg_replace('/^\s*\$/', "\u{20B1}", $priceVal) ?? $priceVal;
+                                                        }
+                                                        if (preg_match('/^\s*\$/', $regularPrice) === 1) {
+                                                            $regularPrice = preg_replace('/^\s*\$/', "\u{20B1}", $regularPrice) ?? $regularPrice;
+                                                        }
+                                                        $period = trim((string) ($settings['period'] ?? ''));
+                                                        $subtitle = trim((string) ($settings['subtitle'] ?? ''));
+                                                        $description = trim((string) ($settings['description'] ?? ''));
+                                                        $badge = trim((string) ($settings['badge'] ?? ''));
+                                                        $quickViewEnabled = (bool) ($settings['quickViewEnabled'] ?? true);
+                                                        $cartEnabled = (bool) ($settings['cartEnabled'] ?? true);
+                                                        $quickViewLabel = trim((string) ($settings['quickViewLabel'] ?? 'Details'));
+                                                        if ($quickViewLabel === '') $quickViewLabel = 'Details';
+                                                        $features = is_array($settings['features'] ?? null) ? $settings['features'] : [];
+                                                        if (count($features) === 0) $features = ['Feature one', 'Feature two', 'Feature three'];
+                                                        $productMediaRaw = is_array($settings['media'] ?? null) ? $settings['media'] : [];
+                                                        $productMedia = [];
+                                                        foreach ($productMediaRaw as $mi => $mediaItem) {
+                                                            if (is_string($mediaItem)) {
+                                                                $mediaItem = ['type' => 'image', 'src' => $mediaItem];
+                                                            }
+                                                            $mediaItem = is_array($mediaItem) ? $mediaItem : [];
+                                                            $mediaType = strtolower(trim((string) ($mediaItem['type'] ?? 'image')));
+                                                            if (!in_array($mediaType, ['image', 'video'], true)) $mediaType = 'image';
+                                                            $mediaSrc = trim((string) ($mediaItem['src'] ?? ''));
+                                                            $mediaAlt = trim((string) ($mediaItem['alt'] ?? ('Media ' . ($mi + 1))));
+                                                            $mediaPoster = trim((string) ($mediaItem['poster'] ?? ''));
+                                                            $productMedia[] = ['type' => $mediaType, 'src' => $mediaSrc, 'alt' => $mediaAlt, 'poster' => $mediaPoster];
+                                                        }
+                                                        if (count($productMedia) === 0) {
+                                                            $productMedia[] = ['type' => 'image', 'src' => '', 'alt' => 'Product image', 'poster' => ''];
+                                                        }
+                                                        $activeMedia = (int) ($settings['activeMedia'] ?? 0);
+                                                        if ($activeMedia < 0) $activeMedia = 0;
+                                                        if ($activeMedia >= count($productMedia)) $activeMedia = count($productMedia) - 1;
+                                                        $pricingTextColor = trim((string) ($rawStyle['color'] ?? ''));
+                                                        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $pricingTextColor)) $pricingTextColor = '';
+                                                        $pricingCtaAction = $resolvePricingCtaAction($settings);
+                                                        $ctaLabelRaw = array_key_exists('ctaLabel', $settings) ? trim((string) $settings['ctaLabel']) : '';
+                                                        $ctaLabel = $currentStepType === 'checkout'
+                                                            ? 'Pay Now'
+                                                            : ($ctaLabelRaw !== '' ? $ctaLabelRaw : ($currentStepType === 'sales' && $plan !== '' ? 'Buy ' . $plan : 'Buy Now'));
+                                                        $pricingCtaHref = ($pricingCtaAction['kind'] ?? 'link') === 'link'
+                                                            ? $appendPricingSelectionHref((string) ($pricingCtaAction['href'] ?? '#'), $settings, (string) $elId)
+                                                            : '#';
+                                                        $pricingPostedAmountSource = $priceVal !== '' ? $priceVal : $regularPrice;
+                                                        $pricingPostedAmount = 0.0;
+                                                        if ($pricingPostedAmountSource !== '') {
+                                                            $pricingPostedAmountClean = preg_replace('/[^0-9,.\-]/', '', $pricingPostedAmountSource);
+                                                            if (is_string($pricingPostedAmountClean) && $pricingPostedAmountClean !== '') {
+                                                                $pricingPostedAmount = (float) str_replace(',', '', $pricingPostedAmountClean);
+                                                            }
+                                                        }
+                                                        $ctaBg = trim((string) ($settings['ctaBgColor'] ?? '#0f172a'));
+                                                        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $ctaBg)) $ctaBg = '#0f172a';
+                                                        $ctaText = trim((string) ($settings['ctaTextColor'] ?? '#ffffff'));
+                                                        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $ctaText)) $ctaText = '#ffffff';
+                                                        $pricingFeaturesJson = json_encode(array_values($features), JSON_UNESCAPED_UNICODE);
+                                                        $cartImage = '';
+                                                        foreach ($productMedia as $cartMediaItem) {
+                                                            $candidateSrc = trim((string) ($cartMediaItem['src'] ?? ''));
+                                                            if ($candidateSrc !== '' && strtolower(trim((string) ($cartMediaItem['type'] ?? 'image'))) === 'image') {
+                                                                $cartImage = $candidateSrc;
+                                                                break;
+                                                            }
+                                                        }
+                                                        $scale = $clampScale($settings['contentScale'] ?? 1);
+                                                        $scaledContentStyle = $contentStyle;
+                                                        if ($scaledContentStyle !== '' && substr($scaledContentStyle, -1) !== ';') $scaledContentStyle .= ';';
+                                                        $scaledContentStyle .= 'gap:' . (int) round(4 * $scale) . 'px;';
+                                                        $pad = trim((string) ($rawStyle['padding'] ?? ''));
+                                                        if ($pad !== '') $scaledContentStyle .= 'padding:' . $scalePaddingValue($pad, $scale) . ';';
+                                                        $radius = trim((string) ($rawStyle['borderRadius'] ?? ''));
+                                                        if ($radius !== '') $scaledContentStyle .= 'border-radius:' . $scalePxValue($radius, $scale) . ';';
+                                                        $badgeStyle = 'font-size:' . (int) round(9 * $scale) . 'px;padding:' . (int) round(2 * $scale) . 'px ' . (int) round(6 * $scale) . 'px;';
+                                                        $titleStyle = 'font-size:' . (int) round(13 * $scale) . 'px;line-height:1.25;';
+                                                        $priceStyle = 'font-size:' . (int) round(20 * $scale) . 'px;line-height:1;';
+                                                        $periodStyle = 'font-size:' . (int) round(10 * $scale) . 'px;';
+                                                        $subtitleStyle = 'font-size:' . (int) round(10 * $scale) . 'px;line-height:1.3;';
+                                                        $featureStyle = 'font-size:' . (int) round(10 * $scale) . 'px;gap:' . (int) round(4 * $scale) . 'px;';
+                                                        $featureGapStyle = 'gap:' . (int) round(4 * $scale) . 'px;';
+                                                        $ctaStyle = 'font-size:' . (int) round(11 * $scale) . 'px;padding:' . (int) round(7 * $scale) . 'px ' . (int) round(8 * $scale) . 'px;';
+                                                        $productCarouselId = 'prod_' . md5((string) ($element['id'] ?? uniqid('', true)));
+                                                        $productModalId = 'product_quick_view_' . md5((string) ($element['id'] ?? uniqid('', true)));
+                                                    @endphp
+                                                    <div class="builder-pricing builder-product-offer" data-pricing-id="{{ $elId }}" data-pricing-plan="{{ $plan }}" data-pricing-sale="{{ $priceVal }}" data-pricing-regular="{{ $regularPrice }}" data-pricing-period="{{ $period }}" data-pricing-subtitle="{{ $subtitle }}" data-pricing-badge="{{ $badge }}" data-pricing-image="{{ $cartImage }}" data-pricing-features="{{ $pricingFeaturesJson }}" style="{{ $scaledContentStyle }}">
+                                                        <div class="builder-product-media">
+                                                            @php $renderableMedia = collect($productMedia)->filter(fn($m) => trim((string) ($m['src'] ?? '')) !== '')->values(); @endphp
+                                                            @if($renderableMedia->count() > 0)
+                                                                <div class="builder-carousel-wrap" data-carousel id="{{ $productCarouselId }}" data-active="{{ $activeMedia }}" data-mode="manual" style="background:#ffffff !important; color:#0f172a;">
+                                                                    <div class="builder-carousel-track" data-carousel-track style="transform: translateX(-{{ $activeMedia * 100 }}%);">
+                                                                        @foreach($productMedia as $media)
+                                                                            <div class="builder-carousel-slide" style="justify-content:center;background:#ffffff !important;">
+                                                                                @if(trim((string) ($media['src'] ?? '')) !== '')
+                                                                                    @if(($media['type'] ?? 'image') === 'video')
+                                                                                        <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#ffffff;">
+                                                                                            <video controls preload="metadata" playsinline @if(trim((string) ($media['poster'] ?? '')) !== '') poster="{{ $media['poster'] }}" @endif style="width:100%;height:100%;object-fit:cover;display:block;background:#ffffff;">
+                                                                                                <source src="{{ $media['src'] }}">
+                                                                                            </video>
+                                                                                        </div>
+                                                                                    @else
+                                                                                        <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#ffffff;">
+                                                                                            <img class="builder-img" src="{{ $media['src'] }}" alt="{{ trim((string) ($media['alt'] ?? 'Product media')) }}" style="width:100%;height:100%;object-fit:cover;display:block;border-radius:0;">
+                                                                                        </div>
+                                                                                    @endif
+                                                                                @else
+                                                                                    <div class="builder-product-media__placeholder"><i class="fas fa-images"></i><div>Add product image or video</div></div>
+                                                                                @endif
+                                                                            </div>
+                                                                        @endforeach
+                                                                    </div>
+                                                                    @if(count($productMedia) > 1)
+                                                                        <button type="button" class="builder-carousel-arrow is-left" data-carousel-prev style="background:#64748b; color:#ffffff;"><i class="fas fa-chevron-left" aria-hidden="true"></i></button>
+                                                                        <button type="button" class="builder-carousel-arrow is-right" data-carousel-next style="background:#64748b; color:#ffffff;"><i class="fas fa-chevron-right" aria-hidden="true"></i></button>
+                                                                        <div class="builder-carousel-dots" data-carousel-dots>
+                                                                            @foreach($productMedia as $si => $unused)
+                                                                                <button type="button" class="builder-carousel-dot{{ $si === $activeMedia ? ' is-active' : '' }}" data-carousel-dot="{{ $si }}" aria-label="Go to media {{ $si + 1 }}"></button>
+                                                                            @endforeach
+                                                                        </div>
+                                                                    @endif
+                                                                </div>
+                                                            @else
+                                                                <div class="builder-product-media__placeholder"><i class="fas fa-images"></i><div>Add product image or video</div></div>
+                                                            @endif
+                                                        </div>
+                                                        @if($badge !== '')
+                                                            <div class="builder-pricing-badge" style="{{ $badgeStyle }}">{{ $badge }}</div>
+                                                        @endif
+                                                        <div class="builder-pricing-title" style="{{ $titleStyle }}@if($pricingTextColor !== '')color: {{ $pricingTextColor }};@endif">{{ $plan !== '' ? $plan : 'Product' }}</div>
+                                                        <div>
+                                                            <span class="builder-pricing-price" data-pricing-price style="{{ $priceStyle }}@if($pricingTextColor !== '')color: {{ $pricingTextColor }};@endif">{{ $priceVal !== '' ? $priceVal : '₱0' }}</span>
+                                                            @if($regularPrice !== '' && $regularPrice !== $priceVal)
+                                                                <span class="builder-pricing-period" style="{{ $periodStyle }}text-decoration:line-through;margin-left:8px;@if($pricingTextColor !== '')color: {{ $pricingTextColor }}; opacity: 0.55;@endif">{{ $regularPrice }}</span>
+                                                            @endif
+                                                            @if($period !== '')
+                                                                <span class="builder-pricing-period" style="{{ $periodStyle }}@if($pricingTextColor !== '')color: {{ $pricingTextColor }}; opacity: 0.7;@endif">{{ $period }}</span>
+                                                            @endif
+                                                        </div>
+                                                        @if($subtitle !== '')
+                                                            <div class="builder-pricing-subtitle" style="{{ $subtitleStyle }}@if($pricingTextColor !== '')color: {{ $pricingTextColor }}; opacity: 0.7;@endif">{{ $subtitle }}</div>
+                                                        @endif
+                                                        <ul class="builder-pricing-features" style="{{ $featureGapStyle }}">
+                                                            @foreach($features as $fi => $feat)
+                                                                @php $featText = trim((string) $feat); if ($featText === '') $featText = 'Feature ' . ($fi + 1); @endphp
+                                                                <li style="{{ $featureStyle }}@if($pricingTextColor !== '')color: {{ $pricingTextColor }};@endif"><i class="fas fa-check" aria-hidden="true"></i> {{ $featText }}</li>
+                                                            @endforeach
+                                                        </ul>
+                                                        <div class="builder-product-actions">
+                                                            @if($ctaLabel !== '')
+                                                                @if(($pricingCtaAction['kind'] ?? 'link') === 'post')
+                                                                    <form method="POST" action="{{ $pricingCtaAction['action'] }}" style="margin:0;">
+                                                                        @csrf
+                                                                        @foreach(($pricingCtaAction['fields'] ?? []) as $fieldName => $fieldValue)
+                                                                            <input type="hidden" name="{{ $fieldName }}" value="{{ $fieldName === 'amount' && $pricingPostedAmount > 0 ? $pricingPostedAmount : $fieldValue }}">
+                                                                        @endforeach
+                                                                        <input type="hidden" name="website" value="">
+                                                                        <input type="hidden" name="checkout_pricing_id" value="{{ $elId }}">
+                                                                        <input type="hidden" name="checkout_pricing_source_step" value="{{ $step->slug }}">
+                                                                        <input type="hidden" name="checkout_pricing_plan" value="{{ $plan }}">
+                                                                        <input type="hidden" name="checkout_pricing_price" value="{{ $priceVal }}">
+                                                                        <input type="hidden" name="checkout_pricing_regular_price" value="{{ $regularPrice }}">
+                                                                        <input type="hidden" name="checkout_pricing_period" value="{{ $period }}">
+                                                                        <input type="hidden" name="checkout_pricing_subtitle" value="{{ $subtitle }}">
+                                                                        <input type="hidden" name="checkout_pricing_badge" value="{{ $badge }}">
+                                                                        <input type="hidden" name="checkout_pricing_image" value="{{ $cartImage }}">
+                                                                        <input type="hidden" name="checkout_pricing_features" value="{{ $pricingFeaturesJson }}">
+                                                                        <button type="submit" class="builder-pricing-cta" style="{{ $ctaStyle }}background: {{ $ctaBg }}; color: {{ $ctaText }};">{{ $ctaLabel }}</button>
+                                                                    </form>
+                                                                @elseif(($pricingCtaAction['kind'] ?? 'link') === 'disabled')
+                                                                    <button type="button" class="builder-pricing-cta" style="{{ $ctaStyle }}background: {{ $ctaBg }}; color: {{ $ctaText }}; opacity:0.7;cursor:not-allowed;" disabled>{{ $ctaLabel }}</button>
+                                                                @else
+                                                                    <a class="builder-pricing-cta" href="{{ $pricingCtaHref }}" style="{{ $ctaStyle }}background: {{ $ctaBg }}; color: {{ $ctaText }};">{{ $ctaLabel }}</a>
+                                                                @endif
+                                                            @endif
+                                                            @if($quickViewEnabled || $cartEnabled)
+                                                                <div class="builder-product-utility">
+                                                                    @if($quickViewEnabled)
+                                                                        <button type="button" class="builder-product-secondary" data-product-modal-target="{{ $productModalId }}">{{ $quickViewLabel }}</button>
+                                                                    @else
+                                                                        <span></span>
+                                                                    @endif
+                                                                    @if($cartEnabled)
+                                                                        <button type="button"
+                                                                            class="builder-product-cart"
+                                                                            data-product-add-to-cart
+                                                                            data-product-id="{{ $elId }}"
+                                                                            data-product-name="{{ $plan }}"
+                                                                            data-product-price="{{ $priceVal }}"
+                                                                            data-product-regular-price="{{ $regularPrice }}"
+                                                                            data-product-period="{{ $period }}"
+                                                                            data-product-badge="{{ $badge }}"
+                                                                            data-product-image="{{ $cartImage }}"
+                                                                            data-product-step="{{ $step->slug }}"
+                                                                            aria-label="Add {{ $plan !== '' ? $plan : 'product' }} to cart"
+                                                                            title="Add to cart">
+                                                                            <i class="fas fa-cart-shopping" aria-hidden="true"></i>
+                                                                        </button>
+                                                                    @endif
+                                                                </div>
+                                                            @endif
+                                                        </div>
+                                                    </div>
+                                                    @if($quickViewEnabled)
+                                                        <template id="{{ $productModalId }}">
+                                                            <div class="product-quick-view-layout">
+                                                                <div class="product-quick-view-media">
+                                                                    @php $modalActiveMedia = $activeMedia; @endphp
+                                                                    <div class="builder-carousel-wrap" data-carousel data-active="{{ $modalActiveMedia }}" data-mode="manual" style="background:#ffffff !important; color:#0f172a;">
+                                                                        <div class="builder-carousel-track" data-carousel-track style="transform: translateX(-{{ $modalActiveMedia * 100 }}%);">
+                                                                            @foreach($productMedia as $media)
+                                                                                <div class="builder-carousel-slide" style="justify-content:center;background:#ffffff !important;">
+                                                                                    @if(trim((string) ($media['src'] ?? '')) !== '')
+                                                                                        @if(($media['type'] ?? 'image') === 'video')
+                                                                                            <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#ffffff;">
+                                                                                                <video controls preload="metadata" playsinline @if(trim((string) ($media['poster'] ?? '')) !== '') poster="{{ $media['poster'] }}" @endif style="width:100%;height:100%;object-fit:cover;display:block;background:#ffffff;">
+                                                                                                    <source src="{{ $media['src'] }}">
+                                                                                                </video>
+                                                                                            </div>
+                                                                                        @else
+                                                                                            <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#ffffff;">
+                                                                                                <img class="builder-img" src="{{ $media['src'] }}" alt="{{ trim((string) ($media['alt'] ?? 'Product media')) }}" style="width:100%;height:100%;object-fit:cover;display:block;border-radius:0;">
+                                                                                            </div>
+                                                                                        @endif
+                                                                                    @else
+                                                                                        <div class="builder-product-media__placeholder"><i class="fas fa-images"></i><div>Add product image or video</div></div>
+                                                                                    @endif
+                                                                                </div>
+                                                                            @endforeach
+                                                                        </div>
+                                                                        @if(count($productMedia) > 1)
+                                                                            <button type="button" class="builder-carousel-arrow is-left" data-carousel-prev style="background:#64748b; color:#ffffff;"><i class="fas fa-chevron-left" aria-hidden="true"></i></button>
+                                                                            <button type="button" class="builder-carousel-arrow is-right" data-carousel-next style="background:#64748b; color:#ffffff;"><i class="fas fa-chevron-right" aria-hidden="true"></i></button>
+                                                                            <div class="builder-carousel-dots" data-carousel-dots>
+                                                                                @foreach($productMedia as $si => $unused)
+                                                                                    <button type="button" class="builder-carousel-dot{{ $si === $modalActiveMedia ? ' is-active' : '' }}" data-carousel-dot="{{ $si }}" aria-label="Go to media {{ $si + 1 }}"></button>
+                                                                                @endforeach
+                                                                            </div>
+                                                                        @endif
+                                                                    </div>
+                                                                </div>
+                                                                <div class="product-quick-view-copy">
+                                                                    @if($badge !== '')
+                                                                        <div class="builder-pricing-badge" data-checkout-badge>{{ $badge }}</div>
+                                                                    @endif
+                                                                    <h3>{{ $plan !== '' ? $plan : 'Product' }}</h3>
+                                                                    <div class="product-quick-view-price">
+                                                                        <span class="builder-pricing-price">{{ $priceVal !== '' ? $priceVal : '₱0' }}</span>
+                                                                        @if($regularPrice !== '' && $regularPrice !== $priceVal)
+                                                                            <span class="builder-pricing-period" style="text-decoration:line-through;opacity:.55;">{{ $regularPrice }}</span>
+                                                                        @endif
+                                                                        @if($period !== '')
+                                                                            <span class="builder-pricing-period" style="opacity:.7;">{{ $period }}</span>
+                                                                        @endif
+                                                                    </div>
+                                                                    @if($subtitle !== '')
+                                                                        <div class="builder-pricing-subtitle">{{ $subtitle }}</div>
+                                                                    @endif
+                                                                    @if($description !== '')
+                                                                        <div class="product-quick-view-description">{{ $description }}</div>
+                                                                    @endif
+                                                                    @if(count($features) > 0)
+                                                                        <ul class="product-quick-view-features">
+                                                                            @foreach($features as $fi => $feat)
+                                                                                @php $featText = trim((string) $feat); if ($featText === '') $featText = 'Feature ' . ($fi + 1); @endphp
+                                                                                <li><i class="fas fa-check" aria-hidden="true"></i><span>{{ $featText }}</span></li>
+                                                                            @endforeach
+                                                                        </ul>
+                                                                    @endif
+                                                                </div>
+                                                            </div>
+                                                        </template>
+                                                    @endif
+                                                @elseif($type === 'checkout_summary' || $type === 'physical_checkout_summary')
+                                                    @php
+                                                        $isPhysicalCheckoutSummary = $type === 'physical_checkout_summary';
+                                                        $summaryHeading = trim((string) ($settings['heading'] ?? ($isPhysicalCheckoutSummary ? 'Review Your Order' : 'Order Summary')));
+                                                        $plan = trim((string) ($settings['plan'] ?? ($isPhysicalCheckoutSummary ? 'Selected Product' : 'Starter')));
+                                                        $priceVal = trim((string) ($settings['price'] ?? '₱0'));
+                                                        $regularPrice = trim((string) ($settings['regularPrice'] ?? ''));
+                                                        $period = trim((string) ($settings['period'] ?? ''));
+                                                        $subtitle = trim((string) ($settings['subtitle'] ?? ($isPhysicalCheckoutSummary ? 'Selected products, cart items, and delivery details update here before payment.' : '')));
+                                                        $badge = trim((string) ($settings['badge'] ?? ($isPhysicalCheckoutSummary ? 'Order Summary' : 'Selected Plan')));
+                                                        $features = is_array($settings['features'] ?? null) ? $settings['features'] : [];
+                                                        $selectedImage = '';
+                                                        $selectedCheckoutPricing = ($currentStepType === 'checkout' && is_array($selectedPricing ?? null)) ? $selectedPricing : null;
+                                                        if (is_array($selectedCheckoutPricing)) {
+                                                            $selectedPlan = trim((string) ($selectedCheckoutPricing['plan'] ?? ''));
+                                                            $selectedPrice = trim((string) ($selectedCheckoutPricing['price'] ?? ''));
+                                                            $selectedRegularPrice = trim((string) ($selectedCheckoutPricing['regularPrice'] ?? ''));
+                                                            $selectedPeriod = trim((string) ($selectedCheckoutPricing['period'] ?? ''));
+                                                            $selectedSubtitle = trim((string) ($selectedCheckoutPricing['subtitle'] ?? ''));
+                                                            $selectedBadge = trim((string) ($selectedCheckoutPricing['badge'] ?? ''));
+                                                            $selectedImage = trim((string) ($selectedCheckoutPricing['image'] ?? ''));
+                                                            $selectedFeatures = is_array($selectedCheckoutPricing['features'] ?? null) ? $selectedCheckoutPricing['features'] : [];
+                                                            if ($selectedPlan !== '') $plan = $selectedPlan;
+                                                            if ($selectedPrice !== '') $priceVal = $selectedPrice;
+                                                            if ($selectedRegularPrice !== '') $regularPrice = $selectedRegularPrice;
+                                                            if ($selectedPeriod !== '') $period = $selectedPeriod;
+                                                            if ($selectedSubtitle !== '') $subtitle = $selectedSubtitle;
+                                                            if ($selectedBadge !== '') $badge = $selectedBadge;
+                                                            if (count($selectedFeatures) > 0) $features = $selectedFeatures;
+                                                        }
+                                                        if (count($features) === 0) {
+                                                            $features = $isPhysicalCheckoutSummary
+                                                                ? ['Product subtotal updates automatically', 'Cart items show here before payment', 'Shipping details are completed below']
+                                                                : ['Unlimited steps', 'Custom domains', 'Email support'];
+                                                        }
+                                                        $summaryTextColor = trim((string) ($rawStyle['color'] ?? ''));
+                                                        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $summaryTextColor)) $summaryTextColor = '';
+                                                        $ctaLabel = trim((string) ($settings['ctaLabel'] ?? ($isPhysicalCheckoutSummary ? 'Place Order' : 'Pay Now')));
+                                                        if ($ctaLabel === '') $ctaLabel = $isPhysicalCheckoutSummary ? 'Place Order' : 'Pay Now';
+                                                        $ctaBg = trim((string) ($settings['ctaBgColor'] ?? '#240E35'));
+                                                        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $ctaBg)) $ctaBg = '#240E35';
+                                                        $ctaText = trim((string) ($settings['ctaTextColor'] ?? '#ffffff'));
+                                                        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $ctaText)) $ctaText = '#ffffff';
+                                                        $summaryAmountSource = $priceVal !== '' ? $priceVal : $regularPrice;
+                                                        $summaryAmount = 0.0;
+                                                        if ($summaryAmountSource !== '') {
+                                                            $summaryAmountClean = preg_replace('/[^0-9,.\-]/', '', $summaryAmountSource);
+                                                            if (is_string($summaryAmountClean) && $summaryAmountClean !== '') {
+                                                                $summaryAmount = (float) str_replace(',', '', $summaryAmountClean);
+                                                            }
+                                                        }
+                                                        $summaryScale = $clampScale($settings['contentScale'] ?? 1);
+                                                        $summaryStyle = $contentStyle;
+                                                        if ($summaryStyle !== '' && substr($summaryStyle, -1) !== ';') {
+                                                            $summaryStyle .= ';';
+                                                        }
+                                                        $summaryStyle .= 'gap:' . (int) round(12 * $summaryScale) . 'px;';
+                                                        $summaryPad = trim((string) ($rawStyle['padding'] ?? ''));
+                                                        if ($summaryPad !== '') {
+                                                            $summaryStyle .= 'padding:' . $scalePaddingValue($summaryPad, $summaryScale) . ';';
+                                                        }
+                                                        $summaryRadius = trim((string) ($rawStyle['borderRadius'] ?? ''));
+                                                        if ($summaryRadius !== '') {
+                                                            $summaryStyle .= 'border-radius:' . $scalePxValue($summaryRadius, $summaryScale) . ';';
+                                                        }
+                                                        $headingStyle = 'font-size:' . (int) round(11 * $summaryScale) . 'px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;';
+                                                        $titleStyle = 'font-size:' . (int) round(18 * $summaryScale) . 'px;';
+                                                        $priceStyle = 'font-size:' . (int) round(32 * $summaryScale) . 'px;';
+                                                        $periodStyle = 'font-size:' . (int) round(12 * $summaryScale) . 'px;';
+                                                        $subtitleStyle = 'font-size:' . (int) round(12 * $summaryScale) . 'px;';
+                                                        $featureStyle = 'font-size:' . (int) round(12 * $summaryScale) . 'px;gap:' . (int) round(6 * $summaryScale) . 'px;';
+                                                        $featureGapStyle = 'gap:' . (int) round(6 * $summaryScale) . 'px;';
+                                                        $ctaStyle = 'font-size:' . (int) round(16 * $summaryScale) . 'px;padding:' . (int) round(8 * $summaryScale) . 'px ' . (int) round(12 * $summaryScale) . 'px;';
+                                                        $summaryFeaturesJson = json_encode(array_values($features), JSON_UNESCAPED_UNICODE);
+                                                        $summaryPricingId = trim((string) ($selectedCheckoutPricing['pricingId'] ?? ''));
+                                                        $summarySourceStep = trim((string) ($selectedCheckoutPricing['sourceStepSlug'] ?? ''));
+                                                    @endphp
+                                                    <div class="builder-pricing builder-checkout-summary {{ $isPhysicalCheckoutSummary ? 'builder-checkout-summary--physical' : '' }}" data-checkout-summary style="{{ $summaryStyle }}">
+                                                        @if($badge !== '')
+                                                            <div class="builder-pricing-badge" data-checkout-badge>{{ $badge }}</div>
+                                                        @endif
+                                                        @if($isPhysicalCheckoutSummary)
+                                                            <div class="checkout-physical-head">
+                                                                <div class="checkout-physical-label" data-checkout-heading style="{{ $headingStyle }}@if($summaryTextColor !== '')color: {{ $summaryTextColor }}; opacity: 0.7;@endif">{{ $summaryHeading }}</div>
+                                                            </div>
+                                                            <div class="checkout-physical-product">
+                                                                <div class="checkout-physical-thumb" data-checkout-thumb>
+                                                                    @if($selectedImage !== '')
+                                                                        <img src="{{ $selectedImage }}" alt="{{ $plan !== '' ? $plan : 'Selected product' }}">
+                                                                    @else
+                                                                        <i class="fas fa-box-open" aria-hidden="true"></i>
+                                                                    @endif
+                                                                </div>
+                                                                <div class="checkout-physical-meta">
+                                                                    <div class="builder-pricing-title" data-checkout-plan style="{{ $titleStyle }}@if($summaryTextColor !== '')color: {{ $summaryTextColor }};@endif">{{ $plan !== '' ? $plan : 'Selected product' }}</div>
+                                                                    @if($subtitle !== '')
+                                                                        <div class="builder-pricing-subtitle" data-checkout-subtitle style="{{ $subtitleStyle }}@if($summaryTextColor !== '')color: {{ $summaryTextColor }}; opacity: 0.7;@endif">{{ $subtitle }}</div>
+                                                                    @endif
+                                                                    <div class="checkout-physical-price">
+                                                                        <span class="builder-pricing-price" data-checkout-price style="{{ $priceStyle }}@if($summaryTextColor !== '')color: {{ $summaryTextColor }};@endif">{{ $priceVal !== '' ? $priceVal : '₱0' }}</span>
+                                                                        @if($period !== '')
+                                                                            <span class="builder-pricing-period" data-checkout-period style="{{ $periodStyle }}@if($summaryTextColor !== '')color: {{ $summaryTextColor }}; opacity: 0.7;@endif">{{ $period }}</span>
+                                                                        @endif
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="checkout-physical-rows">
+                                                                <div class="checkout-physical-row">
+                                                                    <span>Items subtotal</span>
+                                                                    <strong data-checkout-row-subtotal>{{ $priceVal !== '' ? $priceVal : '₱0' }}</strong>
+                                                                </div>
+                                                                <div class="checkout-physical-row">
+                                                                    <span>Shipping</span>
+                                                                    <strong data-checkout-row-shipping>Calculated at checkout</strong>
+                                                                </div>
+                                                                <div class="checkout-physical-row checkout-physical-row--total">
+                                                                    <strong>Order total</strong>
+                                                                    <strong data-checkout-row-total>{{ $priceVal !== '' ? $priceVal : '₱0' }}</strong>
+                                                                </div>
+                                                            </div>
+                                                            <div class="checkout-cart-lines" data-checkout-cart-lines style="{{ $selectedImage !== '' ? '' : 'display:none;' }}">
+                                                                @if($selectedImage !== '')
+                                                                    <div class="checkout-cart-line">
+                                                                        <div class="checkout-cart-line-thumb"><img src="{{ $selectedImage }}" alt="{{ $plan !== '' ? $plan : 'Selected product' }}"></div>
+                                                                        <div class="checkout-cart-line-meta">
+                                                                            <div class="checkout-cart-line-title">{{ $plan !== '' ? $plan : 'Selected product' }}</div>
+                                                                            <div class="checkout-cart-line-sub">{{ $badge !== '' ? $badge : 'Selected item' }}</div>
+                                                                        </div>
+                                                                        <div class="checkout-cart-line-total">{{ $priceVal !== '' ? $priceVal : '₱0' }}</div>
+                                                                    </div>
+                                                                @endif
+                                                            </div>
+                                                            <ul class="builder-pricing-features" data-checkout-features style="{{ $featureGapStyle }}{{ $selectedImage !== '' ? 'display:none;' : '' }}">
+                                                                @foreach($features as $fi => $feat)
+                                                                    @php
+                                                                        $featText = trim((string) $feat);
+                                                                        if ($featText === '') $featText = 'Feature ' . ($fi + 1);
+                                                                    @endphp
+                                                                    <li style="{{ $featureStyle }}@if($summaryTextColor !== '')color: {{ $summaryTextColor }};@endif"><i class="fas fa-check" aria-hidden="true"></i> {{ $featText }}</li>
+                                                                @endforeach
+                                                            </ul>
+                                                        @else
+                                                            <div class="builder-pricing-subtitle" data-checkout-heading style="{{ $headingStyle }}@if($summaryTextColor !== '')color: {{ $summaryTextColor }}; opacity: 0.7;@endif">{{ $summaryHeading }}</div>
+                                                            <div class="builder-pricing-title" data-checkout-plan style="{{ $titleStyle }}@if($summaryTextColor !== '')color: {{ $summaryTextColor }};@endif">{{ $plan !== '' ? $plan : 'Plan' }}</div>
+                                                            <div>
+                                                                <span class="builder-pricing-price" data-checkout-price style="{{ $priceStyle }}@if($summaryTextColor !== '')color: {{ $summaryTextColor }};@endif">{{ $priceVal !== '' ? $priceVal : '₱0' }}</span>
+                                                                @if($period !== '')
+                                                                    <span class="builder-pricing-period" data-checkout-period style="{{ $periodStyle }}@if($summaryTextColor !== '')color: {{ $summaryTextColor }}; opacity: 0.7;@endif">{{ $period }}</span>
+                                                                @endif
+                                                            </div>
+                                                            @if($subtitle !== '')
+                                                                <div class="builder-pricing-subtitle" data-checkout-subtitle style="{{ $subtitleStyle }}@if($summaryTextColor !== '')color: {{ $summaryTextColor }}; opacity: 0.7;@endif">{{ $subtitle }}</div>
+                                                            @endif
+                                                            <ul class="builder-pricing-features" data-checkout-features style="{{ $featureGapStyle }}">
+                                                                @foreach($features as $fi => $feat)
+                                                                    @php
+                                                                        $featText = trim((string) $feat);
+                                                                        if ($featText === '') $featText = 'Feature ' . ($fi + 1);
+                                                                    @endphp
+                                                                    <li style="{{ $featureStyle }}@if($summaryTextColor !== '')color: {{ $summaryTextColor }};@endif"><i class="fas fa-check" aria-hidden="true"></i> {{ $featText }}</li>
+                                                                @endforeach
+                                                            </ul>
+                                                        @endif
+                                                        @if($currentStepType === 'checkout')
+                                                            @if($isPreview)
+                                                                <button type="button" class="builder-pricing-cta" style="{{ $ctaStyle }}background: {{ $ctaBg }}; color: {{ $ctaText }}; opacity:0.7;cursor:not-allowed;" disabled>{{ $ctaLabel }}</button>
+                                                            @else
+                                                                <form method="POST" action="{{ $checkoutActionUrl }}" data-checkout-summary-form style="margin:0;">
+                                                                    @csrf
+                                                                    <input type="hidden" name="amount" value="{{ $summaryAmount > 0 ? $summaryAmount : (float) ($step->price ?? 0) }}">
+                                                                    <input type="hidden" name="website" value="">
+                                                                    <input type="hidden" name="checkout_pricing_id" value="{{ $summaryPricingId }}">
+                                                                    <input type="hidden" name="checkout_pricing_source_step" value="{{ $summarySourceStep }}">
+                                                                    <input type="hidden" name="checkout_pricing_plan" value="{{ $plan }}">
+                                                                    <input type="hidden" name="checkout_pricing_price" value="{{ $priceVal }}">
+                                                                    <input type="hidden" name="checkout_pricing_regular_price" value="{{ $regularPrice }}">
+                                                                    <input type="hidden" name="checkout_pricing_period" value="{{ $period }}">
+                                                                    <input type="hidden" name="checkout_pricing_subtitle" value="{{ $subtitle }}">
+                                                                    <input type="hidden" name="checkout_pricing_badge" value="{{ $badge }}">
+                                                                    <input type="hidden" name="checkout_pricing_image" value="{{ $selectedImage }}">
+                                                                    <input type="hidden" name="checkout_pricing_features" value="{{ $summaryFeaturesJson }}">
+                                                                    <button type="submit" class="builder-pricing-cta" style="{{ $ctaStyle }}background: {{ $ctaBg }}; color: {{ $ctaText }};">{{ $ctaLabel }}</button>
+                                                                </form>
+                                                            @endif
+                                                        @else
+                                                            <button type="button" class="builder-pricing-cta" style="{{ $ctaStyle }}background: {{ $ctaBg }}; color: {{ $ctaText }}; opacity:0.7;cursor:not-allowed;" disabled>{{ $ctaLabel }}</button>
                                                         @endif
                                                     </div>
                                                 @elseif($type === 'countdown')
@@ -1768,7 +2514,7 @@
                                                         }
                                                     @endphp
                                                     @if($step->type === 'opt_in' && !$isPreview)
-                                                        <form method="POST" action="{{ route('funnels.portal.optin', ['funnelSlug' => $funnel->slug, 'stepSlug' => $step->slug]) }}" style="{{ $formInlineStyle }}">
+                                                        <form method="POST" action="{{ $optInActionUrl }}" style="{{ $formInlineStyle }}">
                     @csrf
                                                             <input type="hidden" name="website" value="">
                                                             @foreach($formFields as $f)
@@ -1850,11 +2596,43 @@
                 @if(!$isPreview || trim((string) ($step->content ?? '')) !== '')
                     <div class="content">{{ $step->content }}</div>
                 @endif
-                @include('funnels.portal._step-actions', ['funnel' => $funnel, 'step' => $step, 'nextStep' => $nextStep, 'isPreview' => $isPreview])
+                @include('funnels.portal._step-actions', ['funnel' => $funnel, 'step' => $step, 'nextStep' => $nextStep, 'isPreview' => $isPreview, 'isTemplateTest' => $isTemplateTest, 'optInActionUrl' => $optInActionUrl, 'checkoutActionUrl' => $checkoutActionUrl, 'offerActionUrl' => $offerActionUrl, 'restartStepUrl' => $restartStepUrl, 'nextStepUrl' => $nextStep ? $stepRoute($nextStep) : null])
             @endif
         </div>
+        @else
+        <div class="preview-iframe-shell">
+            <iframe id="previewDeviceFrame" title="Preview device viewport" scrolling="auto" loading="lazy"></iframe>
+        </div>
+        @endif
+</div>
+<div class="product-quick-view-backdrop" id="productQuickViewBackdrop" aria-hidden="true">
+    <div class="product-quick-view-modal" role="dialog" aria-modal="true" aria-label="Product details">
+        <button type="button" class="product-quick-view-close" id="productQuickViewClose" aria-label="Close product details"><i class="fas fa-times" aria-hidden="true"></i></button>
+        <div id="productQuickViewBody"></div>
     </div>
-    <script>
+</div>
+<button type="button" class="portal-cart-fab" id="portalCartFab" aria-label="Open cart">
+    <i class="fas fa-cart-shopping" aria-hidden="true"></i>
+    <span class="portal-cart-count" id="portalCartCount">0</span>
+</button>
+<div class="portal-cart-backdrop" id="portalCartBackdrop" aria-hidden="true"></div>
+<aside class="portal-cart-drawer" id="portalCartDrawer" aria-hidden="true">
+    <div class="portal-cart-head">
+        <h3>Your Cart</h3>
+        <button type="button" class="portal-cart-close" id="portalCartClose" aria-label="Close cart"><i class="fas fa-times" aria-hidden="true"></i></button>
+    </div>
+    <div class="portal-cart-items" id="portalCartItems"></div>
+    <div class="portal-cart-foot">
+        <div class="portal-cart-total"><span>Total</span><span id="portalCartTotal">₱0</span></div>
+        <div class="portal-cart-actions">
+            @if($cartCheckoutUrl)
+                <a href="{{ $cartCheckoutUrl }}" data-base-href="{{ $cartCheckoutUrl }}" class="portal-cart-btn primary" id="portalCartCheckoutBtn">Go to Checkout</a>
+            @endif
+            <button type="button" class="portal-cart-btn secondary" id="portalCartClearBtn">Clear Cart</button>
+        </div>
+    </div>
+</aside>
+<script>
     (function(){
         var pricingStorageKey="funnel_pricing_selection:"+@json((string) ($funnel->slug ?? ''));
         var currentStepSlug=@json((string) ($step->slug ?? ''));
@@ -1914,6 +2692,7 @@
                 period:String(card.getAttribute("data-pricing-period")||"").trim(),
                 subtitle:String(card.getAttribute("data-pricing-subtitle")||"").trim(),
                 badge:String(card.getAttribute("data-pricing-badge")||"").trim(),
+                image:String(card.getAttribute("data-pricing-image")||"").trim(),
                 features:parsePricingFeatures(card.getAttribute("data-pricing-features")||"")
             };
         }
@@ -1932,6 +2711,7 @@
                 url.searchParams.set("offer_period",String(selection.period||"").trim());
                 url.searchParams.set("offer_subtitle",String(selection.subtitle||"").trim());
                 url.searchParams.set("offer_badge",String(selection.badge||"").trim());
+                url.searchParams.set("offer_image",String(selection.image||"").trim());
                 url.searchParams.set("offer_features",JSON.stringify(Array.isArray(selection.features)?selection.features:[]));
                 if(url.origin===window.location.origin){
                     return url.pathname+url.search+url.hash;
@@ -1948,6 +2728,7 @@
                     +"&offer_period="+encodeURIComponent(String(selection.period||"").trim())
                     +"&offer_subtitle="+encodeURIComponent(String(selection.subtitle||"").trim())
                     +"&offer_badge="+encodeURIComponent(String(selection.badge||"").trim())
+                    +"&offer_image="+encodeURIComponent(String(selection.image||"").trim())
                     +"&offer_features="+encodeURIComponent(JSON.stringify(Array.isArray(selection.features)?selection.features:[]));
             }
         }
@@ -2107,6 +2888,419 @@
             paint();
             restartAuto();
         });
+        var quickViewBackdrop=document.getElementById("productQuickViewBackdrop");
+        var quickViewBody=document.getElementById("productQuickViewBody");
+        var quickViewClose=document.getElementById("productQuickViewClose");
+        function closeProductQuickView(){
+            if(!quickViewBackdrop)return;
+            quickViewBackdrop.classList.remove("is-open");
+            quickViewBackdrop.setAttribute("aria-hidden","true");
+            if(quickViewBody)quickViewBody.innerHTML="";
+            document.body.style.overflow="";
+        }
+        function openProductQuickView(templateId){
+            if(!quickViewBackdrop||!quickViewBody)return;
+            var tpl=document.getElementById(templateId);
+            if(!tpl)return;
+            quickViewBody.innerHTML=tpl.innerHTML;
+            quickViewBackdrop.classList.add("is-open");
+            quickViewBackdrop.setAttribute("aria-hidden","false");
+            document.body.style.overflow="hidden";
+            quickViewBody.querySelectorAll("[data-carousel]").forEach(function(car){
+                var track=car.querySelector("[data-carousel-track]");
+                if(!track)return;
+                var slides=track.children;
+                var total=slides.length||1;
+                var index=parseInt(car.getAttribute("data-active")||"0",10);
+                if(isNaN(index)||index<0||index>=total)index=0;
+                var dotsWrap=car.querySelector("[data-carousel-dots]");
+                var dots=dotsWrap?dotsWrap.querySelectorAll("[data-carousel-dot]"):[];
+                function paintModalCarousel(){
+                    track.style.transform="translateX(" + (-index*100) + "%)";
+                    if(dots&&dots.length){
+                        dots.forEach(function(dot,di){
+                            if(di===index)dot.classList.add("is-active");
+                            else dot.classList.remove("is-active");
+                        });
+                    }
+                }
+                var prev=car.querySelector("[data-carousel-prev]");
+                var next=car.querySelector("[data-carousel-next]");
+                if(prev)prev.addEventListener("click",function(e){e.preventDefault();index=(index-1+total)%total;paintModalCarousel();});
+                if(next)next.addEventListener("click",function(e){e.preventDefault();index=(index+1)%total;paintModalCarousel();});
+                if(dots&&dots.length){
+                    dots.forEach(function(dot){
+                        dot.addEventListener("click",function(e){
+                            e.preventDefault();
+                            var target=parseInt(dot.getAttribute("data-carousel-dot")||"0",10);
+                            if(isNaN(target)||target<0||target>=total)return;
+                            index=target;
+                            paintModalCarousel();
+                        });
+                    });
+                }
+                paintModalCarousel();
+            });
+        }
+        if(quickViewClose)quickViewClose.addEventListener("click",closeProductQuickView);
+        if(quickViewBackdrop){
+            quickViewBackdrop.addEventListener("click",function(e){
+                if(e.target===quickViewBackdrop)closeProductQuickView();
+            });
+        }
+        document.addEventListener("keydown",function(e){
+            if(e.key==="Escape"&&quickViewBackdrop&&quickViewBackdrop.classList.contains("is-open")){
+                closeProductQuickView();
+            }
+        });
+        document.addEventListener("click",function(e){
+            var trigger=e.target&&e.target.closest?e.target.closest("[data-product-modal-target]"):null;
+            if(!trigger)return;
+            e.preventDefault();
+            var templateId=trigger.getAttribute("data-product-modal-target")||"";
+            if(templateId!=="")openProductQuickView(templateId);
+        });
+        var cartStorageKey="funnel_product_cart:"+@json((string) ($funnel->slug ?? ''));
+        var portalCartFab=document.getElementById("portalCartFab");
+        var portalCartCount=document.getElementById("portalCartCount");
+        var portalCartDrawer=document.getElementById("portalCartDrawer");
+        var portalCartBackdrop=document.getElementById("portalCartBackdrop");
+        var portalCartItems=document.getElementById("portalCartItems");
+        var portalCartTotal=document.getElementById("portalCartTotal");
+        var portalCartClose=document.getElementById("portalCartClose");
+        var portalCartClear=document.getElementById("portalCartClearBtn");
+        var portalCartCheckout=document.getElementById("portalCartCheckoutBtn");
+        var cartButtons=document.querySelectorAll("[data-product-add-to-cart]");
+        function parseCartMoney(raw){
+            var s=String(raw||"").trim().replace(/[^0-9,.\-]/g,"").replace(/,/g,"");
+            if(!s)return 0;
+            var n=parseFloat(s);
+            return isNaN(n)||!isFinite(n)?0:n;
+        }
+        function formatCartMoney(amount){
+            var n=Number(amount||0);
+            if(!isFinite(n))n=0;
+            return "₱"+n.toLocaleString(undefined,{minimumFractionDigits:n % 1===0 ? 0 : 2,maximumFractionDigits:2});
+        }
+        function readPortalCart(){
+            try{
+                var raw=window.localStorage.getItem(cartStorageKey);
+                var parsed=raw?JSON.parse(raw):[];
+                return Array.isArray(parsed)?parsed:[];
+            }catch(_err){
+                return [];
+            }
+        }
+        function writePortalCart(items){
+            try{ window.localStorage.setItem(cartStorageKey,JSON.stringify(Array.isArray(items)?items:[])); }catch(_err){}
+        }
+        function summarizeCartItems(items){
+            var list=Array.isArray(items)?items:[];
+            var quantity=0;
+            var total=0;
+            var regularTotal=0;
+            list.forEach(function(item){
+                var qty=Math.max(1,Number(item.quantity||1));
+                quantity+=qty;
+                total+=parseCartMoney(item.price||item.regularPrice||0)*qty;
+                regularTotal+=parseCartMoney(item.regularPrice||item.price||0)*qty;
+            });
+            return { quantity:quantity, total:total, regularTotal:regularTotal };
+        }
+        function buildCartCheckoutSelection(itemOrItems){
+            var items=Array.isArray(itemOrItems)?itemOrItems:(itemOrItems?[itemOrItems]:[]);
+            if(!items.length)return null;
+            var summary=summarizeCartItems(items);
+            if(items.length===1 && summary.quantity<=1){
+                var item=items[0];
+                return {
+                    pricingId:String(item.id||"").trim(),
+                    sourceStepSlug:String(item.stepSlug||"").trim(),
+                    plan:String(item.name||"").trim(),
+                    price:String(item.price||"").trim(),
+                    regularPrice:String(item.regularPrice||"").trim(),
+                    period:String(item.period||"").trim(),
+                    subtitle:"",
+                    badge:String(item.badge||"").trim(),
+                    features:[]
+                };
+            }
+            return {
+                pricingId:"cart",
+                sourceStepSlug:currentStepSlug,
+                plan:"Cart Order",
+                price:formatCartMoney(summary.total),
+                regularPrice:summary.regularTotal>summary.total?formatCartMoney(summary.regularTotal):"",
+                period:"",
+                subtitle:summary.quantity+" item"+(summary.quantity===1?"":"s")+" ready for checkout",
+                badge:"Cart",
+                features:items.map(function(item){
+                    var qty=Math.max(1,Number(item.quantity||1));
+                    return String(item.name||"Product")+" x"+qty;
+                })
+            };
+        }
+        function renderCheckoutSummaryFromCart(){
+            if(currentStepType!=="checkout")return;
+            var summaryNode=document.querySelector("[data-checkout-summary]");
+            if(!summaryNode)return;
+            var items=readPortalCart();
+            if(!items.length)return;
+            var summary=summarizeCartItems(items);
+            var selection=buildCartCheckoutSelection(items);
+            var heading=summaryNode.querySelector("[data-checkout-heading]");
+            var badge=summaryNode.querySelector("[data-checkout-badge]");
+            var plan=summaryNode.querySelector("[data-checkout-plan]");
+            var price=summaryNode.querySelector("[data-checkout-price]");
+            var period=summaryNode.querySelector("[data-checkout-period]");
+            var subtitle=summaryNode.querySelector("[data-checkout-subtitle]");
+            var features=summaryNode.querySelector("[data-checkout-features]");
+            var lines=summaryNode.querySelector("[data-checkout-cart-lines]");
+            var thumb=summaryNode.querySelector("[data-checkout-thumb]");
+            var rowSubtotal=summaryNode.querySelector("[data-checkout-row-subtotal]");
+            var rowShipping=summaryNode.querySelector("[data-checkout-row-shipping]");
+            var rowTotal=summaryNode.querySelector("[data-checkout-row-total]");
+            if(heading)heading.textContent="Cart Summary";
+            if(badge)badge.textContent="Cart";
+            if(plan)plan.textContent=summary.quantity+" item"+(summary.quantity===1?"":"s");
+            if(price)price.textContent=formatCartMoney(summary.total);
+            if(period)period.textContent="";
+            if(subtitle)subtitle.textContent="Review the products in your cart before paying.";
+            if(rowSubtotal)rowSubtotal.textContent=formatCartMoney(summary.total);
+            if(rowShipping)rowShipping.textContent="Calculated at checkout";
+            if(rowTotal)rowTotal.textContent=formatCartMoney(summary.total);
+            if(features)features.style.display="none";
+            if(thumb){
+                var firstItem=items[0]||null;
+                if(firstItem && String(firstItem.image||"").trim()!==""){
+                    thumb.innerHTML='<img src="'+escapeHtml(String(firstItem.image||""))+'" alt="'+escapeHtml(String(firstItem.name||"Product"))+'">';
+                }else{
+                    thumb.innerHTML='<i class="fas fa-box-open" aria-hidden="true"></i>';
+                }
+            }
+            if(lines){
+                lines.style.display="";
+                lines.innerHTML="";
+                items.forEach(function(item){
+                    var qty=Math.max(1,Number(item.quantity||1));
+                    var unit=parseCartMoney(item.price||item.regularPrice||0);
+                    var row=document.createElement("div");
+                    row.className="checkout-cart-line";
+                    var thumb=document.createElement("div");
+                    thumb.className="checkout-cart-line-thumb";
+                    if(String(item.image||"").trim()!==""){
+                        var img=document.createElement("img");
+                        img.src=String(item.image||"");
+                        img.alt=String(item.name||"Product");
+                        thumb.appendChild(img);
+                    }else{
+                        thumb.innerHTML='<i class="fas fa-box-open"></i>';
+                    }
+                    var meta=document.createElement("div");
+                    meta.className="checkout-cart-line-meta";
+                    meta.innerHTML='<div class="checkout-cart-line-title"></div><div class="checkout-cart-line-sub"></div>';
+                    meta.querySelector(".checkout-cart-line-title").textContent=String(item.name||"Product");
+                    meta.querySelector(".checkout-cart-line-sub").textContent="Qty: "+qty+(String(item.badge||"").trim()!==""?" • "+String(item.badge||"").trim():"");
+                    var totalNode=document.createElement("div");
+                    totalNode.className="checkout-cart-line-total";
+                    totalNode.textContent=formatCartMoney(unit*qty);
+                    row.appendChild(thumb);
+                    row.appendChild(meta);
+                    row.appendChild(totalNode);
+                    lines.appendChild(row);
+                });
+            }
+            var form=summaryNode.querySelector("[data-checkout-summary-form]");
+            if(form && selection){
+                var amountInput=form.querySelector('input[name="amount"]');
+                if(amountInput)amountInput.value=String(summary.total);
+                var map={
+                    checkout_pricing_id:selection.pricingId,
+                    checkout_pricing_source_step:selection.sourceStepSlug,
+                    checkout_pricing_plan:selection.plan,
+                    checkout_pricing_price:selection.price,
+                    checkout_pricing_regular_price:selection.regularPrice,
+                    checkout_pricing_period:selection.period,
+                    checkout_pricing_subtitle:selection.subtitle,
+                    checkout_pricing_badge:selection.badge,
+                    checkout_pricing_image:String(selection.image||"").trim(),
+                    checkout_pricing_features:JSON.stringify(selection.features||[])
+                };
+                Object.keys(map).forEach(function(name){
+                    var input=form.querySelector('input[name="'+name+'"]');
+                    if(input)input.value=map[name];
+                });
+            }
+        }
+        function updateCartButtonsState(animateId){
+            var items=readPortalCart();
+            cartButtons.forEach(function(btn){
+                var id=String(btn.getAttribute("data-product-id")||"").trim();
+                var inCart=items.some(function(item){ return String(item.id||"")===id && Math.max(0,Number(item.quantity||0))>0; });
+                var icon=btn.querySelector("i");
+                btn.classList.toggle("is-in-cart",inCart);
+                btn.setAttribute("title",inCart?"Added to cart":"Add to cart");
+                btn.setAttribute("aria-label",inCart?"Added to cart":"Add to cart");
+                if(icon){
+                    icon.className=inCart?"fas fa-check":"fas fa-cart-shopping";
+                }
+                if(animateId && animateId===id){
+                    btn.style.animation="cartPop .26s ease";
+                    setTimeout(function(){ btn.style.animation=""; },280);
+                }
+            });
+        }
+        function openPortalCart(){
+            if(!portalCartDrawer||!portalCartBackdrop)return;
+            portalCartDrawer.classList.add("is-open");
+            portalCartBackdrop.classList.add("is-open");
+            portalCartDrawer.setAttribute("aria-hidden","false");
+            portalCartBackdrop.setAttribute("aria-hidden","false");
+            document.body.style.overflow="hidden";
+        }
+        function closePortalCart(){
+            if(!portalCartDrawer||!portalCartBackdrop)return;
+            portalCartDrawer.classList.remove("is-open");
+            portalCartBackdrop.classList.remove("is-open");
+            portalCartDrawer.setAttribute("aria-hidden","true");
+            portalCartBackdrop.setAttribute("aria-hidden","true");
+            document.body.style.overflow="";
+        }
+        function renderPortalCart(){
+            if(!portalCartFab||!portalCartItems||!portalCartTotal)return;
+            var items=readPortalCart();
+            var quantity=items.reduce(function(sum,item){ return sum + Math.max(1,Number(item.quantity||1)); },0);
+            if(quantity>0){
+                portalCartFab.classList.add("is-visible");
+                portalCartCount.textContent=String(quantity);
+            }else{
+                portalCartFab.classList.remove("is-visible");
+                portalCartCount.textContent="0";
+                closePortalCart();
+            }
+            portalCartItems.innerHTML="";
+            if(!items.length){
+                portalCartItems.innerHTML='<div class="portal-cart-empty">Your cart is empty.</div>';
+                portalCartTotal.textContent=formatCartMoney(0);
+                if(portalCartCheckout)portalCartCheckout.setAttribute("aria-disabled","true");
+                return;
+            }
+            var total=0;
+            items.forEach(function(item,idx){
+                var qty=Math.max(1,Number(item.quantity||1));
+                var unit=parseCartMoney(item.price||item.regularPrice||0);
+                total+=unit*qty;
+                var row=document.createElement("div");
+                row.className="portal-cart-item";
+                var thumb=document.createElement("div");
+                thumb.className="portal-cart-thumb";
+                if(String(item.image||"").trim()!==""){
+                    var img=document.createElement("img");
+                    img.src=String(item.image||"");
+                    img.alt=String(item.name||"Product");
+                    thumb.appendChild(img);
+                }else{
+                    thumb.innerHTML='<i class="fas fa-box-open"></i>';
+                }
+                var meta=document.createElement("div");
+                meta.className="portal-cart-meta";
+                meta.innerHTML='<div class="portal-cart-title"></div><div class="portal-cart-price"></div><div class="portal-cart-sub"></div><div class="portal-cart-qty"></div>';
+                meta.querySelector(".portal-cart-title").textContent=String(item.name||"Product");
+                meta.querySelector(".portal-cart-price").textContent=String(item.price||item.regularPrice||"₱0");
+                meta.querySelector(".portal-cart-sub").textContent=String(item.period||item.badge||"");
+                meta.querySelector(".portal-cart-qty").innerHTML='<button type="button" class="portal-cart-qty-btn" data-cart-decrease="'+idx+'" aria-label="Decrease quantity"><i class="fas fa-minus"></i></button><span class="portal-cart-qty-num">'+qty+'</span><button type="button" class="portal-cart-qty-btn" data-cart-increase="'+idx+'" aria-label="Increase quantity"><i class="fas fa-plus"></i></button>';
+                var remove=document.createElement("button");
+                remove.type="button";
+                remove.className="portal-cart-remove";
+                remove.innerHTML='<i class="fas fa-trash"></i>';
+                remove.setAttribute("data-cart-remove",String(idx));
+                row.appendChild(thumb);
+                row.appendChild(meta);
+                row.appendChild(remove);
+                portalCartItems.appendChild(row);
+            });
+            portalCartTotal.textContent=formatCartMoney(total);
+            if(portalCartCheckout){
+                var baseHref=portalCartCheckout.getAttribute("data-base-href")||portalCartCheckout.getAttribute("href")||"";
+                if(baseHref){
+                    portalCartCheckout.setAttribute("href",baseHref);
+                    portalCartCheckout.removeAttribute("aria-disabled");
+                }
+            }
+            updateCartButtonsState();
+            renderCheckoutSummaryFromCart();
+        }
+        if(portalCartFab)portalCartFab.addEventListener("click",function(){ renderPortalCart(); openPortalCart(); });
+        if(portalCartClose)portalCartClose.addEventListener("click",closePortalCart);
+        if(portalCartBackdrop)portalCartBackdrop.addEventListener("click",closePortalCart);
+        if(portalCartClear)portalCartClear.addEventListener("click",function(){
+            writePortalCart([]);
+            renderPortalCart();
+        });
+        if(portalCartItems){
+            portalCartItems.addEventListener("click",function(e){
+                var remove=e.target&&e.target.closest?e.target.closest("[data-cart-remove]"):null;
+                var items=readPortalCart();
+                if(remove){
+                    var idx=parseInt(remove.getAttribute("data-cart-remove")||"-1",10);
+                    if(isNaN(idx)||idx<0)return;
+                    items.splice(idx,1);
+                    writePortalCart(items);
+                    renderPortalCart();
+                    return;
+                }
+                var increase=e.target&&e.target.closest?e.target.closest("[data-cart-increase]"):null;
+                if(increase){
+                    var incIdx=parseInt(increase.getAttribute("data-cart-increase")||"-1",10);
+                    if(isNaN(incIdx)||incIdx<0||!items[incIdx])return;
+                    items[incIdx].quantity=Math.max(1,Number(items[incIdx].quantity||1))+1;
+                    writePortalCart(items);
+                    renderPortalCart();
+                    return;
+                }
+                var decrease=e.target&&e.target.closest?e.target.closest("[data-cart-decrease]"):null;
+                if(decrease){
+                    var decIdx=parseInt(decrease.getAttribute("data-cart-decrease")||"-1",10);
+                    if(isNaN(decIdx)||decIdx<0||!items[decIdx])return;
+                    items[decIdx].quantity=Math.max(1,Number(items[decIdx].quantity||1))-1;
+                    if(items[decIdx].quantity<=0){
+                        items.splice(decIdx,1);
+                    }
+                    writePortalCart(items);
+                    renderPortalCart();
+                }
+            });
+        }
+        cartButtons.forEach(function(btn){
+            btn.addEventListener("click",function(e){
+                e.preventDefault();
+                var id=String(btn.getAttribute("data-product-id")||"").trim();
+                if(id==="")return;
+                var items=readPortalCart();
+                var existing=items.find(function(item){ return String(item.id||"")===id; });
+                if(existing){
+                    existing.quantity=Math.max(1,Number(existing.quantity||1))+1;
+                }else{
+                    items.push({
+                        id:id,
+                        name:String(btn.getAttribute("data-product-name")||"Product").trim(),
+                        price:String(btn.getAttribute("data-product-price")||"").trim(),
+                        regularPrice:String(btn.getAttribute("data-product-regular-price")||"").trim(),
+                        period:String(btn.getAttribute("data-product-period")||"").trim(),
+                        badge:String(btn.getAttribute("data-product-badge")||"").trim(),
+                        image:String(btn.getAttribute("data-product-image")||"").trim(),
+                        stepSlug:String(btn.getAttribute("data-product-step")||"").trim(),
+                        quantity:1
+                    });
+                }
+                writePortalCart(items);
+                renderPortalCart();
+                updateCartButtonsState(id);
+                openPortalCart();
+            });
+        });
+        renderPortalCart();
+        updateCartButtonsState();
         var countdowns=document.querySelectorAll("[data-countdown]");
         if(countdowns && countdowns.length){
             function pad2(n){return String(n).padStart(2,"0");}
@@ -2288,6 +3482,36 @@
         }
         function syncCheckoutPricingForm(form){
             if(!form||!form.querySelector)return;
+            if(currentStepType==="checkout"){
+                var cartItems=readPortalCart();
+                if(cartItems.length){
+                    var cartSummary=summarizeCartItems(cartItems);
+                    var cartSelection=buildCartCheckoutSelection(cartItems);
+                    if(cartSelection){
+                        var cartMap={
+                            checkout_pricing_id:String(cartSelection.pricingId||"").trim(),
+                            checkout_pricing_source_step:String(cartSelection.sourceStepSlug||"").trim(),
+                            checkout_pricing_plan:String(cartSelection.plan||"").trim(),
+                            checkout_pricing_price:String(cartSelection.price||"").trim(),
+                            checkout_pricing_regular_price:String(cartSelection.regularPrice||"").trim(),
+                            checkout_pricing_period:String(cartSelection.period||"").trim(),
+                            checkout_pricing_subtitle:String(cartSelection.subtitle||"").trim(),
+                            checkout_pricing_badge:String(cartSelection.badge||"").trim(),
+                            checkout_pricing_image:String(cartSelection.image||"").trim(),
+                            checkout_pricing_features:JSON.stringify(Array.isArray(cartSelection.features)?cartSelection.features:[])
+                        };
+                        Object.keys(cartMap).forEach(function(name){
+                            var input=form.querySelector('input[name="'+name+'"]');
+                            if(input)input.value=cartMap[name];
+                        });
+                        var cartAmountInput=form.querySelector('input[name="amount"]');
+                        if(cartAmountInput && cartSummary.total>0){
+                            cartAmountInput.value=String(cartSummary.total);
+                        }
+                        return;
+                    }
+                }
+            }
             var card=findVisiblePricingCard();
             if(!card)return;
             var selection=extractPricingSelection(card)||{};
@@ -2314,6 +3538,7 @@
                 checkout_pricing_period:String(selection.period||"").trim(),
                 checkout_pricing_subtitle:String(selection.subtitle||"").trim(),
                 checkout_pricing_badge:String(selection.badge||"").trim(),
+                checkout_pricing_image:String(selection.image||"").trim(),
                 checkout_pricing_features:JSON.stringify(Array.isArray(selection.features)?selection.features:[])
             };
             Object.keys(fieldMap).forEach(function(name){
@@ -2345,8 +3570,9 @@
                 }
             });
             var action=String(form.getAttribute("action")||"");
-            if(action.indexOf("/checkout")<0)return;
-            syncCheckoutPricingForm(form);
+            if(action.indexOf("/checkout")>=0 || action.indexOf("/offer")>=0){
+                syncCheckoutPricingForm(form);
+            }
         },true);
         function syncAbsoluteColumnHeights(){
             var cols=document.querySelectorAll(".builder-col.builder-col--abs, .builder-section--freeform .builder-col");
@@ -2400,24 +3626,132 @@
             img.addEventListener("error",function(){scheduleAbsoluteLayoutSync();},{once:true});
         });
         var isPreview={{ ($isPreview ?? false) ? 'true' : 'false' }};
-        var editorCanvasWidth={{ (int) ($editorCanvasWidth ?? 0) }};
-        if(isPreview&&editorCanvasWidth>0){
-            var measurePreviewContentHeight=function(content){
-                if(!content||!content.getBoundingClientRect)return 0;
-                var rootRect=content.getBoundingClientRect();
-                var maxBottom=Math.max(content.scrollHeight||0,content.offsetHeight||0);
-                Array.from(content.querySelectorAll("*")||[]).forEach(function(node){
-                    if(!node||!node.getBoundingClientRect)return;
-                    var tag=String(node.tagName||"").toLowerCase();
-                    if(tag==="script"||tag==="style")return;
-                    var rect=node.getBoundingClientRect();
-                    if((rect.width<=0&&rect.height<=0)||!isFinite(rect.bottom))return;
-                    var bottom=rect.bottom-rootRect.top;
-                    if(bottom>maxBottom)maxBottom=bottom;
+        var editorCanvasWidth={{ (int) (($editorCanvasWidth ?? 0) + (($isPreview ?? false) ? $previewFreeformRightInset : 0)) }};
+        var previewDeviceWidths={desktop:null,tablet:768,mobile:375};
+        var previewDevice="desktop";
+        if(isPreview){
+            try{
+                var allowed={desktop:1,tablet:1,mobile:1};
+                var sp=new URLSearchParams(window.location.search||"");
+                var q=sp.get("preview_device")||sp.get("previewDevice")||sp.get("device")||"";
+                q=String(q||"").toLowerCase();
+                if(allowed[q])previewDevice=q;
+            }catch(_e){}
+            try{
+                var stored=localStorage.getItem("fbPreviewDevice");
+                stored=String(stored||"").toLowerCase();
+                if(stored==="tablet"||stored==="mobile"||stored==="desktop")previewDevice=stored;
+            }catch(_e){}
+
+            document.body.setAttribute("data-preview-device", previewDevice);
+            // Outer-mode only: keep the iframe synced with the selected device.
+            var maybeIframe=document.getElementById("previewDeviceFrame");
+            if(maybeIframe){
+                var deviceWidthMap={desktop:"100%",tablet:"768px",mobile:"375px"};
+                maybeIframe.style.width=deviceWidthMap[previewDevice]||"100%";
+                var frameParams=new URLSearchParams(window.location.search||"");
+                frameParams.set("preview_iframe","1");
+                frameParams.set("preview_device",previewDevice);
+                maybeIframe.src=window.location.pathname+"?"+frameParams.toString();
+            }
+
+            var deviceBtns=Array.from(document.querySelectorAll("[data-preview-device]")||[]);
+            var setActiveDeviceUI=function(){
+                deviceBtns.forEach(function(btn){
+                    var d=String(btn.getAttribute("data-preview-device")||"desktop");
+                    if(d===previewDevice)btn.classList.add("is-active");
+                    else btn.classList.remove("is-active");
                 });
-                return Math.ceil(maxBottom);
             };
-            var applyPreviewScale=function(){
+            if(deviceBtns.length){
+                setActiveDeviceUI();
+                deviceBtns.forEach(function(btn){
+                    btn.addEventListener("click",function(){
+                        var d=String(btn.getAttribute("data-preview-device")||"desktop").toLowerCase();
+                        if(!(d==="desktop"||d==="tablet"||d==="mobile"))d="desktop";
+                        previewDevice=d;
+                        try{localStorage.setItem("fbPreviewDevice",previewDevice);}catch(_e){}
+                        document.body.setAttribute("data-preview-device", previewDevice);
+                        setActiveDeviceUI();
+                        var iframe=document.getElementById("previewDeviceFrame");
+                        if(iframe){
+                            var deviceWidthMap={desktop:"100%",tablet:"768px",mobile:"375px"};
+                            iframe.style.width=deviceWidthMap[previewDevice]||"100%";
+                            var frameParams=new URLSearchParams(window.location.search||"");
+                            frameParams.set("preview_iframe","1");
+                            frameParams.set("preview_device",previewDevice);
+                            iframe.src=window.location.pathname+"?"+frameParams.toString();
+                        }
+                        if(typeof window.__fbSchedulePreviewScale==="function"){
+                            window.__fbSchedulePreviewScale();
+                        }
+                    });
+                });
+            }
+        }
+        var measurePreviewContentHeight=function(content){
+            if(!content||!content.getBoundingClientRect)return 0;
+            var rootRect=content.getBoundingClientRect();
+            var maxBottom=Math.max(content.scrollHeight||0,content.offsetHeight||0);
+            Array.from(content.querySelectorAll("*")||[]).forEach(function(node){
+                if(!node||!node.getBoundingClientRect)return;
+                var tag=String(node.tagName||"").toLowerCase();
+                if(tag==="script"||tag==="style")return;
+                var rect=node.getBoundingClientRect();
+                if((rect.width<=0&&rect.height<=0)||!isFinite(rect.bottom))return;
+                var bottom=rect.bottom-rootRect.top;
+                if(bottom>maxBottom)maxBottom=bottom;
+            });
+            return Math.ceil(maxBottom);
+        };
+        var useZoom=function(){
+            try{
+                var test=document.createElement("div");
+                test.style.zoom="1";
+                return test.style.zoom!=="";
+            }catch(_e){}
+            return false;
+        }();
+        function applyCanvasScalePublished(){
+            var content=document.querySelector(".step-content--full");
+            if(!content)return;
+            syncAbsoluteColumnHeights();
+            document.body.style.margin="0";
+            document.body.style.display="block";
+            document.body.style.flexDirection="";
+            document.body.style.alignItems="";
+            document.body.style.minHeight="";
+            content.style.transform="none";
+            content.style.height="auto";
+            content.style.width=editorCanvasWidth+"px";
+            content.style.maxWidth="none";
+            content.style.boxSizing="border-box";
+            content.style.marginLeft="auto";
+            content.style.marginRight="auto";
+            content.style.display="block";
+            var targetPad=10;
+            var viewportW=document.documentElement?document.documentElement.clientWidth:window.innerWidth;
+            var availW=viewportW-(targetPad*2);
+            if(availW<200)availW=viewportW;
+            var scale=availW/editorCanvasWidth;
+            if(scale<=0)scale=1;
+            if(scale>3.0)scale=3.0;
+            content.style.padding=(targetPad/scale)+"px";
+            if(useZoom){
+                content.style.zoom=String(scale);
+                content.style.transform="none";
+                content.style.height="auto";
+            }else{
+                content.style.zoom="";
+                var h=measurePreviewContentHeight(content);
+                content.style.transformOrigin="top left";
+                content.style.transform="scale("+scale+")";
+                content.style.height=(h*scale)+"px";
+            }
+            document.body.style.overflowX="hidden";
+        }
+        if(isPreview&&editorCanvasWidth>0){
+            var applyCanvasScale=function(){
                 var content=document.querySelector(".step-content--full");
                 if(!content)return;
                 syncAbsoluteColumnHeights();
@@ -2425,39 +3759,81 @@
                 content.style.height="auto";
                 content.style.width=editorCanvasWidth+"px";
                 content.style.maxWidth="none";
+                content.style.marginLeft="auto";
+                content.style.marginRight="auto";
+                content.style.display="block";
                 var targetPad=10;
-                var vw=document.documentElement?document.documentElement.clientWidth:window.innerWidth;
-                var availW=vw-(targetPad*2);
-                if(availW<200)availW=window.innerWidth;
+                var viewportW=document.documentElement?document.documentElement.clientWidth:window.innerWidth;
+                var deviceW=previewDeviceWidths[previewDevice];
+                var baseW=(deviceW&&deviceW>0)?deviceW:viewportW;
+                var availW=baseW-(targetPad*2);
+                if(availW<200)availW=viewportW-(targetPad*2);
+                if(availW<200)availW=viewportW;
                 var scale=availW/editorCanvasWidth;
                 if(scale<=0)scale=1;
+                if(scale>3.0)scale=3.0;
                 content.style.padding=(targetPad/scale)+"px";
-                var h=measurePreviewContentHeight(content);
-                content.style.transformOrigin="top left";
-                content.style.transform="scale("+scale+")";
-                content.style.height=(h*scale)+"px";
+                // Using `zoom` makes the browser reflow based on scaled layout, which is
+                // what we need for tablet/mobile "layout adjustment" in preview.
+                // Fallback to `transform` when zoom is not supported.
+                if(useZoom){
+                    content.style.zoom=String(scale);
+                    content.style.transform="none";
+                    content.style.height="auto";
+                }else{
+                    content.style.zoom="";
+                    var h=measurePreviewContentHeight(content);
+                    content.style.transformOrigin="top left";
+                    content.style.transform="scale("+scale+")";
+                    content.style.height=(h*scale)+"px";
+                }
                 document.body.style.overflowX="hidden";
             };
-            var schedulePreviewScale=function(){
+            var scheduleCanvasScale=function(){
                 window.requestAnimationFrame(function(){
                     window.requestAnimationFrame(function(){
-                        applyPreviewScale();
+                        applyCanvasScale();
                     });
                 });
             };
-            schedulePreviewScale();
-            window.addEventListener("resize",function(){schedulePreviewScale();});
-            window.addEventListener("load",function(){schedulePreviewScale();});
+            window.__fbSchedulePreviewScale=scheduleCanvasScale;
+            scheduleCanvasScale();
+            window.addEventListener("resize",function(){scheduleCanvasScale();});
+            window.addEventListener("load",function(){scheduleCanvasScale();});
             if(document.fonts&&document.fonts.ready&&typeof document.fonts.ready.then==="function"){
-                document.fonts.ready.then(function(){schedulePreviewScale();}).catch(function(){});
+                document.fonts.ready.then(function(){scheduleCanvasScale();}).catch(function(){});
             }
             Array.from(document.images||[]).forEach(function(img){
                 if(!img||img.complete)return;
-                img.addEventListener("load",function(){schedulePreviewScale();},{once:true});
-                img.addEventListener("error",function(){schedulePreviewScale();},{once:true});
+                img.addEventListener("load",function(){scheduleCanvasScale();},{once:true});
+                img.addEventListener("error",function(){scheduleCanvasScale();},{once:true});
+            });
+        }else if(!isPreview&&editorCanvasWidth>0){
+            var schedulePublishedScale=function(){
+                window.requestAnimationFrame(function(){
+                    window.requestAnimationFrame(function(){
+                        applyCanvasScalePublished();
+                    });
+                });
+            };
+            schedulePublishedScale();
+            window.addEventListener("resize",function(){schedulePublishedScale();});
+            window.addEventListener("load",function(){schedulePublishedScale();});
+            if(document.fonts&&document.fonts.ready&&typeof document.fonts.ready.then==="function"){
+                document.fonts.ready.then(function(){schedulePublishedScale();}).catch(function(){});
+            }
+            Array.from(document.images||[]).forEach(function(img){
+                if(!img||img.complete)return;
+                img.addEventListener("load",function(){schedulePublishedScale();},{once:true});
+                img.addEventListener("error",function(){schedulePublishedScale();},{once:true});
             });
         }
     })();
     </script>
 </body>
 </html>
+
+
+
+
+

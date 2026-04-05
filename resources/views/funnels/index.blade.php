@@ -76,6 +76,7 @@
                 <thead>
                     <tr>
                         <th>Name</th>
+                        <th>Purpose</th>
                         <th>Status</th>
                         <th>Steps</th>
                         <th>Public URL</th>
