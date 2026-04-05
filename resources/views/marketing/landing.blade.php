@@ -275,42 +275,59 @@
                     <button type="button" id="onboardingModalClose" aria-label="Close onboarding modal" style="width: 38px; height: 38px; border: none; border-radius: 999px; background: #E2E8F0; color: #0F172A; font-size: 22px; cursor: pointer;">&times;</button>
                 </div>
 
-                <form method="POST" action="{{ route('register.post') }}">
+                @php
+                    $googleVerified = is_array($googleSignupVerified ?? null) ? $googleSignupVerified : [];
+                    $googleContext = is_array($googleSignupContext ?? null) ? $googleSignupContext : [];
+                    $hasGoogleVerified = $googleVerified !== [];
+                @endphp
+                <form id="landingOnboardingForm" method="POST" action="{{ route('register.post') }}">
                     @csrf
-                    <input type="hidden" name="plan" id="onboardingPlanInput" value="{{ request('plan', 'growth') }}">
+                    <input type="hidden" name="plan" id="onboardingPlanInput" value="{{ old('plan', (string) ($googleContext['plan'] ?? request('plan', 'growth'))) }}">
 
                     <div style="display: grid; gap: 12px;">
                         <div>
                             <label for="full_name" style="display:block;margin-bottom:6px;font-weight:600;color:#0F172A;">Full Name</label>
-                            <input id="full_name" name="full_name" type="text" maxlength="255" required value="{{ old('full_name') }}" style="width:100%;padding:10px 12px;border:1px solid #CBD5E1;border-radius:10px;">
+                            <input id="full_name" name="full_name" type="text" maxlength="255" required value="{{ old('full_name', (string) ($googleVerified['full_name'] ?? $googleContext['full_name'] ?? '')) }}" {{ $hasGoogleVerified ? 'readonly' : '' }} style="width:100%;padding:10px 12px;border:1px solid #CBD5E1;border-radius:10px;">
                         </div>
 
                         <div>
                             <label for="email" style="display:block;margin-bottom:6px;font-weight:600;color:#0F172A;">Email Address</label>
-                            <input id="email" name="email" type="email" maxlength="255" required value="{{ old('email') }}" style="width:100%;padding:10px 12px;border:1px solid #CBD5E1;border-radius:10px;">
+                            <input id="email" name="email" type="email" maxlength="255" required value="{{ old('email', (string) ($googleVerified['email'] ?? $googleContext['email'] ?? '')) }}" {{ $hasGoogleVerified ? 'readonly' : '' }} style="width:100%;padding:10px 12px;border:1px solid #CBD5E1;border-radius:10px;">
                             <small style="display:block;margin-top:6px;color:#280137;">Please enter a valid email address</small>
                         </div>
 
                         <div>
                             <label for="mobile" style="display:block;margin-bottom:6px;font-weight:600;color:#0F172A;">Mobile Number</label>
-                            <input id="mobile" name="mobile" type="text" pattern="^09\d{9}$" placeholder="09XXXXXXXXX" required value="{{ old('mobile') }}" style="width:100%;padding:10px 12px;border:1px solid #CBD5E1;border-radius:10px;">
+                            <input id="mobile" name="mobile" type="text" pattern="^09\d{9}$" placeholder="09XXXXXXXXX" required value="{{ old('mobile', (string) ($googleContext['mobile'] ?? '')) }}" style="width:100%;padding:10px 12px;border:1px solid #CBD5E1;border-radius:10px;">
                         </div>
 
                         <div>
                             <label for="company_name" style="display:block;margin-bottom:6px;font-weight:600;color:#0F172A;">Company Name</label>
-                            <input id="company_name" name="company_name" type="text" maxlength="255" required value="{{ old('company_name') }}" style="width:100%;padding:10px 12px;border:1px solid #CBD5E1;border-radius:10px;">
+                            <input id="company_name" name="company_name" type="text" maxlength="255" required value="{{ old('company_name', (string) ($googleContext['company_name'] ?? '')) }}" style="width:100%;padding:10px 12px;border:1px solid #CBD5E1;border-radius:10px;">
                         </div>
 
                         <div>
                             <label for="onboardingPlanPreview" style="display:block;margin-bottom:6px;font-weight:600;color:#0F172A;">Selected Plan</label>
-                            <input id="onboardingPlanPreview" type="text" readonly value="{{ strtoupper((string) request('plan', 'growth')) }}" style="width:100%;padding:10px 12px;border:1px solid #CBD5E1;border-radius:10px;background:#F8FAFC;font-weight:700;">
+                            <input id="onboardingPlanPreview" type="text" readonly value="{{ strtoupper((string) old('plan', (string) ($googleContext['plan'] ?? request('plan', 'growth')))) }}" style="width:100%;padding:10px 12px;border:1px solid #CBD5E1;border-radius:10px;background:#F8FAFC;font-weight:700;">
                         </div>
                     </div>
 
                     <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px;flex-wrap:wrap;">
                         <button type="button" id="onboardingModalCancel" style="padding:10px 16px;border:none;border-radius:10px;background:#E2E8F0;color:#0F172A;font-weight:600;cursor:pointer;">Cancel</button>
+                        <button type="button" id="onboardingGoogleButton" style="padding:10px 16px;border:1px solid #CBD5E1;border-radius:10px;background:#FFFFFF;color:#0F172A;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;">
+                            <span aria-hidden="true" style="display:inline-flex;width:18px;height:18px;border-radius:50%;align-items:center;justify-content:center;background:#fff;border:1px solid #CBD5E1;color:#ea4335;font-weight:800;font-size:12px;">G</span>
+                            Continue with Google
+                        </button>
                         <button type="submit" style="padding:10px 16px;border:none;border-radius:10px;background:#240E35;color:#ffffff;font-weight:700;cursor:pointer;">Continue to Payment</button>
                     </div>
+                </form>
+                <form id="landingGoogleSignupForm" method="POST" action="{{ route('auth.google.signup.redirect') }}" style="display:none;">
+                    @csrf
+                    <input type="hidden" name="full_name" id="google_signup_full_name">
+                    <input type="hidden" name="email" id="google_signup_email">
+                    <input type="hidden" name="mobile" id="google_signup_mobile">
+                    <input type="hidden" name="company_name" id="google_signup_company_name">
+                    <input type="hidden" name="plan" id="google_signup_plan">
                 </form>
             </div>
         </div>
@@ -382,6 +399,9 @@
         const onboardingOpeners = document.querySelectorAll('[data-open-onboarding]');
         const onboardingModalClose = document.getElementById('onboardingModalClose');
         const onboardingModalCancel = document.getElementById('onboardingModalCancel');
+        const onboardingForm = document.getElementById('landingOnboardingForm');
+        const onboardingGoogleButton = document.getElementById('onboardingGoogleButton');
+        const landingGoogleSignupForm = document.getElementById('landingGoogleSignupForm');
 
         const openOnboardingModal = (planCode) => {
             if (!onboardingModal) return;
@@ -399,6 +419,25 @@
             if (!onboardingModal) return;
             onboardingModal.style.display = 'none';
             document.body.style.overflow = '';
+        };
+
+        const validateOnboardingForm = () => {
+            if (!onboardingForm) return false;
+            const nativeValid = onboardingForm.reportValidity();
+            if (!nativeValid) return false;
+            const mobileInput = onboardingForm.querySelector('#mobile');
+            if (mobileInput) {
+                const mobileValue = String(mobileInput.value || '').trim();
+                const isValidMobile = /^09\d{9}$/.test(mobileValue);
+                if (!isValidMobile) {
+                    mobileInput.setCustomValidity('Mobile number must be in 09XXXXXXXXX format.');
+                    onboardingForm.reportValidity();
+                    return false;
+                }
+                mobileInput.setCustomValidity('');
+            }
+
+            return true;
         };
 
         onboardingOpeners.forEach((opener) => {
@@ -419,6 +458,22 @@
                 if (event.target === onboardingModal) {
                     closeOnboardingModal();
                 }
+            });
+        }
+        if (onboardingGoogleButton && onboardingForm && landingGoogleSignupForm) {
+            onboardingGoogleButton.addEventListener('click', () => {
+                const fullName = onboardingForm.querySelector('#full_name');
+                const email = onboardingForm.querySelector('#email');
+                const mobile = onboardingForm.querySelector('#mobile');
+                const companyName = onboardingForm.querySelector('#company_name');
+                const plan = onboardingForm.querySelector('#onboardingPlanInput');
+
+                landingGoogleSignupForm.querySelector('#google_signup_full_name').value = fullName ? fullName.value : '';
+                landingGoogleSignupForm.querySelector('#google_signup_email').value = email ? email.value : '';
+                landingGoogleSignupForm.querySelector('#google_signup_mobile').value = mobile ? mobile.value : '';
+                landingGoogleSignupForm.querySelector('#google_signup_company_name').value = companyName ? companyName.value : '';
+                landingGoogleSignupForm.querySelector('#google_signup_plan').value = plan ? plan.value : 'growth';
+                landingGoogleSignupForm.submit();
             });
         }
         document.addEventListener('keydown', (event) => {

@@ -333,10 +333,15 @@ class SignupOnboardingService
     /**
      * @return array{checkout_url: string, id: string}|null
      */
-    public function beginPayMongoCheckout(SignupIntent $intent, PayMongoCheckoutService $payMongo): ?array
+    public function beginPayMongoCheckout(SignupIntent $intent, PayMongoCheckoutService $payMongo, array $options = []): ?array
     {
+        $successParams = ['signupIntent' => $intent->id];
+        if (($options['google_signup'] ?? false) === true) {
+            $successParams['google_signup'] = 1;
+        }
+
         $successUrl = URL::signedRoute('register.paymongo.return', [
-            'signupIntent' => $intent->id,
+            ...$successParams,
         ], now()->addHours(48));
 
         $cancelUrl = route('register', [
@@ -350,11 +355,12 @@ class SignupOnboardingService
             trim($intent->company_name).' subscription for the Sales & Marketing Funnel System',
             $successUrl,
             $cancelUrl,
-            [
+            array_filter([
                 'signup_intent_id' => (string) $intent->id,
-                'flow' => 'signup',
+                'flow' => (string) ($options['flow'] ?? 'signup'),
                 'plan_code' => $intent->plan_code,
-            ],
+                'google_id' => isset($options['google_id']) ? (string) $options['google_id'] : null,
+            ], fn ($value) => $value !== null && $value !== ''),
             [
                 'name' => $intent->full_name,
                 'email' => $intent->email,
@@ -470,9 +476,12 @@ class SignupOnboardingService
         return app(SubscriptionLifecycleService::class)->activateTenantSubscriptionFromPayment($payment, $plan, $paymentMethod);
     }
 
-    public function finalize(SignupIntent $intent): User
+    public function finalize(SignupIntent $intent, array $options = []): User
     {
-        [$user, $setupToken] = DB::transaction(function () use ($intent) {
+        $autoActivate = (bool) ($options['auto_activate'] ?? false);
+        $googleId = isset($options['google_id']) ? trim((string) $options['google_id']) : '';
+
+        [$user, $setupToken] = DB::transaction(function () use ($intent, $autoActivate, $googleId) {
             $intent = SignupIntent::query()->lockForUpdate()->findOrFail($intent->id);
 
             $existingUser = User::query()->where('email', $intent->email)->first();
@@ -500,7 +509,7 @@ class SignupOnboardingService
                 'subscription_activated_at' => now(),
             ]);
 
-            $user = User::create([
+            $userAttributes = [
                 'tenant_id' => $tenant->id,
                 'name' => $intent->full_name,
                 'email' => $intent->email,
@@ -509,7 +518,19 @@ class SignupOnboardingService
                 'role' => 'account-owner',
                 'status' => 'inactive',
                 'activation_state' => 'pending_activation',
-            ]);
+            ];
+            if ($autoActivate) {
+                $userAttributes['status'] = 'active';
+                $userAttributes['activation_state'] = 'active';
+                $userAttributes['email_verified_at'] = now();
+                $userAttributes['activation_completed_at'] = now();
+                $userAttributes['must_change_password'] = false;
+            }
+            if ($googleId !== '') {
+                $userAttributes['google_id'] = $googleId;
+            }
+
+            $user = User::create($userAttributes);
 
             $role = Role::query()->where('slug', 'account-owner')->first();
             if ($role) {
@@ -546,12 +567,6 @@ class SignupOnboardingService
                 ]);
             }
 
-            $setupTokenData = app(SetupTokenService::class)->createForUser(
-                $user,
-                'account_owner_onboarding',
-                ['signup_intent_id' => $intent->id]
-            );
-
             $intent->update([
                 'email_delivery_status' => 'queued',
                 'email_delivery_attempts' => 0,
@@ -562,12 +577,57 @@ class SignupOnboardingService
             ]);
             $this->transitionIntentOrFail($intent, SignupIntent::STATE_ACCOUNT_CREATED_PENDING_ACTIVATION);
 
+            if ($autoActivate) {
+                if ($tenant->status === 'inactive') {
+                    $tenant->update([
+                        'status' => 'active',
+                        'subscription_activated_at' => $tenant->subscription_activated_at ?? now(),
+                    ]);
+                }
+                $this->transitionIntentOrFail($intent, SignupIntent::STATE_EMAIL_SENT);
+                $this->transitionIntentOrFail($intent, SignupIntent::STATE_EMAIL_VERIFIED);
+                $this->transitionIntentOrFail($intent, SignupIntent::STATE_PASSWORD_SET);
+                $this->transitionIntentOrFail($intent, SignupIntent::STATE_ACTIVE);
+                $intent->update([
+                    'status' => 'completed',
+                    'activated_at' => now(),
+                    'completed_at' => now(),
+                ]);
+
+                return [$user->fresh(['roles']), null];
+            }
+
+            $setupTokenData = app(SetupTokenService::class)->createForUser(
+                $user,
+                'account_owner_onboarding',
+                ['signup_intent_id' => $intent->id]
+            );
+
             return [$user->fresh(['roles']), $setupTokenData['token']];
         });
 
-        $this->queueSetupEmail($user, 'account_owner_paid_signup_created', app(SetupTokenService::class), [
-            'token' => $setupToken,
-        ]);
+        if ($autoActivate) {
+            app(N8nEmailOrchestrator::class)->dispatch('account_owner_google_paid_signup_created', [
+                'signup_intent_id' => $intent->id,
+                'user_id' => $user->id,
+                'tenant_id' => $user->tenant_id,
+                'email' => $user->email,
+                'name' => $user->name,
+                'plan_code' => $intent->plan_code,
+                'plan_name' => $intent->plan_name,
+                'amount' => (float) $intent->amount,
+                'payment_method' => $intent->payment_method,
+                'paid_at' => optional($intent->paid_at ?? now())->toIso8601String(),
+                'setup_url' => route('login'),
+                'expires_at' => now()->addHours(24)->toIso8601String(),
+                'login_url' => route('login'),
+                'google_signup' => true,
+            ]);
+        } elseif (is_string($setupToken) && $setupToken !== '') {
+            $this->queueSetupEmail($user, 'account_owner_paid_signup_created', app(SetupTokenService::class), [
+                'token' => $setupToken,
+            ]);
+        }
 
         if ((bool) config('services.n8n.send_payment_success_event', false)) {
             app(N8nEmailOrchestrator::class)->dispatch('payment_successful', [

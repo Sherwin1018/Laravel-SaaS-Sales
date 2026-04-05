@@ -44,7 +44,7 @@ class N8nWebhookController extends Controller
 
             $intent = SignupIntent::query()
                 ->where('email', $validated['email'])
-                ->whereIn('status', ['pending', 'paid'])
+                ->whereIn('status', ['pending', 'paid', 'completed'])
                 ->latest('id')
                 ->first();
 
@@ -70,7 +70,7 @@ class N8nWebhookController extends Controller
         } else {
             $intent = SignupIntent::query()
                 ->where('email', $validated['email'])
-                ->whereIn('status', ['pending', 'paid'])
+                ->whereIn('status', ['pending', 'paid', 'completed'])
                 ->latest('id')
                 ->first();
             if ($intent) {
