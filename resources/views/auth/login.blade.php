@@ -128,13 +128,10 @@
         (function () {
             const loginForm = document.getElementById('loginForm');
             const submitButton = document.getElementById('loginSubmitButton');
-            const googleLoginLink = document.getElementById('googleLoginLink');
             const splash = document.getElementById('loginSplash');
             const defaultButtonLabel = submitButton ? submitButton.textContent : 'Login';
             const splashDisplayMs = 900;
-            const googleSplashDisplayMs = 700;
             let isSubmitting = false;
-            let isGoogleRedirecting = false;
 
             if (!loginForm || !submitButton || !splash) {
                 return;
@@ -170,24 +167,6 @@
                     }
                 }, 12000);
             });
-
-            if (googleLoginLink) {
-                googleLoginLink.addEventListener('click', function (event) {
-                    if (isGoogleRedirecting || isSubmitting) {
-                        event.preventDefault();
-                        return;
-                    }
-
-                    event.preventDefault();
-                    isGoogleRedirecting = true;
-                    splash.classList.add('is-visible');
-                    splash.setAttribute('aria-hidden', 'false');
-
-                    window.setTimeout(function () {
-                        window.location.href = googleLoginLink.href;
-                    }, googleSplashDisplayMs);
-                });
-            }
 
             window.addEventListener('pageshow', resetSubmitUi);
         })();

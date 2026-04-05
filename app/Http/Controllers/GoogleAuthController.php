@@ -17,6 +17,7 @@ class GoogleAuthController extends Controller
 
         return Socialite::driver('google')
             ->scopes(['openid', 'profile', 'email'])
+            ->with(['prompt' => 'select_account'])
             ->redirect();
     }
 
@@ -74,7 +75,7 @@ class GoogleAuthController extends Controller
         Auth::login($user, true);
         $request->session()->regenerate();
 
-        return $this->redirectByRole($user);
+        return $this->redirectByRole($user, true);
     }
 
     private function isGoogleConfigMissing(): bool
@@ -84,7 +85,23 @@ class GoogleAuthController extends Controller
             || ! config('services.google.redirect');
     }
 
-    private function redirectByRole($user)
+    public function processing(Request $request)
+    {
+        if (! Auth::check()) {
+            return redirect()->route('login');
+        }
+
+        $redirectTo = $request->session()->pull('google_login_redirect_to');
+        if (! is_string($redirectTo) || $redirectTo === '') {
+            $redirectTo = $this->dashboardRouteForUser(Auth::user()) ?? route('landing');
+        }
+
+        return view('auth.google-processing', [
+            'redirectTo' => $redirectTo,
+        ]);
+    }
+
+    private function redirectByRole($user, bool $useGoogleSplash = false)
     {
         if ($user->hasRole('super-admin')) {
             return redirect()->intended('/admin/dashboard')->with('success', 'Login Successfully');
@@ -94,24 +111,15 @@ class GoogleAuthController extends Controller
             return $response;
         }
 
-        if ($user->hasRole('account-owner')) {
-            return redirect()->intended(route('dashboard.owner'))->with('success', 'Login Successfully');
-        }
+        $destination = $this->dashboardRouteForUser($user);
+        if ($destination) {
+            if ($useGoogleSplash) {
+                session(['google_login_redirect_to' => $destination]);
 
-        if ($user->hasRole('marketing-manager')) {
-            return redirect()->intended(route('dashboard.marketing'))->with('success', 'Login Successfully');
-        }
+                return redirect()->route('auth.google.processing');
+            }
 
-        if ($user->hasRole('sales-agent')) {
-            return redirect()->intended(route('dashboard.sales'))->with('success', 'Login Successfully');
-        }
-
-        if ($user->hasRole('finance')) {
-            return redirect()->intended(route('dashboard.finance'))->with('success', 'Login Successfully');
-        }
-
-        if ($user->hasRole('customer')) {
-            return redirect()->intended(route('dashboard.customer'))->with('success', 'Login Successfully');
+            return redirect()->intended($destination)->with('success', 'Login Successfully');
         }
 
         Auth::logout();
@@ -119,6 +127,31 @@ class GoogleAuthController extends Controller
         request()->session()->regenerateToken();
 
         return redirect()->route('login')->with('error', 'Login Failed. Your role does not have access.');
+    }
+
+    private function dashboardRouteForUser($user): ?string
+    {
+        if ($user->hasRole('account-owner')) {
+            return route('dashboard.owner');
+        }
+
+        if ($user->hasRole('marketing-manager')) {
+            return route('dashboard.marketing');
+        }
+
+        if ($user->hasRole('sales-agent')) {
+            return route('dashboard.sales');
+        }
+
+        if ($user->hasRole('finance')) {
+            return route('dashboard.finance');
+        }
+
+        if ($user->hasRole('customer')) {
+            return route('dashboard.customer');
+        }
+
+        return null;
     }
 
     private function tenantAccessRedirect($user)
