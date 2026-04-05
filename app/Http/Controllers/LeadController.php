@@ -6,6 +6,7 @@ use App\Models\Lead;
 use App\Models\LeadStageHistory;
 use App\Models\TenantCustomField;
 use App\Models\User;
+use App\Services\N8nEmailOrchestrator;
 use App\Support\TenantPlanEnforcer;
 use Illuminate\Support\Collection;
 use Illuminate\Http\Request;
@@ -191,6 +192,10 @@ class LeadController extends Controller
             $this->recordStageHistory($lead, null, $lead->status, $user->id, ['source' => 'created']);
             $this->applySourceCampaignScore($lead, $lead->source_campaign);
             $this->applyStageScore($lead, null, $lead->status);
+            $this->dispatchAutomationEvent('lead_captured', $lead, [
+                'source_campaign' => $lead->source_campaign,
+                'points' => 10,
+            ]);
 
             return redirect()->route('leads.index')->with('success', 'Added Successfully');
         } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
@@ -248,6 +253,10 @@ class LeadController extends Controller
             if ($previousStatus !== $lead->status) {
                 $this->recordStageHistory($lead, $previousStatus, $lead->status, $user->id, ['source' => 'updated']);
                 $this->applyStageScore($lead, $previousStatus, $lead->status);
+                $this->dispatchAutomationEvent('lead_stage_changed', $lead, [
+                    'from_status' => $previousStatus,
+                    'to_status' => $lead->status,
+                ]);
             }
 
             return redirect()->route('leads.index')->with('success', 'Edited Successfully');
@@ -759,5 +768,24 @@ class LeadController extends Controller
             'stage_conversions' => $stageConversions,
             'stage_aging' => $stageAging,
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $extra
+     */
+    private function dispatchAutomationEvent(string $eventName, Lead $lead, array $extra = []): void
+    {
+        try {
+            app(N8nEmailOrchestrator::class)->dispatch($eventName, array_merge([
+                'tenant_id' => $lead->tenant_id,
+                'lead_id' => $lead->id,
+                'email' => $lead->email,
+                'name' => $lead->name,
+                'score' => (int) $lead->score,
+                'status' => $lead->status,
+            ], $extra));
+        } catch (\Throwable) {
+            // Silent fail to avoid blocking lead operations on automation transport issues.
+        }
     }
 }

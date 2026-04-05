@@ -11,6 +11,7 @@ use App\Http\Controllers\LeadController;
 use App\Http\Controllers\LeadCustomFieldController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\N8nWebhookController;
+use App\Http\Controllers\N8nAutomationController;
 use App\Http\Controllers\PayMongoWebhookController;
 use App\Http\Controllers\PlanController;
 use App\Http\Controllers\ProfileController;
@@ -186,3 +187,17 @@ Route::get('/register/paymongo/return/{signupIntent}', [PublicOnboardingControll
 
 Route::post('/webhooks/paymongo', PayMongoWebhookController::class)->name('webhooks.paymongo');
 Route::post('/api/n8n/email-status', [N8nWebhookController::class, 'emailStatus'])->name('api.n8n.email-status');
+Route::post('/api/n8n/lead-activity', [N8nAutomationController::class, 'leadActivity'])->name('api.n8n.lead-activity');
+Route::post('/api/n8n/lead-score', [N8nAutomationController::class, 'leadScore'])->name('api.n8n.lead-score');
+Route::post('/api/n8n/send-email', [N8nAutomationController::class, 'sendEmail'])->name('api.n8n.send-email');
+Route::post('/api/n8n/send-sms', [N8nAutomationController::class, 'sendSms'])->name('api.n8n.send-sms');
+Route::post('/api/n8n/agent-task', [N8nAutomationController::class, 'agentTask'])->name('api.n8n.agent-task');
+Route::get('/api/n8n/invoice-status', [N8nAutomationController::class, 'invoiceStatus'])->name('api.n8n.invoice-status');
+Route::post('/api/n8n/suspend-subscription', [N8nAutomationController::class, 'suspendSubscription'])->name('api.n8n.suspend-subscription');
+Route::post('/api/n8n/payment-recovered', [N8nAutomationController::class, 'paymentRecovered'])->name('api.n8n.payment-recovered');
+Route::post('/api/n8n/automation-log', [N8nAutomationController::class, 'automationLog'])->name('api.n8n.automation-log');
+Route::get('/api/n8n/analytics-daily', [N8nAutomationController::class, 'analyticsDaily'])->name('api.n8n.analytics-daily');
+Route::post('/api/n8n/analytics-store', [N8nAutomationController::class, 'analyticsStore'])->name('api.n8n.analytics-store');
+Route::post('/api/n8n/send-owner-digest', [N8nAutomationController::class, 'sendOwnerDigest'])->name('api.n8n.send-owner-digest');
+Route::post('/api/n8n/trial-inactive-recovery', [N8nAutomationController::class, 'trialInactiveRecovery'])->name('api.n8n.trial-inactive-recovery');
+Route::post('/api/n8n/run-inactive-trial-recovery', [N8nAutomationController::class, 'runInactiveTrialRecovery'])->name('api.n8n.run-inactive-trial-recovery');

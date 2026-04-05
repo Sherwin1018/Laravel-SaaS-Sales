@@ -182,7 +182,7 @@ class SetupAccessController extends Controller
             return back()->with('success', 'If your account is eligible, a new activation email has been queued.');
         }
 
-        app(SignupOnboardingService::class)->queueSetupEmail($user, 'setup_link_expiring_soon', $setupTokenService);
+        app(SignupOnboardingService::class)->queueSetupEmail($user, 'setup_link_expiring', $setupTokenService);
 
         app(OnboardingAuditService::class)->record(
             'setup_resend_requested',
