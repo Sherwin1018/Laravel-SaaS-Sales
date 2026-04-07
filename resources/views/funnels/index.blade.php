@@ -34,6 +34,32 @@
         .fb-modal-actions{display:flex;justify-content:flex-end;gap:8px}
         .fb-btn{padding:8px 12px;border-radius:8px;border:1px solid #E6E1EF;background:#fff;color:#240E35;font-weight:700;cursor:pointer}
         .fb-btn.danger{background:#dc2626;color:#fff;border-color:#b91c1c}
+        .fb-reviews-modal{position:fixed;inset:0;background:rgba(15,23,42,.56);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;z-index:1510;padding:18px}
+        .fb-reviews-modal.open{display:flex}
+        .fb-reviews-card{width:min(1120px,96vw);height:min(86vh,840px);background:#fff;border-radius:18px;border:1px solid #E6E1EF;box-shadow:0 28px 70px rgba(15,23,42,.24);display:grid;grid-template-rows:auto 1fr;overflow:hidden}
+        .fb-reviews-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px;border-bottom:1px solid #E6E1EF;background:#fff}
+        .fb-reviews-title{font-size:18px;font-weight:900;color:#240E35;margin:0}
+        .fb-reviews-close{width:38px;height:38px;border-radius:999px;border:1px solid #E6E1EF;background:#fff;color:#240E35;cursor:pointer;font-size:22px;line-height:1}
+        .fb-reviews-body{position:relative;background:#F8FAFC;overflow:auto;padding:18px}
+        .fb-reviews-loading{display:grid;place-items:center;min-height:220px;color:#64748b;font-weight:700}
+        .fb-reviews-body .reviews-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+        .fb-reviews-body .reviews-filter{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+        .fb-reviews-body .reviews-filter select{padding:10px 12px;border:1px solid #E6E1EF;border-radius:10px;background:#fff}
+        .fb-reviews-body .reviews-list{display:grid;gap:14px}
+        .fb-reviews-body .review-card,.fb-reviews-body .card{background:#fff;border:1px solid #E6E1EF;border-radius:16px;padding:18px;box-shadow:0 12px 24px rgba(15,23,42,.06)}
+        .fb-reviews-body .review-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:10px}
+        .fb-reviews-body .review-name{font-size:18px;font-weight:800;color:#240E35}
+        .fb-reviews-body .review-meta{font-size:13px;color:#64748B}
+        .fb-reviews-body .review-stars{color:#f59e0b;font-size:15px;letter-spacing:.06em}
+        .fb-reviews-body .review-status{display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.05em}
+        .fb-reviews-body .review-status.pending{background:#fff7ed;color:#c2410c}
+        .fb-reviews-body .review-status.approved{background:#ecfdf5;color:#047857}
+        .fb-reviews-body .review-status.rejected{background:#fef2f2;color:#b91c1c}
+        .fb-reviews-body .review-body{font-size:14px;line-height:1.6;color:#334155;white-space:pre-wrap}
+        .fb-reviews-body .review-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+        .fb-reviews-body .review-btn{padding:9px 12px;border-radius:10px;border:1px solid #E6E1EF;background:#fff;color:#240E35;font-weight:700;cursor:pointer}
+        .fb-reviews-body .review-btn.approve{background:#047857;color:#fff;border-color:#047857}
+        .fb-reviews-body .review-btn.reject{background:#b91c1c;color:#fff;border-color:#b91c1c}
     </style>
 @endsection
 
@@ -104,6 +130,17 @@
             </div>
         </div>
     </div>
+    <div class="fb-reviews-modal" id="fbReviewsModal" aria-hidden="true">
+        <div class="fb-reviews-card" role="dialog" aria-modal="true" aria-labelledby="fbReviewsModalTitle">
+            <div class="fb-reviews-head">
+                <h2 class="fb-reviews-title" id="fbReviewsModalTitle">Funnel Reviews</h2>
+                <button type="button" class="fb-reviews-close" id="fbReviewsModalClose" aria-label="Close reviews modal">&times;</button>
+            </div>
+            <div class="fb-reviews-body" id="fbReviewsModalBody">
+                <div class="fb-reviews-loading">Loading reviews...</div>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @section('scripts')
@@ -114,6 +151,11 @@
     var paginationLinks=document.getElementById("paginationLinks");
     var toggleFunnelsListBtn=document.getElementById("toggleFunnelsListBtn");
     var funnelsListContent=document.getElementById("funnelsListContent");
+    var reviewsModal=document.getElementById("fbReviewsModal");
+    var reviewsModalTitle=document.getElementById("fbReviewsModalTitle");
+    var reviewsModalBody=document.getElementById("fbReviewsModalBody");
+    var reviewsModalClose=document.getElementById("fbReviewsModalClose");
+    var reviewsModalUrl="";
     var timeout=null;
     var modal=document.getElementById("fbDeleteConfirm");
     if(searchInput&&tableBody){
@@ -186,6 +228,94 @@
             var msg=form.getAttribute("data-confirm-message")||"Delete this item?";
             openModal(msg,form);
         }
+    });
+    function reviewsLoading(){
+        if(reviewsModalBody)reviewsModalBody.innerHTML='<div class="fb-reviews-loading">Loading reviews...</div>';
+    }
+    function closeReviewsModal(){
+        if(!reviewsModal)return;
+        reviewsModal.classList.remove("open");
+        reviewsModal.setAttribute("aria-hidden","true");
+        reviewsModalUrl="";
+        reviewsLoading();
+    }
+    function loadReviewsModal(url,options){
+        if(!reviewsModalBody||!url)return Promise.resolve();
+        reviewsLoading();
+        var fetchOptions=options||{
+            headers:{'X-Requested-With':'XMLHttpRequest'}
+        };
+        return fetch(url,fetchOptions)
+            .then(function(response){ return response.text(); })
+            .then(function(html){
+                reviewsModalBody.innerHTML=html;
+            })
+            .catch(function(){
+                reviewsModalBody.innerHTML='<div class="card" style="color:#b91c1c;">Unable to load reviews right now.</div>';
+            });
+    }
+    function openReviewsModal(title,url){
+        if(!reviewsModal||!reviewsModalBody)return;
+        if(reviewsModalTitle)reviewsModalTitle.textContent=title||"Funnel Reviews";
+        reviewsModalUrl=url||"";
+        reviewsModal.classList.add("open");
+        reviewsModal.setAttribute("aria-hidden","false");
+        loadReviewsModal(reviewsModalUrl);
+    }
+    if(reviewsModalClose)reviewsModalClose.addEventListener("click",closeReviewsModal);
+    if(reviewsModal){
+        reviewsModal.addEventListener("click",function(e){
+            if(e.target===reviewsModal)closeReviewsModal();
+        });
+    }
+    document.addEventListener("change",function(e){
+        var select=e.target&&e.target.closest?e.target.closest('#fbReviewsModalBody select[name="status"]'):null;
+        if(!select)return;
+        var form=select.form;
+        if(!form)return;
+        e.preventDefault();
+        var params=new URLSearchParams(new FormData(form));
+        loadReviewsModal(form.action+"?"+params.toString(),{
+            headers:{'X-Requested-With':'XMLHttpRequest'}
+        });
+    });
+    document.addEventListener("submit",function(e){
+        var form=e.target&&e.target.closest?e.target.closest('#fbReviewsModalBody form'):null;
+        if(!form)return;
+        var method=String(form.getAttribute("method")||"GET").toUpperCase();
+        if(method==="GET")return;
+        e.preventDefault();
+        var formData=new FormData(form);
+        fetch(form.action,{
+            method:'POST',
+            headers:{
+                'X-Requested-With':'XMLHttpRequest',
+                'X-CSRF-TOKEN':'{{ csrf_token() }}',
+                'Accept':'text/html'
+            },
+            body:formData
+        })
+        .then(function(response){ return response.text(); })
+        .then(function(html){
+            reviewsModalBody.innerHTML=html;
+        })
+        .catch(function(){
+            reviewsModalBody.innerHTML='<div class="card" style="color:#b91c1c;">Unable to update review right now.</div>';
+        });
+    });
+    document.addEventListener("click",function(e){
+        var btn=e.target&&e.target.closest?e.target.closest("[data-reviews-modal-url]"):null;
+        if(!btn)return;
+        e.preventDefault();
+        openReviewsModal(
+            btn.getAttribute("data-reviews-modal-title")||"Funnel Reviews",
+            btn.getAttribute("data-reviews-modal-url")||"about:blank"
+        );
+    });
+    document.addEventListener("keydown",function(e){
+        if(!reviewsModal||!reviewsModal.classList.contains("open"))return;
+        var k=String(e.key||"").toLowerCase();
+        if(k==="escape")closeReviewsModal();
     });
 })();
 </script>

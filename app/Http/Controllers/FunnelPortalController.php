@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Funnel;
 use App\Models\FunnelEvent;
+use App\Models\FunnelReview;
 use App\Models\FunnelStep;
 use App\Models\Lead;
 use App\Models\Payment;
@@ -29,6 +30,12 @@ class FunnelPortalController extends Controller
 
         $isFirstStep = (int) $steps->first()->id === (int) $step->id;
         $selectedPricing = $this->syncSelectedPricingFromRequest($request, $funnel, $steps, $step, $isFirstStep);
+        $lead = null;
+        $leadId = $this->currentLeadId($funnel->id);
+        if ($leadId) {
+            $lead = Lead::query()->find($leadId);
+        }
+        $recentReviewPayment = $this->recentPaidPaymentForReview($request, $funnel, $lead, $tracking);
         $tracking->trackStepViewed($funnel, $step, $request, [
             'is_first_step' => $isFirstStep,
         ]);
@@ -41,7 +48,87 @@ class FunnelPortalController extends Controller
             'isFirstStep' => $isFirstStep,
             'selectedPricing' => $selectedPricing,
             'productInventory' => $this->productInventorySummary($funnel),
+            'approvedReviews' => $this->approvedReviewsForFunnel($funnel),
+            'reviewPrefill' => [
+                'name' => trim((string) ($lead->name ?? '')),
+                'email' => trim((string) ($lead->email ?? '')),
+            ],
+            'reviewAlreadySubmitted' => $this->hasSubmittedReviewForJourney($request, $funnel, $lead, $recentReviewPayment, $tracking),
+            'currentJourneyReview' => $this->currentJourneyReview($request, $funnel, $lead, $recentReviewPayment, $tracking),
         ]);
+    }
+
+    public function submitReview(
+        Request $request,
+        FunnelTrackingService $tracking,
+        string $funnelSlug,
+        string $stepSlug
+    ) {
+        [$funnel, $steps, $step] = $this->resolveStepContext($funnelSlug, $stepSlug, 'thank_you');
+
+        $validated = $request->validate([
+            'customer_name' => 'required|string|max:150',
+            'customer_email' => 'nullable|email|max:150',
+            'rating' => 'required|integer|min:1|max:5',
+            'review_text' => 'required|string|max:2000',
+            'is_public' => 'nullable|boolean',
+        ], [
+            'customer_name.required' => 'Your name is required.',
+            'review_text.required' => 'Please write a short review.',
+        ]);
+
+        $lead = null;
+        $leadId = $this->currentLeadId($funnel->id);
+        if ($leadId) {
+            $lead = Lead::query()->find($leadId);
+        }
+
+        $recentPaidPayment = $this->recentPaidPaymentForReview($request, $funnel, $lead, $tracking);
+        if (! $lead && ! $recentPaidPayment) {
+            return redirect()
+                ->back()
+                ->withErrors(['review' => 'A recent funnel journey was not detected for this review.'])
+                ->withInput();
+        }
+
+        $email = trim((string) ($validated['customer_email'] ?? ''));
+        if ($email === '' && $lead && filter_var((string) $lead->email, FILTER_VALIDATE_EMAIL)) {
+            $email = (string) $lead->email;
+        }
+
+        $existing = FunnelReview::query()
+            ->where('tenant_id', $funnel->tenant_id)
+            ->where('funnel_id', $funnel->id)
+            ->when($recentPaidPayment, fn ($query) => $query->where('payment_id', $recentPaidPayment->id))
+            ->when(! $recentPaidPayment && $lead, fn ($query) => $query->where('lead_id', $lead->id))
+            ->latest('id')
+            ->first();
+
+        $review = $existing ?? new FunnelReview();
+        $review->tenant_id = $funnel->tenant_id;
+        $review->funnel_id = $funnel->id;
+        $review->funnel_step_id = $step->id;
+        $review->lead_id = $lead?->id;
+        $review->payment_id = $recentPaidPayment?->id;
+        $review->customer_name = trim((string) $validated['customer_name']);
+        $review->customer_email = $email !== '' ? $email : null;
+        $review->rating = (int) $validated['rating'];
+        $review->review_text = trim((string) $validated['review_text']);
+        $review->status = 'pending';
+        $review->is_public = (bool) ($validated['is_public'] ?? true);
+        $review->source = 'thank_you_form';
+        $review->approved_at = null;
+        $review->approved_by = null;
+        $review->meta = array_filter([
+            'step_slug' => (string) $step->slug,
+            'session_identifier' => $tracking->sessionIdentifier($request),
+            'payment_amount' => $recentPaidPayment ? (float) $recentPaidPayment->amount : null,
+        ], fn ($value) => $value !== null && $value !== '');
+        $review->save();
+
+        return redirect()
+            ->route('funnels.portal.step', ['funnelSlug' => $funnel->slug, 'stepSlug' => $step->slug])
+            ->with('review_status', 'Thanks for the review. It is now waiting for approval.');
     }
 
     public function optIn(Request $request, FunnelTrackingService $tracking, string $funnelSlug, string $stepSlug)
@@ -481,10 +568,14 @@ class FunnelPortalController extends Controller
     {
         $next = $this->nextStep($steps, $step->id);
         if (! $next) {
-            return redirect()->route('funnels.portal.step', ['funnelSlug' => $funnel->slug, 'stepSlug' => $step->slug]);
+            return redirect()
+                ->route('funnels.portal.step', ['funnelSlug' => $funnel->slug, 'stepSlug' => $step->slug])
+                ->with('clear_portal_cart', true);
         }
 
-        return redirect()->route('funnels.portal.step', ['funnelSlug' => $funnel->slug, 'stepSlug' => $next->slug]);
+        return redirect()
+            ->route('funnels.portal.step', ['funnelSlug' => $funnel->slug, 'stepSlug' => $next->slug])
+            ->with('clear_portal_cart', true);
     }
 
     private function checkoutTrackingMeta(
@@ -1213,6 +1304,78 @@ class FunnelPortalController extends Controller
         $selection = session()->get($this->selectedPricingSessionKey($funnelId));
 
         return is_array($selection) ? $selection : null;
+    }
+
+    private function approvedReviewsForFunnel(Funnel $funnel)
+    {
+        return FunnelReview::query()
+            ->where('tenant_id', $funnel->tenant_id)
+            ->where('funnel_id', $funnel->id)
+            ->where('status', 'approved')
+            ->where('is_public', true)
+            ->latest('approved_at')
+            ->latest('id')
+            ->get();
+    }
+
+    private function recentPaidPaymentForReview(Request $request, Funnel $funnel, ?Lead $lead, FunnelTrackingService $tracking): ?Payment
+    {
+        $query = Payment::query()
+            ->where('tenant_id', $funnel->tenant_id)
+            ->where('funnel_id', $funnel->id)
+            ->where('payment_type', Payment::TYPE_FUNNEL_CHECKOUT)
+            ->where('status', 'paid')
+            ->where('created_at', '>=', now()->subDays(30));
+
+        $sessionIdentifier = $tracking->sessionIdentifier($request);
+        $query->where(function ($builder) use ($lead, $sessionIdentifier) {
+            if ($lead) {
+                $builder->orWhere('lead_id', $lead->id);
+            }
+            if ($sessionIdentifier !== '') {
+                $builder->orWhere('session_identifier', $sessionIdentifier);
+            }
+        });
+
+        return $query->latest('id')->first();
+    }
+
+    private function hasSubmittedReviewForJourney(
+        Request $request,
+        Funnel $funnel,
+        ?Lead $lead,
+        ?Payment $payment = null,
+        ?FunnelTrackingService $tracking = null
+    ): bool
+    {
+        return $this->currentJourneyReview($request, $funnel, $lead, $payment, $tracking) !== null;
+    }
+
+    private function currentJourneyReview(
+        Request $request,
+        Funnel $funnel,
+        ?Lead $lead,
+        ?Payment $payment = null,
+        ?FunnelTrackingService $tracking = null
+    ): ?FunnelReview
+    {
+        $query = FunnelReview::query()
+            ->where('tenant_id', $funnel->tenant_id)
+            ->where('funnel_id', $funnel->id);
+
+        if ($payment) {
+            $query->where('payment_id', $payment->id);
+        } elseif ($lead) {
+            $query->where('lead_id', $lead->id);
+        } else {
+            $sessionIdentifier = trim((string) ($tracking?->sessionIdentifier($request) ?? ''));
+            if ($sessionIdentifier === '') {
+                return null;
+            }
+            $query->where('meta->session_identifier', $sessionIdentifier);
+        }
+
+        return $query->latest('id')->first();
     }
 
     private function pricingSelectionFromCheckoutRequest(array $payload): ?array

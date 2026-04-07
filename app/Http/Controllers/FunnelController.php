@@ -1381,7 +1381,7 @@ class FunnelController extends Controller
             $type = (string) ($element['type'] ?? 'text');
             $type = in_array($type, [
                 'heading', 'text', 'image', 'button', 'icon', 'form', 'shipping_details', 'video', 'countdown', 'spacer', 'menu', 'carousel',
-                'testimonial', 'faq', 'pricing', 'product_offer', 'checkout_summary', 'physical_checkout_summary',
+                'testimonial', 'faq', 'pricing', 'product_offer', 'checkout_summary', 'physical_checkout_summary', 'review_form', 'reviews',
             ], true) ? $type : 'text';
 
             $rawContent = (string) ($element['content'] ?? '');
@@ -1741,6 +1741,8 @@ class FunnelController extends Controller
         }
         foreach ([
             'quote' => 2000,
+            'heading' => 300,
+            'physicalHeading' => 300,
             'name' => 200,
             'role' => 200,
             'avatar' => 2048,
@@ -1749,8 +1751,13 @@ class FunnelController extends Controller
             'regularPrice' => 200,
             'period' => 60,
             'subtitle' => 300,
+            'physicalSubtitle' => 500,
             'description' => 4000,
             'badge' => 80,
+            'buttonLabel' => 120,
+            'successMessage' => 500,
+            'publicLabel' => 300,
+            'emptyText' => 500,
             'ctaLabel' => 120,
             'ctaActionStepSlug' => 120,
             'ctaLink' => 2048,
@@ -1760,6 +1767,8 @@ class FunnelController extends Controller
             'expiredText' => 200,
             'promoKey' => 120,
             'linkedPricingId' => 120,
+            'expandLabel' => 120,
+            'collapseLabel' => 120,
         ] as $k => $maxLen) {
             $v = $readStringAllowEmpty($k, $maxLen);
             if ($v !== null) {
@@ -1784,6 +1793,7 @@ class FunnelController extends Controller
             'buttonAlign' => ['left', 'center', 'right'],
             'vAlign' => ['top', 'center', 'bottom'],
             'slideshowMode' => ['manual', 'auto'],
+            'layout' => ['list', 'grid'],
             'actionType' => ['next_step', 'step', 'link', 'checkout', 'offer_accept', 'offer_decline'],
             'ctaActionType' => ['next_step', 'step', 'link', 'checkout'],
             'positionMode' => ['absolute', 'relative', 'flow'],
@@ -1794,7 +1804,7 @@ class FunnelController extends Controller
             }
         }
 
-        foreach (['autoplay', 'controls', 'showArrows', 'imageRadiusLinked', 'videoRadiusLinked', 'quickViewEnabled', 'cartEnabled'] as $k) {
+        foreach (['autoplay', 'controls', 'showArrows', 'imageRadiusLinked', 'videoRadiusLinked', 'quickViewEnabled', 'cartEnabled', 'showRating', 'showDate', 'collapsible'] as $k) {
             $v = $readBool($k);
             if ($v !== null) {
                 $safe[$k] = $v;
@@ -1808,6 +1818,7 @@ class FunnelController extends Controller
             'carouselActiveRow' => [0, 500],
             'carouselActiveCol' => [0, 500],
             'activeMedia' => [0, 500],
+            'stockQuantity' => [0, 1000000],
             'fixedWidth' => [50, 2400],
             'fixedHeight' => [50, 1600],
             'offsetX' => [-2400, 2400],
@@ -1817,6 +1828,9 @@ class FunnelController extends Controller
             'cropRight' => [0, 2400],
             'cropBottom' => [0, 1800],
             'cropLeft' => [0, 2400],
+            'maxItems' => [1, 24],
+            'filterRating' => [0, 5],
+            'collapsedCount' => [1, 24],
         ] as $k => $range) {
             $v = $readInt($k, $range[0], $range[1]);
             if ($v !== null) {
@@ -1990,7 +2004,7 @@ class FunnelController extends Controller
                                         $type = (string) ($element['type'] ?? 'text');
                                         $type = in_array($type, [
                                             'heading', 'text', 'image', 'button', 'icon', 'form', 'shipping_details', 'video', 'countdown', 'spacer', 'menu', 'carousel',
-                                            'testimonial', 'faq', 'pricing', 'product_offer', 'checkout_summary', 'physical_checkout_summary',
+                                            'testimonial', 'faq', 'pricing', 'product_offer', 'checkout_summary', 'physical_checkout_summary', 'review_form', 'reviews',
                                         ], true) ? $type : 'text';
 
                                         $rawContent = (string) ($element['content'] ?? '');

@@ -171,7 +171,7 @@
 .fb-lib-group:last-child{margin-bottom:0;padding-bottom:0;border-bottom:0}
 .fb-lib-group-title{font-size:12px;font-weight:900;letter-spacing:.02em;text-transform:uppercase;color:#2E1244;margin:0 0 8px}
 .fb-template-grid{display:grid;grid-template-columns:1fr;gap:12px}
-.fb-template-card{border:1px solid #E6E1EF;border-radius:14px;background:#fff;padding:12px;display:flex;flex-direction:column;gap:10px;box-shadow:0 10px 20px rgba(36,14,53,.06);transition:transform .16s ease,box-shadow .2s ease,border-color .2s ease}
+.fb-template-card{border:1px solid #E6E1EF;border-radius:16px;background:#fff;padding:14px;display:flex;flex-direction:column;gap:12px;box-shadow:0 10px 20px rgba(36,14,53,.06);transition:transform .16s ease,box-shadow .2s ease,border-color .2s ease}
 .fb-template-card:hover{transform:translateY(-1px);border-color:#D8C8EA;box-shadow:0 16px 28px rgba(36,14,53,.10)}
 .fb-template-status{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 8px}
 .fb-template-pill{display:inline-flex;align-items:center;justify-content:center;padding:6px 10px;border-radius:999px;background:#F3EEF7;color:#240E35;font-size:11px;font-weight:800;white-space:nowrap;border:1px solid #E6E1EF}
@@ -181,12 +181,23 @@
 .fb-template-mode-btn:not(.active):hover{background:#F8F5FB;border-color:#D8C8EA}
 .fb-template-current{margin:0 0 12px;font-size:12px;color:#64748b;line-height:1.45}
 .fb-template-pane.hidden{display:none}
-.fb-template-preview{height:92px;border-radius:10px;border:1px dashed #E6E1EF;background:linear-gradient(135deg,#F8F5FB,#F3EEF7);position:relative;overflow:hidden}
-.fb-template-title{font-size:13px;font-weight:800;color:#240E35;margin:0}
-.fb-template-desc{font-size:12px;color:#64748b;line-height:1.4;margin:0}
-.fb-template-actions{display:flex;align-items:flex-end;justify-content:space-between;gap:8px}
+.fb-template-preview{height:92px;border-radius:12px;border:1px dashed #E6E1EF;background:linear-gradient(135deg,#F8F5FB,#F3EEF7);position:relative;overflow:hidden}
+.fb-template-title{font-size:15px;font-weight:800;color:#240E35;margin:0;line-height:1.25}
+.fb-template-desc{font-size:12px;color:#64748b;line-height:1.55;margin:0}
+.fb-template-actions{display:flex;flex-direction:column;align-items:stretch;gap:10px}
 .fb-template-tags{display:flex;flex-wrap:wrap;gap:6px}
 .fb-template-tag{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:800;color:#6B4A7A;background:#F3EEF7;border:1px solid #E6E1EF;border-radius:999px;padding:2px 6px;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}
+.fb-template-card-meta{display:grid;gap:6px}
+.fb-template-card-controls{display:flex;gap:8px;align-items:stretch;justify-content:space-between;flex-wrap:wrap}
+.fb-template-card-controls .fb-btn{min-height:42px}
+.fb-template-card-controls .fb-btn.primary{flex:1 1 160px;justify-content:center;text-align:center;line-height:1.2;padding:10px 14px}
+.fb-template-card-controls .fb-btn:not(.primary){flex:0 0 auto}
+@media (max-width:640px){
+    .fb-template-card{padding:12px}
+    .fb-template-card-controls{flex-direction:column;align-items:stretch}
+    .fb-template-card-controls .fb-btn,
+    .fb-template-card-controls .fb-btn.primary{width:100%;flex:1 1 auto}
+}
 .fb-template-preview .tp-line{height:6px;background:#E6E1EF;border-radius:999px;margin:6px 8px}
 .fb-template-preview .tp-line-lg{height:10px;width:70%;background:#D6C6E2}
 .fb-template-preview .tp-line-md{width:88%}
@@ -370,6 +381,22 @@
 .fb-testimonial-avatar{width:40px;height:40px;border-radius:999px;object-fit:cover;background:#E6E1EF;flex-shrink:0}
 .fb-testimonial-name{font-weight:800;color:#240E35}
 .fb-testimonial-role{font-size:12px;color:#64748b}
+.fb-review-form{display:grid;gap:10px}
+.fb-review-form-title{font-size:18px;font-weight:900;color:#240E35}
+.fb-review-form-subtitle{font-size:12px;color:#64748b;line-height:1.5}
+.fb-review-stars{display:flex;gap:6px;color:#f59e0b;font-size:18px}
+.fb-review-input,.fb-review-textarea{width:100%;padding:10px 12px;border:1px solid #E6E1EF;border-radius:10px;background:#fff}
+.fb-review-textarea{min-height:84px;resize:vertical}
+.fb-review-check{display:flex;align-items:flex-start;gap:8px;font-size:12px;color:#475569}
+.fb-review-form{width:100%;min-width:0}
+.fb-review-list{display:grid;gap:12px;width:100%;min-width:0}
+.fb-review-list.grid{grid-template-columns:repeat(auto-fit,minmax(min(280px,100%),1fr))}
+.fb-review-card{border:1px solid #E6E1EF;border-radius:14px;padding:14px;width:100%;min-width:0;box-sizing:border-box;background:#fff;display:grid;gap:8px}
+.fb-review-card-head{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.fb-review-card-name{font-weight:800;color:#240E35}
+.fb-review-card-date{font-size:11px;color:#64748b}
+.fb-review-card-text{font-size:13px;color:#334155;line-height:1.55}
+.fb-review-card-stars{color:#f59e0b;font-size:14px;letter-spacing:.05em}
 .fb-faq{display:grid;gap:10px}
 .fb-faq-item{border-bottom:1px solid #E6E1EF;padding-bottom:8px}
 .fb-faq-item:last-child{border-bottom:0;padding-bottom:0}
@@ -625,9 +652,11 @@
                     title="Template Purpose"
                 >
                     @foreach(\App\Models\FunnelTemplate::TEMPLATE_TYPES as $value => $label)
-                        <option value="{{ $value }}" {{ old('template_type', $funnel->template_type) === $value ? 'selected' : '' }}>
-                            {{ $label }}
-                        </option>
+                        @if(in_array($value, ['service', 'physical_product'], true))
+                            <option value="{{ $value }}" {{ old('template_type', $funnel->template_type) === $value ? 'selected' : '' }}>
+                                {{ $label }}
+                            </option>
+                        @endif
                     @endforeach
                 </select>
             @else
@@ -646,6 +675,9 @@
         </form>
         <button id="saveBtn" class="fb-btn primary" type="button"><i class="fas fa-save"></i> Save</button>
         <button id="previewBtn" class="fb-btn" type="button"><i class="fas fa-eye"></i> Preview</button>
+        @if(($builderMode ?? 'funnel') !== 'template')
+            <a href="{{ route('funnels.reviews.index', $funnel) }}" class="fb-btn"><i class="fas fa-star-half-alt"></i> Reviews</a>
+        @endif
         @if(($builderMode ?? 'funnel') === 'template')
             <button id="testFlowBtn" class="fb-btn" type="button"><i class="fas fa-vial"></i> Test Flow</button>
         @endif
@@ -695,17 +727,19 @@
                 <div class="fb-lib-group" data-component-group>
                     <div class="fb-lib-group-title">Interaction & Navigation</div>
                     <button draggable="true" data-c="menu" data-purpose="all"><i class="fas fa-bars"></i>Menu</button>
-                    <button draggable="true" data-c="form" data-purpose="service,digital_product,physical_product,hybrid"><i class="fas fa-file-lines"></i>Form</button>
+                    <button draggable="true" data-c="form" data-purpose="service,physical_product"><i class="fas fa-file-lines"></i>Form</button>
                 </div>
                 <div class="fb-lib-group" data-component-group>
                     <div class="fb-lib-group-title">Advanced Blocks</div>
-                    <button draggable="true" data-c="testimonial" data-purpose="service,digital_product,hybrid"><i class="fas fa-quote-right"></i>Testimonial</button>
-                    <button draggable="true" data-c="faq" data-purpose="service,digital_product,hybrid"><i class="fas fa-circle-question"></i>FAQ</button>
-                    <button draggable="true" data-c="pricing" data-purpose="service,digital_product,hybrid"><i class="fas fa-tags"></i>Pricing</button>
-                    <button draggable="true" data-c="product_offer" data-purpose="physical_product,hybrid"><i class="fas fa-box-open"></i>Product Offer</button>
-                    <button draggable="true" data-c="checkout_summary" data-purpose="service,digital_product,hybrid"><i class="fas fa-receipt"></i>Checkout Summary</button>
-                    <button draggable="true" data-c="physical_checkout_summary" data-purpose="physical_product,hybrid"><i class="fas fa-basket-shopping"></i>Physical Checkout Summary</button>
-                    <button draggable="true" data-c="countdown" data-purpose="service,digital_product,hybrid"><i class="fas fa-stopwatch"></i>Countdown</button>
+                    <button draggable="true" data-c="testimonial" data-purpose="service"><i class="fas fa-quote-right"></i>Testimonial</button>
+                    <button draggable="true" data-c="review_form" data-purpose="service,physical_product"><i class="fas fa-star-half-stroke"></i>Review Form</button>
+                    <button draggable="true" data-c="reviews" data-purpose="service,physical_product"><i class="fas fa-stars"></i>Reviews</button>
+                    <button draggable="true" data-c="faq" data-purpose="service"><i class="fas fa-circle-question"></i>FAQ</button>
+                    <button draggable="true" data-c="pricing" data-purpose="service"><i class="fas fa-tags"></i>Pricing</button>
+                    <button draggable="true" data-c="product_offer" data-purpose="physical_product"><i class="fas fa-box-open"></i>Product Offer</button>
+                    <button draggable="true" data-c="checkout_summary" data-purpose="service"><i class="fas fa-receipt"></i>Checkout Summary</button>
+                    <button draggable="true" data-c="physical_checkout_summary" data-purpose="physical_product"><i class="fas fa-basket-shopping"></i>Physical Checkout Summary</button>
+                    <button draggable="true" data-c="countdown" data-purpose="service"><i class="fas fa-stopwatch"></i>Countdown</button>
                 </div>
             </div>
         </div>
@@ -768,6 +802,7 @@
             <div class="page-mgr-col">
                 <div class="page-mgr-section">
                     <h5>Add Page</h5>
+                    <div class="page-mgr-note">Repeated page types are suggested as numbered groups like Sales 1, Sales 2, and Sales 3 so they are easier to find later.</div>
                     <label for="pageMgrAddType">Type</label>
                     <select id="pageMgrAddType">
                         <option value="landing">Landing</option>
@@ -780,9 +815,9 @@
                         <option value="custom">Custom</option>
                     </select>
                     <label for="pageMgrAddTitle">Page title</label>
-                    <input id="pageMgrAddTitle" type="text" placeholder="e.g. About Offer">
+                    <input id="pageMgrAddTitle" type="text" placeholder="e.g. Sales 2 - Bundle Offer">
                     <label for="pageMgrAddSlug">Page slug (optional)</label>
-                    <input id="pageMgrAddSlug" type="text" placeholder="e.g. about-offer">
+                    <input id="pageMgrAddSlug" type="text" placeholder="e.g. sales-2-bundle-offer">
                     <button id="pageMgrCreateBtn" type="button" class="fb-btn primary page-mgr-create-btn">Create Page</button>
                 </div>
                 <div class="page-mgr-section">
@@ -1058,8 +1093,7 @@ function renderStepOptions(){
     steps.forEach(function(s){
         var o=document.createElement("option");
         o.value=String(s.id);
-        var stepTitle=String(s.title||("Step "+String(s.id)));
-        o.textContent=stepTitle+" ("+pageTypeLabel(s.type)+")";
+        o.textContent=pageDisplayLabel(s);
         stepSel.appendChild(o);
     });
     var hasCurrent=steps.some(function(s){return +s.id===+state.sid;});
@@ -1069,9 +1103,7 @@ function renderStepOptions(){
 function applyPurposeComponentVisibility(){
     var labels={
         service:"Service Funnel",
-        digital_product:"Digital Product Funnel",
-        physical_product:"Physical Product Funnel",
-        hybrid:"Hybrid Funnel"
+        physical_product:"Physical Product Funnel"
     };
     if(fbPurposeMeta){
         var purposeLabel=labels[builderPurpose]||"Service Funnel";
@@ -1079,8 +1111,6 @@ function applyPurposeComponentVisibility(){
             fbPurposeMeta.textContent=purposeLabel+" components are focused on product selling and checkout-related blocks.";
         }else if(builderPurpose==="service"){
             fbPurposeMeta.textContent=purposeLabel+" components are focused on offers, forms, proof, and service-style selling.";
-        }else{
-            fbPurposeMeta.textContent="Component library is filtered for "+purposeLabel+".";
         }
     }
     document.querySelectorAll("[data-c][data-purpose]").forEach(function(btn){
@@ -1097,7 +1127,8 @@ function applyPurposeComponentVisibility(){
 }
 function normalizeBuilderPurpose(value){
     var normalized=String(value||"service").trim().toLowerCase();
-    return ["service","digital_product","physical_product","hybrid"].indexOf(normalized)>=0?normalized:"service";
+    if(normalized==="digital_product"||normalized==="hybrid")return "service";
+    return ["service","physical_product"].indexOf(normalized)>=0?normalized:"service";
 }
 function setBuilderPurpose(nextPurpose){
     builderPurpose=normalizeBuilderPurpose(nextPurpose);
@@ -3587,18 +3618,9 @@ function applySharedFunnelTemplate(template){
                 var currentStepId=cur()?+cur().id:null;
                 var nextStateLayout=null;
                 var appliedIds={};
-                var templatePools={};
-                tplSteps.forEach(function(sourceStep){
-                    var sourceType=String(sourceStep&&sourceStep.type||"").toLowerCase();
-                    if(!templatePools[sourceType])templatePools[sourceType]=[];
-                    templatePools[sourceType].push(sourceStep);
-                });
-                ordered.forEach(function(targetStep,idx){
+                tplSteps.forEach(function(sourceStep,idx){
+                    var targetStep=ordered[idx]||null;
                     if(!targetStep)return;
-                    var targetType=String(targetStep.type||"").toLowerCase();
-                    var pool=templatePools[targetType]||[];
-                    var sourceStep=pool.length?pool.shift():(tplSteps[idx]||null);
-                    if(!sourceStep)return;
                     appliedIds[String(targetStep.id||"")]=true;
                     targetStep.position=idx+1;
                     targetStep.title=String(sourceStep.title||defaultStepTitleForType(sourceStep.type)||"Untitled");
@@ -3754,6 +3776,14 @@ function renderTemplateLibrary(){
     var pageLabel=pageTypeLabel(pageType);
     var mode="shared";
     var allFunnelTemplates=(sharedFunnelTemplates||[]);
+    var matchingFunnelTemplates=allFunnelTemplates.filter(function(template){
+        return normalizeBuilderPurpose(template&&template.template_type||"service")===builderPurpose;
+    });
+    var purposeLabels={
+        service:"Service Funnel",
+        physical_product:"Physical Product Funnel"
+    };
+    var activePurposeLabel=purposeLabels[builderPurpose]||"Service Funnel";
     if(pageModeBtn){
         pageModeBtn.classList.toggle("active",mode==="page");
         pageModeBtn.setAttribute("aria-pressed",mode==="page"?"true":"false");
@@ -3766,37 +3796,37 @@ function renderTemplateLibrary(){
     }
     if(pagePane)pagePane.classList.toggle("hidden",mode!=="page");
     if(funnelPane)funnelPane.classList.toggle("hidden",mode==="page");
-    if(titleEl)titleEl.textContent="Super Admin Templates";
-    if(metaEl)metaEl.textContent="Showing "+allFunnelTemplates.length+" saved super-admin template"+(allFunnelTemplates.length===1?"":"s")+". Applying one replaces the layouts across all pages in this funnel.";
-    if(typePill)typePill.textContent="Super Admin";
-    if(countPill)countPill.textContent=String(allFunnelTemplates.length)+" templates";
-    if(currentPageEl)currentPageEl.textContent="Choose one saved template to update all "+steps.length+" page"+(steps.length===1?"":"s")+" in this funnel.";
+    if(titleEl)titleEl.textContent=activePurposeLabel+" Templates";
+    if(metaEl)metaEl.textContent="Showing "+matchingFunnelTemplates.length+" saved super-admin template"+(matchingFunnelTemplates.length===1?"":"s")+" for "+activePurposeLabel+". Applying one replaces the layouts across all pages in this funnel.";
+    if(typePill)typePill.textContent=activePurposeLabel;
+    if(countPill)countPill.textContent=String(matchingFunnelTemplates.length)+" template"+(matchingFunnelTemplates.length===1?"":"s");
+    if(currentPageEl)currentPageEl.textContent="Choose one "+activePurposeLabel.toLowerCase()+" template to update all "+steps.length+" page"+(steps.length===1?"":"s")+" in this funnel.";
     if(grid){
         grid.innerHTML="";
     }
     if(funnelGrid){
-        var sharedCards=(sharedFunnelTemplates||[]).map(function(template){
+        var sharedCards=matchingFunnelTemplates.map(function(template){
             var tags=(template.tags||[]).map(function(tag){return '<span class="fb-template-tag">'+String(tag)+'</span>';}).join("");
             var editBtn=template.update_url
                 ? '<button type="button" class="fb-btn" data-edit-shared-template-id="'+String(template.template_id||"")+'" style="font-size:12px;padding:8px 10px;">Edit Card</button>'
                 : '';
             return '<div class="fb-template-card">'
                 +'<div class="fb-template-preview">'+templatePreviewHtml(template.preview)+'</div>'
-                +'<div>'
+                +'<div class="fb-template-card-meta">'
                 +'<p class="fb-template-title">'+String(template.name||"Saved Template")+'</p>'
                 +'<p class="fb-template-desc">'+String(template.description||"")+'</p>'
                 +'<p class="fb-template-desc" style="margin-top:6px;font-size:12px;color:#64748b;">Applies the saved super-admin template across '+String(sharedTemplateSteps(template).length||0)+' page(s) in this funnel.</p>'
                 +'</div>'
                 +'<div class="fb-template-actions">'
                 +'<div class="fb-template-tags">'+tags+'</div>'
-                +'<div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end;">'
+                +'<div class="fb-template-card-controls">'
                 +editBtn
                 +'<button type="button" class="fb-btn primary" data-shared-template-id="'+String(template.template_id||"")+'">Apply To All Pages</button>'
                 +'</div>'
                 +'</div>'
                 +'</div>';
         }).join("");
-        funnelGrid.innerHTML=sharedCards;
+        funnelGrid.innerHTML=sharedCards || '<div class="fb-template-card"><div><p class="fb-template-title">No matching templates</p><p class="fb-template-desc">There are no saved super-admin templates yet for '+activePurposeLabel+'. Create or publish one in that category so AO sees only relevant templates here.</p></div></div>';
         funnelGrid.querySelectorAll("[data-shared-template-id]").forEach(function(btn){
             btn.addEventListener("click",function(){
                 if(btn.disabled)return;
@@ -4023,6 +4053,43 @@ function pageTypeLabel(v){
     if(t==="landing")return "Landing";
     if(t==="custom")return "Custom";
     return titleCase(t);
+}
+function stepsOfType(type,excludeStepId){
+    var wanted=String(type||"").toLowerCase();
+    return steps.filter(function(step){
+        if(excludeStepId!=null && +step.id===+excludeStepId)return false;
+        return String(step&&step.type||"").toLowerCase()===wanted;
+    }).sort(function(a,b){
+        var ap=Number(a&&a.position)||0;
+        var bp=Number(b&&b.position)||0;
+        if(ap!==bp)return ap-bp;
+        return (Number(a&&a.id)||0)-(Number(b&&b.id)||0);
+    });
+}
+function repeatedTypeIndex(step){
+    if(!step)return 1;
+    var sameType=stepsOfType(step.type);
+    var idx=sameType.findIndex(function(item){return +item.id===+step.id;});
+    return idx>=0?idx+1:Math.max(1,sameType.length);
+}
+function numberedPageTypeLabel(type,index,total){
+    var base=pageTypeLabel(type);
+    var count=Math.max(0,Number(total||0));
+    var order=Math.max(1,Number(index||1));
+    if(count<=1)return base;
+    return base+" "+order;
+}
+function suggestedStepTitleForType(type,excludeStepId){
+    var sameType=stepsOfType(type,excludeStepId);
+    return numberedPageTypeLabel(type,sameType.length+1,sameType.length+1);
+}
+function pageDisplayLabel(step){
+    if(!step)return "Untitled";
+    var sameType=stepsOfType(step.type);
+    var fallbackLabel=numberedPageTypeLabel(step.type,repeatedTypeIndex(step),sameType.length);
+    var stepTitle=String(step.title||"").trim();
+    if(stepTitle==="")return fallbackLabel;
+    return stepTitle+" ("+fallbackLabel+")";
 }
 function stepUrlFromTpl(tpl,id){return String(tpl||"").replace("__STEP__",String(id));}
 function asFormUrlEncoded(obj){
@@ -4368,7 +4435,7 @@ function moveSelectedStepBy(delta){
 }
 function syncAddPageDraftFromType(force){
     var type=String((pageMgrAddType&&pageMgrAddType.value)||"landing").toLowerCase();
-    var defaultTitle=defaultStepTitleForType(type);
+    var defaultTitle=suggestedStepTitleForType(type);
     var currentTitle=String((pageMgrAddTitle&&pageMgrAddTitle.value)||"").trim();
     if(pageMgrAddTitle && (force||currentTitle==="")){
         pageMgrAddTitle.value=defaultTitle;
@@ -4399,13 +4466,16 @@ function syncPageManagerList(){
     sortStepsByPosition();
     pageMgrList.innerHTML="";
     steps.forEach(function(s){
+        var sameTypeCount=stepsOfType(s.type).length;
+        var typeLabel=numberedPageTypeLabel(s.type,repeatedTypeIndex(s),sameTypeCount);
+        var titleLabel=String((s.title&&String(s.title).trim())||typeLabel);
         var item=document.createElement("div");
         item.className="page-mgr-item"+(String(state.sid)===String(s.id)?" is-selected":"");
         item.setAttribute("role","option");
         item.setAttribute("aria-selected",String(state.sid)===String(s.id)?"true":"false");
         item.setAttribute("data-id",String(s.id));
         item.setAttribute("draggable","true");
-        item.innerHTML='<div class="page-mgr-item-copy"><span class="page-mgr-item-title">'+String(s.title||("Step "+String(s.id))).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")+'</span><span class="page-mgr-item-meta">'+pageTypeLabel(s.type).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")+'</span></div><span class="page-mgr-item-handle"><i class="fas fa-grip-vertical"></i></span>';
+        item.innerHTML='<div class="page-mgr-item-copy"><span class="page-mgr-item-title">'+titleLabel.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")+'</span><span class="page-mgr-item-meta">'+typeLabel.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")+'</span></div><span class="page-mgr-item-handle"><i class="fas fa-grip-vertical"></i></span>';
         item.addEventListener("click",function(){
             var id=Number(item.getAttribute("data-id")||0);
             if(!id)return;
@@ -4525,7 +4595,7 @@ function createPageFromManager(){
         if(pageMgrAddTitle)pageMgrAddTitle.focus();
         return;
     }
-    var title=titleRaw!==""?titleRaw:defaultStepTitleForType(type);
+    var title=titleRaw!==""?titleRaw:suggestedStepTitleForType(type);
     if(String(title).trim()===""){
         showBuilderToast("Page title is required.","error");
         if(pageMgrAddTitle)pageMgrAddTitle.focus();
@@ -5159,20 +5229,43 @@ function syncSectionsFromRoot(){
     state.layout.root=Array.isArray(state.layout.root)?state.layout.root:[];
     const out=[];
     var freeformEls=[];
+    var freeformIndex=0;
+    function flushFreeformGroup(){
+        if(!freeformEls.length)return;
+        var wrapId="sec_freeform_canvas_"+String(freeformIndex++);
+        var existingFreeform=(state.layout.sections||[]).find(function(s){
+            return !!s.__freeformCanvas && String(s.id||"")===wrapId;
+        });
+        out.push({
+            id:wrapId,
+            style:existingFreeform?existingFreeform.style:{},
+            settings:existingFreeform?existingFreeform.settings:{contentWidth:"full"},
+            elements:freeformEls.slice(),
+            rows:[],
+            __rootWrap:true,
+            __rootKind:"el",
+            __bareRootWrap:true,
+            __freeformCanvas:true
+        });
+        freeformEls=[];
+    }
     state.layout.root.forEach((it,idx)=>{
         const kind=String((it&&it.kind)||"section").toLowerCase();
         if(kind==="section"){
+            flushFreeformGroup();
             it.elements=Array.isArray(it.elements)?it.elements:[];
             it.rows=Array.isArray(it.rows)?it.rows:[];
             out.push(it);
             return;
         }
         if(kind==="row"){
+            flushFreeformGroup();
             const wrap={id:"sec_wrap_row_"+String(it.id||idx),style:{},settings:{contentWidth:"full"},elements:[],rows:[it],__rootWrap:true,__rootKind:"row",__rootRef:it,__bareRootWrap:true};
             out.push(wrap);
             return;
         }
         if(kind==="column"){
+            flushFreeformGroup();
             const rw={id:"row_wrap_col_"+String(it.id||idx),style:{gap:"8px"},settings:{},columns:[it]};
             const wrap={id:"sec_wrap_col_"+String(it.id||idx),style:{},settings:{contentWidth:"full"},elements:[],rows:[rw],__rootWrap:true,__rootKind:"column",__rootRef:it,__bareRootWrap:true};
             out.push(wrap);
@@ -5186,20 +5279,7 @@ function syncSectionsFromRoot(){
         it.rows=Array.isArray(it.rows)?it.rows:[];
         out.push(it);
     });
-    if(freeformEls.length>0){
-        var existingFreeform=(state.layout.sections||[]).find(function(s){return !!s.__freeformCanvas;});
-        out.push({
-            id:existingFreeform?existingFreeform.id:"sec_freeform_canvas",
-            style:existingFreeform?existingFreeform.style:{},
-            settings:existingFreeform?existingFreeform.settings:{contentWidth:"full"},
-            elements:freeformEls,
-            rows:[],
-            __rootWrap:true,
-            __rootKind:"el",
-            __bareRootWrap:true,
-            __freeformCanvas:true
-        });
-    }
+    flushFreeformGroup();
     state.layout.sections=out;
 }
 
@@ -6569,7 +6649,7 @@ function titleCase(v){
 }
 function isAdvancedScaleComponent(t){
     var type=String(t||"").toLowerCase();
-    return type==="testimonial"||type==="faq"||type==="pricing"||type==="product_offer"||type==="checkout_summary"||type==="physical_checkout_summary"||type==="shipping_details"||type==="countdown"||type==="form";
+    return type==="testimonial"||type==="review_form"||type==="reviews"||type==="faq"||type==="pricing"||type==="product_offer"||type==="checkout_summary"||type==="physical_checkout_summary"||type==="shipping_details"||type==="countdown"||type==="form";
 }
 function parsePxVal(v){
     var n=Number(String(v||"0").replace("px","").trim());
@@ -7225,9 +7305,32 @@ function createDefaultElement(type){
     var _cd=new Date(Date.now()+7*24*60*60*1000);
     var _pad=n=>String(n).padStart(2,"0");
     var countdownEndVal=_cd.getFullYear()+"-"+_pad(_cd.getMonth()+1)+"-"+_pad(_cd.getDate())+"T"+_pad(_cd.getHours())+":"+_pad(_cd.getMinutes());
-const d={heading:{content:"Heading",style:{fontSize:"32px",color:"#000000",position:"absolute"},settings:{positionMode:"absolute"}},text:{content:"Text",style:{fontSize:"16px",color:"#000000",position:"absolute"},settings:{positionMode:"absolute"}},menu:{content:"",style:{fontSize:"16px",width:"400px",position:"absolute"},settings:{positionMode:"absolute",items:[{label:"Home",url:"#",newWindow:false,hasSubmenu:false},{label:"Contact",url:"/contact",newWindow:false,hasSubmenu:false}],itemGap:13,activeIndex:0,menuAlign:"left",underlineColor:""}},carousel:{content:"",style:{width:"200px",height:"200px",padding:"0px",position:"absolute"},settings:{positionMode:"absolute",slides:[defaultCarouselSlide("Slide #1")],activeSlide:0,vAlign:"center",alignment:"left",showArrows:true,slideshowMode:"manual",controlsColor:"#64748b",arrowColor:"#ffffff",fixedWidth:200,fixedHeight:200}},image:{content:"",style:{width:"300px",position:"absolute"},settings:{positionMode:"absolute",src:"",alt:"Image",alignment:"left"}},button:{content:"Click Me",style:{backgroundColor:"#240E35",color:"#fff",borderRadius:"999px",padding:"10px 18px",textAlign:"center",position:"absolute"},settings:{positionMode:"absolute",actionType:"next_step",actionStepSlug:"",link:"#"}},icon:{content:"",style:{fontSize:"36px",color:"#2E1244",padding:"0px",borderRadius:"0px",position:"absolute"},settings:{positionMode:"absolute",iconName:"star",iconStyle:"solid",alignment:"center",link:""}},form:{content:"Submit",style:{width:"350px",position:"absolute"},settings:{positionMode:"absolute",alignment:"left",width:"350px",buttonAlign:"left",buttonBold:false,buttonItalic:false,labelColor:"#240E35",placeholderColor:"#94a3b8",buttonBgColor:"#240E35",buttonTextColor:"#ffffff",fields:[{type:"text",label:"First name",placeholder:"First name",required:false}]}},shipping_details:{content:"",style:{width:"420px",padding:"18px",backgroundColor:"#ffffff",border:"1px solid #E6E1EF",borderRadius:"18px",boxShadow:"0 12px 24px rgba(15,23,42,.08)",position:"absolute"},settings:{positionMode:"absolute",heading:"Shipping Details",subtitle:"Enter your delivery and contact information before placing the order.",labelColor:"#240E35",placeholderColor:"#94a3b8",fields:[{type:"first_name",label:"First name",placeholder:"First name",required:true},{type:"last_name",label:"Last name",placeholder:"Last name",required:true},{type:"email",label:"Email",placeholder:"Email address",required:true},{type:"phone_number",label:"Phone number",placeholder:"09XXXXXXXXX",required:true},{type:"province",label:"Province",placeholder:"Province",required:true},{type:"city_municipality",label:"City / Municipality",placeholder:"City / Municipality",required:true},{type:"barangay",label:"Barangay",placeholder:"Barangay",required:true},{type:"street",label:"Street address",placeholder:"House no., street, building",required:true},{type:"postal_code",label:"Postal code",placeholder:"Postal code",required:false},{type:"notes",label:"Order notes",placeholder:"Optional notes for delivery",required:false}]}},video:{content:"",style:{width:"400px",position:"absolute"},settings:{positionMode:"absolute",src:"",alignment:"left"}},spacer:{content:"",style:{height:"24px",width:"200px",position:"absolute"},settings:{positionMode:"absolute"}},testimonial:{content:"",style:{width:"320px",padding:"16px",backgroundColor:"#ffffff",border:"1px solid #E6E1EF",borderRadius:"16px",boxShadow:"0 12px 24px rgba(15,23,42,.08)",position:"absolute"},settings:{positionMode:"absolute",quote:"This product changed how we work.",name:"Alex Johnson",role:"Founder, Startify",avatar:""}},faq:{content:"",style:{width:"420px",padding:"16px",backgroundColor:"#ffffff",border:"1px solid #E6E1EF",borderRadius:"16px",boxShadow:"0 12px 24px rgba(15,23,42,.08)",position:"absolute"},settings:{positionMode:"absolute",items:[{q:"How does it work?",a:"Choose a template, customize, and publish."},{q:"Is there a free trial?",a:"Yes, you can start with a 14-day trial."}],itemGap:10,questionColor:"#240E35",answerColor:"#475569"}},pricing:{content:"",style:{width:"320px",padding:"18px",backgroundColor:"#ffffff",border:"1px solid #E6E1EF",borderRadius:"18px",boxShadow:"0 12px 24px rgba(15,23,42,.08)",position:"absolute"},settings:{positionMode:"absolute",plan:"Pro",price:"₱49",period:"/month",subtitle:"Best for growing teams",features:["Unlimited pages","Custom domains","Priority support"],ctaLabel:"Get Started",ctaActionType:"next_step",ctaActionStepSlug:"",ctaLink:"#",ctaBgColor:"#240E35",ctaTextColor:"#ffffff",badge:"Popular"}},product_offer:{content:"",style:{width:"160px",padding:"8px",backgroundColor:"#ffffff",border:"1px solid #E6E1EF",borderRadius:"16px",boxShadow:"0 12px 24px rgba(15,23,42,.08)",position:"absolute"},settings:{positionMode:"absolute",plan:"Starter Bundle",price:"₱299",regularPrice:"₱499",period:"",subtitle:"",description:"Add a fuller product description here for your quick-view modal.",features:[],ctaLabel:"Buy",ctaActionType:"next_step",ctaActionStepSlug:"",ctaLink:"#",ctaBgColor:"#240E35",ctaTextColor:"#ffffff",badge:"Best Seller",stockQuantity:"",quickViewEnabled:true,quickViewLabel:"Details",cartEnabled:true,activeMedia:0,media:[{type:"image",src:"",alt:"Main product image",poster:""}]}},checkout_summary:{content:"",style:{width:"360px",padding:"22px",backgroundColor:"#ffffff",border:"1px solid #E6E1EF",borderRadius:"20px",boxShadow:"0 12px 24px rgba(15,23,42,.08)",position:"absolute"},settings:{positionMode:"absolute",heading:"Complete Your Order",plan:"Chosen Plan",price:"Selected price",period:"/billing cycle",subtitle:"This summary updates from the pricing selected earlier in the funnel.",features:["Unlimited steps","Custom domains","Email support"],ctaLabel:"Pay Now",ctaBgColor:"#240E35",ctaTextColor:"#ffffff",badge:"Selected Plan"}},physical_checkout_summary:{content:"",style:{width:"360px",padding:"22px",backgroundColor:"#ffffff",border:"1px solid #E6E1EF",borderRadius:"20px",boxShadow:"0 12px 24px rgba(15,23,42,.08)",position:"absolute"},settings:{positionMode:"absolute",heading:"Cart Summary",plan:"3 items",price:"₱4,000",period:"",subtitle:"Review the products in your cart before paying.",features:["Product subtotal updates automatically","Cart items show here before payment","Shipping details are collected before payment"],ctaLabel:"Place Order",ctaBgColor:"#240E35",ctaTextColor:"#ffffff",badge:"Cart"}},countdown:{content:"",style:{width:"300px",padding:"16px",backgroundColor:"#ffffff",border:"1px solid #E6E1EF",borderRadius:"16px",boxShadow:"0 12px 24px rgba(15,23,42,.08)",position:"absolute"},settings:{positionMode:"absolute",endAt:countdownEndVal,label:"Offer ends in",expiredText:"Offer ended",numberColor:"#240E35",labelColor:"#64748b",itemGap:8}}}[type]||null;
+const d={heading:{content:"Heading",style:{fontSize:"32px",color:"#000000",position:"absolute"},settings:{positionMode:"absolute"}},text:{content:"Text",style:{fontSize:"16px",color:"#000000",position:"absolute"},settings:{positionMode:"absolute"}},menu:{content:"",style:{fontSize:"16px",width:"400px",position:"absolute"},settings:{positionMode:"absolute",items:[{label:"Home",url:"#",newWindow:false,hasSubmenu:false},{label:"Contact",url:"/contact",newWindow:false,hasSubmenu:false}],itemGap:13,activeIndex:0,menuAlign:"left",underlineColor:""}},carousel:{content:"",style:{width:"200px",height:"200px",padding:"0px",position:"absolute"},settings:{positionMode:"absolute",slides:[defaultCarouselSlide("Slide #1")],activeSlide:0,vAlign:"center",alignment:"left",showArrows:true,slideshowMode:"manual",controlsColor:"#64748b",arrowColor:"#ffffff",fixedWidth:200,fixedHeight:200}},image:{content:"",style:{width:"300px",position:"absolute"},settings:{positionMode:"absolute",src:"",alt:"Image",alignment:"left"}},button:{content:"Click Me",style:{backgroundColor:"#240E35",color:"#fff",borderRadius:"999px",padding:"10px 18px",textAlign:"center",position:"absolute"},settings:{positionMode:"absolute",actionType:"next_step",actionStepSlug:"",link:"#"}},icon:{content:"",style:{fontSize:"36px",color:"#2E1244",padding:"0px",borderRadius:"0px",position:"absolute"},settings:{positionMode:"absolute",iconName:"star",iconStyle:"solid",alignment:"center",link:""}},form:{content:"Submit",style:{width:"350px",position:"absolute"},settings:{positionMode:"absolute",alignment:"left",width:"350px",buttonAlign:"left",buttonBold:false,buttonItalic:false,labelColor:"#240E35",placeholderColor:"#94a3b8",buttonBgColor:"#240E35",buttonTextColor:"#ffffff",fields:[{type:"text",label:"First name",placeholder:"First name",required:false}]}},shipping_details:{content:"",style:{width:"420px",padding:"18px",backgroundColor:"#ffffff",border:"1px solid #E6E1EF",borderRadius:"18px",boxShadow:"0 12px 24px rgba(15,23,42,.08)",position:"absolute"},settings:{positionMode:"absolute",heading:"Shipping Details",subtitle:"Enter your delivery and contact information before placing the order.",labelColor:"#240E35",placeholderColor:"#94a3b8",fields:[{type:"first_name",label:"First name",placeholder:"First name",required:true},{type:"last_name",label:"Last name",placeholder:"Last name",required:true},{type:"email",label:"Email",placeholder:"Email address",required:true},{type:"phone_number",label:"Phone number",placeholder:"09XXXXXXXXX",required:true},{type:"province",label:"Province",placeholder:"Province",required:true},{type:"city_municipality",label:"City / Municipality",placeholder:"City / Municipality",required:true},{type:"barangay",label:"Barangay",placeholder:"Barangay",required:true},{type:"street",label:"Street address",placeholder:"House no., street, building",required:true},{type:"postal_code",label:"Postal code",placeholder:"Postal code",required:false},{type:"notes",label:"Order notes",placeholder:"Optional notes for delivery",required:false}]}},video:{content:"",style:{width:"400px",position:"absolute"},settings:{positionMode:"absolute",src:"",alignment:"left"}},spacer:{content:"",style:{height:"24px",width:"200px",position:"absolute"},settings:{positionMode:"absolute"}},testimonial:{content:"",style:{width:"320px",padding:"16px",backgroundColor:"#ffffff",border:"1px solid #E6E1EF",borderRadius:"16px",boxShadow:"0 12px 24px rgba(15,23,42,.08)",position:"absolute"},settings:{positionMode:"absolute",quote:"This product changed how we work.",name:"Alex Johnson",role:"Founder, Startify",avatar:""}},review_form:{content:"",style:{width:"360px",padding:"18px",backgroundColor:"#ffffff",border:"1px solid #E6E1EF",borderRadius:"18px",boxShadow:"0 12px 24px rgba(15,23,42,.08)",position:"absolute"},settings:{positionMode:"absolute",heading:"How was your experience?",subtitle:"Share a quick review after your order or service experience.",physicalHeading:"How was your order experience?",physicalSubtitle:"Tell us how the ordering and checkout experience felt while your item is on the way.",buttonLabel:"Submit Review",successMessage:"Thanks for the review. It is now waiting for approval.",publicLabel:"I am okay with showing this review publicly."}},reviews:{content:"",style:{width:"420px",padding:"18px",backgroundColor:"#ffffff",border:"1px solid #E6E1EF",borderRadius:"18px",boxShadow:"0 12px 24px rgba(15,23,42,.08)",position:"absolute"},settings:{positionMode:"absolute",heading:"What customers are saying",subtitle:"Approved reviews from this funnel appear here automatically.",emptyText:"Approved reviews will appear here after customers submit them.",maxItems:6,filterRating:0,layout:"list",showRating:true,showDate:false,collapsible:true,collapsedCount:3,expandLabel:"Show all reviews",collapseLabel:"Show fewer reviews"}},faq:{content:"",style:{width:"420px",padding:"16px",backgroundColor:"#ffffff",border:"1px solid #E6E1EF",borderRadius:"16px",boxShadow:"0 12px 24px rgba(15,23,42,.08)",position:"absolute"},settings:{positionMode:"absolute",items:[{q:"How does it work?",a:"Choose a template, customize, and publish."},{q:"Is there a free trial?",a:"Yes, you can start with a 14-day trial."}],itemGap:10,questionColor:"#240E35",answerColor:"#475569"}},pricing:{content:"",style:{width:"320px",padding:"18px",backgroundColor:"#ffffff",border:"1px solid #E6E1EF",borderRadius:"18px",boxShadow:"0 12px 24px rgba(15,23,42,.08)",position:"absolute"},settings:{positionMode:"absolute",plan:"Pro",price:"₱49",period:"/month",subtitle:"Best for growing teams",features:["Unlimited pages","Custom domains","Priority support"],ctaLabel:"Get Started",ctaActionType:"next_step",ctaActionStepSlug:"",ctaLink:"#",ctaBgColor:"#240E35",ctaTextColor:"#ffffff",badge:"Popular"}},product_offer:{content:"",style:{width:"160px",padding:"8px",backgroundColor:"#ffffff",border:"1px solid #E6E1EF",borderRadius:"16px",boxShadow:"0 12px 24px rgba(15,23,42,.08)",position:"absolute"},settings:{positionMode:"absolute",plan:"Starter Bundle",price:"₱299",regularPrice:"₱499",period:"",subtitle:"",description:"Add a fuller product description here for your quick-view modal.",features:[],ctaLabel:"Buy",ctaActionType:"next_step",ctaActionStepSlug:"",ctaLink:"#",ctaBgColor:"#240E35",ctaTextColor:"#ffffff",badge:"Best Seller",stockQuantity:"",quickViewEnabled:true,quickViewLabel:"Details",cartEnabled:true,activeMedia:0,media:[{type:"image",src:"",alt:"Main product image",poster:""}]}},checkout_summary:{content:"",style:{width:"360px",padding:"22px",backgroundColor:"#ffffff",border:"1px solid #E6E1EF",borderRadius:"20px",boxShadow:"0 12px 24px rgba(15,23,42,.08)",position:"absolute"},settings:{positionMode:"absolute",heading:"Complete Your Order",plan:"Chosen Plan",price:"Selected price",period:"/billing cycle",subtitle:"This summary updates from the pricing selected earlier in the funnel.",features:["Unlimited steps","Custom domains","Email support"],ctaLabel:"Pay Now",ctaBgColor:"#240E35",ctaTextColor:"#ffffff",badge:"Selected Plan"}},physical_checkout_summary:{content:"",style:{width:"360px",padding:"22px",backgroundColor:"#ffffff",border:"1px solid #E6E1EF",borderRadius:"20px",boxShadow:"0 12px 24px rgba(15,23,42,.08)",position:"absolute"},settings:{positionMode:"absolute",heading:"Cart Summary",plan:"3 items",price:"₱4,000",period:"",subtitle:"Review the products in your cart before paying.",features:["Product subtotal updates automatically","Cart items show here before payment","Shipping details are collected before payment"],ctaLabel:"Place Order",ctaBgColor:"#240E35",ctaTextColor:"#ffffff",badge:"Cart"}},countdown:{content:"",style:{width:"300px",padding:"16px",backgroundColor:"#ffffff",border:"1px solid #E6E1EF",borderRadius:"16px",boxShadow:"0 12px 24px rgba(15,23,42,.08)",position:"absolute"},settings:{positionMode:"absolute",endAt:countdownEndVal,label:"Offer ends in",expiredText:"Offer ended",numberColor:"#240E35",labelColor:"#64748b",itemGap:8}}}[type]||null;
     if(!d)return null;
     return {id:uid("el"),type:type,content:d.content,style:clone(d.style),settings:clone(d.settings)};
+}
+
+function findLooseRootSection(){
+    return (state.layout.sections||[]).find(function(secNode){
+        return secNode && !secNode.__rootWrap && !secNode.__freeformCanvas;
+    })||null;
+}
+
+function ensureLooseRootSection(createFresh,insertIndex){
+    ensureRootModel();
+    var existing=createFresh?null:findLooseRootSection();
+    if(existing)return existing;
+    var rs=rootItems();
+    var newSection=createRootItem("section");
+    if(!newSection)return null;
+    if(typeof insertIndex==="number" && isFinite(insertIndex)){
+        var idx=Math.max(0,Math.min(Math.round(insertIndex),rs.length));
+        rs.splice(idx,0,newSection);
+    }else{
+        rs.push(newSection);
+    }
+    syncSectionsFromRoot();
+    return sec(newSection.id)||newSection;
 }
 
 
@@ -7248,19 +7351,17 @@ function addComponent(type){
         });
         return node;
     }
-    function ensureSectionForLooseComponent(){
-        var existing=(state.layout.sections||[]).find(function(secNode){
-            return secNode && !secNode.__rootWrap && !secNode.__freeformCanvas;
-        })||null;
-        if(existing)return existing;
-        var newSection=createRootItem("section");
-        rs.push(newSection);
-        syncSectionsFromRoot();
-        return sec(newSection.id)||newSection;
-    }
     if(!p||!p.k){
+        if(isStandaloneRootComponent(type)){
+            const rootLoose=createRootItem(type);
+            if(!rootLoose)return;
+            rs.push(rootLoose);
+            syncSectionsFromRoot();
+            state.sel={k:"el",scope:"root",e:rootLoose.id};
+            return;
+        }
         if(!isStructureComponent(type)){
-            let targetSection=ensureSectionForLooseComponent();
+            let targetSection=ensureLooseRootSection(false);
             targetSection.elements=Array.isArray(targetSection.elements)?targetSection.elements:[];
             const freeEl=convertToFlowElement(createDefaultElement(type));
             if(!freeEl)return;
@@ -7276,8 +7377,16 @@ function addComponent(type){
     }
     const pRootCtx=sectionRootContext(p.s);
     if(pRootCtx.isWrap||pRootCtx.isFreeform){
+        if(isStandaloneRootComponent(type)){
+            const rootLoose2=createRootItem(type);
+            if(!rootLoose2)return;
+            rs.push(rootLoose2);
+            syncSectionsFromRoot();
+            state.sel={k:"el",scope:"root",e:rootLoose2.id};
+            return;
+        }
         if(!isStructureComponent(type)){
-            let targetSection=ensureSectionForLooseComponent();
+            let targetSection=ensureLooseRootSection(false);
             targetSection.elements=Array.isArray(targetSection.elements)?targetSection.elements:[];
             const freeEl2=convertToFlowElement(createDefaultElement(type));
             if(!freeEl2)return;
@@ -7294,8 +7403,16 @@ function addComponent(type){
     if(type==="section"){rs.push(createRootItem("section"));syncSectionsFromRoot();return;}
     let s=sec(p.s)||state.layout.sections[0];
     if(!s){
+        if(isStandaloneRootComponent(type)){
+            const rootLoose3=createRootItem(type);
+            if(!rootLoose3)return;
+            rs.push(rootLoose3);
+            syncSectionsFromRoot();
+            state.sel={k:"el",scope:"root",e:rootLoose3.id};
+            return;
+        }
         if(!isStructureComponent(type)){
-            let targetSection=ensureSectionForLooseComponent();
+            let targetSection=ensureLooseRootSection(false);
             targetSection.elements=Array.isArray(targetSection.elements)?targetSection.elements:[];
             const freeEl3=convertToFlowElement(createDefaultElement(type));
             if(!freeEl3)return;
@@ -7358,6 +7475,10 @@ function dropPlacement(ev,node){
 function isStructureComponent(type){
     var t=String(type||"").toLowerCase();
     return t==="section"||t==="row"||t==="column";
+}
+function isStandaloneRootComponent(type){
+    var t=String(type||"").toLowerCase();
+    return t==="menu";
 }
 
 const freeDropGuides={host:null,v:null,h:null};
@@ -8206,10 +8327,37 @@ function addComponentAt(type,target,place){
     ensureRootModel();
     const rs=rootItems();
     state.layout.sections=Array.isArray(state.layout.sections)?state.layout.sections:[];
+    function convertToFlowElement(node){
+        if(!node)return node;
+        node.style=node.style||{};
+        node.settings=node.settings||{};
+        ["position","left","top","right","bottom","zIndex"].forEach(function(key){
+            if(Object.prototype.hasOwnProperty.call(node.style,key))delete node.style[key];
+        });
+        ["positionMode","freeX","freeY"].forEach(function(key){
+            if(Object.prototype.hasOwnProperty.call(node.settings,key))delete node.settings[key];
+        });
+        return node;
+    }
     if(!t||!t.k){
+        if(isStandaloneRootComponent(type)){
+            var rootLoose=createRootItem(type);
+            if(!rootLoose)return false;
+            rs.push(rootLoose);
+            syncSectionsFromRoot();
+            state.sel={k:"el",scope:"root",e:rootLoose.id};
+            return true;
+        }
         if(!isStructureComponent(type)){
-            showBuilderToast("Add a section first before dropping this component.","error");
-            return false;
+            var emptyTargetSection=freePlacement
+                ? ensureLooseRootSection(true)
+                : ensureLooseRootSection(false);
+            emptyTargetSection.elements=Array.isArray(emptyTargetSection.elements)?emptyTargetSection.elements:[];
+            var emptyFlowEl=convertToFlowElement(createDefaultElement(type));
+            if(!emptyFlowEl)return false;
+            emptyTargetSection.elements.push(emptyFlowEl);
+            state.sel={k:"el",scope:"section",s:emptyTargetSection.id,e:emptyFlowEl.id};
+            return true;
         }
         var rootNew=createRootItem(type);
         if(!rootNew)return false;
@@ -8220,9 +8368,23 @@ function addComponentAt(type,target,place){
     var tRootCtx=sectionRootContext(t.s);
     var isNestedGridTarget=(t.k==="row"||t.k==="col"||(t.k==="el"&&!!t.c));
     if((tRootCtx.isWrap||tRootCtx.isFreeform)&&tRootCtx.index>=0&&!isNestedGridTarget){
+        if(isStandaloneRootComponent(type)){
+            var wrapLoose=createRootItem(type);
+            if(!wrapLoose)return false;
+            var wrapLooseIdx=(place==="before"?tRootCtx.index:tRootCtx.index+1);
+            rs.splice(Math.max(0,Math.min(wrapLooseIdx,rs.length)),0,wrapLoose);
+            syncSectionsFromRoot();
+            state.sel={k:"el",scope:"root",e:wrapLoose.id};
+            return true;
+        }
         if(!isStructureComponent(type)){
-            showBuilderToast("Drop this component inside a section.","error");
-            return false;
+            var wrapTargetSection=ensureLooseRootSection(true,tRootCtx.index+1);
+            wrapTargetSection.elements=Array.isArray(wrapTargetSection.elements)?wrapTargetSection.elements:[];
+            var wrapFlowEl=convertToFlowElement(createDefaultElement(type));
+            if(!wrapFlowEl)return false;
+            wrapTargetSection.elements.push(wrapFlowEl);
+            state.sel={k:"el",scope:"section",s:wrapTargetSection.id,e:wrapFlowEl.id};
+            return true;
         }
         var wrapInsert=createRootItem(type);
         if(!wrapInsert)return false;
@@ -8887,6 +9049,119 @@ function renderElement(item,ctx){
         card.appendChild(author);
         w.appendChild(card);
     }
+    else if(item.type==="review_form"){
+        item.settings=item.settings||{};
+        var reviewHeading=String(item.settings.heading||"How was your experience?");
+        var reviewSubtitle=String(item.settings.subtitle||"Share a quick review after your order or service experience.");
+        var reviewButton=String(item.settings.buttonLabel||"Submit Review").trim()||"Submit Review";
+        var reviewPublicLabel=String(item.settings.publicLabel||"I am okay with showing this review publicly.");
+        var reviewCard=document.createElement("div");
+        reviewCard.className="fb-review-form";
+        var reviewTitle=document.createElement("div");
+        reviewTitle.className="fb-review-form-title";
+        reviewTitle.textContent=reviewHeading;
+        var reviewSub=document.createElement("div");
+        reviewSub.className="fb-review-form-subtitle";
+        reviewSub.textContent=reviewSubtitle;
+        var reviewStars=document.createElement("div");
+        reviewStars.className="fb-review-stars";
+        reviewStars.innerHTML='<span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>';
+        var reviewName=document.createElement("input");
+        reviewName.className="fb-review-input";
+        reviewName.placeholder="Your name";
+        reviewName.disabled=true;
+        var reviewEmail=document.createElement("input");
+        reviewEmail.className="fb-review-input";
+        reviewEmail.placeholder="Email address";
+        reviewEmail.disabled=true;
+        var reviewText=document.createElement("textarea");
+        reviewText.className="fb-review-textarea";
+        reviewText.placeholder="Write a quick review...";
+        reviewText.disabled=true;
+        var reviewCheck=document.createElement("label");
+        reviewCheck.className="fb-review-check";
+        reviewCheck.innerHTML='<input type="checkbox" disabled> <span>'+reviewPublicLabel.replace(/</g,"&lt;").replace(/>/g,"&gt;")+'</span>';
+        var reviewBtn=document.createElement("button");
+        reviewBtn.type="button";
+        reviewBtn.className="fb-pricing-cta";
+        reviewBtn.textContent=reviewButton;
+        reviewBtn.disabled=true;
+        reviewBtn.style.background=String(item.settings.ctaBgColor||"#240E35");
+        reviewBtn.style.color=String(item.settings.ctaTextColor||"#ffffff");
+        reviewCard.appendChild(reviewTitle);
+        reviewCard.appendChild(reviewSub);
+        reviewCard.appendChild(reviewStars);
+        reviewCard.appendChild(reviewName);
+        reviewCard.appendChild(reviewEmail);
+        reviewCard.appendChild(reviewText);
+        reviewCard.appendChild(reviewCheck);
+        reviewCard.appendChild(reviewBtn);
+        w.appendChild(reviewCard);
+    }
+    else if(item.type==="reviews"){
+        item.settings=item.settings||{};
+        var listHeading=String(item.settings.heading||"What customers are saying");
+        var listSubtitle=String(item.settings.subtitle||"Approved reviews from this funnel appear here automatically.");
+        var listLayout=String(item.settings.layout||"list").toLowerCase()==="grid"?"grid":"list";
+        var listShowRating=item.settings.showRating!==false;
+        var listShowDate=item.settings.showDate===true;
+        var reviewsShell=document.createElement("div");
+        reviewsShell.style.width="100%";
+        reviewsShell.style.height="100%";
+        reviewsShell.style.minWidth="0";
+        reviewsShell.style.minHeight="0";
+        reviewsShell.style.display="grid";
+        reviewsShell.style.alignContent="start";
+        reviewsShell.style.gap="12px";
+        reviewsShell.style.overflow="hidden";
+        var listWrap=document.createElement("div");
+        listWrap.className="fb-review-list "+listLayout;
+        listWrap.style.minWidth="0";
+        listWrap.style.alignContent="start";
+        var listHeader=document.createElement("div");
+        listHeader.className="fb-review-form";
+        var listHeaderTitle=document.createElement("div");
+        listHeaderTitle.className="fb-review-form-title";
+        listHeaderTitle.textContent=listHeading;
+        var listHeaderSub=document.createElement("div");
+        listHeaderSub.className="fb-review-form-subtitle";
+        listHeaderSub.textContent=listSubtitle;
+        listHeader.appendChild(listHeaderTitle);
+        listHeader.appendChild(listHeaderSub);
+        reviewsShell.appendChild(listHeader);
+        [{name:"Maria Dela Cruz",text:"Fast checkout and very smooth experience.",rating:5,date:"Approved review"},{name:"John Reyes",text:"Clear process and easy to follow from start to finish.",rating:4,date:"Approved review"}].forEach(function(sample){
+            var card=document.createElement("div");
+            card.className="fb-review-card";
+            var head=document.createElement("div");
+            head.className="fb-review-card-head";
+            var meta=document.createElement("div");
+            var name=document.createElement("div");
+            name.className="fb-review-card-name";
+            name.textContent=sample.name;
+            meta.appendChild(name);
+            if(listShowDate){
+                var date=document.createElement("div");
+                date.className="fb-review-card-date";
+                date.textContent=sample.date;
+                meta.appendChild(date);
+            }
+            head.appendChild(meta);
+            if(listShowRating){
+                var stars=document.createElement("div");
+                stars.className="fb-review-card-stars";
+                stars.textContent="★★★★★".slice(0,sample.rating)+"☆☆☆☆☆".slice(0,5-sample.rating);
+                head.appendChild(stars);
+            }
+            var text=document.createElement("div");
+            text.className="fb-review-card-text";
+            text.textContent=sample.text;
+            card.appendChild(head);
+            card.appendChild(text);
+            listWrap.appendChild(card);
+        });
+        reviewsShell.appendChild(listWrap);
+        w.appendChild(reviewsShell);
+    }
     else if(item.type==="faq"){
         item.settings=item.settings||{};
         item.settings.items=normalizeFaqItems(item.settings.items);
@@ -9007,6 +9282,8 @@ function renderElement(item,ctx){
         var productSubtitle=String(item.settings.subtitle||"");
         var productBadge=String(item.settings.badge||"");
         var productDescription=String(item.settings.description||"").trim();
+        var productStockRaw=String(item.settings.stockQuantity||"").trim();
+        var productStockCount=productStockRaw===""?null:Math.max(0,parseInt(productStockRaw,10)||0);
         var productButtonRaw=(typeof item.settings.ctaLabel==="string")?String(item.settings.ctaLabel).trim():"";
         var productQuickViewEnabled=item.settings.quickViewEnabled!==false;
         var productQuickViewLabel=String(item.settings.quickViewLabel||"Details").trim()||"Details";
@@ -9134,6 +9411,13 @@ function renderElement(item,ctx){
             productSub.textContent=productSubtitle;
             if(productColor){productSub.style.color=productColor;productSub.style.opacity="0.7";}
             productCard.appendChild(productSub);
+        }
+        if(productStockCount!==null){
+            var productStock=document.createElement("div");
+            productStock.className="fb-pricing-subtitle";
+            productStock.textContent=productStockCount===0?"Out of stock":(productStockCount+" in stock");
+            if(productColor){productStock.style.color=productColor;productStock.style.opacity="0.82";}
+            productCard.appendChild(productStock);
         }
         var productList=document.createElement("ul");
         productList.className="fb-pricing-features";
@@ -10502,7 +10786,7 @@ function renderCanvas(){
         inner.style.boxSizing="border-box";
         inner.style.position="relative";
         if(s.__freeformCanvas){
-            inner.style.minHeight="300px";
+            inner.style.minHeight="56px";
         }else{
             inner.style.minHeight=(sn.style.minHeight&&String(sn.style.minHeight).trim()!=="")?String(sn.style.minHeight):"30vh";
         }
@@ -10559,11 +10843,18 @@ function renderCanvas(){
             if(ok)render();
         };
         s.elements=Array.isArray(s.elements)?s.elements:[];
+        var freeformRenderedBottom=0;
         {
             (s.elements||[]).forEach(function(it){
                 var elNode=renderElement(it,{s:s.id,scope:"section"});
                 inner.appendChild(elNode);
                 if(isAdvancedScaleComponent(it.type))syncAdvancedElementHeight(elNode,it);
+                if(s.__freeformCanvas && it.settings && it.settings.positionMode==="absolute"){
+                    var eyRendered=Number(it.settings.freeY)||0;
+                    var renderedHeight=Math.round(elNode.getBoundingClientRect().height)||Number(elNode.offsetHeight)||0;
+                    var renderedBottom=eyRendered+Math.max(24,renderedHeight)+8;
+                    if(renderedBottom>freeformRenderedBottom)freeformRenderedBottom=renderedBottom;
+                }
             });
         }
         if(s.__freeformCanvas){
@@ -10576,7 +10867,7 @@ function renderCanvas(){
                     if(bot>secMaxBot)secMaxBot=bot;
                 }
             });
-            var freeformH=Math.max(300,secMaxBot);
+            var freeformH=Math.max(40,freeformRenderedBottom,secMaxBot>0?Math.min(secMaxBot,freeformRenderedBottom||secMaxBot):0);
             sn.style.minHeight=freeformH+"px";
             inner.style.minHeight=freeformH+"px";
         }
@@ -12550,6 +12841,51 @@ function renderSettings(){
             });
         };
         renderIconPreview();
+    } else if(selKind==="el"&&t.type==="review_form"){
+        t.settings=t.settings||{};
+        var padDef=[18,18,18,18],marDef=[0,0,0,0];
+        var pad=parseSpacing(t.style&&t.style.padding,padDef),mar=parseSpacing(t.style&&t.style.margin,marDef);
+        settings.innerHTML='<div class="menu-section-title">Content</div><label>Heading</label><input id="rfHeading"><label>Subtitle</label><textarea id="rfSubtitle" rows="4"></textarea><div class="menu-split"></div><div class="menu-section-title">Physical Product Copy</div><label>Physical heading</label><input id="rfPhysicalHeading"><label>Physical subtitle</label><textarea id="rfPhysicalSubtitle" rows="3"></textarea><div class="meta">Use this wording when the funnel purpose is physical product, so the thank-you page asks about the order experience instead of the item itself.</div><div class="menu-split"></div><label>Button label</label><input id="rfButton"><label>Success message</label><textarea id="rfSuccess" rows="3"></textarea><label>Public consent label</label><input id="rfPublicLabel">'+spacingControlsHtml(pad,mar)+'<div class="menu-split"></div><div class="menu-section-title">Style</div><label>Text color</label><input id="rfColor" type="color"><label>Background color</label><input id="rfBg" type="color"><label>Border</label><input id="rfBorder">'+radiusHelpLabelHtml("rfRadiusHelp","Border radius")+'<div class="px-wrap"><input id="rfRadius" type="number" min="0" step="1"><span class="px-unit">px</span></div><label>Shadow</label><input id="rfShadow"><label>Button color</label><input id="rfBtnBg" type="color"><label>Button text color</label><input id="rfBtnText" type="color">'+posControls+moveControls+remove;
+        bind("rfHeading",(t.settings&&t.settings.heading)||"How was your experience?",v=>{t.settings.heading=v;renderCanvas();},{undo:true});
+        bind("rfSubtitle",(t.settings&&t.settings.subtitle)||"Share a quick review after your order or service experience.",v=>{t.settings.subtitle=v;renderCanvas();},{undo:true});
+        bind("rfPhysicalHeading",(t.settings&&t.settings.physicalHeading)||"How was your order experience?",v=>{t.settings.physicalHeading=v;renderCanvas();},{undo:true});
+        bind("rfPhysicalSubtitle",(t.settings&&t.settings.physicalSubtitle)||"Tell us how the ordering and checkout experience felt while your item is on the way.",v=>{t.settings.physicalSubtitle=v;renderCanvas();},{undo:true});
+        bind("rfButton",(t.settings&&t.settings.buttonLabel)||"Submit Review",v=>{t.settings.buttonLabel=v;renderCanvas();},{undo:true});
+        bind("rfSuccess",(t.settings&&t.settings.successMessage)||"Thanks for the review. It is now waiting for approval.",v=>{t.settings.successMessage=v;renderCanvas();},{undo:true});
+        bind("rfPublicLabel",(t.settings&&t.settings.publicLabel)||"I am okay with showing this review publicly.",v=>{t.settings.publicLabel=v;renderCanvas();},{undo:true});
+        bind("rfColor",(t.style&&t.style.color)||"#240E35",v=>sty().color=v,{undo:true});
+        bind("rfBg",(t.style&&t.style.backgroundColor)||"#ffffff",v=>sty().backgroundColor=v,{undo:true});
+        bind("rfBorder",(t.style&&t.style.border)||"1px solid #E6E1EF",v=>sty().border=v,{undo:true});
+        bindPx("rfRadius",(t.style&&t.style.borderRadius)||"18px",v=>sty().borderRadius=v,{undo:true});
+        bind("rfShadow",(t.style&&t.style.boxShadow)||"0 12px 24px rgba(15,23,42,.08)",v=>sty().boxShadow=v,{undo:true});
+        bind("rfBtnBg",(t.settings&&t.settings.ctaBgColor)||"#240E35",v=>{t.settings.ctaBgColor=v;renderCanvas();},{undo:true});
+        bind("rfBtnText",(t.settings&&t.settings.ctaTextColor)||"#ffffff",v=>{t.settings.ctaTextColor=v;renderCanvas();},{undo:true});
+        mountSpacingControls();
+        bindRadiusHelpButton("rfRadiusHelp");
+    } else if(selKind==="el"&&t.type==="reviews"){
+        t.settings=t.settings||{};
+        var padDef=[18,18,18,18],marDef=[0,0,0,0];
+        var pad=parseSpacing(t.style&&t.style.padding,padDef),mar=parseSpacing(t.style&&t.style.margin,marDef);
+        settings.innerHTML='<div class="menu-section-title">Content</div><label>Heading</label><input id="rvHeading"><label>Subtitle</label><textarea id="rvSubtitle" rows="4"></textarea><label>Empty state</label><textarea id="rvEmpty" rows="3"></textarea><label>Maximum reviews</label><div class="px-wrap"><input id="rvMax" type="number" min="1" step="1"><span class="px-unit">items</span></div><label>Star filter</label><select id="rvFilter"><option value="0">Show all ratings</option><option value="5">5 stars</option><option value="4">4 stars</option><option value="3">3 stars</option><option value="2">2 stars</option><option value="1">1 star</option></select><label>Layout</label><select id="rvLayout"><option value="list">List</option><option value="grid">Grid</option></select><div class="menu-split"></div><div class="menu-section-title">Space Control</div><label style="display:flex;align-items:center;gap:8px;font-weight:600;"><input id="rvCollapsible" type="checkbox" style="width:auto;margin:0;"> Collapse long review lists</label><label>Visible reviews before collapse</label><div class="px-wrap"><input id="rvCollapsedCount" type="number" min="1" step="1"><span class="px-unit">items</span></div><label>Expand label</label><input id="rvExpandLabel"><label>Collapse label</label><input id="rvCollapseLabel"><label style="display:flex;align-items:center;gap:8px;font-weight:600;"><input id="rvShowRating" type="checkbox" style="width:auto;margin:0;"> Show rating stars</label><label style="display:flex;align-items:center;gap:8px;font-weight:600;"><input id="rvShowDate" type="checkbox" style="width:auto;margin:0;"> Show approval date</label>'+spacingControlsHtml(pad,mar)+'<div class="menu-split"></div><div class="menu-section-title">Style</div><label>Text color</label><input id="rvColor" type="color"><label>Background color</label><input id="rvBg" type="color"><label>Border</label><input id="rvBorder">'+radiusHelpLabelHtml("rvRadiusHelp","Border radius")+'<div class="px-wrap"><input id="rvRadius" type="number" min="0" step="1"><span class="px-unit">px</span></div><label>Shadow</label><input id="rvShadow">'+posControls+moveControls+remove;
+        bind("rvHeading",(t.settings&&t.settings.heading)||"What customers are saying",v=>{t.settings.heading=v;renderCanvas();},{undo:true});
+        bind("rvSubtitle",(t.settings&&t.settings.subtitle)||"Approved reviews from this funnel appear here automatically.",v=>{t.settings.subtitle=v;renderCanvas();},{undo:true});
+        bind("rvEmpty",(t.settings&&t.settings.emptyText)||"Approved reviews will appear here after customers submit them.",v=>{t.settings.emptyText=v;renderCanvas();},{undo:true});
+        bind("rvMax",String((t.settings&&t.settings.maxItems)||6),v=>{var n=Number(v);t.settings.maxItems=isNaN(n)?6:Math.max(1,Math.min(24,Math.round(n)));renderCanvas();},{undo:true});
+        bind("rvFilter",String((t.settings&&t.settings.filterRating)||0),v=>{var n=Number(v);t.settings.filterRating=isNaN(n)?0:Math.max(0,Math.min(5,Math.round(n)));renderCanvas();},{undo:true});
+        bind("rvLayout",(t.settings&&t.settings.layout)||"list",v=>{t.settings.layout=(String(v||"list")==="grid"?"grid":"list");renderCanvas();},{undo:true});
+        var rvCollapsible=document.getElementById("rvCollapsible"); if(rvCollapsible){rvCollapsible.checked=t.settings.collapsible!==false;rvCollapsible.addEventListener("change",function(){saveToHistory();t.settings.collapsible=!!rvCollapsible.checked;renderCanvas();});}
+        bind("rvCollapsedCount",String((t.settings&&t.settings.collapsedCount)||3),v=>{var n=Number(v);t.settings.collapsedCount=isNaN(n)?3:Math.max(1,Math.min(24,Math.round(n)));renderCanvas();},{undo:true});
+        bind("rvExpandLabel",(t.settings&&t.settings.expandLabel)||"Show all reviews",v=>{t.settings.expandLabel=v;renderCanvas();},{undo:true});
+        bind("rvCollapseLabel",(t.settings&&t.settings.collapseLabel)||"Show fewer reviews",v=>{t.settings.collapseLabel=v;renderCanvas();},{undo:true});
+        var rvShowRating=document.getElementById("rvShowRating"); if(rvShowRating){rvShowRating.checked=t.settings.showRating!==false;rvShowRating.addEventListener("change",function(){saveToHistory();t.settings.showRating=!!rvShowRating.checked;renderCanvas();});}
+        var rvShowDate=document.getElementById("rvShowDate"); if(rvShowDate){rvShowDate.checked=t.settings.showDate===true;rvShowDate.addEventListener("change",function(){saveToHistory();t.settings.showDate=!!rvShowDate.checked;renderCanvas();});}
+        bind("rvColor",(t.style&&t.style.color)||"#240E35",v=>sty().color=v,{undo:true});
+        bind("rvBg",(t.style&&t.style.backgroundColor)||"#ffffff",v=>sty().backgroundColor=v,{undo:true});
+        bind("rvBorder",(t.style&&t.style.border)||"1px solid #E6E1EF",v=>sty().border=v,{undo:true});
+        bindPx("rvRadius",(t.style&&t.style.borderRadius)||"18px",v=>sty().borderRadius=v,{undo:true});
+        bind("rvShadow",(t.style&&t.style.boxShadow)||"0 12px 24px rgba(15,23,42,.08)",v=>sty().boxShadow=v,{undo:true});
+        mountSpacingControls();
+        bindRadiusHelpButton("rvRadiusHelp");
     } else if(selKind==="el"&&t.type==="testimonial"){
         t.settings=t.settings||{};
         var padDef=[16,16,16,16],marDef=[0,0,0,0];
@@ -12767,7 +13103,10 @@ function renderSettings(){
             t.settings.ctaActionType=productAction;
             var poCtaLabelField=document.getElementById("poCtaLabel"),poCtaLinkField=document.getElementById("poCtaLink");
             if(poCtaLabelField&&poCtaLinkField){
-                var productStepOptions=steps.filter(function(s){return String(s.id)!==String(state.sid);}).map(function(s){var label=escapeSidebarHtml(String(s.title||s.type||"Step"));var safeType=escapeSidebarHtml(String(s.type||""));return '<option value="'+String(s.slug||"").replace(/"/g,'&quot;')+'">'+label+' ('+safeType+')</option>';}).join("")||'<option value="">No other pages found</option>';
+                var productStepOptions=steps.filter(function(s){return String(s.id)!==String(state.sid);}).map(function(s){
+                    var optionLabel=escapeSidebarHtml(pageDisplayLabel(s));
+                    return '<option value="'+String(s.slug||"").replace(/"/g,'&quot;')+'">'+optionLabel+'</option>';
+                }).join("")||'<option value="">No other pages found</option>';
                 var productActionOptions=isCheckoutProductEditor?'<option value="checkout">Checkout submit</option>':(isOfferProductEditor?'<option value="offer_accept">Accept offer</option><option value="offer_decline">Decline offer</option><option value="link">Custom URL</option>':'<option value="next_step">Smart next page</option><option value="step">Specific step</option><option value="link">Custom URL</option>');
                 poCtaLabelField.insertAdjacentHTML("afterend",'<label>Button action</label><select id="poCtaAction">'+productActionOptions+'</select><div id="poCtaStepWrap" style="display:none;"><label>Target page</label><select id="poCtaStep">'+productStepOptions+'</select></div><div class="meta" id="poCtaMeta" style="margin:6px 0 0;"></div>');
                 var poCtaAction=document.getElementById("poCtaAction"),poCtaStep=document.getElementById("poCtaStep"),poCtaStepWrap=document.getElementById("poCtaStepWrap"),poCtaMeta=document.getElementById("poCtaMeta"),poCtaLinkLabel=poCtaLinkField.previousElementSibling;
@@ -12815,10 +13154,8 @@ function renderSettings(){
                 var isCheckoutPricingStep=pricingStepType==="checkout";
                 var isOfferPricingStep=pricingStepType==="upsell"||pricingStepType==="downsell";
                 var pricingStepOptions=steps.filter(function(s){return String(s.id)!==String(state.sid);}).map(function(s){
-                    var label=String(s.title||s.type||"Step").trim();
-                    var safeLabel=label.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-                    var safeType=String(s.type||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-                    return '<option value="'+String(s.slug||"").replace(/"/g,'&quot;')+'">'+safeLabel+' ('+safeType+')</option>';
+                    var optionLabel=escapeSidebarHtml(pageDisplayLabel(s));
+                    return '<option value="'+String(s.slug||"").replace(/"/g,'&quot;')+'">'+optionLabel+'</option>';
                 }).join("");
                 var pricingStepDisabled=pricingStepOptions==="";
                 if(pricingStepOptions==="")pricingStepOptions='<option value="">No other pages found</option>';
@@ -13220,8 +13557,8 @@ function renderSettings(){
             : '';
         var buttonStepOptions=(t.type==="button")?steps.filter(function(s){return String(s.id)!==String(state.sid);}).map(function(s){
             var sl=String(s.slug||"").replace(/"/g,'&quot;');
-            var tt=String(s.title||s.slug||"Untitled").replace(/"/g,'&quot;');
-            return '<option value="'+sl+'">'+tt+' ('+sl+')</option>';
+            var optionLabel=escapeSidebarHtml(pageDisplayLabel(s));
+            return '<option value="'+sl+'">'+optionLabel+'</option>';
         }).join(''):'';
         var buttonStepDisabled=false;
         if(t.type==="button" && buttonStepOptions===""){
@@ -13488,6 +13825,8 @@ const sidebarComponentMeta={
     menu:{desc:"Navigation links for headers and simple site menus."},
     form:{desc:"Lead capture form for opt-ins, bookings, or checkout."},
     testimonial:{desc:"Social proof card with quote and author details."},
+    review_form:{desc:"Thank-you form that captures customer reviews for approval."},
+    reviews:{desc:"Display block for approved funnel reviews."},
     faq:{desc:"Question-and-answer block for objections and clarity."},
     pricing:{desc:"Offer card with plan, price, features, and button."},
     product_offer:{desc:"Marketplace-style product card with mixed media, price, and buy button."},
@@ -13528,6 +13867,10 @@ function sidebarPreviewMarkup(type){
             return "<span class='fb-comp-drag-ghost__preview' aria-hidden='true'><span class='fb-comp-preview-card'><span class='fb-comp-preview-stack'><span class='fb-comp-preview-line sm is-dark'></span><span class='fb-comp-preview-line md'></span></span><span class='fb-comp-preview-form'><span class='fb-comp-preview-input'></span><span class='fb-comp-preview-input'></span><span class='fb-comp-preview-input'></span></span></span></span>";
         case "testimonial":
             return "<span class='fb-comp-drag-ghost__preview' aria-hidden='true'><span class='fb-comp-preview-card'><span class='fb-comp-preview-stack'><span class='fb-comp-preview-line full'></span><span class='fb-comp-preview-line md'></span></span><span class='fb-comp-preview-avatar-row'><span class='fb-comp-preview-avatar'></span><span class='fb-comp-preview-line sm'></span></span></span></span>";
+        case "review_form":
+            return "<span class='fb-comp-drag-ghost__preview' aria-hidden='true'><span class='fb-comp-preview-card'><span class='fb-comp-preview-line sm is-dark'></span><span class='fb-comp-preview-line md'></span><span class='fb-comp-preview-input'></span><span class='fb-comp-preview-input'></span><span class='fb-comp-preview-input'></span><span class='fb-comp-preview-btn'>Review</span></span></span>";
+        case "reviews":
+            return "<span class='fb-comp-drag-ghost__preview' aria-hidden='true'><span class='fb-comp-preview-card'><span class='fb-comp-preview-line md is-dark'></span><span class='fb-comp-preview-avatar-row'><span class='fb-comp-preview-avatar'></span><span class='fb-comp-preview-line sm'></span></span><span class='fb-comp-preview-line full'></span><span class='fb-comp-preview-line md'></span></span></span>";
         case "faq":
             return "<span class='fb-comp-drag-ghost__preview' aria-hidden='true'><span class='fb-comp-preview-card'><span class='fb-comp-preview-faq-item'><span class='fb-comp-preview-faq-badge'>?</span><span class='fb-comp-preview-line md'></span></span><span class='fb-comp-preview-faq-item'><span class='fb-comp-preview-faq-badge'>?</span><span class='fb-comp-preview-line lg'></span></span></span></span>";
         case "pricing":
@@ -13892,7 +14235,5 @@ loadStep(state.sid);
 })();
 </script>
 @endsection
-
-
 
 

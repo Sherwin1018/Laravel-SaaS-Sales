@@ -13,20 +13,30 @@
                 <span style="color: var(--theme-muted, #6B7280);">Publish to enable</span>
             @endif
         </td>
-        <td style="display:flex; gap: 10px;">
-            <a href="{{ route('funnels.edit', $funnel) }}" style="color:var(--theme-primary, #240E35); text-decoration:none; font-weight:700;">
-                <i class="fas fa-pen"></i> Builder
-            </a>
-            <a href="{{ route('funnels.analytics', $funnel) }}" style="color:#0F766E; text-decoration:none; font-weight:700;">
-                <i class="fas fa-chart-line"></i> Analytics
-            </a>
-            <form method="POST" action="{{ route('funnels.destroy', $funnel) }}" data-confirm-message="Delete this funnel?">
-                @csrf
-                @method('DELETE')
-                <button type="submit" style="background:none;border:none;color:#DC2626;cursor:pointer;font-weight:700;">
-                    <i class="fas fa-trash"></i> Delete
+        <td>
+            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                <a href="{{ route('funnels.edit', $funnel) }}" style="color:var(--theme-primary, #240E35); text-decoration:none; font-weight:700;">
+                    <i class="fas fa-pen"></i> Builder
+                </a>
+                <a href="{{ route('funnels.analytics', $funnel) }}" style="color:#0F766E; text-decoration:none; font-weight:700;">
+                    <i class="fas fa-chart-line"></i> Analytics
+                </a>
+                <button
+                    type="button"
+                    data-reviews-modal-url="{{ route('funnels.reviews.index', ['funnel' => $funnel, 'modal' => 1]) }}"
+                    data-reviews-modal-title="{{ $funnel->name }} Reviews"
+                    style="background:none;border:none;color:#7C3AED;cursor:pointer;font-weight:700;padding:0;"
+                >
+                    <i class="fas fa-star-half-alt"></i> Reviews
                 </button>
-            </form>
+                <form method="POST" action="{{ route('funnels.destroy', $funnel) }}" data-confirm-message="Delete this funnel?">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" style="background:none;border:none;color:#DC2626;cursor:pointer;font-weight:700;">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                </form>
+            </div>
         </td>
     </tr>
 @empty

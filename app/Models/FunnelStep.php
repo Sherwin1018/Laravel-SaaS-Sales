@@ -76,4 +76,9 @@ class FunnelStep extends Model
     {
         return $this->hasMany(FunnelEvent::class, 'funnel_step_id');
     }
+
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(FunnelReview::class, 'funnel_step_id');
+    }
 }

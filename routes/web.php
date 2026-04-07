@@ -7,6 +7,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FunnelController;
 use App\Http\Controllers\FunnelPortalController;
+use App\Http\Controllers\FunnelReviewController;
 use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\LeadCustomFieldController;
@@ -177,6 +178,8 @@ Route::middleware(['auth', 'tenant.subscription', 'role:sales-agent,marketing-ma
         Route::get('/funnels/{funnel}/analytics', [FunnelController::class, 'analytics'])->name('funnels.analytics');
         Route::get('/funnels/{funnel}/analytics/export', [FunnelController::class, 'exportAnalytics'])->name('funnels.analytics.export');
         Route::post('/funnels/{funnel}/analytics/delivery-update', [FunnelController::class, 'sendDeliveryUpdate'])->name('funnels.analytics.delivery-update');
+        Route::get('/funnels/{funnel}/reviews', [FunnelReviewController::class, 'index'])->name('funnels.reviews.index');
+        Route::patch('/funnels/{funnel}/reviews/{review}', [FunnelReviewController::class, 'updateStatus'])->name('funnels.reviews.update');
         Route::get('/funnels/{funnel}/events', [FunnelController::class, 'events'])->name('funnels.events');
         Route::delete('/funnels/{funnel}', [FunnelController::class, 'destroy'])->name('funnels.destroy');
         Route::post('/funnels/{funnel}/steps', [FunnelController::class, 'storeStep'])->name('funnels.steps.store');
@@ -206,6 +209,7 @@ Route::get('/f/{funnelSlug}/{stepSlug?}', [FunnelPortalController::class, 'show'
 Route::get('/funnel/{funnelSlug}/{stepSlug?}', [FunnelPortalController::class, 'show'])->middleware('throttle:funnel-public-view')->name('funnels.portal.step.alias');
 Route::post('/f/{funnelSlug}/{stepSlug}/opt-in', [FunnelPortalController::class, 'optIn'])->middleware('throttle:funnel-public-submit')->name('funnels.portal.optin');
 Route::post('/f/{funnelSlug}/{stepSlug}/checkout', [FunnelPortalController::class, 'checkout'])->middleware('throttle:funnel-public-submit')->name('funnels.portal.checkout');
+Route::post('/f/{funnelSlug}/{stepSlug}/review', [FunnelPortalController::class, 'submitReview'])->middleware('throttle:funnel-public-submit')->name('funnels.portal.review');
 Route::get('/f/{funnelSlug}/{stepSlug}/paymongo/return/{payment}', [FunnelPortalController::class, 'paymongoReturn'])
     ->middleware('signed')
     ->name('funnels.portal.paymongo.return');

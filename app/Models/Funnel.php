@@ -83,4 +83,9 @@ class Funnel extends Model
     {
         return $this->hasMany(FunnelEvent::class);
     }
+
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(FunnelReview::class);
+    }
 }

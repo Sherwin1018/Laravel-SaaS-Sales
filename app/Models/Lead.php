@@ -90,6 +90,11 @@ class Lead extends Model
         return $this->hasMany(Payment::class);
     }
 
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(FunnelReview::class);
+    }
+
     public function customFieldValueMap(): Collection
     {
         return $this->customFieldValues

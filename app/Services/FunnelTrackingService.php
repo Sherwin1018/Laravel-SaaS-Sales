@@ -89,6 +89,11 @@ class FunnelTrackingService
         ?array $pricing = null,
         array $meta = []
     ): FunnelEvent {
+        $orderKey = trim((string) ($meta['order_key'] ?? ''));
+        if ($orderKey === '' && (int) ($payment->id ?? 0) > 0) {
+            $orderKey = 'payment:'.$payment->id;
+        }
+
         return $this->recordEvent([
             'tenant_id' => $funnel->tenant_id,
             'funnel_id' => $funnel->id,
@@ -106,6 +111,7 @@ class FunnelTrackingService
                 'payment_status' => $payment->status,
                 'provider' => $payment->provider,
                 'pricing' => $pricing,
+                'order_key' => $orderKey,
             ], $meta),
         ]);
     }
@@ -116,21 +122,53 @@ class FunnelTrackingService
             return null;
         }
 
-        return $this->recordEvent([
-            'tenant_id' => $payment->tenant_id,
-            'funnel_id' => $payment->funnel_id,
-            'funnel_step_id' => $payment->funnel_step_id,
-            'lead_id' => $payment->lead_id,
-            'payment_id' => $payment->id,
-            'event_name' => self::EVENT_PAYMENT_PAID,
-            'session_identifier' => $payment->session_identifier,
-            'meta' => array_merge([
-                'amount' => (float) $payment->amount,
-                'provider' => $payment->provider,
-                'provider_reference' => $payment->provider_reference,
-                'payment_method' => $payment->payment_method,
-            ], $meta),
-        ]);
+        $checkoutStarted = FunnelEvent::query()
+            ->where('payment_id', $payment->id)
+            ->where('event_name', self::EVENT_CHECKOUT_STARTED)
+            ->latest('id')
+            ->first();
+
+        $checkoutMeta = is_array($checkoutStarted?->meta) ? $checkoutStarted->meta : [];
+        $derivedMeta = [];
+        foreach ([
+            'funnel_purpose',
+            'pricing',
+            'customer',
+            'shipping',
+            'delivery_address',
+            'order_items',
+            'order_item_count',
+            'order_quantity',
+            'order_items_label',
+        ] as $key) {
+            if (array_key_exists($key, $checkoutMeta)) {
+                $derivedMeta[$key] = $checkoutMeta[$key];
+            }
+        }
+
+        $eventMeta = array_merge([
+            'amount' => (float) $payment->amount,
+            'provider' => $payment->provider,
+            'provider_reference' => $payment->provider_reference,
+            'payment_method' => $payment->payment_method,
+            'order_key' => 'payment:'.$payment->id,
+        ], $derivedMeta, $meta);
+
+        return FunnelEvent::query()->updateOrCreate(
+            [
+                'payment_id' => $payment->id,
+                'event_name' => self::EVENT_PAYMENT_PAID,
+            ],
+            [
+                'tenant_id' => $payment->tenant_id,
+                'funnel_id' => $payment->funnel_id,
+                'funnel_step_id' => $payment->funnel_step_id,
+                'lead_id' => $payment->lead_id,
+                'session_identifier' => $payment->session_identifier,
+                'meta' => $eventMeta,
+                'occurred_at' => now(),
+            ]
+        );
     }
 
     public function trackOfferDecision(

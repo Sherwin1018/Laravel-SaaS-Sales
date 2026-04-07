@@ -115,15 +115,15 @@
             overflow-y: visible;
         }
         body.is-published:not(.portal-has-freeform-canvas) .step-content--full { padding-top: 0; }
-        /* Published freeform: match builder/preview — center canvas vertically; preview uses JS scale; live uses flex. */
+        /* Published freeform: keep canvas anchored to the top so menu/header groups stay close to the next section. */
         body.is-published.portal-has-freeform-canvas .step-content--full {
             min-height: 100vh;
             min-height: 100dvh;
             display: flex;
             flex-direction: column;
-            justify-content: center;
+            justify-content: flex-start;
             align-items: stretch;
-            padding: 32px 1.5rem 48px;
+            padding: 10px 1.5rem 24px;
             box-sizing: border-box;
         }
         body.is-preview .step-content--full { padding: 10px; overflow-x: auto; overflow-y: visible; }
@@ -213,6 +213,40 @@
         .builder-testimonial-avatar { width: 42px; height: 42px; border-radius: 999px; object-fit: cover; background: #e2e8f0; flex-shrink: 0; }
         .builder-testimonial-name { font-weight: 800; color: #0f172a; }
         .builder-testimonial-role { font-size: 12px; color: #64748b; }
+        .builder-review-form { display:grid; gap:12px; }
+        .builder-review-title { font-size:18px; font-weight:900; color:#0f172a; }
+        .builder-review-subtitle { font-size:13px; line-height:1.55; color:#64748b; }
+        .builder-review-stars { display:flex; gap:6px; color:#f59e0b; font-size:20px; }
+        .builder-review-rating { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+        .builder-review-star { appearance:none; border:0; background:transparent; padding:0; margin:0; cursor:pointer; font-size:28px; line-height:1; color:#d1d5db; transition:transform .12s ease,color .16s ease; }
+        .builder-review-star:hover,
+        .builder-review-star:focus-visible { color:#f59e0b; transform:scale(1.08); outline:none; }
+        .builder-review-star.is-active { color:#f59e0b; }
+        .builder-review-rating-note { font-size:12px; font-weight:700; color:#64748b; margin-left:4px; }
+        .builder-review-stars.is-interactive { align-items:center; gap:8px; }
+        .builder-review-stars.is-interactive label { display:inline-flex; align-items:center; justify-content:center; cursor:pointer; }
+        .builder-review-stars.is-interactive input { position:absolute; opacity:0; pointer-events:none; }
+        .builder-review-stars.is-interactive .builder-review-star-glyph { font-size:28px; line-height:1; color:#d1d5db; transition:transform .12s ease,color .16s ease; }
+        .builder-review-stars.is-interactive label.is-active .builder-review-star-glyph { color:#f59e0b; }
+        .builder-review-stars.is-interactive label:hover .builder-review-star-glyph { transform:scale(1.08); }
+        .builder-review-input, .builder-review-textarea { width:100%; box-sizing:border-box; padding:10px 12px; border:1px solid #E2E8F0; border-radius:10px; background:#fff; }
+        .builder-review-textarea { min-height:100px; resize:vertical; }
+        .builder-review-check { display:grid; grid-template-columns:auto 1fr; align-items:start; column-gap:12px; row-gap:0; font-size:13px; line-height:1.6; color:#475569; font-weight:600; }
+        .builder-review-check input[type="hidden"] { display:none; }
+        .builder-review-check input[type="checkbox"] { width:18px; height:18px; margin:2px 0 0; accent-color:#1d4ed8; }
+        .builder-review-check span { display:block; min-width:0; }
+        .builder-review-note { font-size:12px; color:#64748b; }
+        .builder-review-form { width:100%; min-width:0; }
+        .builder-review-list { display:grid; gap:12px; width:100%; min-width:0; }
+        .builder-review-list.grid { grid-template-columns:repeat(auto-fit,minmax(min(280px,100%),1fr)); }
+        .builder-review-card { display:grid; gap:8px; width:100%; min-width:0; box-sizing:border-box; padding:14px; border:1px solid #E2E8F0; border-radius:14px; background:#fff; }
+        .builder-review-card-head { display:flex; justify-content:space-between; gap:10px; align-items:flex-start; }
+        .builder-review-card-name { font-weight:800; color:#0f172a; }
+        .builder-review-card-date { font-size:11px; color:#64748b; }
+        .builder-review-card-stars { color:#f59e0b; font-size:14px; letter-spacing:.04em; }
+        .builder-review-card-text { font-size:13px; line-height:1.6; color:#334155; white-space:pre-wrap; }
+        .builder-review-toggle { display:inline-flex; align-items:center; justify-content:center; padding:9px 14px; border-radius:999px; border:1px solid #d7cdea; background:#ffffff; color:#240E35; font-size:12px; font-weight:800; cursor:pointer; width:max-content; }
+        .builder-review-hidden { display:none !important; }
         .builder-faq { display: grid; gap: 10px; }
         .builder-faq-item { border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; }
         .builder-faq-item:last-child { border-bottom: 0; padding-bottom: 0; }
@@ -357,6 +391,13 @@
         .checkout-shipping-modal-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:4px; }
         .checkout-shipping-modal-cancel { display:inline-flex; align-items:center; justify-content:center; min-width:120px; padding:11px 16px; border-radius:999px; border:1px solid #d7cdea; background:#ffffff; color:#240E35; font-weight:700; cursor:pointer; }
         .checkout-shipping-modal-submit { min-width:160px; }
+        .portal-loading-overlay { position:fixed; inset:0; z-index:2100; display:none; align-items:center; justify-content:center; background:rgba(248,250,252,.86); backdrop-filter:blur(4px); }
+        .portal-loading-overlay.is-active { display:flex; }
+        .portal-loading-card { width:min(280px,calc(100vw - 32px)); padding:24px 22px; border-radius:24px; background:rgba(255,255,255,.96); border:1px solid rgba(226,232,240,.95); box-shadow:0 28px 70px rgba(15,23,42,.16); display:grid; justify-items:center; gap:12px; text-align:center; }
+        .portal-loading-spinner { width:44px; height:44px; border-radius:999px; border:4px solid #dbe4f0; border-top-color:#240E35; animation:portal-loading-spin .82s linear infinite; }
+        .portal-loading-title { font-size:18px; font-weight:900; color:#240E35; line-height:1.1; }
+        .portal-loading-copy { font-size:13px; line-height:1.55; color:#64748b; max-width:24ch; }
+        @keyframes portal-loading-spin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
         @media (max-width: 720px) {
             .product-quick-view-modal { padding: 16px; border-radius: 18px; }
             .product-quick-view-layout { grid-template-columns: 1fr; gap: 16px; }
@@ -533,6 +574,13 @@
     </style>
 </head>
 <body class="{{ ($isPreview ?? false) ? 'is-preview' : 'is-published' }}{{ ($portalHasFreeformCanvas ?? false) ? ' portal-has-freeform-canvas' : '' }}">
+    <div class="portal-loading-overlay" id="portalLoadingOverlay" aria-hidden="true">
+        <div class="portal-loading-card" role="status" aria-live="polite" aria-label="Loading next page">
+            <div class="portal-loading-spinner" aria-hidden="true"></div>
+            <div class="portal-loading-title">Loading</div>
+            <div class="portal-loading-copy">Please wait while the next page is opening.</div>
+        </div>
+    </div>
     @php
         $isPreview = $isPreview ?? false;
         $layout = is_array($step->layout_json ?? null) ? $step->layout_json : [];
@@ -547,16 +595,36 @@
         }
         $renderSections = [];
         $freeformEls = [];
+        $freeformGroups = [];
+        $freeformIndex = 0;
+        $flushFreeformGroup = function () use (&$renderSections, &$freeformEls, &$freeformGroups, &$freeformIndex) {
+            if (count($freeformEls) === 0) {
+                return;
+            }
+            $group = $freeformEls;
+            $freeformGroups[] = $group;
+            $renderSections[] = [
+                'id' => 'sec_freeform_canvas_' . $freeformIndex++,
+                'style' => [],
+                'settings' => ['contentWidth' => 'full'],
+                'elements' => $group,
+                'rows' => [],
+                'isFreeformCanvas' => true,
+            ];
+            $freeformEls = [];
+        };
         foreach ($rootItems as $ri => $rootItem) {
             if (!is_array($rootItem)) {
                 continue;
             }
             $kind = strtolower((string) ($rootItem['kind'] ?? 'section'));
             if ($kind === 'section') {
+                $flushFreeformGroup();
                 $renderSections[] = $rootItem;
                 continue;
             }
             if ($kind === 'row') {
+                $flushFreeformGroup();
                 $renderSections[] = [
                     'id' => 'sec_root_row_' . $ri,
                     'style' => [],
@@ -567,6 +635,7 @@
                 continue;
             }
             if ($kind === 'column' || $kind === 'col') {
+                $flushFreeformGroup();
                 $renderSections[] = [
                     'id' => 'sec_root_col_' . $ri,
                     'style' => [],
@@ -583,32 +652,25 @@
             }
             $freeformEls[] = $rootItem;
         }
-        if (count($freeformEls) > 0) {
-            $renderSections[] = [
-                'id' => 'sec_freeform_canvas',
-                'style' => [],
-                'settings' => ['contentWidth' => 'full'],
-                'elements' => $freeformEls,
-                'rows' => [],
-                'isFreeformCanvas' => true,
-            ];
-        }
+        $flushFreeformGroup();
         $editorMeta = is_array($layout['__editor'] ?? null) ? $layout['__editor'] : [];
-        $editorCanvasWidth = count($freeformEls) > 0
+        $editorCanvasWidth = count($freeformGroups) > 0
             ? $resolveSavedCanvasWidth($editorMeta)
             : $resolveSavedStageWidth($editorMeta);
         $derivedCanvasWidth = 0;
-        foreach ($freeformEls as $ffEl) {
-            if (!is_array($ffEl)) continue;
-            $ffStyle = is_array($ffEl['style'] ?? null) ? $ffEl['style'] : [];
-            $ffSettings = is_array($ffEl['settings'] ?? null) ? $ffEl['settings'] : [];
-            $ffLeft = (int) ($ffSettings['freeX'] ?? 0);
-            if ($ffLeft <= 0) $ffLeft = (int) str_replace('px', '', (string) ($ffStyle['left'] ?? '0'));
-            $ffWidth = (int) str_replace('px', '', (string) ($ffStyle['width'] ?? '0'));
-            if ($ffWidth <= 0) $ffWidth = (int) ($ffSettings['fixedWidth'] ?? 0);
-            if ($ffWidth <= 0) $ffWidth = 120;
-            $ffRight = $ffLeft + $ffWidth;
-            if ($ffRight > $derivedCanvasWidth) $derivedCanvasWidth = $ffRight;
+        foreach ($freeformGroups as $freeformGroup) {
+            foreach ($freeformGroup as $ffEl) {
+                if (!is_array($ffEl)) continue;
+                $ffStyle = is_array($ffEl['style'] ?? null) ? $ffEl['style'] : [];
+                $ffSettings = is_array($ffEl['settings'] ?? null) ? $ffEl['settings'] : [];
+                $ffLeft = (int) ($ffSettings['freeX'] ?? 0);
+                if ($ffLeft <= 0) $ffLeft = (int) str_replace('px', '', (string) ($ffStyle['left'] ?? '0'));
+                $ffWidth = (int) str_replace('px', '', (string) ($ffStyle['width'] ?? '0'));
+                if ($ffWidth <= 0) $ffWidth = (int) ($ffSettings['fixedWidth'] ?? 0);
+                if ($ffWidth <= 0) $ffWidth = 120;
+                $ffRight = $ffLeft + $ffWidth;
+                if ($ffRight > $derivedCanvasWidth) $derivedCanvasWidth = $ffRight;
+            }
         }
         if ($derivedCanvasWidth > $editorCanvasWidth) {
             $editorCanvasWidth = $derivedCanvasWidth;
@@ -1206,7 +1268,7 @@
                                                 if ($_colRight > $colMinWidth) $colMinWidth = $_colRight;
                                             }
                                         }
-                                        $colHeightStyle = $colMinHeight > 0 ? 'min-height:' . $colMinHeight . 'px;' : '';
+                                        $colHeightStyle = ($colMinHeight > 0 && !$isFreeformCanvas) ? 'min-height:' . $colMinHeight . 'px;' : '';
                                         $colWidthStyle = $isFreeformCanvas ? 'width:100%;margin-left:0;margin-right:0;' : '';
                                         $isSectionElementCarrierCol = (bool) ($column['isSectionElementCarrier'] ?? false);
                                     @endphp
@@ -1786,6 +1848,156 @@
                                                                 @endif
                                                             </div>
                                                         </div>
+                                                    </div>
+                                                @elseif($type === 'review_form')
+                                                    @php
+                                                        $funnelPurpose = strtolower(trim((string) (($funnel->purpose ?? null) ?: ($funnel->template_type ?? 'service'))));
+                                                        $isPhysicalReviewFlow = $funnelPurpose === 'physical_product';
+                                                        $defaultReviewHeading = $isPhysicalReviewFlow ? 'How was your order experience?' : 'How was your experience?';
+                                                        $defaultReviewSubtitle = $isPhysicalReviewFlow
+                                                            ? 'Tell us how the ordering and checkout experience felt while your item is on the way.'
+                                                            : 'Share a quick review after your order or service experience.';
+                                                        $configuredHeading = trim((string) ($settings['heading'] ?? ''));
+                                                        $configuredSubtitle = trim((string) ($settings['subtitle'] ?? ''));
+                                                        $reviewHeading = $configuredHeading !== '' ? $configuredHeading : $defaultReviewHeading;
+                                                        $reviewSubtitle = $configuredSubtitle !== '' ? $configuredSubtitle : $defaultReviewSubtitle;
+                                                        $physicalHeading = trim((string) ($settings['physicalHeading'] ?? ''));
+                                                        $physicalSubtitle = trim((string) ($settings['physicalSubtitle'] ?? ''));
+                                                        if ($isPhysicalReviewFlow) {
+                                                            if ($physicalHeading !== '') $reviewHeading = $physicalHeading;
+                                                            if ($physicalSubtitle !== '') $reviewSubtitle = $physicalSubtitle;
+                                                        }
+                                                        $reviewButton = trim((string) ($settings['buttonLabel'] ?? 'Submit Review'));
+                                                        if ($reviewButton === '') $reviewButton = 'Submit Review';
+                                                        $reviewPublicLabel = trim((string) ($settings['publicLabel'] ?? 'I am okay with showing this review publicly.'));
+                                                        if ($reviewPublicLabel === '') $reviewPublicLabel = 'I am okay with showing this review publicly.';
+                                                        $reviewSuccess = trim((string) ($settings['successMessage'] ?? 'Thanks for the review. It is now waiting for approval.'));
+                                                        $reviewColor = trim((string) ($rawStyle['color'] ?? ''));
+                                                        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $reviewColor)) $reviewColor = '';
+                                                        $reviewCtaBg = trim((string) ($settings['ctaBgColor'] ?? '#240E35'));
+                                                        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $reviewCtaBg)) $reviewCtaBg = '#240E35';
+                                                        $reviewCtaText = trim((string) ($settings['ctaTextColor'] ?? '#ffffff'));
+                                                        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $reviewCtaText)) $reviewCtaText = '#ffffff';
+                                                        $prefillName = trim((string) ($reviewPrefill['name'] ?? ''));
+                                                        $prefillEmail = trim((string) ($reviewPrefill['email'] ?? ''));
+                                                    @endphp
+                                                    <div class="builder-review-form" style="{{ $contentStyle }}">
+                                                        <div class="builder-review-title" @if($reviewColor !== '') style="color: {{ $reviewColor }};" @endif>{{ $reviewHeading }}</div>
+                                                        @if($reviewSubtitle !== '')
+                                                            <div class="builder-review-subtitle" @if($reviewColor !== '') style="color: {{ $reviewColor }}; opacity: .78;" @endif>{{ $reviewSubtitle }}</div>
+                                                        @endif
+                                                        @if($isPreview)
+                                                            <div class="builder-review-stars" aria-hidden="true"><span>★</span><span>★</span><span>★</span><span>★</span><span>★</span></div>
+                                                            <input class="builder-review-input" type="text" value="{{ $prefillName !== '' ? $prefillName : 'Your name' }}" disabled>
+                                                            <input class="builder-review-input" type="email" value="{{ $prefillEmail !== '' ? $prefillEmail : 'Email address' }}" disabled>
+                                                            <textarea class="builder-review-textarea" disabled>Write a quick review...</textarea>
+                                                            <label class="builder-review-check"><input type="checkbox" disabled> <span>{{ $reviewPublicLabel }}</span></label>
+                                                            <button type="button" class="builder-pricing-cta" style="background: {{ $reviewCtaBg }}; color: {{ $reviewCtaText }}; opacity:.72; cursor:not-allowed;" disabled>{{ $reviewButton }}</button>
+                                                        @elseif($reviewAlreadySubmitted)
+                                                            <div class="builder-review-note">{{ session('review_status', $reviewSuccess) }}</div>
+                                                        @else
+                                                            <form method="POST" action="{{ route('funnels.portal.review', ['funnelSlug' => $funnel->slug, 'stepSlug' => $step->slug]) }}" class="builder-review-form">
+                                                                @csrf
+                                                                <div class="builder-review-stars" aria-label="Rating">
+                                                                    @for($star = 5; $star >= 1; $star--)
+                                                                        <label style="cursor:pointer;">
+                                                                            <input type="radio" name="rating" value="{{ $star }}" style="display:none;" @checked((int) old('rating', 5) === $star)>
+                                                                            <span>★</span>
+                                                                        </label>
+                                                                    @endfor
+                                                                </div>
+                                                                <input class="builder-review-input" type="text" name="customer_name" value="{{ old('customer_name', $prefillName) }}" placeholder="Your name" required>
+                                                                <input class="builder-review-input" type="email" name="customer_email" value="{{ old('customer_email', $prefillEmail) }}" placeholder="Email address">
+                                                                <textarea class="builder-review-textarea" name="review_text" placeholder="Write a quick review..." required>{{ old('review_text') }}</textarea>
+                                                                <label class="builder-review-check">
+                                                                    <input type="hidden" name="is_public" value="0">
+                                                                    <input type="checkbox" name="is_public" value="1" @checked(old('is_public', '1') === '1')>
+                                                                    <span>{{ $reviewPublicLabel }}</span>
+                                                                </label>
+                                                                <button type="submit" class="builder-pricing-cta" style="background: {{ $reviewCtaBg }}; color: {{ $reviewCtaText }};">{{ $reviewButton }}</button>
+                                                                @if(session('review_status'))
+                                                                    <div class="builder-review-note">{{ session('review_status') }}</div>
+                                                                @endif
+                                                                @error('review')
+                                                                    <div class="builder-review-note" style="color:#b91c1c;">{{ $message }}</div>
+                                                                @enderror
+                                                            </form>
+                                                        @endif
+                                                    </div>
+                                                @elseif($type === 'reviews')
+                                                    @php
+                                                        $reviewsHeading = trim((string) ($settings['heading'] ?? 'What customers are saying'));
+                                                        $reviewsSubtitle = trim((string) ($settings['subtitle'] ?? 'Approved reviews from this funnel appear here automatically.'));
+                                                        $reviewsEmpty = trim((string) ($settings['emptyText'] ?? 'Approved reviews will appear here after customers submit them.'));
+                                                        $reviewsLayout = strtolower(trim((string) ($settings['layout'] ?? 'list'))) === 'grid' ? 'grid' : 'list';
+                                                        $reviewsMax = max(1, min(24, (int) ($settings['maxItems'] ?? 3)));
+                                                        $reviewsFilterRating = max(0, min(5, (int) ($settings['filterRating'] ?? ($settings['minRating'] ?? 0))));
+                                                        $reviewsShowRating = ($settings['showRating'] ?? true) !== false;
+                                                        $reviewsShowDate = ($settings['showDate'] ?? false) === true;
+                                                        $reviewsCollapsible = ($settings['collapsible'] ?? true) !== false;
+                                                        $reviewsCollapsedCount = max(1, min(24, (int) ($settings['collapsedCount'] ?? 3)));
+                                                        $reviewsExpandLabel = trim((string) ($settings['expandLabel'] ?? 'Show all reviews'));
+                                                        if ($reviewsExpandLabel === '') $reviewsExpandLabel = 'Show all reviews';
+                                                        $reviewsCollapseLabel = trim((string) ($settings['collapseLabel'] ?? 'Show fewer reviews'));
+                                                        if ($reviewsCollapseLabel === '') $reviewsCollapseLabel = 'Show fewer reviews';
+                                                        $reviewsColor = trim((string) ($rawStyle['color'] ?? ''));
+                                                        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $reviewsColor)) $reviewsColor = '';
+                                                        $reviewsData = collect($approvedReviews ?? []);
+                                                        if ($reviewsFilterRating > 0) {
+                                                            $reviewsData = $reviewsData->filter(fn ($review) => (int) ($review->rating ?? 0) === $reviewsFilterRating);
+                                                        }
+                                                        $reviewsData = $reviewsData->take($reviewsMax);
+                                                        if ($isPreview && $reviewsData->isEmpty()) {
+                                                            $reviewsData = collect([
+                                                                (object) ['customer_name' => 'Maria Dela Cruz', 'rating' => 5, 'review_text' => 'Fast checkout and a very smooth overall experience.', 'approved_at' => now()],
+                                                                (object) ['customer_name' => 'John Reyes', 'rating' => 4, 'review_text' => 'Everything was clear and easy to follow from start to finish.', 'approved_at' => now()],
+                                                            ]);
+                                                        }
+                                                    @endphp
+                                                    <div class="builder-review-form" style="{{ $contentStyle }}">
+                                                        <div class="builder-review-title" @if($reviewsColor !== '') style="color: {{ $reviewsColor }};" @endif>{{ $reviewsHeading !== '' ? $reviewsHeading : 'What customers are saying' }}</div>
+                                                        @if($reviewsSubtitle !== '')
+                                                            <div class="builder-review-subtitle" @if($reviewsColor !== '') style="color: {{ $reviewsColor }}; opacity: .78;" @endif>{{ $reviewsSubtitle }}</div>
+                                                        @endif
+                                                        @if($reviewsData->isEmpty())
+                                                            <div class="builder-review-note">{{ $reviewsEmpty !== '' ? $reviewsEmpty : 'Approved reviews will appear here after customers submit them.' }}</div>
+                                                        @else
+                                                            <div class="builder-review-list {{ $reviewsLayout }}" data-review-list>
+                                                                @foreach($reviewsData as $reviewIndex => $review)
+                                                                    @php
+                                                                        $reviewName = trim((string) ($review->customer_name ?? 'Customer'));
+                                                                        if ($reviewName === '') $reviewName = 'Customer';
+                                                                        $reviewText = trim((string) ($review->review_text ?? ''));
+                                                                        $reviewStars = max(1, min(5, (int) ($review->rating ?? 5)));
+                                                                        $reviewApprovedAt = $review->approved_at ?? null;
+                                                                        $reviewHidden = $reviewsCollapsible && $reviewIndex >= $reviewsCollapsedCount;
+                                                                    @endphp
+                                                                    <div class="builder-review-card{{ $reviewHidden ? ' builder-review-hidden' : '' }}" @if($reviewHidden) data-review-extra hidden @endif>
+                                                                        <div class="builder-review-card-head">
+                                                                            <div>
+                                                                                <div class="builder-review-card-name" @if($reviewsColor !== '') style="color: {{ $reviewsColor }};" @endif>{{ $reviewName }}</div>
+                                                                                @if($reviewsShowDate && $reviewApprovedAt)
+                                                                                    <div class="builder-review-card-date">{{ \Illuminate\Support\Carbon::parse($reviewApprovedAt)->format('M d, Y') }}</div>
+                                                                                @endif
+                                                                            </div>
+                                                                            @if($reviewsShowRating)
+                                                                                <div class="builder-review-card-stars">{{ str_repeat('★', $reviewStars) }}{{ str_repeat('☆', 5 - $reviewStars) }}</div>
+                                                                            @endif
+                                                                        </div>
+                                                                        <div class="builder-review-card-text" @if($reviewsColor !== '') style="color: {{ $reviewsColor }}; opacity: .88;" @endif>{{ $reviewText !== '' ? $reviewText : 'Customer review.' }}</div>
+                                                                    </div>
+                                                                @endforeach
+                                                            </div>
+                                                            @if($reviewsCollapsible && $reviewsData->count() > $reviewsCollapsedCount)
+                                                                <button
+                                                                    type="button"
+                                                                    class="builder-review-toggle"
+                                                                    data-review-toggle
+                                                                    data-expand-label="{{ $reviewsExpandLabel }}"
+                                                                    data-collapse-label="{{ $reviewsCollapseLabel }}"
+                                                                >{{ $reviewsExpandLabel }}</button>
+                                                            @endif
+                                                        @endif
                                                     </div>
                                                 @elseif($type === 'faq')
                                                     @php
@@ -3041,6 +3253,7 @@
         var currentStepType=@json((string) ($currentStepType ?? 'custom'));
         var hasServerSelectedPricing={{ is_array($selectedPricing ?? null) ? 'true' : 'false' }};
         var isFirstStep={{ ($isFirstStep ?? false) ? 'true' : 'false' }};
+        var shouldClearPortalCart={{ session('clear_portal_cart') ? 'true' : 'false' }};
         function escapeHtml(raw){
             return String(raw||"")
                 .replace(/&/g,"&amp;")
@@ -3355,6 +3568,44 @@
                 closeProductQuickView();
             }
         });
+        var portalLoadingOverlay=document.getElementById("portalLoadingOverlay");
+        function portalShowLoading(){
+            if(!portalLoadingOverlay)return;
+            portalLoadingOverlay.classList.add("is-active");
+            portalLoadingOverlay.setAttribute("aria-hidden","false");
+        }
+        function portalHideLoading(){
+            if(!portalLoadingOverlay)return;
+            portalLoadingOverlay.classList.remove("is-active");
+            portalLoadingOverlay.setAttribute("aria-hidden","true");
+        }
+        window.addEventListener("pageshow",portalHideLoading);
+        window.addEventListener("load",portalHideLoading);
+        document.addEventListener("click",function(e){
+            if({{ ($isPreview ?? false) ? 'true' : 'false' }})return;
+            var link=e.target&&e.target.closest?e.target.closest("a[href]"):null;
+            if(!link)return;
+            if(link.hasAttribute("download"))return;
+            if(String(link.getAttribute("target")||"").toLowerCase()==="_blank")return;
+            if(link.closest("[data-product-modal-target]"))return;
+            if(link.closest("[data-open-shipping-modal]"))return;
+            var rawHref=String(link.getAttribute("href")||"").trim();
+            if(rawHref===""||rawHref==="#")return;
+            try{
+                var url=new URL(link.href,window.location.href);
+                if(url.origin!==window.location.origin)return;
+                if(url.hash&&url.pathname===window.location.pathname&&url.search===window.location.search)return;
+            }catch(_err){
+                return;
+            }
+            portalShowLoading();
+        });
+        document.addEventListener("submit",function(e){
+            if({{ ($isPreview ?? false) ? 'true' : 'false' }})return;
+            var form=e.target;
+            if(!form||!form.action)return;
+            portalShowLoading();
+        });
         document.addEventListener("click",function(e){
             var trigger=e.target&&e.target.closest?e.target.closest("[data-product-modal-target]"):null;
             if(!trigger)return;
@@ -3396,6 +3647,14 @@
         }
         function writePortalCart(items){
             try{ window.localStorage.setItem(cartStorageKey,JSON.stringify(Array.isArray(items)?items:[])); }catch(_err){}
+        }
+        function clearPortalCartStorage(){
+            try{
+                if(window.localStorage)window.localStorage.removeItem(cartStorageKey);
+            }catch(_err){}
+            try{
+                if(window.sessionStorage)window.sessionStorage.removeItem(pricingStorageKey);
+            }catch(_err){}
         }
         function productStockLimitFromValue(value){
             var raw=String(value==null?"":value).trim();
@@ -3870,8 +4129,83 @@
                 animateAddToCart(btn);
             });
         });
+        if(shouldClearPortalCart){
+            clearPortalCartStorage();
+        }
         renderPortalCart();
         updateCartButtonsState();
+        Array.from(document.querySelectorAll("[data-review-toggle]")||[]).forEach(function(btn){
+            btn.addEventListener("click",function(){
+                var parent=btn.parentNode;
+                if(!parent)return;
+                var list=parent.querySelector("[data-review-list]");
+                if(!list)return;
+                var extras=Array.from(list.querySelectorAll("[data-review-extra]")||[]);
+                if(!extras.length)return;
+                var expanded=btn.getAttribute("data-expanded")==="1";
+                extras.forEach(function(card){
+                    if(expanded){
+                        card.classList.add("builder-review-hidden");
+                        card.setAttribute("hidden","hidden");
+                    }else{
+                        card.classList.remove("builder-review-hidden");
+                        card.removeAttribute("hidden");
+                    }
+                });
+                expanded=!expanded;
+                btn.setAttribute("data-expanded",expanded?"1":"0");
+                btn.textContent=expanded
+                    ? String(btn.getAttribute("data-collapse-label")||"Show fewer reviews")
+                    : String(btn.getAttribute("data-expand-label")||"Show all reviews");
+            });
+        });
+        Array.from(document.querySelectorAll('.builder-review-stars[aria-label="Rating"]')||[]).forEach(function(group){
+            var labels=Array.from(group.querySelectorAll("label")||[]);
+            if(!labels.length)return;
+            group.classList.add("is-interactive");
+            function syncReviewStars(selected){
+                labels.forEach(function(label,idx){
+                    var input=label.querySelector('input[type="radio"]');
+                    var value=input?parseInt(input.value||"0",10):0;
+                    var glyph=label.querySelector(".builder-review-star-glyph");
+                    if(!glyph){
+                        glyph=document.createElement("span");
+                        glyph.className="builder-review-star-glyph";
+                        glyph.innerHTML="&#9733;";
+                        label.innerHTML="";
+                        if(input)label.appendChild(input);
+                        label.appendChild(glyph);
+                    }
+                    label.classList.toggle("is-active", value >= selected);
+                });
+            }
+            labels.forEach(function(label){
+                var input=label.querySelector('input[type="radio"]');
+                if(!input)return;
+                var selected=parseInt(input.checked?input.value:"0",10)||0;
+                var glyph=label.querySelector(".builder-review-star-glyph");
+                if(!glyph){
+                    glyph=document.createElement("span");
+                    glyph.className="builder-review-star-glyph";
+                    glyph.innerHTML="&#9733;";
+                    label.innerHTML="";
+                    label.appendChild(input);
+                    label.appendChild(glyph);
+                }
+                label.addEventListener("click",function(){
+                    input.checked=true;
+                    syncReviewStars(parseInt(input.value||"0",10)||0);
+                });
+                if(selected>0)syncReviewStars(selected);
+            });
+            if(!labels.some(function(label){ var input=label.querySelector('input[type="radio"]'); return !!(input&&input.checked); })){
+                var fallbackInput=labels[labels.length-1]?labels[labels.length-1].querySelector('input[type="radio"]'):null;
+                if(fallbackInput){
+                    fallbackInput.checked=true;
+                    syncReviewStars(parseInt(fallbackInput.value||"5",10)||5);
+                }
+            }
+        });
         var countdowns=document.querySelectorAll("[data-countdown]");
         if(countdowns && countdowns.length){
             function pad2(n){return String(n).padStart(2,"0");}
