@@ -29,10 +29,12 @@ class Funnel extends Model
         'purpose',
         'default_tags',
         'status',
+        'require_double_opt_in',
     ];
 
     protected $casts = [
         'default_tags' => 'array',
+        'require_double_opt_in' => 'boolean',
     ];
 
     public function setStatusAttribute($value): void

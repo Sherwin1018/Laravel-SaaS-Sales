@@ -29,6 +29,15 @@
                 >
                     <i class="fas fa-star-half-alt"></i> Reviews
                 </button>
+                <button
+                    type="button"
+                    class="funnels-action funnels-action--utm utm-generator-btn"
+                    data-funnel-id="{{ $funnel->id }}"
+                    data-funnel-slug="{{ $funnel->slug }}"
+                    data-funnel-name="{{ $funnel->name }}"
+                >
+                    <i class="fas fa-link"></i> UTM
+                </button>
                 <form method="POST" action="{{ route('funnels.destroy', $funnel) }}" data-confirm-message="Delete this funnel?">
                     @csrf
                     @method('DELETE')

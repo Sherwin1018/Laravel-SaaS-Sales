@@ -209,6 +209,23 @@ class LeadController extends Controller
     {
         $this->ensureTenantLeadAccess($lead);
 
+        $user = auth()->user();
+        $tenantId = $user->tenant_id;
+
+        $recentLinkClicks = LeadLinkClick::where('tenant_id', $tenantId)
+            ->where('lead_id', $lead->id)
+            ->latest('clicked_at')
+            ->limit(15)
+            ->get();
+
+        $topLinkClicks = LeadLinkClick::selectRaw("COALESCE(NULLIF(link_name, ''), 'Link') as link_label, COUNT(*) as total")
+            ->where('tenant_id', $tenantId)
+            ->where('lead_id', $lead->id)
+            ->groupBy('link_label')
+            ->orderByDesc('total')
+            ->limit(5)
+            ->get();
+
         return view('leads.edit', [
             'lead' => $lead->load(['activities', 'customFieldValues.customField', 'stageHistories.changedByUser']),
             'statuses' => Lead::PIPELINE_STATUSES,
@@ -247,6 +264,7 @@ class LeadController extends Controller
             } else {
                 unset($validated['tags']);
             }
+            $oldStatus = $lead->status;
             $lead->update($validated);
             $this->syncCustomFieldValues($lead, $customFields, $validated['custom_fields'] ?? []);
 
@@ -257,6 +275,10 @@ class LeadController extends Controller
                     'from_status' => $previousStatus,
                     'to_status' => $lead->status,
                 ]);
+            }
+
+            if ($oldStatus !== $lead->status) {
+                $this->dispatchLeadStatusChangedWebhook($lead, $oldStatus, $lead->status);
             }
 
             return redirect()->route('leads.index')->with('success', 'Edited Successfully');

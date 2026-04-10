@@ -7,6 +7,8 @@ The platform combines funnel creation, CRM, automation, payments, and analytics 
 
 Primary goal: deliver a scalable, secure, and commercially viable SaaS product with clear monetization and role-based operations.
 
+For the current architecture baseline, see [docs/project-overview.md](docs/project-overview.md).
+
 ## Project Objective
 Deliver a platform that:
 
@@ -43,11 +45,13 @@ Deliver a platform that:
 - [x] Lead form capture and tagging
 
 ### Step 3 (Week 4): Automation Engine
-- [ ] Email sequences
+- [x] Email sequences
 - [ ] SMS integration
-- [ ] Time-delay actions
+- [x] Time-delay actions
 - [ ] Conditional workflows
-- [ ] Event-based automation triggers
+- [x] Event-based automation triggers
+
+> Automation module implemented using n8n. See [`automation-architecture.md`](automation-architecture.md) for full details.
 
 ### Step 4 (Week 5): Checkout + Subscriptions
 - [ ] One-time payments flow
@@ -152,10 +156,12 @@ Deliver a platform that:
 - [x] Sales pipeline view (basic Kanban-style section)
 
 ### 4. Automation Engine
-- [ ] Email sequences
-- [ ] SMS workflows
+- [x] Email sequences
+- [x] SMS workflows
 - [ ] Conditional logic
-- [ ] Trigger-based automation
+- [x] Trigger-based automation
+
+> Implemented via Laravel + n8n. See [`automation-architecture.md`](automation-architecture.md).
 
 ### 5. Checkout and Payment System
 - [x] Basic payment tracking records
@@ -207,13 +213,13 @@ All modules must remain interconnected: CRM, funnel tracking, automation, and pa
 - CRM <-> Funnel: Implemented. Published funnel opt-in creates/updates leads in CRM (`FunnelPortalController@optIn`).
 - Funnel <-> Payments: Implemented (initial). Checkout/offer steps create payment records linked to funnel lead (`FunnelPortalController@checkout`, `@offer`).
 - CRM <-> Payments: Implemented (initial). Payments can be linked to leads (`payments.lead_id`) and viewed in billing.
-- Automation <-> CRM/Funnel/Payments: Not yet implemented as workflow engine. Current automation is limited to manual/basic lead activity logging and score events.
+- Automation <-> CRM/Funnel/Payments: **Implemented.** Events dispatched to n8n; n8n calls back for tenant actions. See [`automation-architecture.md`](automation-architecture.md).
 
 ### Comments and Suggestions
-- Add event-driven automation triggers for key points: `lead_created`, `lead_status_changed`, `payment_paid`, `payment_failed`.
-- Add workflow actions (email sequence, delay, condition) so automation is part of the same end-to-end flow.
-- Add webhook/outbox integration (e.g., n8n) to connect CRM/funnel/payment events reliably.
-- Add integration/feature tests to validate the full flow: funnel opt-in -> lead creation -> checkout payment -> automation trigger.
+- [x] Add event-driven automation triggers. *(Done)*
+- [x] Add workflow actions (email sequence, delay, condition). *(Done)*
+- [x] Add webhook/outbox integration (e.g., n8n). *(Done)*
+- [ ] Add integration/feature tests to validate the full flow: funnel opt-in -> lead creation -> checkout payment -> automation trigger.
 --------
 ## Expected Outcome
 At completion, the platform should provide:
@@ -231,8 +237,10 @@ At completion, the platform should provide:
 - Usefulness: Features directly support growth and automation.
 
 ## Recommended Immediate Next Tasks
-- [ ] Add lead tags and custom fields. (Not done)
-- [x] Start funnel builder MVP (Week 3 scope). (Initial)
-- [ ] Add automated email sequence infrastructure. (Not done)
-- [ ] Integrate payment gateway for real transactions. (Not done)
-- [ ] Add feature tests for assignment, scoring, pipeline, and payments. (Not done)
+- [ ] Add lead tags and custom fields.
+- [x] Start funnel builder MVP (Week 3 scope).
+- [x] Add automated email sequence infrastructure. *(Done)*
+- [ ] Integrate payment gateway for real transactions.
+- [ ] Add feature tests for assignment, scoring, pipeline, payments, and automation.
+- [ ] Connect SMS provider (Twilio / Vonage) to n8n SMS branch.
+- [ ] Add `payment.paid` / `payment.failed` workflow templates or examples.

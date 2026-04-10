@@ -166,4 +166,43 @@ class PaymentController extends Controller
             return redirect()->back()->withInput()->with('error', 'Added Failed');
         }
     }
+
+    private function dispatchPaymentWebhookIfLeadExists(Payment $payment, string $status): void
+    {
+        if (!in_array($status, ['paid', 'failed'], true)) {
+            return;
+        }
+        if (!$payment->lead_id) {
+            return;
+        }
+        $lead = Lead::where('id', $payment->lead_id)->where('tenant_id', $payment->tenant_id)->first();
+        if (!$lead) {
+            return;
+        }
+
+        $event = $status === 'paid' ? 'payment.paid' : 'payment.failed';
+        $service = app(AutomationWebhookService::class);
+
+        // MVP rule: Payment paid => Closed Won (and notify n8n via lead.status_changed).
+        if ($event === 'payment.paid') {
+            $oldStatus = (string) ($lead->status ?? '');
+            $newStatus = 'closed_won';
+
+            if ($oldStatus !== $newStatus && !in_array($oldStatus, ['closed_lost', 'closed_won'], true)) {
+                $lead->status = $newStatus;
+                $lead->save();
+
+                $lead->activities()->create([
+                    'activity_type' => 'Scoring',
+                    'notes' => 'Auto: Pipeline Stage updated to closed_won (+0 points)',
+                ]);
+
+                $statusPayload = $service->buildLeadStatusChangedPayload($lead, $oldStatus, $newStatus, []);
+                $service->dispatchEvent('lead.status_changed', $statusPayload);
+            }
+        }
+
+        $payload = $service->buildPaymentPayload($event, $lead, $payment, []);
+        $service->dispatchEvent($event, $payload);
+    }
 }

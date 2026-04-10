@@ -47,6 +47,14 @@
             </div>
 
             <div style="margin-bottom: 16px;">
+                <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+                    <input type="checkbox" name="require_double_opt_in" value="1" {{ old('require_double_opt_in') ? 'checked' : '' }}>
+                    <span style="font-weight:700;">Require email confirmation (double opt-in)</span>
+                </label>
+                <p style="color:#64748b; font-size:12px; margin:6px 0 0 28px;">When enabled, leads must click a verification link before automation runs.</p>
+            </div>
+
+            <div style="margin-bottom: 16px;">
                 <label for="default_tags" style="display:block; margin-bottom:8px; font-weight:700;">Funnel Tags</label>
                 <input id="default_tags" name="default_tags" type="text" value="{{ old('default_tags') }}"
                     placeholder="webinar, q2-campaign, lead-magnet"

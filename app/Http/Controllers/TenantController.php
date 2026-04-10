@@ -71,7 +71,7 @@ class TenantController extends Controller
                     'status' => $validated['status'],
                 ]);
 
-                // 2. Create Admin User
+                // 2. Create Admin User (pre-verified: Super Admin creates trusted Account Owner)
                 $user = User::create([
                     'tenant_id' => $tenant->id,
                     'name' => $validated['admin_name'],
@@ -80,6 +80,7 @@ class TenantController extends Controller
                     'role' => 'account-owner', // consistent with role slug
                     'status' => 'active',
                 ]);
+                $user->forceFill(['email_verified_at' => now()])->save();
 
                 // 3. Attach Role (if using pivot table)
                 // Ensure Role model has 'account-owner' slug from seeder

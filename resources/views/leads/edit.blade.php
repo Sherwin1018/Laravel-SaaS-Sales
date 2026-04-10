@@ -40,9 +40,16 @@
 
                 <div style="margin-bottom: 20px;">
                     <label for="source_campaign" style="display: block; margin-bottom: 8px; font-weight: bold;">Source / Campaign</label>
+                    @php
+                        $baseSourceOptions = ['Direct', 'Facebook Ads', 'Google Ads', 'Referral', 'Email Campaign', 'Webinar', 'Organic Search'];
+                        $currentSource = (string) ($lead->source_campaign ?? 'Direct');
+                        $sourceOptions = in_array($currentSource, $baseSourceOptions, true)
+                            ? $baseSourceOptions
+                            : array_merge([$currentSource], $baseSourceOptions);
+                    @endphp
                     <select name="source_campaign" id="source_campaign" required
                         style="width: 100%; padding: 10px; border: 1px solid var(--theme-border, #E6E1EF); border-radius: 6px;">
-                        @foreach(['Direct', 'Facebook Ads', 'Google Ads', 'Referral', 'Email Campaign', 'Webinar', 'Organic Search'] as $source)
+                        @foreach($sourceOptions as $source)
                             <option value="{{ $source }}" {{ old('source_campaign', $lead->source_campaign ?? 'Direct') === $source ? 'selected' : '' }}>{{ $source }}</option>
                         @endforeach
                     </select>
@@ -217,6 +224,55 @@
                 @empty
                     <p style="color: #6B7280; font-style: italic;">No stage changes recorded yet.</p>
                 @endforelse
+            </div>
+        </div>
+    </div>
+
+    <div class="card" style="margin-top: 20px;">
+        <h3>Link Clicks</h3>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start;">
+            <div>
+                <h4 style="margin-bottom: 8px;">Top Links</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Link</th>
+                            <th>Clicks</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($topLinkClicks as $row)
+                            <tr>
+                                <td>{{ $row->link_label }}</td>
+                                <td>{{ $row->total }}</td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="2">No tracked link clicks yet.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+
+            <div>
+                <h4 style="margin-bottom: 8px;">Recent Clicks</h4>
+                <div style="max-height: 220px; overflow-y: auto;">
+                    @forelse($recentLinkClicks as $click)
+                        <div style="border-left: 2px solid var(--theme-accent, #6B4A7A); padding-left: 10px; margin-bottom: 14px;">
+                            <p style="font-size: 12px; color: #6B7280; margin-bottom: 4px;">
+                                {{ $click->clicked_at?->format('M d, H:i') }} -
+                                <strong>{{ $click->link_name ?: 'Link' }}</strong>
+                            </p>
+                            <p style="font-size: 13px; color: #1F2937; word-break: break-word;">
+                                {{ \Illuminate\Support\Str::limit($click->destination_url, 120) }}
+                            </p>
+                        </div>
+                    @empty
+                        <p style="color: #6B7280; font-style: italic;">No tracked link clicks yet.</p>
+                    @endforelse
+                </div>
             </div>
         </div>
     </div>

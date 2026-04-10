@@ -664,6 +664,10 @@
                 <input type="hidden" name="description" value="{{ $funnel->description }}">
             @endif
             <input type="hidden" name="status" value="{{ $funnel->status }}">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;font-weight:700;" title="Require email confirmation before automation runs">
+                <input type="checkbox" name="require_double_opt_in" value="1" {{ $funnel->require_double_opt_in ? 'checked' : '' }}>
+                DOI
+            </label>
             <input
                 type="text"
                 name="default_tags"

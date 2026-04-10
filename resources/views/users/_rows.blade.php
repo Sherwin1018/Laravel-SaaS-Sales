@@ -11,14 +11,34 @@
         </td>
         <td>{{ $user->created_at->format('Y-m-d') }}</td>
         <td>
+            @if($user->hasVerifiedEmail())
+                <span style="background-color: #3B82F6; color: white; padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: 600;">
+                    ✓ Verified
+                </span>
+            @else
+                <span style="background-color: #F59E0B; color: white; padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: 600;">
+                    ⏳ Pending
+                </span>
+            @endif
+        </td>
+        <td>
             @if($user->id !== auth()->id())
-                <form action="{{ route('users.destroy', $user->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to remove this user?');">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" style="background: none; border: none; color: #DC2626; cursor: pointer; padding: 0; font-weight: 600;">
-                        <i class="fas fa-trash"></i> Remove
-                    </button>
-                </form>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    @if(!$user->hasVerifiedEmail())
+                        <button onclick="resendVerification({{$user->id}}, '{{$user->name}}')" 
+                                style="background: none; border: 1px solid #6366F1; color: #6366F1; cursor: pointer; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;"
+                                title="Resend verification email">
+                            <i class="fas fa-envelope"></i> Resend
+                        </button>
+                    @endif
+                    <form action="{{ route('users.destroy', $user->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to remove this user?');">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" style="background: none; border: none; color: #DC2626; cursor: pointer; padding: 0; font-weight: 600;">
+                            <i class="fas fa-trash"></i> Remove
+                        </button>
+                    </form>
+                </div>
             @else
                 <span style="color: #9CA3AF; font-size: 12px;">(You)</span>
             @endif
@@ -26,6 +46,6 @@
     </tr>
 @empty
     <tr>
-        <td colspan="5" style="text-align: center;">No team members found.</td>
+        <td colspan="6" style="text-align: center;">No team members found.</td>
     </tr>
 @endforelse

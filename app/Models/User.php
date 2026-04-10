@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
     use HasFactory, Notifiable;
 
@@ -21,17 +22,11 @@ class User extends Authenticatable
         'active',
     ];
 
-    /**
-     * User belongs to a tenant
-     */
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
     }
 
-    /**
-     * User can have multiple roles
-     */
     public function roles()
     {
         return $this->belongsToMany(Role::class);
@@ -52,9 +47,6 @@ class User extends Authenticatable
         return $this->belongsTo(self::class, 'invited_by');
     }
 
-    /**
-     * Check if user has a role by slug
-     */
     public function hasRole(string $roleSlug): bool
     {
         return $this->roles->contains('slug', $roleSlug);
@@ -76,11 +68,6 @@ class User extends Authenticatable
         return false;
     }
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
     protected $fillable = [
         'name',
         'email',
@@ -102,24 +89,14 @@ class User extends Authenticatable
         'is_customer_portal_user',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var array<int, string>
-     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    /**
-     * The attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected $casts = [
         'email_verified_at' => 'datetime',
-        'password' => 'hashed', // Laravel hashes automatically
+        'password' => 'hashed',
         'last_login_at' => 'datetime',
         'invited_at' => 'datetime',
         'activation_completed_at' => 'datetime',

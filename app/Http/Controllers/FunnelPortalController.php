@@ -3,11 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\Funnel;
+use App\Models\FunnelVisit;
 use App\Models\FunnelEvent;
 use App\Models\FunnelReview;
 use App\Models\FunnelStep;
 use App\Models\Lead;
 use App\Models\Payment;
+use App\Notifications\LeadVerifyEmail;
+use App\Services\AutomationWebhookService;
 use App\Services\PayMongoCheckoutService;
 use App\Services\FunnelTrackingService;
 use Illuminate\Http\Request;
@@ -28,8 +31,49 @@ class FunnelPortalController extends Controller
 
         abort_if(! $step, 404);
 
+        // Capture UTM parameters on first visit
+        $utmSource = $this->normalizeUtmParameter($request->query('utm_source'));
+        $utmMedium = $this->normalizeUtmParameter($request->query('utm_medium'));
+        $utmCampaign = $this->normalizeUtmParameter($request->query('utm_campaign'));
+        $utmTerm = $this->normalizeUtmParameter($request->query('utm_term'));
+        $utmContent = $this->normalizeUtmParameter($request->query('utm_content'));
+        $utmId = $this->normalizeUtmParameter($request->query('utm_id'));
+
+        if ($utmSource || $utmMedium || $utmCampaign || $utmTerm || $utmContent || $utmId) {
+            $utmData = array_filter([
+                'utm_source' => $utmSource,
+                'utm_medium' => $utmMedium,
+                'utm_campaign' => $utmCampaign,
+                'utm_term' => $utmTerm,
+                'utm_content' => $utmContent,
+                'utm_id' => $utmId,
+                'referrer' => $request->header('referer'),
+            ]);
+            session()->put($this->funnelUtmSessionKey($funnel->id), $utmData);
+        }
+
         $isFirstStep = (int) $steps->first()->id === (int) $step->id;
         $selectedPricing = $this->syncSelectedPricingFromRequest($request, $funnel, $steps, $step, $isFirstStep);
+
+        // Create funnel visit record for analytics (must never break funnel rendering)
+        try {
+            FunnelVisit::create([
+                'tenant_id' => $funnel->tenant_id,
+                'funnel_id' => $funnel->id,
+                'funnel_step_id' => $step->id,
+                'utm_source' => $utmSource,
+                'utm_medium' => $utmMedium,
+                'utm_campaign' => $utmCampaign,
+                'utm_term' => $utmTerm,
+                'utm_content' => $utmContent,
+                'utm_id' => $utmId,
+                'referrer' => $request->header('referer'),
+                'visited_at' => now(),
+            ]);
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
         $lead = null;
         $leadId = $this->currentLeadId($funnel->id);
         if ($leadId) {
@@ -172,7 +216,17 @@ class FunnelPortalController extends Controller
             $lead->score = 0;
         }
 
-        $lead->name = $name !== '' ? $name : $lead->name;
+        $utmFromRequest = $this->normalizeUtmParameter($request->query('utm_source'));
+        $storedUtm = session()->get($this->funnelUtmSessionKey($funnel->id), []);
+        $utmFromSession = $this->normalizeUtmParameter($storedUtm['utm_source'] ?? null);
+        $referrerFromSession = $storedUtm['referrer'] ?? null;
+
+        $resolvedSource = $utmFromRequest ?: $utmFromSession ?: $this->inferSourceFromReferrer($referrerFromSession);
+        if ($resolvedSource) {
+            $lead->source_campaign = $resolvedSource;
+        }
+
+        $lead->name = $name !== '' ? $name : ($lead->name ?? 'Lead');
         $lead->phone = $phone !== '' ? $phone : ($lead->phone ?? '');
         $lead->tags = $this->mergeTags(
             $lead->tags ?? [],
@@ -218,7 +272,23 @@ class FunnelPortalController extends Controller
             ]);
         }
 
-        session()->put($this->leadSessionKey($funnel->id), $lead->id);
+        // Only send webhook if double opt-in is not required or email is already verified
+        if (!$funnel->require_double_opt_in || $lead->hasVerifiedEmail()) {
+            $this->dispatchFunnelOptInWebhook($lead, $funnel->id, $funnel->name ?? null);
+        }
+
+        // Handle email verification for first-time users if double opt-in is required
+        if ($funnel->require_double_opt_in && !$lead->hasVerifiedEmail()) {
+            // Store lead ID in session for verification flow
+            session()->put("funnel_lead_{$funnel->id}", $lead->id);
+            session()->put("funnel_pending_step_{$funnel->id}", $this->nextStep($steps, $step->id)?->slug ?? '');
+            
+            // Send verification email
+            $lead->notify(new \App\Notifications\LeadVerifyEmail($lead, $funnel->id, $funnel->name, $step->id));
+            
+            // Redirect to confirmation page instead of next step
+            return redirect()->route('funnels.confirm-email', ['funnelSlug' => $funnel->slug]);
+        }
 
         $next = $this->nextStep($steps, $step->id);
         abort_if(! $next, 422, 'No next step configured.');
@@ -1668,5 +1738,101 @@ class FunnelPortalController extends Controller
             ->take(30)
             ->values()
             ->all();
+    }
+
+    private function dispatchFunnelOptInWebhook(Lead $lead, int $funnelId, ?string $funnelName): void
+    {
+        $service = app(AutomationWebhookService::class);
+        $payload = $service->buildFunnelOptInPayload($lead, $funnelId, $funnelName, []);
+        $service->dispatchEvent('funnel.opt_in', $payload);
+    }
+
+    private function dispatchPaymentWebhookIfLeadExists(Payment $payment, string $event): void
+    {
+        if (!$payment->lead_id) {
+            return;
+        }
+        $lead = Lead::withoutGlobalScope('tenant')->where('id', $payment->lead_id)->where('tenant_id', $payment->tenant_id)->first();
+        if (!$lead) {
+            return;
+        }
+        $service = app(AutomationWebhookService::class);
+
+        // MVP rule: payment.paid => Closed Won (and notify n8n via lead.status_changed).
+        if ($event === 'payment.paid') {
+            $oldStatus = (string) ($lead->status ?? '');
+            $newStatus = 'closed_won';
+
+            if ($oldStatus !== $newStatus && !in_array($oldStatus, ['closed_lost', 'closed_won'], true)) {
+                $lead->status = $newStatus;
+                $lead->save();
+
+                $lead->activities()->create([
+                    'activity_type' => 'Scoring',
+                    'notes' => 'Auto: Pipeline Stage updated to closed_won (+0 points)',
+                ]);
+
+                $statusPayload = $service->buildLeadStatusChangedPayload($lead, $oldStatus, $newStatus, []);
+                $service->dispatchEvent('lead.status_changed', $statusPayload);
+            }
+        }
+
+        $payload = $service->buildPaymentPayload($event, $lead, $payment, []);
+        $service->dispatchEvent($event, $payload);
+    }
+
+    /**
+     * Normalize UTM parameter values by cleaning and validating input
+     */
+    private function normalizeUtmParameter(mixed $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+        
+        $clean = trim((string) $value);
+        $clean = preg_replace('/[^a-zA-Z0-9_\-\.]/', '', $clean);
+        
+        return $clean === '' ? null : mb_strtolower($clean);
+    }
+
+    /**
+     * Generate unique session key for storing UTM data per funnel
+     */
+    private function funnelUtmSessionKey(int $funnelId): string
+    {
+        return "funnel_utm_{$funnelId}";
+    }
+
+    /**
+     * Infer traffic source from referrer URL
+     */
+    private function inferSourceFromReferrer(?string $referrer): ?string
+    {
+        if (!$referrer) {
+            return null;
+        }
+        
+        $domain = parse_url($referrer, PHP_URL_HOST);
+        if (!$domain) {
+            return null;
+        }
+        
+        $domainMap = [
+            'google.com' => 'google',
+            'facebook.com' => 'facebook', 
+            'instagram.com' => 'instagram',
+            'linkedin.com' => 'linkedin',
+            'twitter.com' => 'twitter',
+            'youtube.com' => 'youtube',
+        ];
+        
+        foreach ($domainMap as $fullDomain => $source) {
+            if (str_contains($domain, $fullDomain)) {
+                return $source;
+            }
+        }
+        
+        return $domain;
     }
 }

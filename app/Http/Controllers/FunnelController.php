@@ -10,6 +10,7 @@ use App\Models\FunnelStep;
 use App\Models\FunnelStepRevision;
 use App\Models\FunnelTemplate;
 use App\Services\FunnelTrackingService;
+use App\Services\UTMAnalyticsService;
 use App\Support\TenantPlanEnforcer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
@@ -110,6 +111,7 @@ class FunnelController extends Controller
                 'purpose' => $validated['purpose'],
                 'default_tags' => $this->normalizeTagsString($validated['default_tags'] ?? null),
                 'status' => 'draft',
+                'require_double_opt_in' => $request->boolean('require_double_opt_in'),
             ]);
 
             $starterSteps = $this->starterStepsForPurpose($validated['purpose']);
@@ -329,6 +331,10 @@ class FunnelController extends Controller
 
         $events = $tracking->eventsForFunnel($funnel, array_merge($filters, ['per_page' => 15]));
 
+        // NEW: Add UTM analytics for this specific funnel
+        $utmAnalytics = new UTMAnalyticsService();
+        $sourcePerformance = $utmAnalytics->getSourcePerformanceForFunnel($funnel->id, $filters);
+
         return view('funnels.analytics', [
             'funnel' => $funnel->load('steps'),
             'analytics' => $analytics,
@@ -340,6 +346,8 @@ class FunnelController extends Controller
                 'event_name' => $request->query('event_name', ''),
             ],
             'supportedEvents' => $analytics['events_supported'] ?? [],
+            // NEW UTM data
+            'sourcePerformance' => $sourcePerformance,
         ]);
     }
 
@@ -861,11 +869,15 @@ class FunnelController extends Controller
             'status' => [$jsonRequest ? 'sometimes' : 'required', Rule::in(array_keys(Funnel::STATUSES))],
             'default_tags' => [$jsonRequest ? 'sometimes' : 'nullable', 'nullable', 'string', 'max:500'],
             'purpose' => ['sometimes', 'nullable', Rule::in(array_keys(Funnel::PURPOSES))],
+            'require_double_opt_in' => ['sometimes', 'boolean'],
         ]);
 
         try {
             if (array_key_exists('default_tags', $validated)) {
                 $validated['default_tags'] = $this->normalizeTagsString($validated['default_tags'] ?? null);
+            }
+            if (array_key_exists('require_double_opt_in', $validated)) {
+                $validated['require_double_opt_in'] = (bool) $validated['require_double_opt_in'];
             }
             $funnel->update($validated);
             if ($jsonRequest) {

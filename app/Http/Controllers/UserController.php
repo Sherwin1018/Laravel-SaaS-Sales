@@ -2,36 +2,33 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\User;
 use App\Models\Role;
+use App\Models\User;
 use App\Services\SetupTokenService;
 use App\Services\SignupOnboardingService;
 use App\Support\TenantPlanEnforcer;
+use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
 class UserController extends Controller
 {
-    /**
-     * Display a list of ALL users for Super Admin.
-     */
     public function adminIndex(Request $request)
     {
         $query = User::with(['tenant', 'roles']);
 
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhere('status', 'like', "%{$search}%")
-                  ->orWhereHas('roles', function ($roleQuery) use ($search) {
-                      $roleQuery->where('name', 'like', "%{$search}%")
-                          ->orWhere('slug', 'like', "%{$search}%");
-                  })
-                  ->orWhereHas('tenant', function($tq) use ($search) {
-                      $tq->where('company_name', 'like', "%{$search}%");
-                  });
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('status', 'like', "%{$search}%")
+                    ->orWhereHas('roles', function ($roleQuery) use ($search) {
+                        $roleQuery->where('name', 'like', "%{$search}%")
+                            ->orWhere('slug', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('tenant', function ($tenantQuery) use ($search) {
+                        $tenantQuery->where('company_name', 'like', "%{$search}%");
+                    });
             });
         }
 
@@ -44,9 +41,6 @@ class UserController extends Controller
         return view('admin.users.index', compact('users'));
     }
 
-    /**
-     * Display a list of users for the current tenant.
-     */
     public function index(Request $request)
     {
         $tenantId = auth()->user()->tenant_id;
@@ -54,13 +48,13 @@ class UserController extends Controller
 
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhereHas('roles', function ($roleQuery) use ($search) {
-                      $roleQuery->where('name', 'like', "%{$search}%")
-                          ->orWhere('slug', 'like', "%{$search}%");
-                  });
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhereHas('roles', function ($roleQuery) use ($search) {
+                        $roleQuery->where('name', 'like', "%{$search}%")
+                            ->orWhere('slug', 'like', "%{$search}%");
+                    });
             });
         }
 
@@ -74,9 +68,6 @@ class UserController extends Controller
         return view('users.index', compact('users', 'planUsage'));
     }
 
-    /**
-     * Show form to create a new user.
-     */
     public function create()
     {
         try {
@@ -85,15 +76,11 @@ class UserController extends Controller
             return redirect()->route('users.index')->with('error', $e->getMessage());
         }
 
-        // Get roles assignable by account owner
         $roles = Role::whereIn('slug', ['marketing-manager', 'sales-agent', 'finance', 'customer'])->get();
 
         return view('users.create', compact('roles'));
     }
 
-    /**
-     * Store a new user.
-     */
     public function store(Request $request)
     {
         $request->validate([
@@ -104,17 +91,20 @@ class UserController extends Controller
         ]);
 
         try {
-            $tenantId = auth()->user()->tenant_id;
             app(TenantPlanEnforcer::class)->ensureCanCreateUser(auth()->user()->tenant);
 
-            // Create User
+            $role = Role::where('slug', $request->role)->first();
+            if (! $role) {
+                return redirect()->back()->withInput()->with('error', 'Invalid role. Please refresh the page and try again.');
+            }
+
             $user = User::create([
-                'tenant_id' => $tenantId,
+                'tenant_id' => auth()->user()->tenant_id,
                 'name' => $request->name,
                 'email' => $request->email,
                 'phone' => $request->phone,
                 'password' => Str::random(40),
-                'role' => $request->role, // Store slug directly (e.g. 'marketing-manager')
+                'role' => $request->role,
                 'status' => 'inactive',
                 'activation_state' => 'invited',
                 'invited_by' => auth()->id(),
@@ -122,11 +112,7 @@ class UserController extends Controller
                 'is_customer_portal_user' => $request->role === 'customer',
             ]);
 
-            // Attach Role
-            $role = Role::where('slug', $request->role)->first();
-            if ($role) {
-                $user->roles()->syncWithoutDetaching([$role->id]);
-            }
+            $user->roles()->syncWithoutDetaching([$role->id]);
 
             $eventName = $request->role === 'customer'
                 ? 'customer_portal_invited'
@@ -148,12 +134,34 @@ class UserController extends Controller
         }
     }
 
-    /**
-     * Remove the specified user.
-     */
+    public function resendVerification(User $user)
+    {
+        if ($user->tenant_id !== auth()->user()->tenant_id) {
+            abort(403);
+        }
+
+        if ($user->activation_state === 'active') {
+            return redirect()->back()->with('success', 'User is already active.');
+        }
+
+        $eventName = $user->hasRole('customer')
+            ? 'customer_portal_invited'
+            : 'team_member_invited';
+
+        $sent = app(SignupOnboardingService::class)->queueSetupEmail(
+            $user,
+            $eventName,
+            app(SetupTokenService::class),
+        );
+
+        return redirect()->back()->with(
+            $sent ? 'success' : 'error',
+            $sent ? 'Invitation resent successfully.' : 'Invitation could not be resent.'
+        );
+    }
+
     public function destroy(User $user)
     {
-        // Policy: can only delete users from own tenant, and not self
         if ($user->tenant_id !== auth()->user()->tenant_id) {
             abort(403);
         }
@@ -164,6 +172,7 @@ class UserController extends Controller
 
         try {
             $user->delete();
+
             return redirect()->back()->with('success', 'Deleted Successfully');
         } catch (\Throwable $e) {
             return redirect()->back()->with('error', 'Deleted Failed');
@@ -172,7 +181,7 @@ class UserController extends Controller
 
     public function toggleOwnerStatus(Request $request, User $user)
     {
-        if (!$user->hasRole('account-owner')) {
+        if (! $user->hasRole('account-owner')) {
             return redirect()->back()->with('error', 'Edited Failed. Only Account Owner accounts can be updated.');
         }
 
