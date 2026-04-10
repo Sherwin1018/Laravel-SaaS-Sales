@@ -19,9 +19,6 @@
 
     <div class="card" style="max-width: 760px; margin: 0 auto;">
         <h3 style="margin-top: 0;">n8n Workflow Control</h3>
-        <p style="color: #475569; margin-bottom: 20px;">
-            Use this panel to monitor and toggle your n8n workflow state without leaving the app.
-        </p>
 
         @if(!($status['configured'] ?? false))
             <div style="padding: 12px 14px; border-radius: 10px; background: rgba(217, 119, 6, 0.08); color: #92400E; border: 1px solid rgba(217, 119, 6, 0.18); margin-bottom: 18px;">

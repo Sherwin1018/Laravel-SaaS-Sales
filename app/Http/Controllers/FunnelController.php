@@ -2,34 +2,60 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\FunnelOrderDeliveryUpdateMail;
 use App\Models\Funnel;
 use App\Models\FunnelBuilderAsset;
+use App\Models\Lead;
 use App\Models\FunnelStep;
 use App\Models\FunnelStepRevision;
+use App\Models\FunnelTemplate;
 use App\Services\FunnelTrackingService;
 use App\Services\UTMAnalyticsService;
 use App\Support\TenantPlanEnforcer;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
-use Illuminate\Support\Facades\Storage;
 
 class FunnelController extends Controller
 {
     private const MAX_STEP_REVISIONS = 40;
     private const MAX_MANUAL_VERSIONS = 25;
+    private const CREATE_PURPOSE_KEYS = ['service', 'physical_product'];
 
     public function index(Request $request)
     {
         $tenantId = auth()->user()->tenant_id;
         $search = trim((string) $request->query('search', ''));
+        $normalizedSearch = mb_strtolower($search);
+        $purposeMatches = collect(Funnel::PURPOSES)
+            ->filter(function (string $label, string $key) use ($normalizedSearch) {
+                if ($normalizedSearch === '') {
+                    return false;
+                }
+
+                $normalizedLabel = mb_strtolower($label);
+                $normalizedKey = mb_strtolower(str_replace('_', ' ', $key));
+
+                return str_contains($normalizedLabel, $normalizedSearch)
+                    || str_contains($normalizedKey, $normalizedSearch);
+            })
+            ->keys()
+            ->values()
+            ->all();
 
         $funnels = Funnel::where('tenant_id', $tenantId)
-            ->when($search !== '', function ($query) use ($search) {
-                $query->where(function ($innerQuery) use ($search) {
+            ->when($search !== '', function ($query) use ($search, $purposeMatches) {
+                $query->where(function ($innerQuery) use ($search, $purposeMatches) {
                     $innerQuery->where('name', 'like', "%{$search}%")
                         ->orWhere('slug', 'like', "%{$search}%")
-                        ->orWhere('description', 'like', "%{$search}%");
+                        ->orWhere('description', 'like', "%{$search}%")
+                        ->orWhere('purpose', 'like', "%{$search}%");
+
+                    if ($purposeMatches !== []) {
+                        $innerQuery->orWhereIn('purpose', $purposeMatches);
+                    }
                 });
             })
             ->withCount('steps')
@@ -53,7 +79,13 @@ class FunnelController extends Controller
             return redirect()->route('funnels.index')->with('error', $e->getMessage());
         }
 
-        return view('funnels.create');
+        $purposeOptions = collect(Funnel::PURPOSES)
+            ->only(self::CREATE_PURPOSE_KEYS)
+            ->all();
+
+        return view('funnels.create', [
+            'purposeOptions' => $purposeOptions,
+        ]);
     }
 
     public function store(Request $request)
@@ -61,6 +93,7 @@ class FunnelController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:120',
             'description' => 'nullable|string|max:2000',
+            'purpose' => ['required', Rule::in(self::CREATE_PURPOSE_KEYS)],
             'default_tags' => 'nullable|string|max:500',
         ]);
 
@@ -68,25 +101,20 @@ class FunnelController extends Controller
 
         try {
             app(TenantPlanEnforcer::class)->ensureCanCreateFunnel($user->tenant);
+
             $funnel = Funnel::create([
                 'tenant_id' => $user->tenant_id,
                 'created_by' => $user->id,
                 'name' => $validated['name'],
                 'slug' => $this->generateUniqueFunnelSlug($validated['name'], $user->tenant_id),
                 'description' => $validated['description'] ?? null,
+                'purpose' => $validated['purpose'],
                 'default_tags' => $this->normalizeTagsString($validated['default_tags'] ?? null),
                 'status' => 'draft',
                 'require_double_opt_in' => $request->boolean('require_double_opt_in'),
             ]);
 
-            // Starter flow: Landing -> Opt-in -> Sales -> Checkout -> Thank You
-            $starterSteps = [
-                ['title' => 'Landing', 'slug' => 'landing', 'type' => 'landing', 'content' => 'Welcome to our funnel.', 'cta_label' => 'Continue'],
-                ['title' => 'Opt-in', 'slug' => 'opt-in', 'type' => 'opt_in', 'content' => 'Fill out the form to continue.', 'cta_label' => 'Submit'],
-                ['title' => 'Sales', 'slug' => 'sales', 'type' => 'sales', 'content' => 'Present your offer details here.', 'cta_label' => 'Go to Checkout'],
-                ['title' => 'Checkout', 'slug' => 'checkout', 'type' => 'checkout', 'content' => 'Complete your order.', 'cta_label' => 'Pay Now', 'price' => 1000],
-                ['title' => 'Thank You', 'slug' => 'thank-you', 'type' => 'thank_you', 'content' => 'Thank you for your purchase.', 'cta_label' => null],
-            ];
+            $starterSteps = $this->starterStepsForPurpose($validated['purpose']);
 
             foreach ($starterSteps as $index => $step) {
                 $createdStep = FunnelStep::create([
@@ -112,6 +140,35 @@ class FunnelController extends Controller
         }
     }
 
+    private function starterStepsForPurpose(string $purpose): array
+    {
+        return match (Funnel::normalizePurpose($purpose)) {
+            'digital_product' => [
+                ['title' => 'Sales', 'slug' => 'sales', 'type' => 'sales', 'content' => 'Present your digital product offer here.', 'cta_label' => 'Go to Checkout'],
+                ['title' => 'Checkout', 'slug' => 'checkout', 'type' => 'checkout', 'content' => 'Complete your digital order.', 'cta_label' => 'Pay Now', 'price' => 1000],
+                ['title' => 'Thank You', 'slug' => 'thank-you', 'type' => 'thank_you', 'content' => 'Thank you for your purchase. Deliver access details here.', 'cta_label' => null],
+            ],
+            'physical_product' => [
+                ['title' => 'Sales', 'slug' => 'sales', 'type' => 'sales', 'content' => 'Show the product, price, benefits, and buying reason here.', 'cta_label' => 'Buy Now'],
+                ['title' => 'Checkout', 'slug' => 'checkout', 'type' => 'checkout', 'content' => 'Collect customer, shipping, and payment details here.', 'cta_label' => 'Place Order', 'price' => 1000],
+                ['title' => 'Thank You', 'slug' => 'thank-you', 'type' => 'thank_you', 'content' => 'Confirm the order and tell the buyer what happens next.', 'cta_label' => null],
+            ],
+            'hybrid' => [
+                ['title' => 'Landing', 'slug' => 'landing', 'type' => 'landing', 'content' => 'Introduce the offer and guide buyers into the right next step.', 'cta_label' => 'Continue'],
+                ['title' => 'Sales', 'slug' => 'sales', 'type' => 'sales', 'content' => 'Present the main offer details here.', 'cta_label' => 'Go to Checkout'],
+                ['title' => 'Checkout', 'slug' => 'checkout', 'type' => 'checkout', 'content' => 'Complete your order here.', 'cta_label' => 'Pay Now', 'price' => 1000],
+                ['title' => 'Thank You', 'slug' => 'thank-you', 'type' => 'thank_you', 'content' => 'Thank you for your purchase.', 'cta_label' => null],
+            ],
+            default => [
+                ['title' => 'Landing', 'slug' => 'landing', 'type' => 'landing', 'content' => 'Welcome to our funnel.', 'cta_label' => 'Continue'],
+                ['title' => 'Opt-in', 'slug' => 'opt-in', 'type' => 'opt_in', 'content' => 'Fill out the form to continue.', 'cta_label' => 'Submit'],
+                ['title' => 'Sales', 'slug' => 'sales', 'type' => 'sales', 'content' => 'Present your offer details here.', 'cta_label' => 'Go to Checkout'],
+                ['title' => 'Checkout', 'slug' => 'checkout', 'type' => 'checkout', 'content' => 'Complete your order.', 'cta_label' => 'Pay Now', 'price' => 1000],
+                ['title' => 'Thank You', 'slug' => 'thank-you', 'type' => 'thank_you', 'content' => 'Thank you for your purchase.', 'cta_label' => null],
+            ],
+        };
+    }
+
     public function edit(Funnel $funnel)
     {
         $this->ensureTenantFunnelAccess($funnel);
@@ -134,7 +191,103 @@ class FunnelController extends Controller
             'stepLayouts' => FunnelStep::LAYOUTS,
             'stepTemplates' => FunnelStep::TEMPLATES,
             'defaultStepId' => $defaultStep?->id,
+            'builderSharedTemplates' => $this->builderSharedTemplatesPayload(),
+            'builderSharedTemplatesUrl' => route('funnels.shared-templates'),
         ]);
+    }
+
+    public function sharedTemplates()
+    {
+        return response()->json([
+            'templates' => $this->builderSharedTemplatesPayload(),
+        ]);
+    }
+
+    private function builderSharedTemplatesPayload(): array
+    {
+        return FunnelTemplate::query()
+            ->where('status', 'published')
+            ->where('template_type', '!=', FunnelTemplate::TEMPLATE_TYPE_UNCATEGORIZED)
+            ->with(['steps' => fn ($query) => $query->orderBy('position')])
+            ->latest('published_at')
+            ->latest('id')
+            ->get()
+            ->map(function (FunnelTemplate $template) {
+                $steps = $template->steps
+                    ->sortBy('position')
+                    ->values()
+                    ->map(function ($step) {
+                        return [
+                            'id' => $step->id,
+                            'title' => $step->title,
+                            'slug' => $step->slug,
+                            'type' => $step->type,
+                            'subtitle' => $step->subtitle,
+                            'content' => $step->content,
+                            'cta_label' => $step->cta_label,
+                            'price' => $step->price,
+                            'position' => $step->position,
+                            'is_active' => (bool) $step->is_active,
+                            'template' => $step->template,
+                            'template_data' => $step->template_data,
+                            'step_tags' => $step->step_tags,
+                            'background_color' => $step->background_color,
+                            'button_color' => $step->button_color,
+                            'layout_style' => $step->layout_style,
+                            'layout_json' => $step->layout_json,
+                        ];
+                    })
+                    ->all();
+
+                $firstType = (string) data_get($steps, '0.type', 'custom');
+                $preview = in_array($firstType, ['checkout', 'sales'], true)
+                    ? 'pricing'
+                    : (in_array($firstType, ['opt_in', 'form'], true) ? 'lead' : 'hero');
+                $stepTypeTags = collect($steps)
+                    ->pluck('type')
+                    ->filter()
+                    ->map(fn ($type) => strtoupper(str_replace('_', ' ', (string) $type)))
+                    ->unique()
+                    ->take(2)
+                    ->values()
+                    ->all();
+
+                return [
+                    'id' => 'shared_template_' . $template->id,
+                    'template_id' => $template->id,
+                    'name' => $template->name,
+                    'description' => $template->description ?: 'Saved super-admin funnel template.',
+                    'template_type' => (string) $template->template_type,
+                    'status' => (string) $template->status,
+                    'update_url' => null,
+                    'preview' => $preview,
+                    'preview_image' => $template->preview_image,
+                    'tags' => $this->templateCardTags($template, count($steps), $stepTypeTags),
+                    'steps' => $steps,
+                ];
+            })
+            ->all();
+    }
+
+    private function templateCardTags(FunnelTemplate $template, int $stepCount, array $fallbackStepTypeTags): array
+    {
+        $custom = collect($template->template_tags ?? [])
+            ->map(fn ($tag) => trim((string) $tag))
+            ->filter()
+            ->take(6)
+            ->values()
+            ->all();
+
+        if (!empty($custom)) {
+            return $custom;
+        }
+
+        return array_values(array_filter(array_merge(
+            [$template->templateTypeLabel()],
+            [$stepCount . ' Pages'],
+            $fallbackStepTypeTags,
+            [strtoupper((string) $template->status)]
+        )));
     }
 
     public function preview(Request $request, Funnel $funnel, ?FunnelStep $step = null)
@@ -227,6 +380,76 @@ class FunnelController extends Controller
         }, $filename, [
             'Content-Type' => 'text/csv',
         ]);
+    }
+
+    public function sendDeliveryUpdate(Request $request, Funnel $funnel, FunnelTrackingService $tracking)
+    {
+        $this->ensureTenantFunnelAccess($funnel);
+
+        $validated = $request->validate([
+            'order_key' => 'required|string|max:191',
+            'recipient_email' => 'nullable|email|max:150',
+            'delivery_status' => ['required', Rule::in(['processing', 'shipped', 'out_for_delivery', 'delivered'])],
+            'tracking_url' => 'nullable|url|max:2000',
+            'courier_name' => 'nullable|string|max:80',
+            'custom_message' => 'nullable|string|max:600',
+        ]);
+
+        $order = $tracking->findPhysicalOrderRow($funnel, (string) $validated['order_key']);
+        if (! is_array($order)) {
+            return redirect()->back()->with('error', 'Order could not be found.');
+        }
+        if (($order['order_status'] ?? '') !== 'paid') {
+            return redirect()->back()->with('error', 'Only paid orders can receive delivery update emails.');
+        }
+
+        $recipientEmail = trim((string) ($validated['recipient_email'] ?? ($order['email'] ?? '')));
+        if ($recipientEmail === '') {
+            return redirect()->back()->with('error', 'This order does not have a customer email address.');
+        }
+
+        $courierName = trim((string) ($validated['courier_name'] ?? ''));
+        if ($courierName === '') {
+            $courierName = 'LBC';
+        }
+
+        try {
+            Mail::to($recipientEmail)->send(new FunnelOrderDeliveryUpdateMail(
+                (string) $funnel->name,
+                (string) ($order['customer'] ?? 'Customer'),
+                (string) $validated['delivery_status'],
+                trim((string) ($validated['tracking_url'] ?? '')) ?: null,
+                $courierName,
+                is_array($order['order_items'] ?? null) ? $order['order_items'] : [],
+                (int) ($order['order_quantity'] ?? 0),
+                trim((string) ($validated['custom_message'] ?? '')) ?: null
+            ));
+        } catch (\Throwable $e) {
+            return redirect()->back()->with('error', 'Delivery update email failed to send.');
+        }
+
+        $tracking->trackOrderDeliveryUpdate($funnel, $order, [
+            'recipient_email' => $recipientEmail,
+            'delivery_status' => (string) $validated['delivery_status'],
+            'tracking_url' => trim((string) ($validated['tracking_url'] ?? '')),
+            'courier_name' => $courierName,
+            'custom_message' => trim((string) ($validated['custom_message'] ?? '')),
+        ]);
+
+        $leadId = (int) ($order['lead_id'] ?? 0);
+        if ($leadId > 0) {
+            $lead = Lead::query()
+                ->where('tenant_id', auth()->user()->tenant_id)
+                ->find($leadId);
+            if ($lead) {
+                $lead->activities()->create([
+                    'activity_type' => 'Delivery Update Sent',
+                    'notes' => 'Sent ' . Str::headline((string) $validated['delivery_status']) . ' update to ' . $recipientEmail,
+                ]);
+            }
+        }
+
+        return redirect()->back()->with('success', 'Delivery update emailed successfully.');
     }
 
     public function events(Request $request, Funnel $funnel, FunnelTrackingService $tracking)
@@ -616,7 +839,7 @@ class FunnelController extends Controller
         if ($steps->isEmpty()) {
             return redirect()->back()->with('error', 'Publishing failed: add at least one active step.');
         }
-        $issues = $this->validatePublishReadiness($steps);
+        $issues = $this->validatePublishReadiness($steps, (string) $funnel->purpose);
         if (count($issues) > 0) {
             return redirect()->back()->with('error', 'Publishing failed: ' . implode(' ', $issues));
         }
@@ -639,19 +862,40 @@ class FunnelController extends Controller
     {
         $this->ensureTenantFunnelAccess($funnel);
 
+        $jsonRequest = $request->expectsJson();
         $validated = $request->validate([
-            'name' => 'required|string|max:120',
-            'description' => 'nullable|string|max:2000',
-            'status' => ['required', Rule::in(array_keys(Funnel::STATUSES))],
-            'default_tags' => 'nullable|string|max:500',
+            'name' => [$jsonRequest ? 'sometimes' : 'required', 'string', 'max:120'],
+            'description' => [$jsonRequest ? 'sometimes' : 'nullable', 'nullable', 'string', 'max:2000'],
+            'status' => [$jsonRequest ? 'sometimes' : 'required', Rule::in(array_keys(Funnel::STATUSES))],
+            'default_tags' => [$jsonRequest ? 'sometimes' : 'nullable', 'nullable', 'string', 'max:500'],
+            'purpose' => ['sometimes', 'nullable', Rule::in(array_keys(Funnel::PURPOSES))],
+            'require_double_opt_in' => ['sometimes', 'boolean'],
         ]);
 
         try {
-            $validated['default_tags'] = $this->normalizeTagsString($validated['default_tags'] ?? null);
-            $validated['require_double_opt_in'] = $request->boolean('require_double_opt_in');
+            if (array_key_exists('default_tags', $validated)) {
+                $validated['default_tags'] = $this->normalizeTagsString($validated['default_tags'] ?? null);
+            }
+            if (array_key_exists('require_double_opt_in', $validated)) {
+                $validated['require_double_opt_in'] = (bool) $validated['require_double_opt_in'];
+            }
             $funnel->update($validated);
+            if ($jsonRequest) {
+                return response()->json([
+                    'message' => 'Edited Successfully',
+                    'funnel' => [
+                        'id' => $funnel->id,
+                        'purpose' => (string) $funnel->fresh()->purpose,
+                    ],
+                ]);
+            }
             return redirect()->back()->with('success', 'Edited Successfully');
         } catch (\Throwable $e) {
+            if ($jsonRequest) {
+                return response()->json([
+                    'message' => 'Edited Failed',
+                ], 422);
+            }
             return redirect()->back()->withInput()->with('error', 'Edited Failed');
         }
     }
@@ -1174,8 +1418,8 @@ class FunnelController extends Controller
         $sanitizeElement = function (array $element): array {
             $type = (string) ($element['type'] ?? 'text');
             $type = in_array($type, [
-                'heading', 'text', 'image', 'button', 'icon', 'form', 'video', 'countdown', 'spacer', 'menu', 'carousel',
-                'testimonial', 'faq', 'pricing',
+                'heading', 'text', 'image', 'button', 'icon', 'form', 'shipping_details', 'video', 'countdown', 'spacer', 'menu', 'carousel',
+                'testimonial', 'faq', 'pricing', 'product_offer', 'checkout_summary', 'physical_checkout_summary', 'review_form', 'reviews',
             ], true) ? $type : 'text';
 
             $rawContent = (string) ($element['content'] ?? '');
@@ -1313,6 +1557,12 @@ class FunnelController extends Controller
             }
             if (isset($layout['__editor']['canvasWidth']) && is_numeric($layout['__editor']['canvasWidth'])) {
                 $editor['canvasWidth'] = (int) $layout['__editor']['canvasWidth'];
+            }
+            if (isset($layout['__editor']['canvasInnerWidth']) && is_numeric($layout['__editor']['canvasInnerWidth'])) {
+                $editor['canvasInnerWidth'] = (int) $layout['__editor']['canvasInnerWidth'];
+            }
+            if (isset($layout['__editor']['canvasContentWidth']) && is_numeric($layout['__editor']['canvasContentWidth'])) {
+                $editor['canvasContentWidth'] = (int) $layout['__editor']['canvasContentWidth'];
             }
             if (! empty($editor)) {
                 $result['__editor'] = $editor;
@@ -1529,6 +1779,8 @@ class FunnelController extends Controller
         }
         foreach ([
             'quote' => 2000,
+            'heading' => 300,
+            'physicalHeading' => 300,
             'name' => 200,
             'role' => 200,
             'avatar' => 2048,
@@ -1537,15 +1789,24 @@ class FunnelController extends Controller
             'regularPrice' => 200,
             'period' => 60,
             'subtitle' => 300,
+            'physicalSubtitle' => 500,
+            'description' => 4000,
             'badge' => 80,
+            'buttonLabel' => 120,
+            'successMessage' => 500,
+            'publicLabel' => 300,
+            'emptyText' => 500,
             'ctaLabel' => 120,
             'ctaActionStepSlug' => 120,
             'ctaLink' => 2048,
+            'quickViewLabel' => 120,
             'endAt' => 120,
             'label' => 120,
             'expiredText' => 200,
             'promoKey' => 120,
             'linkedPricingId' => 120,
+            'expandLabel' => 120,
+            'collapseLabel' => 120,
         ] as $k => $maxLen) {
             $v = $readStringAllowEmpty($k, $maxLen);
             if ($v !== null) {
@@ -1570,6 +1831,7 @@ class FunnelController extends Controller
             'buttonAlign' => ['left', 'center', 'right'],
             'vAlign' => ['top', 'center', 'bottom'],
             'slideshowMode' => ['manual', 'auto'],
+            'layout' => ['list', 'grid'],
             'actionType' => ['next_step', 'step', 'link', 'checkout', 'offer_accept', 'offer_decline'],
             'ctaActionType' => ['next_step', 'step', 'link', 'checkout'],
             'positionMode' => ['absolute', 'relative', 'flow'],
@@ -1580,7 +1842,7 @@ class FunnelController extends Controller
             }
         }
 
-        foreach (['autoplay', 'controls', 'showArrows', 'imageRadiusLinked', 'videoRadiusLinked'] as $k) {
+        foreach (['autoplay', 'controls', 'showArrows', 'imageRadiusLinked', 'videoRadiusLinked', 'quickViewEnabled', 'cartEnabled', 'showRating', 'showDate', 'collapsible'] as $k) {
             $v = $readBool($k);
             if ($v !== null) {
                 $safe[$k] = $v;
@@ -1593,6 +1855,8 @@ class FunnelController extends Controller
             'activeSlide' => [0, 500],
             'carouselActiveRow' => [0, 500],
             'carouselActiveCol' => [0, 500],
+            'activeMedia' => [0, 500],
+            'stockQuantity' => [0, 1000000],
             'fixedWidth' => [50, 2400],
             'fixedHeight' => [50, 1600],
             'offsetX' => [-2400, 2400],
@@ -1602,6 +1866,9 @@ class FunnelController extends Controller
             'cropRight' => [0, 2400],
             'cropBottom' => [0, 1800],
             'cropLeft' => [0, 2400],
+            'maxItems' => [1, 24],
+            'filterRating' => [0, 5],
+            'collapsedCount' => [1, 24],
         ] as $k => $range) {
             $v = $readInt($k, $range[0], $range[1]);
             if ($v !== null) {
@@ -1717,6 +1984,30 @@ class FunnelController extends Controller
             $safe['slides'] = $this->sanitizeCarouselSlides($settings['slides']);
         }
 
+        if (isset($settings['media']) && is_array($settings['media'])) {
+            $safe['media'] = collect($settings['media'])
+                ->filter(fn ($item) => is_array($item) || is_string($item))
+                ->take(20)
+                ->map(function ($item, int $index) {
+                    if (is_string($item)) {
+                        $item = ['type' => 'image', 'src' => $item];
+                    }
+                    $item = is_array($item) ? $item : [];
+                    $type = strtolower(trim((string) ($item['type'] ?? 'image')));
+                    if (! in_array($type, ['image', 'video'], true)) {
+                        $type = 'image';
+                    }
+                    return [
+                        'type' => $type,
+                        'src' => mb_substr(trim((string) ($item['src'] ?? '')), 0, 2048),
+                        'alt' => mb_substr(trim((string) ($item['alt'] ?? ('Media ' . ($index + 1)))), 0, 300),
+                        'poster' => mb_substr(trim((string) ($item['poster'] ?? '')), 0, 2048),
+                    ];
+                })
+                ->values()
+                ->all();
+        }
+
         if (isset($settings['menuCollapsed']) && is_array($settings['menuCollapsed'])) {
             $safe['menuCollapsed'] = collect($settings['menuCollapsed'])
                 ->take(100)
@@ -1750,8 +2041,8 @@ class FunnelController extends Controller
                                     ->map(function (array $element) {
                                         $type = (string) ($element['type'] ?? 'text');
                                         $type = in_array($type, [
-                                            'heading', 'text', 'image', 'button', 'icon', 'form', 'video', 'countdown', 'spacer', 'menu', 'carousel',
-                                            'testimonial', 'faq', 'pricing',
+                                            'heading', 'text', 'image', 'button', 'icon', 'form', 'shipping_details', 'video', 'countdown', 'spacer', 'menu', 'carousel',
+                                            'testimonial', 'faq', 'pricing', 'product_offer', 'checkout_summary', 'physical_checkout_summary', 'review_form', 'reviews',
                                         ], true) ? $type : 'text';
 
                                         $rawContent = (string) ($element['content'] ?? '');
@@ -1857,6 +2148,11 @@ class FunnelController extends Controller
         $cw = trim((string) ($settings['contentWidth'] ?? ''));
         if (in_array($cw, ['full', 'wide', 'medium', 'small', 'xsmall'], true)) {
             $safe['contentWidth'] = $cw;
+        }
+
+        $stageWidth = (int) ($settings['stageWidth'] ?? 0);
+        if ($stageWidth >= 1 && $stageWidth <= 5000) {
+            $safe['stageWidth'] = $stageWidth;
         }
 
         $anchorId = trim((string) ($settings['anchorId'] ?? ''));
@@ -2068,11 +2364,20 @@ class FunnelController extends Controller
         return $value;
     }
 
-    private function validatePublishReadiness($steps): array
+    private function requiredStepTypesForPurpose(string $purpose): array
+    {
+        return match (Funnel::normalizePurpose($purpose)) {
+            'digital_product', 'physical_product' => ['sales', 'checkout', 'thank_you'],
+            'hybrid' => ['landing', 'sales', 'checkout', 'thank_you'],
+            default => ['landing', 'opt_in', 'sales', 'checkout', 'thank_you'],
+        };
+    }
+
+    private function validatePublishReadiness($steps, string $purpose = 'service'): array
     {
         $ordered = collect($steps)->values();
         $issues = [];
-        $requiredTypes = ['landing', 'opt_in', 'sales', 'checkout', 'thank_you'];
+        $requiredTypes = $this->requiredStepTypesForPurpose($purpose);
         $activeSlugs = $ordered
             ->map(fn ($step) => strtolower(trim((string) ($step->slug ?? ''))))
             ->filter()
@@ -2246,6 +2551,33 @@ class FunnelController extends Controller
                     } elseif ($isCheckoutStep) {
                         $stats['checkoutActionCount']++;
                     }
+                }
+                if ($type === 'product_offer') {
+                    $actionType = strtolower(trim((string) ($settings['ctaActionType'] ?? '')));
+                    $link = trim((string) ($settings['ctaLink'] ?? ''));
+                    $stepSlug = trim((string) ($settings['ctaActionStepSlug'] ?? ''));
+                    if ($actionType === '') {
+                        $actionType = ($link !== '' && $link !== '#') ? 'link' : 'next_step';
+                    }
+                    if ($actionType === 'next_step') {
+                        $stats['navigateActionCount']++;
+                    } elseif ($actionType === 'step' && $stepSlug !== '') {
+                        $stats['navigateActionCount']++;
+                        if (! $normalizedSlugs->contains(strtolower($stepSlug))) {
+                            $stats['invalidTargetCount']++;
+                        }
+                    } elseif ($actionType === 'link' && $link !== '' && $link !== '#') {
+                        $stats['navigateActionCount']++;
+                    } elseif ($actionType === 'checkout') {
+                        $stats['checkoutActionCount']++;
+                    } elseif ($actionType === 'offer_accept') {
+                        $stats['offerAcceptActionCount']++;
+                    } elseif ($actionType === 'offer_decline') {
+                        $stats['offerDeclineActionCount']++;
+                    }
+                }
+                if ($type === 'checkout_summary' || $type === 'physical_checkout_summary') {
+                    $stats['checkoutActionCount']++;
                 }
                 if ($type === 'carousel') {
                     $slides = is_array($settings['slides'] ?? null) ? $settings['slides'] : [];

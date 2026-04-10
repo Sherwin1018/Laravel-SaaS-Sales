@@ -1,0 +1,10 @@
+﻿        .team-table-scroll {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .team-table {
+            min-width: 760px;
+        }
+    

@@ -1,6 +1,10 @@
-@extends('layouts.admin')
+﻿@extends('layouts.admin')
 
 @section('title', 'Finance Dashboard')
+
+@section('styles')
+        <link rel="stylesheet" href="{{ asset('css/extracted/dashboard-finance-style1.css') }}">
+@endsection
 
 @php
     $companyName = optional(auth()->user()->tenant)->company_name ?? 'No Company';
@@ -35,29 +39,41 @@
     <div class="kpi-cards">
         <div class="card">
             <h3>Paid Total</h3>
-            <p>₱{{ number_format((float) ($statusAmounts['paid'] ?? 0), 2) }}</p>
+            <p>â‚±{{ number_format((float) ($statusAmounts['paid'] ?? 0), 2) }}</p>
         </div>
         <div class="card">
             <h3>Pending Total</h3>
-            <p>₱{{ number_format((float) ($statusAmounts['pending'] ?? 0), 2) }}</p>
+            <p>â‚±{{ number_format((float) ($statusAmounts['pending'] ?? 0), 2) }}</p>
         </div>
         <div class="card">
             <h3>Failed Total</h3>
-            <p>₱{{ number_format((float) ($statusAmounts['failed'] ?? 0), 2) }}</p>
+            <p>â‚±{{ number_format((float) ($statusAmounts['failed'] ?? 0), 2) }}</p>
         </div>
         <div class="card">
             <h3>Outstanding Invoices</h3>
-            <p>{{ $outstandingCount }} ({{ '₱' . number_format($outstandingAmount, 2) }})</p>
+            <p>{{ $outstandingCount }} ({{ 'â‚±' . number_format($outstandingAmount, 2) }})</p>
         </div>
     </div>
 
     <div class="charts">
         <div class="chart">
-            <h3>Payment Collection Trend (Paid)</h3>
+            <div class="chart-heading">
+                <h3>Payment Collection Trend (Paid)</h3>
+                <span class="chart-help-wrap">
+                    <span class="chart-help-dot" tabindex="0" aria-label="Collection trend help">?</span>
+                    <span class="chart-help-tip">Shows paid amount collected over time.</span>
+                </span>
+            </div>
             <canvas id="collectionTrendChart"></canvas>
         </div>
         <div class="chart">
-            <h3>Payment Status Distribution</h3>
+            <div class="chart-heading">
+                <h3>Payment Status Distribution</h3>
+                <span class="chart-help-wrap">
+                    <span class="chart-help-dot" tabindex="0" aria-label="Payment distribution help">?</span>
+                    <span class="chart-help-tip">Shows how payments are split across paid, pending, and failed statuses.</span>
+                </span>
+            </div>
             <canvas id="paymentStatusChart"></canvas>
         </div>
     </div>
@@ -77,7 +93,7 @@
                     <tr>
                         <td>{{ $invoice->payment_date->format('Y-m-d') }}</td>
                         <td>{{ $invoice->lead->name ?? 'N/A' }}</td>
-                        <td>₱{{ number_format((float) $invoice->amount, 2) }}</td>
+                        <td>â‚±{{ number_format((float) $invoice->amount, 2) }}</td>
                     </tr>
                 @empty
                     <tr>
@@ -129,3 +145,4 @@
         });
     </script>
 @endsection
+

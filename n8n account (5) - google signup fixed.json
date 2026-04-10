@@ -1,0 +1,2611 @@
+{
+    "name": "n8n account (google fixed)",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "laravel-auth-events",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2.1,
+            "position": [
+                -1440,
+                640
+            ],
+            "id": "e7ce4fbc-91f4-4c9d-843e-a43f1a83fd58",
+            "name": "Webhook1",
+            "webhookId": "b0fb7ff7-0604-480b-8a14-7bdaf797900f"
+        },
+        {
+            "parameters": {
+                "mode": "runOnceForEachItem",
+                "jsCode": "const incoming = $json.body ?? $json;\nlet body = incoming;\n\nif (typeof body === 'string') {\n  try { body = JSON.parse(body); } catch (e) {}\n}\n\nif (!body || typeof body !== 'object' || Array.isArray(body)) {\n  throw new Error('Payload body must be an object');\n}\n\nconst required = ['event_name', 'email', 'name', 'setup_url', 'expires_at'];\nfor (const key of required) {\n  if (!body[key]) throw new Error(`Missing ${key}`);\n}\n\nreturn { json: body };"
+            },
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                -1024,
+                640
+            ],
+            "id": "58cd5e89-0099-46f5-b0ca-3cbefce6f5fc",
+            "name": "ValidatePayload1"
+        },
+        {
+            "parameters": {
+                "rules": {
+                    "values": [
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict",
+                                    "version": 3
+                                },
+                                "conditions": [
+                                    {
+                                        "id": "a041a6b1-a176-44c4-9c6d-e493d5fc76d9",
+                                        "leftValue": "={{$json.event_name}}",
+                                        "rightValue": "account_owner_paid_signup_created",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "equals",
+                                            "name": "filter.operator.equals"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            },
+                            "renameOutput": true,
+                            "outputKey": "account_owner"
+                        },
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict",
+                                    "version": 3
+                                },
+                                "conditions": [
+                                    {
+                                        "id": "bfdb3ca2-92d0-4ab4-8b25-a964be36dd9e",
+                                        "leftValue": "={{$json.event_name}}",
+                                        "rightValue": "team_member_invited",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "equals",
+                                            "name": "filter.operator.equals"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            },
+                            "renameOutput": true,
+                            "outputKey": "team_invite"
+                        },
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict",
+                                    "version": 3
+                                },
+                                "conditions": [
+                                    {
+                                        "id": "bf5989ba-c68d-4f2c-a352-11a73c2366ce",
+                                        "leftValue": "={{$json.event_name}}",
+                                        "rightValue": "customer_portal_invited",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "equals",
+                                            "name": "filter.operator.equals"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            },
+                            "renameOutput": true,
+                            "outputKey": "customer_invite"
+                        },
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict",
+                                    "version": 3
+                                },
+                                "conditions": [
+                                    {
+                                        "id": "6ec36ddc-c4f1-4b48-9954-043542f50e88",
+                                        "leftValue": "={{$json.event_name}}",
+                                        "rightValue": "setup_link_expiring",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "equals",
+                                            "name": "filter.operator.equals"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            },
+                            "renameOutput": true,
+                            "outputKey": "expiring"
+                        },
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict",
+                                    "version": 3
+                                },
+                                "conditions": [
+                                    {
+                                        "id": "dbb7f841-3016-4abd-92c7-5440eba00343",
+                                        "leftValue": "={{$json.event_name}}",
+                                        "rightValue": "setup_link_expired",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "equals",
+                                            "name": "filter.operator.equals"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            },
+                            "renameOutput": true,
+                            "outputKey": "expired"
+                        },
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict",
+                                    "version": 3
+                                },
+                                "conditions": [
+                                    {
+                                        "id": "75654450-e47a-4a09-bea9-b415d359e89d",
+                                        "leftValue": "={{$json.event_name}}",
+                                        "rightValue": "payment_successful",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "equals",
+                                            "name": "filter.operator.equals"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            },
+                            "renameOutput": true,
+                            "outputKey": "payment_success"
+                        },
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict",
+                                    "version": 3
+                                },
+                                "conditions": [
+                                    {
+                                        "id": "9e30bf05-ca6c-4a30-bd8c-09c164e9b595",
+                                        "leftValue": "={{$json.event_name}}",
+                                        "rightValue": "account_owner_google_paid_signup_created",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "equals",
+                                            "name": "filter.operator.equals"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            },
+                            "renameOutput": true,
+                            "outputKey": "account_owner_google"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.switch",
+            "typeVersion": 3.4,
+            "position": [
+                -816,
+                576
+            ],
+            "id": "2ecef822-9add-4166-941f-e46cdc126595",
+            "name": "RouteByEvent1"
+        },
+        {
+            "parameters": {
+                "assignments": {
+                    "assignments": [
+                        {
+                            "id": "ff1703bc-3b33-482a-b326-17c8c782f014",
+                            "name": "subject",
+                            "value": "Welcome! Activate your account",
+                            "type": "string"
+                        },
+                        {
+                            "id": "5a5c2101-8cac-446a-a35b-91a816feb610",
+                            "name": "html",
+                            "value": "=<p>Hi {{$json.name}},</p><p>Your payment was successful.</p><p>Set your password and activate your account:</p><p><a href=\"{{$json.setup_url}}\">Activate account</a></p><p>This link expires on {{$json.expires_at}}.</p><p>Login: <a href=\"{{$json.login_url || 'http://127.0.0.1:8000/login'}}\">{{$json.login_url || 'http://127.0.0.1:8000/login'}}</a></p>",
+                            "type": "string"
+                        }
+                    ]
+                },
+                "includeOtherFields": true,
+                "options": {}
+            },
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.4,
+            "position": [
+                -288,
+                240
+            ],
+            "id": "5a1e4450-2ff5-49a4-a055-08a72b62d121",
+            "name": "TplAccountOwner1"
+        },
+        {
+            "parameters": {
+                "assignments": {
+                    "assignments": [
+                        {
+                            "id": "bee179b8-26d6-40e8-a9d1-ffc0b56798eb",
+                            "name": "subject",
+                            "value": "You were invited to join the team",
+                            "type": "string"
+                        },
+                        {
+                            "id": "4bbfe75b-22ac-4b68-9dd8-6f0ee80c7fa1",
+                            "name": "html",
+                            "value": "=<p>Hi {{$json.name}},</p><p>You have been invited as a team member.</p><p>Please verify and set your password:</p><p><a href=\"{{$json.setup_url}}\">Accept invite</a></p><p>This link expires on {{$json.expires_at}}.</p><p>Login: <a href=\"{{$json.login_url || 'http://127.0.0.1:8000/login'}}\">{{$json.login_url || 'http://127.0.0.1:8000/login'}}</a></p>",
+                            "type": "string"
+                        }
+                    ]
+                },
+                "includeOtherFields": true,
+                "options": {}
+            },
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.4,
+            "position": [
+                -288,
+                400
+            ],
+            "id": "968a4ffb-c9be-4ba4-9dda-918048fd6030",
+            "name": "TplTeamInvite1"
+        },
+        {
+            "parameters": {
+                "assignments": {
+                    "assignments": [
+                        {
+                            "id": "92bb31bc-276f-45ae-818e-d581987401ce",
+                            "name": "subject",
+                            "value": "Your customer portal is ready",
+                            "type": "string"
+                        },
+                        {
+                            "id": "d97e5a57-0a80-4591-b5d3-8fbb7db555d0",
+                            "name": "html",
+                            "value": "=<p>Hi {{$json.name}},</p><p>Your portal access is ready.</p><p>Set your password here:</p><p><a href=\"{{$json.setup_url}}\">Set password</a></p><p>This link expires on {{$json.expires_at}}.</p><p>Login: <a href=\"{{$json.login_url || 'http://127.0.0.1:8000/login'}}\">{{$json.login_url || 'http://127.0.0.1:8000/login'}}</a></p>",
+                            "type": "string"
+                        }
+                    ]
+                },
+                "includeOtherFields": true,
+                "options": {}
+            },
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.4,
+            "position": [
+                -288,
+                560
+            ],
+            "id": "4661b751-89e9-4e57-a731-bd5f06906a3f",
+            "name": "TplCustomerInvite1"
+        },
+        {
+            "parameters": {
+                "assignments": {
+                    "assignments": [
+                        {
+                            "id": "65600960-d6ea-4e4e-b856-cb80082e579d",
+                            "name": "subject",
+                            "value": "Your setup link is expiring soon",
+                            "type": "string"
+                        },
+                        {
+                            "id": "89b54fae-26a9-40f9-88e1-5dca4c89f967",
+                            "name": "html",
+                            "value": "=<p>Hi {{$json.name}},</p><p>Your setup link will expire soon.</p><p>Use it now:</p><p><a href=\"{{$json.setup_url}}\">Complete setup</a></p><p>Expires on {{$json.expires_at}}.</p><p>Login: <a href=\"{{$json.login_url || 'http://127.0.0.1:8000/login'}}\">{{$json.login_url || 'http://127.0.0.1:8000/login'}}</a></p>",
+                            "type": "string"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.4,
+            "position": [
+                -288,
+                720
+            ],
+            "id": "1bf08858-759a-40c7-be54-bd90596c4eaa",
+            "name": "TplExpiring1"
+        },
+        {
+            "parameters": {
+                "assignments": {
+                    "assignments": [
+                        {
+                            "id": "bf441ba8-71e7-481b-9ecd-427b8ca8853f",
+                            "name": "subject",
+                            "value": "Your setup link has expired",
+                            "type": "string"
+                        },
+                        {
+                            "id": "4b010a4f-1069-4664-839c-0e3ce8aae575",
+                            "name": "html",
+                            "value": "=<p>Hi {{$json.name}},</p><p>Your setup link has expired.</p><p>Please request a new activation email from the login page.</p><p>Login: <a href=\"{{$json.login_url || 'http://127.0.0.1:8000/login'}}\">{{$json.login_url || 'http://127.0.0.1:8000/login'}}</a></p>",
+                            "type": "string"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.4,
+            "position": [
+                -288,
+                864
+            ],
+            "id": "66ac45ab-6671-4ee7-948a-599223fade5a",
+            "name": "TplExpired1"
+        },
+        {
+            "parameters": {
+                "assignments": {
+                    "assignments": [
+                        {
+                            "id": "0c9aa726-92c8-4ab4-8512-7fd4e0c920cd",
+                            "name": "subject",
+                            "value": "Payment received",
+                            "type": "string"
+                        },
+                        {
+                            "id": "e9667093-45e1-4d09-97e5-e2adf4bb048e",
+                            "name": "html",
+                            "value": "=<p>Hi {{$json.name}},</p><p>We received your payment successfully.</p><p>If your account is pending activation, check your inbox for the setup email.</p><p>Login: <a href=\"{{$json.login_url || 'http://127.0.0.1:8000/login'}}\">{{$json.login_url || 'http://127.0.0.1:8000/login'}}</a></p>",
+                            "type": "string"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.4,
+            "position": [
+                -288,
+                1040
+            ],
+            "id": "22c113a5-ea4f-4839-803b-2a418ce136af",
+            "name": "TplPaymentSuccess1"
+        },
+        {
+            "parameters": {
+                "numberInputs": 7
+            },
+            "type": "n8n-nodes-base.merge",
+            "typeVersion": 3.2,
+            "position": [
+                16,
+                576
+            ],
+            "id": "5395fa63-0d9d-4460-a5fb-0127b0645431",
+            "name": "Merge1"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://127.0.0.1:8000/api/n8n/email-status",
+                "sendHeaders": true,
+                "specifyHeaders": "json",
+                "jsonHeaders": "{\n  \"Authorization\": \"Bearer {{N8N_CALLBACK_BEARER_TOKEN}}\",\n  \"Content-Type\": \"application/json\"\n}",
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "event_name",
+                            "value": "={{ $node[\"ValidatePayload1\"].json.event_name }}"
+                        },
+                        {
+                            "name": "user_id",
+                            "value": "={{ $node[\"ValidatePayload1\"].json.user_id || null }}"
+                        },
+                        {
+                            "name": "email",
+                            "value": "={{ $node[\"ValidatePayload1\"].json.email }}"
+                        },
+                        {
+                            "name": "status",
+                            "value": "=sent"
+                        },
+                        {
+                            "name": "sent_at",
+                            "value": "={{$now}}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.3,
+            "position": [
+                432,
+                640
+            ],
+            "id": "949a5ddb-bce2-45b9-8bac-054b3c4b5646",
+            "name": "NotifyLaravelEmailStatus1"
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true,
+                        "leftValue": "",
+                        "typeValidation": "strict",
+                        "version": 3
+                    },
+                    "conditions": [
+                        {
+                            "id": "a9a0d9f3-68e8-41aa-88d5-1b68fe18c6fe",
+                            "leftValue": "={{$json.headers['x-webhook-token'] || ''}}",
+                            "rightValue": "{{N8N_WEBHOOK_TOKEN}}",
+                            "operator": {
+                                "type": "string",
+                                "operation": "equals",
+                                "name": "filter.operator.equals"
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2.3,
+            "position": [
+                -1232,
+                640
+            ],
+            "id": "408878ca-1e13-4df9-9667-9fd9f704f2a1",
+            "name": "X-Webhook-Token1"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://api.brevo.com/v3/smtp/email",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "api-key",
+                            "value": "={{$env.BREVO_API_KEY}}"
+                        },
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        },
+                        {
+                            "name": "accept",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{\n{\n  sender: { email: \"espanosherwin10@gmail.com\", name: \"NS\" },\n  to: [\n    { email: $json.email, name: $json.name || \"User\" }\n  ],\n  subject: $json.subject,\n  htmlContent: $json.html\n}\n}}",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.4,
+            "position": [
+                224,
+                640
+            ],
+            "id": "ca9e4fe8-8171-4d5b-bf25-e626d0c0ff07",
+            "name": "HTTP Request1",
+            "alwaysOutputData": false
+        },
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "saas-automation-events",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2.1,
+            "position": [
+                -1440,
+                980
+            ],
+            "id": "2f3f9835-4f6f-4a58-b1a2-fb84a40a4de1",
+            "name": "WebhookAutomation1",
+            "webhookId": "d9b6df04-4a0f-4a0f-9f9b-d2f3a2231a11"
+        },
+        {
+            "parameters": {
+                "mode": "runOnceForEachItem",
+                "jsCode": "const payload = $json.body ?? $json;\nif (!payload || typeof payload !== 'object') throw new Error('Invalid JSON payload');\nif (!payload.event_name) throw new Error('Missing event_name');\nif (!payload.tenant_id) throw new Error('Missing tenant_id');\nreturn { json: payload };"
+            },
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                -1220,
+                980
+            ],
+            "id": "28f2da1f-29e1-4adc-b29a-7e3fd8d53b0d",
+            "name": "ValidateAutomationPayload1"
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true,
+                        "leftValue": "",
+                        "typeValidation": "strict",
+                        "version": 3
+                    },
+                    "conditions": [
+                        {
+                            "id": "ad03a8b0-f17a-4c9a-b22f-345673b7b600",
+                            "leftValue": "={{$json.headers['x-webhook-token'] || ''}}",
+                            "rightValue": "{{N8N_WEBHOOK_TOKEN}}",
+                            "operator": {
+                                "type": "string",
+                                "operation": "equals",
+                                "name": "filter.operator.equals"
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2.3,
+            "position": [
+                -1000,
+                980
+            ],
+            "id": "fca4edb8-9a74-4f93-9d29-a9fcb1e2a2b3",
+            "name": "X-Webhook-Token-Automation1"
+        },
+        {
+            "parameters": {
+                "rules": {
+                    "values": [
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict",
+                                    "version": 3
+                                },
+                                "conditions": [
+                                    {
+                                        "leftValue": "={{$json.event_name}}",
+                                        "rightValue": "lead_captured",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "equals"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            },
+                            "renameOutput": true,
+                            "outputKey": "lead_captured"
+                        },
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict",
+                                    "version": 3
+                                },
+                                "conditions": [
+                                    {
+                                        "leftValue": "={{$json.event_name}}",
+                                        "rightValue": "lead_stage_changed",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "equals"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            },
+                            "renameOutput": true,
+                            "outputKey": "lead_stage_changed"
+                        },
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict",
+                                    "version": 3
+                                },
+                                "conditions": [
+                                    {
+                                        "leftValue": "={{$json.event_name}}",
+                                        "rightValue": "payment_failed",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "equals"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            },
+                            "renameOutput": true,
+                            "outputKey": "payment_failed"
+                        },
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict",
+                                    "version": 3
+                                },
+                                "conditions": [
+                                    {
+                                        "leftValue": "={{$json.event_name}}",
+                                        "rightValue": "payment_recovered",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "equals"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            },
+                            "renameOutput": true,
+                            "outputKey": "payment_recovered"
+                        },
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict",
+                                    "version": 3
+                                },
+                                "conditions": [
+                                    {
+                                        "leftValue": "={{$json.event_name}}",
+                                        "rightValue": "trial_ending_soon",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "equals"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            },
+                            "renameOutput": true,
+                            "outputKey": "trial_ending_soon"
+                        },
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict",
+                                    "version": 3
+                                },
+                                "conditions": [
+                                    {
+                                        "leftValue": "={{$json.event_name}}",
+                                        "rightValue": "automation_event",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "contains"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            },
+                            "renameOutput": true,
+                            "outputKey": "other_automation"
+                        },
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict",
+                                    "version": 3
+                                },
+                                "conditions": [
+                                    {
+                                        "leftValue": "={{.event_name}}",
+                                        "rightValue": "trial_reminder_t3",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "equals"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            },
+                            "renameOutput": true,
+                            "outputKey": "trial_reminder_t3"
+                        },
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict",
+                                    "version": 3
+                                },
+                                "conditions": [
+                                    {
+                                        "leftValue": "={{.event_name}}",
+                                        "rightValue": "trial_reminder_t1",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "equals"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            },
+                            "renameOutput": true,
+                            "outputKey": "trial_reminder_t1"
+                        },
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict",
+                                    "version": 3
+                                },
+                                "conditions": [
+                                    {
+                                        "leftValue": "={{.event_name}}",
+                                        "rightValue": "trial_expired",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "equals"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            },
+                            "renameOutput": true,
+                            "outputKey": "trial_expired"
+                        },
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict",
+                                    "version": 3
+                                },
+                                "conditions": [
+                                    {
+                                        "leftValue": "={{.event_name}}",
+                                        "rightValue": "trial_upgrade_nudge",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "equals"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            },
+                            "renameOutput": true,
+                            "outputKey": "trial_upgrade_nudge"
+                        },
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict",
+                                    "version": 3
+                                },
+                                "conditions": [
+                                    {
+                                        "leftValue": "={{.event_name}}",
+                                        "rightValue": "trial_inactive_recovery",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "equals"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            },
+                            "renameOutput": true,
+                            "outputKey": "trial_inactive_recovery"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.switch",
+            "typeVersion": 3.2,
+            "position": [
+                -760,
+                980
+            ],
+            "id": "bf0043a4-cedd-4a6c-96eb-3b4a1fc1df88",
+            "name": "AutomationRouter1"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://127.0.0.1:8000/api/n8n/lead-activity",
+                "sendHeaders": true,
+                "specifyHeaders": "json",
+                "jsonHeaders": "{\n  \"Authorization\": \"Bearer {{N8N_CALLBACK_BEARER_TOKEN}}\",\n  \"Content-Type\": \"application/json\"\n}",
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "tenant_id",
+                            "value": "={{$json.tenant_id}}"
+                        },
+                        {
+                            "name": "lead_id",
+                            "value": "={{$json.lead_id}}"
+                        },
+                        {
+                            "name": "activity_type",
+                            "value": "Lead Captured"
+                        },
+                        {
+                            "name": "notes",
+                            "value": "={{$json.notes || 'Captured via funnel form'}}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.3,
+            "position": [
+                -520,
+                760
+            ],
+            "id": "1225a4f4-b50f-4bb2-9cd8-9a9af86e1c55",
+            "name": "HTTPUpsertLeadActivity1"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://127.0.0.1:8000/api/n8n/lead-score",
+                "sendHeaders": true,
+                "specifyHeaders": "json",
+                "jsonHeaders": "{\n  \"Authorization\": \"Bearer {{N8N_CALLBACK_BEARER_TOKEN}}\",\n  \"Content-Type\": \"application/json\"\n}",
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "tenant_id",
+                            "value": "={{$json.tenant_id}}"
+                        },
+                        {
+                            "name": "lead_id",
+                            "value": "={{$json.lead_id}}"
+                        },
+                        {
+                            "name": "event",
+                            "value": "lead_captured"
+                        },
+                        {
+                            "name": "points",
+                            "value": "={{$json.points || 10}}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.3,
+            "position": [
+                -300,
+                760
+            ],
+            "id": "90ab6d46-513b-475f-b7cb-a30508357af4",
+            "name": "HTTPApplyLeadScore1"
+        },
+        {
+            "parameters": {
+                "resume": "timeInterval",
+                "amount": 15,
+                "unit": "minutes"
+            },
+            "type": "n8n-nodes-base.wait",
+            "typeVersion": 1.1,
+            "position": [
+                -80,
+                760
+            ],
+            "id": "4f0a1f94-5f3c-4ec8-90b6-4e317e04665b",
+            "name": "WaitFollowup15m1"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://127.0.0.1:8000/api/n8n/send-email",
+                "sendHeaders": true,
+                "specifyHeaders": "json",
+                "jsonHeaders": "{\n  \"Authorization\": \"Bearer {{N8N_CALLBACK_BEARER_TOKEN}}\",\n  \"Content-Type\": \"application/json\"\n}",
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "tenant_id",
+                            "value": "={{$json.tenant_id}}"
+                        },
+                        {
+                            "name": "lead_id",
+                            "value": "={{$json.lead_id}}"
+                        },
+                        {
+                            "name": "template",
+                            "value": "lead_nurture_day0"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.3,
+            "position": [
+                140,
+                760
+            ],
+            "id": "f8e69acb-a58f-4f4a-a8a8-37e90ec6a83a",
+            "name": "HTTPFollowupEmail1"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://127.0.0.1:8000/api/n8n/send-sms",
+                "sendHeaders": true,
+                "specifyHeaders": "json",
+                "jsonHeaders": "{\n  \"Authorization\": \"Bearer {{N8N_CALLBACK_BEARER_TOKEN}}\",\n  \"Content-Type\": \"application/json\"\n}",
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "tenant_id",
+                            "value": "={{$json.tenant_id}}"
+                        },
+                        {
+                            "name": "lead_id",
+                            "value": "={{$json.lead_id}}"
+                        },
+                        {
+                            "name": "template",
+                            "value": "lead_nurture_sms_day0"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.3,
+            "position": [
+                360,
+                760
+            ],
+            "id": "0f7608ae-cdfe-4d97-8a36-03b7cbcb7a58",
+            "name": "HTTPSendSms1"
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true,
+                        "leftValue": "",
+                        "typeValidation": "strict",
+                        "version": 2
+                    },
+                    "conditions": [
+                        {
+                            "leftValue": "={{ Number($json.score || 0) }}",
+                            "rightValue": 80,
+                            "operator": {
+                                "type": "number",
+                                "operation": "gte"
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2.2,
+            "position": [
+                580,
+                760
+            ],
+            "id": "848bf122-99b1-460b-9bc2-c587e90ca8fb",
+            "name": "IfHotLead1"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://127.0.0.1:8000/api/n8n/agent-task",
+                "sendHeaders": true,
+                "specifyHeaders": "json",
+                "jsonHeaders": "{\n  \"Authorization\": \"Bearer {{N8N_CALLBACK_BEARER_TOKEN}}\",\n  \"Content-Type\": \"application/json\"\n}",
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "tenant_id",
+                            "value": "={{$json.tenant_id}}"
+                        },
+                        {
+                            "name": "lead_id",
+                            "value": "={{$json.lead_id}}"
+                        },
+                        {
+                            "name": "title",
+                            "value": "Hot lead follow-up"
+                        },
+                        {
+                            "name": "priority",
+                            "value": "high"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.3,
+            "position": [
+                800,
+                700
+            ],
+            "id": "2752d7df-208e-49d7-b869-7e66eb603e54",
+            "name": "HTTPCreateAgentTask1"
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true,
+                        "leftValue": "",
+                        "typeValidation": "strict",
+                        "version": 2
+                    },
+                    "conditions": [
+                        {
+                            "leftValue": "={{$json.to_status || ''}}",
+                            "rightValue": "proposal_sent",
+                            "operator": {
+                                "type": "string",
+                                "operation": "equals"
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2.2,
+            "position": [
+                -520,
+                980
+            ],
+            "id": "c84a1112-f8d9-422f-8bfd-7290d7336f38",
+            "name": "IfStageProposal1"
+        },
+        {
+            "parameters": {
+                "resume": "timeInterval",
+                "amount": 1,
+                "unit": "days"
+            },
+            "type": "n8n-nodes-base.wait",
+            "typeVersion": 1.1,
+            "position": [
+                -300,
+                980
+            ],
+            "id": "3a1afdf0-c751-4ef6-b90a-0ed77357ddde",
+            "name": "WaitProposalReminder1d1"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://127.0.0.1:8000/api/n8n/send-email",
+                "sendHeaders": true,
+                "specifyHeaders": "json",
+                "jsonHeaders": "{\n  \"Authorization\": \"Bearer {{N8N_CALLBACK_BEARER_TOKEN}}\",\n  \"Content-Type\": \"application/json\"\n}",
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "tenant_id",
+                            "value": "={{$json.tenant_id}}"
+                        },
+                        {
+                            "name": "lead_id",
+                            "value": "={{$json.lead_id}}"
+                        },
+                        {
+                            "name": "template",
+                            "value": "proposal_followup_day1"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.3,
+            "position": [
+                -80,
+                980
+            ],
+            "id": "608e0a2c-75c8-4db5-9bca-f65db4f1d7fb",
+            "name": "HTTPProposalReminder1"
+        },
+        {
+            "parameters": {
+                "resume": "timeInterval",
+                "amount": 1,
+                "unit": "days"
+            },
+            "type": "n8n-nodes-base.wait",
+            "typeVersion": 1.1,
+            "position": [
+                -520,
+                1220
+            ],
+            "id": "b17d300d-6688-4a24-a42c-f56f54d2cb77",
+            "name": "WaitRetryDay11"
+        },
+        {
+            "parameters": {
+                "method": "GET",
+                "url": "={{'http://127.0.0.1:8000/api/n8n/invoice-status?tenant_id=' + $json.tenant_id + '&invoice_id=' + ($json.invoice_id || '')}}",
+                "sendHeaders": true,
+                "specifyHeaders": "json",
+                "jsonHeaders": "{\n  \"Authorization\": \"Bearer {{N8N_CALLBACK_BEARER_TOKEN}}\"\n}",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.3,
+            "position": [
+                -300,
+                1220
+            ],
+            "id": "67f167ca-c5fd-4dff-b89c-4ce047cdf586",
+            "name": "HTTPCheckInvoice1"
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true,
+                        "leftValue": "",
+                        "typeValidation": "strict",
+                        "version": 2
+                    },
+                    "conditions": [
+                        {
+                            "leftValue": "={{$json.status || ''}}",
+                            "rightValue": "failed",
+                            "operator": {
+                                "type": "string",
+                                "operation": "equals"
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2.2,
+            "position": [
+                -80,
+                1220
+            ],
+            "id": "2a5212ea-d09f-4b48-a7a3-f89680b31e96",
+            "name": "IfStillFailedDay11"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://127.0.0.1:8000/api/n8n/send-email",
+                "sendHeaders": true,
+                "specifyHeaders": "json",
+                "jsonHeaders": "{\n  \"Authorization\": \"Bearer {{N8N_CALLBACK_BEARER_TOKEN}}\",\n  \"Content-Type\": \"application/json\"\n}",
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "tenant_id",
+                            "value": "={{$json.tenant_id}}"
+                        },
+                        {
+                            "name": "invoice_id",
+                            "value": "={{$json.invoice_id || ''}}"
+                        },
+                        {
+                            "name": "template",
+                            "value": "payment_retry_day1"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.3,
+            "position": [
+                140,
+                1160
+            ],
+            "id": "1cf1b182-8ecf-4ec2-9663-0f8c34f6f50d",
+            "name": "HTTPPaymentEmailD11"
+        },
+        {
+            "parameters": {
+                "resume": "timeInterval",
+                "amount": 2,
+                "unit": "days"
+            },
+            "type": "n8n-nodes-base.wait",
+            "typeVersion": 1.1,
+            "position": [
+                360,
+                1160
+            ],
+            "id": "4bb173e7-0184-48f2-8d89-28f5c3ad2eb8",
+            "name": "WaitRetryDay31"
+        },
+        {
+            "parameters": {
+                "method": "GET",
+                "url": "={{'http://127.0.0.1:8000/api/n8n/invoice-status?tenant_id=' + $json.tenant_id + '&invoice_id=' + ($json.invoice_id || '')}}",
+                "sendHeaders": true,
+                "specifyHeaders": "json",
+                "jsonHeaders": "{\n  \"Authorization\": \"Bearer {{N8N_CALLBACK_BEARER_TOKEN}}\"\n}",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.3,
+            "position": [
+                580,
+                1160
+            ],
+            "id": "91f19464-c2e8-4ac8-9f99-93df2be31f52",
+            "name": "HTTPCheckInvoice3"
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true,
+                        "leftValue": "",
+                        "typeValidation": "strict",
+                        "version": 2
+                    },
+                    "conditions": [
+                        {
+                            "leftValue": "={{$json.status || ''}}",
+                            "rightValue": "failed",
+                            "operator": {
+                                "type": "string",
+                                "operation": "equals"
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2.2,
+            "position": [
+                800,
+                1160
+            ],
+            "id": "f21eb514-24f2-4e3f-bf0b-7cb5a8af3ea6",
+            "name": "IfStillFailedDay31"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://127.0.0.1:8000/api/n8n/send-sms",
+                "sendHeaders": true,
+                "specifyHeaders": "json",
+                "jsonHeaders": "{\n  \"Authorization\": \"Bearer {{N8N_CALLBACK_BEARER_TOKEN}}\",\n  \"Content-Type\": \"application/json\"\n}",
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "tenant_id",
+                            "value": "={{$json.tenant_id}}"
+                        },
+                        {
+                            "name": "invoice_id",
+                            "value": "={{$json.invoice_id || ''}}"
+                        },
+                        {
+                            "name": "template",
+                            "value": "payment_retry_day3_sms"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.3,
+            "position": [
+                1020,
+                1100
+            ],
+            "id": "b3e0480b-d2f9-4e22-aaf8-57840a4dc8d6",
+            "name": "HTTPPaymentSmsD31"
+        },
+        {
+            "parameters": {
+                "resume": "timeInterval",
+                "amount": 4,
+                "unit": "days"
+            },
+            "type": "n8n-nodes-base.wait",
+            "typeVersion": 1.1,
+            "position": [
+                1240,
+                1100
+            ],
+            "id": "7ae6b37f-a718-4745-abdf-f0f419d2288e",
+            "name": "WaitRetryDay71"
+        },
+        {
+            "parameters": {
+                "method": "GET",
+                "url": "={{'http://127.0.0.1:8000/api/n8n/invoice-status?tenant_id=' + $json.tenant_id + '&invoice_id=' + ($json.invoice_id || '')}}",
+                "sendHeaders": true,
+                "specifyHeaders": "json",
+                "jsonHeaders": "{\n  \"Authorization\": \"Bearer {{N8N_CALLBACK_BEARER_TOKEN}}\"\n}",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.3,
+            "position": [
+                1460,
+                1100
+            ],
+            "id": "6f70fdb8-8c17-4a8b-bf1d-5133c8572de6",
+            "name": "HTTPCheckInvoice7"
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true,
+                        "leftValue": "",
+                        "typeValidation": "strict",
+                        "version": 2
+                    },
+                    "conditions": [
+                        {
+                            "leftValue": "={{$json.status || ''}}",
+                            "rightValue": "failed",
+                            "operator": {
+                                "type": "string",
+                                "operation": "equals"
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2.2,
+            "position": [
+                1680,
+                1100
+            ],
+            "id": "084b27dc-ed65-4f96-a799-6f3638d70bd8",
+            "name": "IfStillFailedDay71"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://127.0.0.1:8000/api/n8n/suspend-subscription",
+                "sendHeaders": true,
+                "specifyHeaders": "json",
+                "jsonHeaders": "{\n  \"Authorization\": \"Bearer {{N8N_CALLBACK_BEARER_TOKEN}}\",\n  \"Content-Type\": \"application/json\"\n}",
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "tenant_id",
+                            "value": "={{$json.tenant_id}}"
+                        },
+                        {
+                            "name": "invoice_id",
+                            "value": "={{$json.invoice_id || ''}}"
+                        },
+                        {
+                            "name": "reason",
+                            "value": "payment_failed_recovery_exhausted"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.3,
+            "position": [
+                1900,
+                1040
+            ],
+            "id": "7f6a54f0-df2d-4240-a9fc-89f5f0c3eca8",
+            "name": "HTTPSuspendSub1"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://127.0.0.1:8000/api/n8n/payment-recovered",
+                "sendHeaders": true,
+                "specifyHeaders": "json",
+                "jsonHeaders": "{\n  \"Authorization\": \"Bearer {{N8N_CALLBACK_BEARER_TOKEN}}\",\n  \"Content-Type\": \"application/json\"\n}",
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "tenant_id",
+                            "value": "={{$json.tenant_id}}"
+                        },
+                        {
+                            "name": "invoice_id",
+                            "value": "={{$json.invoice_id || ''}}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.3,
+            "position": [
+                -520,
+                1460
+            ],
+            "id": "59f98ebd-bd07-4a16-bf7a-26ce019bcf1b",
+            "name": "HTTPLogRecovery1"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://127.0.0.1:8000/api/n8n/send-email",
+                "sendHeaders": true,
+                "specifyHeaders": "json",
+                "jsonHeaders": "{\n  \"Authorization\": \"Bearer {{N8N_CALLBACK_BEARER_TOKEN}}\",\n  \"Content-Type\": \"application/json\"\n}",
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "tenant_id",
+                            "value": "={{$json.tenant_id}}"
+                        },
+                        {
+                            "name": "template",
+                            "value": "payment_recovered_thankyou"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.3,
+            "position": [
+                -300,
+                1460
+            ],
+            "id": "e4b958f5-cafb-4142-b8ea-286f78480fb8",
+            "name": "HTTPThankYouPayment1"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://127.0.0.1:8000/api/n8n/send-email",
+                "sendHeaders": true,
+                "specifyHeaders": "json",
+                "jsonHeaders": "{\n  \"Authorization\": \"Bearer {{N8N_CALLBACK_BEARER_TOKEN}}\",\n  \"Content-Type\": \"application/json\"\n}",
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "tenant_id",
+                            "value": "={{$json.tenant_id}}"
+                        },
+                        {
+                            "name": "template",
+                            "value": "trial_ending_notice"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.3,
+            "position": [
+                -520,
+                1680
+            ],
+            "id": "733fdf56-4c7e-4ae0-80b9-f7e230725418",
+            "name": "HTTPTrialEndingNotice1"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://127.0.0.1:8000/api/n8n/automation-log",
+                "sendHeaders": true,
+                "specifyHeaders": "json",
+                "jsonHeaders": "{\n  \"Authorization\": \"Bearer {{N8N_CALLBACK_BEARER_TOKEN}}\",\n  \"Content-Type\": \"application/json\"\n}",
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "tenant_id",
+                            "value": "={{$json.tenant_id}}"
+                        },
+                        {
+                            "name": "event_name",
+                            "value": "={{$json.event_name}}"
+                        },
+                        {
+                            "name": "payload",
+                            "value": "={{JSON.stringify($json)}}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.3,
+            "position": [
+                -520,
+                1880
+            ],
+            "id": "503c52f9-c9b4-4f83-9262-0ee10e35a2f7",
+            "name": "HTTPLogAutomationEvent1"
+        },
+        {
+            "parameters": {
+                "rule": {
+                    "interval": [
+                        {
+                            "field": "cronExpression",
+                            "expression": "55 23 * * *"
+                        }
+                    ]
+                }
+            },
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "typeVersion": 1.2,
+            "position": [
+                -1440,
+                2080
+            ],
+            "id": "91dbb5c8-aeb7-499b-a9ff-b4b5a03f77da",
+            "name": "CronAnalyticsDaily1"
+        },
+        {
+            "parameters": {
+                "method": "GET",
+                "url": "http://127.0.0.1:8000/api/n8n/analytics-daily",
+                "sendHeaders": true,
+                "specifyHeaders": "json",
+                "jsonHeaders": "{\n  \"Authorization\": \"Bearer {{N8N_CALLBACK_BEARER_TOKEN}}\"\n}",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.3,
+            "position": [
+                -1220,
+                2080
+            ],
+            "id": "2510edb4-9430-433a-8ad7-f3de7dc83ece",
+            "name": "HTTPFetchMetrics1"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://127.0.0.1:8000/api/n8n/analytics-store",
+                "sendHeaders": true,
+                "specifyHeaders": "json",
+                "jsonHeaders": "{\n  \"Authorization\": \"Bearer {{N8N_CALLBACK_BEARER_TOKEN}}\",\n  \"Content-Type\": \"application/json\"\n}",
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "date",
+                            "value": "={{$now.format('yyyy-MM-dd')}}"
+                        },
+                        {
+                            "name": "snapshot",
+                            "value": "={{JSON.stringify($json)}}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.3,
+            "position": [
+                -1000,
+                2080
+            ],
+            "id": "cd747a0a-79b0-419f-bef0-88a229514327",
+            "name": "HTTPStoreMetrics1"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://127.0.0.1:8000/api/n8n/send-owner-digest",
+                "sendHeaders": true,
+                "specifyHeaders": "json",
+                "jsonHeaders": "{\n  \"Authorization\": \"Bearer {{N8N_CALLBACK_BEARER_TOKEN}}\",\n  \"Content-Type\": \"application/json\"\n}",
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "date",
+                            "value": "={{$now.format('yyyy-MM-dd')}}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.3,
+            "position": [
+                -780,
+                2080
+            ],
+            "id": "ac1c6f06-2b84-42b6-9f87-4ba6aa99e2bd",
+            "name": "HTTPSendOwnerDigest1"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://127.0.0.1:8000/api/n8n/send-email",
+                "sendHeaders": true,
+                "specifyHeaders": "json",
+                "jsonHeaders": "{\n  \"Authorization\": \"Bearer {{N8N_CALLBACK_BEARER_TOKEN}}\",\n  \"Content-Type\": \"application/json\"\n}",
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "tenant_id",
+                            "value": "={{$json.tenant_id}}"
+                        },
+                        {
+                            "name": "user_id",
+                            "value": "={{$json.user_id || ''}}"
+                        },
+                        {
+                            "name": "template",
+                            "value": "trial_reminder_t3"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.3,
+            "position": [
+                -520,
+                2280
+            ],
+            "id": "7b55a628-4f36-4ea9-8fdf-fdde78117a7f",
+            "name": "HTTPTrialReminderT31"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://127.0.0.1:8000/api/n8n/send-email",
+                "sendHeaders": true,
+                "specifyHeaders": "json",
+                "jsonHeaders": "{\n  \"Authorization\": \"Bearer {{N8N_CALLBACK_BEARER_TOKEN}}\",\n  \"Content-Type\": \"application/json\"\n}",
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "tenant_id",
+                            "value": "={{$json.tenant_id}}"
+                        },
+                        {
+                            "name": "user_id",
+                            "value": "={{$json.user_id || ''}}"
+                        },
+                        {
+                            "name": "template",
+                            "value": "trial_reminder_t1"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.3,
+            "position": [
+                -300,
+                2280
+            ],
+            "id": "60759940-09cc-43e9-b253-9aa62ec19f8c",
+            "name": "HTTPTrialReminderT11"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://127.0.0.1:8000/api/n8n/send-email",
+                "sendHeaders": true,
+                "specifyHeaders": "json",
+                "jsonHeaders": "{\n  \"Authorization\": \"Bearer {{N8N_CALLBACK_BEARER_TOKEN}}\",\n  \"Content-Type\": \"application/json\"\n}",
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "tenant_id",
+                            "value": "={{$json.tenant_id}}"
+                        },
+                        {
+                            "name": "user_id",
+                            "value": "={{$json.user_id || ''}}"
+                        },
+                        {
+                            "name": "template",
+                            "value": "trial_expired_notice"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.3,
+            "position": [
+                -80,
+                2280
+            ],
+            "id": "5895237b-c709-4334-a8f4-c4bb6aeb7cc0",
+            "name": "HTTPTrialExpiryNotice1"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://127.0.0.1:8000/api/n8n/send-email",
+                "sendHeaders": true,
+                "specifyHeaders": "json",
+                "jsonHeaders": "{\n  \"Authorization\": \"Bearer {{N8N_CALLBACK_BEARER_TOKEN}}\",\n  \"Content-Type\": \"application/json\"\n}",
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "tenant_id",
+                            "value": "={{$json.tenant_id}}"
+                        },
+                        {
+                            "name": "user_id",
+                            "value": "={{$json.user_id || ''}}"
+                        },
+                        {
+                            "name": "template",
+                            "value": "trial_upgrade_nudge"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.3,
+            "position": [
+                140,
+                2280
+            ],
+            "id": "2f0a666a-a58c-4627-8752-6424e8ba3f0b",
+            "name": "HTTPTrialUpgradeNudge1"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://127.0.0.1:8000/api/n8n/trial-inactive-recovery",
+                "sendHeaders": true,
+                "specifyHeaders": "json",
+                "jsonHeaders": "{\n  \"Authorization\": \"Bearer {{N8N_CALLBACK_BEARER_TOKEN}}\",\n  \"Content-Type\": \"application/json\"\n}",
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "tenant_id",
+                            "value": "={{$json.tenant_id}}"
+                        },
+                        {
+                            "name": "user_id",
+                            "value": "={{$json.user_id || ''}}"
+                        },
+                        {
+                            "name": "reason",
+                            "value": "trial_inactive"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.3,
+            "position": [
+                360,
+                2280
+            ],
+            "id": "23ec806b-14fa-4197-8f59-23fc4d7f57c4",
+            "name": "HTTPInactiveTrialRecovery1"
+        },
+        {
+            "parameters": {
+                "rule": {
+                    "interval": [
+                        {
+                            "field": "cronExpression",
+                            "expression": "0 9 * * *"
+                        }
+                    ]
+                }
+            },
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "typeVersion": 1.2,
+            "position": [
+                -1440,
+                2460
+            ],
+            "id": "b5f9b990-b80e-4204-a477-f205d739fce7",
+            "name": "CronTrialOwnerDigest1"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://127.0.0.1:8000/api/n8n/send-owner-digest",
+                "sendHeaders": true,
+                "specifyHeaders": "json",
+                "jsonHeaders": "{\n  \"Authorization\": \"Bearer {{N8N_CALLBACK_BEARER_TOKEN}}\",\n  \"Content-Type\": \"application/json\"\n}",
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "date",
+                            "value": "={{$now.format('yyyy-MM-dd')}}"
+                        },
+                        {
+                            "name": "audience",
+                            "value": "trial_owners"
+                        },
+                        {
+                            "name": "include_upgrade_nudges",
+                            "value": "true"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.3,
+            "position": [
+                -1220,
+                2460
+            ],
+            "id": "d4a11914-e61f-436c-8a53-cb1475a47370",
+            "name": "HTTPSendTrialOwnerDigest1"
+        },
+        {
+            "parameters": {
+                "rule": {
+                    "interval": [
+                        {
+                            "field": "cronExpression",
+                            "expression": "30 10 * * *"
+                        }
+                    ]
+                }
+            },
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "typeVersion": 1.2,
+            "position": [
+                -1440,
+                2640
+            ],
+            "id": "06d0f727-e21f-4be5-90d3-a74f6ba1e7ac",
+            "name": "CronInactiveTrialRecovery1"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://127.0.0.1:8000/api/n8n/run-inactive-trial-recovery",
+                "sendHeaders": true,
+                "specifyHeaders": "json",
+                "jsonHeaders": "{\n  \"Authorization\": \"Bearer {{N8N_CALLBACK_BEARER_TOKEN}}\",\n  \"Content-Type\": \"application/json\"\n}",
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "date",
+                            "value": "={{$now.format('yyyy-MM-dd')}}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.3,
+            "position": [
+                -1220,
+                2640
+            ],
+            "id": "c6fd7f35-90f9-43d6-8a3e-a6d48b8f8a80",
+            "name": "HTTPRunInactiveTrialRecovery1"
+        },
+        {
+            "parameters": {
+                "assignments": {
+                    "assignments": [
+                        {
+                            "id": "566f604e-7265-4ec4-8a37-c342c31c74c2",
+                            "name": "subject",
+                            "value": "Welcome! Your Google account is now active",
+                            "type": "string"
+                        },
+                        {
+                            "id": "cca106e9-df65-4598-84ca-7f7e94f4803b",
+                            "name": "html",
+                            "value": "=<p>Hi {{$json.name}},</p><p>Your payment was successful and your account is now active via Google sign-up.</p><p>You can continue by logging in with Google:</p><p><a href=\"{{$json.login_url || 'http://127.0.0.1:8000/login'}}\">{{$json.login_url || 'http://127.0.0.1:8000/login'}}</a></p>",
+                            "type": "string"
+                        }
+                    ]
+                },
+                "includeOtherFields": true,
+                "options": {}
+            },
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.4,
+            "position": [
+                -288,
+                400
+            ],
+            "id": "25b08b06-a632-427b-a48f-891a2938f487",
+            "name": "TplAccountOwnerGoogle1"
+        }
+    ],
+    "pinData": {},
+    "connections": {
+        "Webhook1": {
+            "main": [
+                [
+                    {
+                        "node": "X-Webhook-Token1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "ValidatePayload1": {
+            "main": [
+                [
+                    {
+                        "node": "RouteByEvent1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "RouteByEvent1": {
+            "main": [
+                [
+                    {
+                        "node": "TplAccountOwner1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "TplTeamInvite1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "TplCustomerInvite1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "TplExpiring1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "TplExpired1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "TplPaymentSuccess1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "TplAccountOwnerGoogle1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "TplAccountOwner1": {
+            "main": [
+                [
+                    {
+                        "node": "Merge1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "TplTeamInvite1": {
+            "main": [
+                [
+                    {
+                        "node": "Merge1",
+                        "type": "main",
+                        "index": 1
+                    }
+                ]
+            ]
+        },
+        "TplCustomerInvite1": {
+            "main": [
+                [
+                    {
+                        "node": "Merge1",
+                        "type": "main",
+                        "index": 2
+                    }
+                ]
+            ]
+        },
+        "TplExpiring1": {
+            "main": [
+                [
+                    {
+                        "node": "Merge1",
+                        "type": "main",
+                        "index": 3
+                    }
+                ]
+            ]
+        },
+        "TplExpired1": {
+            "main": [
+                [
+                    {
+                        "node": "Merge1",
+                        "type": "main",
+                        "index": 4
+                    }
+                ]
+            ]
+        },
+        "TplPaymentSuccess1": {
+            "main": [
+                [
+                    {
+                        "node": "Merge1",
+                        "type": "main",
+                        "index": 5
+                    }
+                ]
+            ]
+        },
+        "Merge1": {
+            "main": [
+                [
+                    {
+                        "node": "HTTP Request1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "NotifyLaravelEmailStatus1": {
+            "main": [
+                []
+            ]
+        },
+        "X-Webhook-Token1": {
+            "main": [
+                [
+                    {
+                        "node": "ValidatePayload1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                []
+            ]
+        },
+        "HTTP Request1": {
+            "main": [
+                [
+                    {
+                        "node": "NotifyLaravelEmailStatus1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "WebhookAutomation1": {
+            "main": [
+                [
+                    {
+                        "node": "ValidateAutomationPayload1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "ValidateAutomationPayload1": {
+            "main": [
+                [
+                    {
+                        "node": "X-Webhook-Token-Automation1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "X-Webhook-Token-Automation1": {
+            "main": [
+                [
+                    {
+                        "node": "AutomationRouter1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                []
+            ]
+        },
+        "AutomationRouter1": {
+            "main": [
+                [
+                    {
+                        "node": "HTTPUpsertLeadActivity1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "IfStageProposal1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "WaitRetryDay11",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "HTTPLogRecovery1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "HTTPTrialEndingNotice1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "HTTPLogAutomationEvent1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "HTTPTrialReminderT31",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "HTTPTrialReminderT11",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "HTTPTrialExpiryNotice1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "HTTPTrialUpgradeNudge1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "HTTPInactiveTrialRecovery1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "HTTPUpsertLeadActivity1": {
+            "main": [
+                [
+                    {
+                        "node": "HTTPApplyLeadScore1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "HTTPApplyLeadScore1": {
+            "main": [
+                [
+                    {
+                        "node": "WaitFollowup15m1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "WaitFollowup15m1": {
+            "main": [
+                [
+                    {
+                        "node": "HTTPFollowupEmail1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "HTTPFollowupEmail1": {
+            "main": [
+                [
+                    {
+                        "node": "HTTPSendSms1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "HTTPSendSms1": {
+            "main": [
+                [
+                    {
+                        "node": "IfHotLead1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "IfHotLead1": {
+            "main": [
+                [
+                    {
+                        "node": "HTTPCreateAgentTask1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                []
+            ]
+        },
+        "IfStageProposal1": {
+            "main": [
+                [
+                    {
+                        "node": "WaitProposalReminder1d1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                []
+            ]
+        },
+        "WaitProposalReminder1d1": {
+            "main": [
+                [
+                    {
+                        "node": "HTTPProposalReminder1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "WaitRetryDay11": {
+            "main": [
+                [
+                    {
+                        "node": "HTTPCheckInvoice1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "HTTPCheckInvoice1": {
+            "main": [
+                [
+                    {
+                        "node": "IfStillFailedDay11",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "IfStillFailedDay11": {
+            "main": [
+                [
+                    {
+                        "node": "HTTPPaymentEmailD11",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                []
+            ]
+        },
+        "HTTPPaymentEmailD11": {
+            "main": [
+                [
+                    {
+                        "node": "WaitRetryDay31",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "WaitRetryDay31": {
+            "main": [
+                [
+                    {
+                        "node": "HTTPCheckInvoice3",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "HTTPCheckInvoice3": {
+            "main": [
+                [
+                    {
+                        "node": "IfStillFailedDay31",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "IfStillFailedDay31": {
+            "main": [
+                [
+                    {
+                        "node": "HTTPPaymentSmsD31",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                []
+            ]
+        },
+        "HTTPPaymentSmsD31": {
+            "main": [
+                [
+                    {
+                        "node": "WaitRetryDay71",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "WaitRetryDay71": {
+            "main": [
+                [
+                    {
+                        "node": "HTTPCheckInvoice7",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "HTTPCheckInvoice7": {
+            "main": [
+                [
+                    {
+                        "node": "IfStillFailedDay71",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "IfStillFailedDay71": {
+            "main": [
+                [
+                    {
+                        "node": "HTTPSuspendSub1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                []
+            ]
+        },
+        "HTTPLogRecovery1": {
+            "main": [
+                [
+                    {
+                        "node": "HTTPThankYouPayment1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "CronAnalyticsDaily1": {
+            "main": [
+                [
+                    {
+                        "node": "HTTPFetchMetrics1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "HTTPFetchMetrics1": {
+            "main": [
+                [
+                    {
+                        "node": "HTTPStoreMetrics1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "HTTPStoreMetrics1": {
+            "main": [
+                [
+                    {
+                        "node": "HTTPSendOwnerDigest1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "CronTrialOwnerDigest1": {
+            "main": [
+                {
+                    "node": "HTTPSendTrialOwnerDigest1",
+                    "type": "main",
+                    "index": 0
+                }
+            ]
+        },
+        "CronInactiveTrialRecovery1": {
+            "main": [
+                {
+                    "node": "HTTPRunInactiveTrialRecovery1",
+                    "type": "main",
+                    "index": 0
+                }
+            ]
+        },
+        "TplAccountOwnerGoogle1": {
+            "main": [
+                [
+                    {
+                        "node": "Merge1",
+                        "type": "main",
+                        "index": 6
+                    }
+                ]
+            ]
+        }
+    },
+    "active": true,
+    "settings": {
+        "executionOrder": "v1",
+        "binaryMode": "separate",
+        "timeSavedMode": "fixed",
+        "callerPolicy": "workflowsFromSameOwner",
+        "availableInMCP": false
+    },
+    "versionId": "dc3f01a8-7e1a-4100-a0c0-e99caca07215",
+    "meta": {
+        "templateCredsSetupCompleted": true,
+        "instanceId": "eced9ec719e3c759ab225ba148abcb314e7e2356484642b226d142a834fc9468"
+    },
+    "id": "4Y4gyzWFbq4GfrvJ",
+    "tags": []
+}

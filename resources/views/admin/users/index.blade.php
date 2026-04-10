@@ -1,19 +1,9 @@
-@extends('layouts.admin')
+﻿@extends('layouts.admin')
 
 @section('title', 'All System Users')
 
 @section('styles')
-    <style>
-        .sa-table-scroll {
-            width: 100%;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-        }
-
-        .sa-table {
-            min-width: 980px;
-        }
-    </style>
+    <link rel="stylesheet" href="{{ asset('css/extracted/admin-users-index-style1.css') }}">
 @endsection
 
 @section('content')
@@ -88,14 +78,6 @@
             </form>
         </div>
     </div>
-
-    <style>
-        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center; padding: 20px; }
-        .modal-box { background: #fff; border-radius: 8px; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); }
-        .status-modal-box { width: 100%; max-width: 520px; }
-        .modal-close-btn { background: none; border: none; font-size: 28px; cursor: pointer; color: var(--theme-muted, #6B7280); line-height: 1; padding: 0 4px; }
-        .modal-close-btn:hover { color: #1E293B; }
-    </style>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -208,3 +190,4 @@
         });
     </script>
 @endsection
+

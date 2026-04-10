@@ -1,6 +1,10 @@
-@extends('layouts.admin')
+﻿@extends('layouts.admin')
 
 @section('title', 'Account Owner Dashboard')
+
+@section('styles')
+        <link rel="stylesheet" href="{{ asset('css/extracted/dashboard-account-owner-style1.css') }}">
+@endsection
 
 @php
     $companyName = optional(auth()->user()->tenant)->company_name ?? 'No Company';
@@ -12,6 +16,9 @@
     $companyInitials = $companyInitials !== '' ? $companyInitials : 'NC';
     $companyHue = abs(crc32($companyName ?: 'company')) % 360;
     $companyBg = "hsl({$companyHue}, 60%, 42%)";
+    $servicePaidRevenue = (float) ($serviceSalesTotal ?? 0);
+    $physicalPaidRevenue = (float) ($physicalProductSalesTotal ?? 0);
+    $teamActivityOpen = request()->has('activity_page');
 @endphp
 
 @section('content')
@@ -94,7 +101,15 @@
         </div>
         <div class="card">
             <h3>Funnel Paid Revenue</h3>
-            <p>{{ number_format($revenueTotal, 2) }}</p>
+            <p>â‚±{{ number_format($revenueTotal, 2) }}</p>
+        </div>
+        <div class="card">
+            <h3>Service Sales</h3>
+            <p>â‚±{{ number_format($servicePaidRevenue, 2) }}</p>
+        </div>
+        <div class="card">
+            <h3>Physical Product Sales</h3>
+            <p>â‚±{{ number_format($physicalPaidRevenue, 2) }}</p>
         </div>
         <div class="card">
             <h3>Total Users</h3>
@@ -112,18 +127,36 @@
 
     <div class="charts">
         <div class="chart">
-            <h3>Pipeline Distribution</h3>
+            <div class="chart-heading">
+                <h3>Pipeline Distribution</h3>
+                <span class="chart-help-wrap">
+                    <span class="chart-help-dot" tabindex="0" aria-label="Pipeline distribution help">?</span>
+                    <span class="chart-help-tip">Shows how many leads are in each pipeline status right now.</span>
+                </span>
+            </div>
             <canvas id="pipelineDistributionChart"></canvas>
         </div>
         <div class="chart">
-            <h3>Pipeline Aging</h3>
+            <div class="chart-heading">
+                <h3>Pipeline Aging</h3>
+                <span class="chart-help-wrap">
+                    <span class="chart-help-dot" tabindex="0" aria-label="Pipeline aging help">?</span>
+                    <span class="chart-help-tip">Shows how long open leads have been waiting in the pipeline.</span>
+                </span>
+            </div>
             <canvas id="pipelineAgingChart"></canvas>
         </div>
     </div>
 
     <div class="charts">
         <div class="chart">
-            <h3>Revenue Trend (Last 6 Months)</h3>
+            <div class="chart-heading">
+                <h3>Revenue Trend (Last 6 Months)</h3>
+                <span class="chart-help-wrap">
+                    <span class="chart-help-dot" tabindex="0" aria-label="Revenue trend help">?</span>
+                    <span class="chart-help-tip">Shows month-by-month paid revenue for the last six months.</span>
+                </span>
+            </div>
             <canvas id="ownerRevenueTrendChart"></canvas>
         </div>
         <div class="chart">
@@ -175,16 +208,16 @@
         </table>
     </div>
 
-    <div class="card">
+    <div class="card" id="team-activity">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px;">
             <h3 style="margin:0;">Team Activity Snapshot</h3>
             <button type="button" id="toggleTeamActivityBtn"
                 style="padding:10px 16px;background:var(--theme-primary,#240E35);color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700;min-width:88px;"
-                aria-expanded="false">
-                Show
+                aria-expanded="{{ $teamActivityOpen ? 'true' : 'false' }}">
+                {{ $teamActivityOpen ? 'Hide' : 'Show' }}
             </button>
         </div>
-        <div id="teamActivityContent" style="display:none;">
+        <div id="teamActivityContent" style="display:{{ $teamActivityOpen ? 'block' : 'none' }};">
             <table>
                 <thead>
                     <tr>
@@ -210,7 +243,7 @@
                 </tbody>
             </table>
             <div style="margin-top: 16px;">
-                {{ $teamActivity->links('pagination::bootstrap-4') }}
+                {{ $teamActivity->fragment('team-activity')->links('pagination::bootstrap-4') }}
             </div>
         </div>
     </div>
@@ -386,3 +419,4 @@
         }
     </script>
 @endsection
+

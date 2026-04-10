@@ -1,6 +1,10 @@
-@extends('layouts.admin')
+﻿@extends('layouts.admin')
 
 @section('title', 'Sales Dashboard')
+
+@section('styles')
+        <link rel="stylesheet" href="{{ asset('css/extracted/dashboard-sales-style1.css') }}">
+@endsection
 
 @php
     $companyName = optional(auth()->user()->tenant)->company_name ?? 'No Company';
@@ -49,7 +53,13 @@
 
     <div class="charts">
         <div class="chart">
-            <h3>My Pipeline Stage Counts</h3>
+            <div class="chart-heading">
+                <h3>My Pipeline Stage Counts</h3>
+                <span class="chart-help-wrap">
+                    <span class="chart-help-dot" tabindex="0" aria-label="Pipeline chart help">?</span>
+                    <span class="chart-help-tip">Shows the number of your assigned leads in each pipeline stage.</span>
+                </span>
+            </div>
             <canvas id="salesPipelineChart"></canvas>
         </div>
         <div class="chart">
@@ -138,3 +148,4 @@
         });
     </script>
 @endsection
+

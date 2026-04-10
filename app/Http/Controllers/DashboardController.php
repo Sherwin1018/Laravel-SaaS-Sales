@@ -62,6 +62,26 @@ class DashboardController extends Controller
             ->pluck('total', 'status');
 
         $revenueTotal = (float) ($paymentStatusTotals['paid'] ?? 0);
+        $salesByPurpose = Payment::query()
+            ->select(
+                DB::raw("COALESCE(funnels.purpose, 'service') as purpose"),
+                DB::raw('SUM(payments.amount) as total')
+            )
+            ->leftJoin('funnels', 'funnels.id', '=', 'payments.funnel_id')
+            ->where('payments.tenant_id', $tenantId)
+            ->where('payments.payment_type', Payment::TYPE_FUNNEL_CHECKOUT)
+            ->where('payments.status', 'paid')
+            ->groupBy('purpose')
+            ->pluck('total', 'purpose');
+
+        $physicalProductSalesTotal = (float) (
+            ($salesByPurpose['physical_product'] ?? 0)
+            + ($salesByPurpose['hybrid'] ?? 0)
+        );
+        $serviceSalesTotal = (float) (
+            ($salesByPurpose['service'] ?? 0)
+            + ($salesByPurpose['digital_product'] ?? 0)
+        );
 
         $teamActivity = LeadActivity::with(['lead:id,name'])
             ->whereHas('lead', function ($query) use ($tenantId) {
@@ -88,6 +108,8 @@ class DashboardController extends Controller
             'pipelineDistribution',
             'pipelineAging',
             'revenueTotal',
+            'serviceSalesTotal',
+            'physicalProductSalesTotal',
             'paymentStatusTotals',
             'teamActivity',
             'trialDaysRemaining',

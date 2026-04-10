@@ -450,6 +450,25 @@
             document.body.style.overflow = '';
         };
 
+        const validateOnboardingForm = () => {
+            if (!onboardingForm) return false;
+            const nativeValid = onboardingForm.reportValidity();
+            if (!nativeValid) return false;
+            const mobileInput = onboardingForm.querySelector('#mobile');
+            if (mobileInput) {
+                const mobileValue = String(mobileInput.value || '').trim();
+                const isValidMobile = /^09\d{9}$/.test(mobileValue);
+                if (!isValidMobile) {
+                    mobileInput.setCustomValidity('Mobile number must be in 09XXXXXXXXX format.');
+                    onboardingForm.reportValidity();
+                    return false;
+                }
+                mobileInput.setCustomValidity('');
+            }
+
+            return true;
+        };
+
         onboardingOpeners.forEach((opener) => {
             opener.addEventListener('click', (event) => {
                 event.preventDefault();

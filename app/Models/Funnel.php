@@ -13,12 +13,20 @@ class Funnel extends Model
         'published' => 'Published',
     ];
 
+    public const PURPOSES = [
+        'service' => 'Service / Lead',
+        'digital_product' => 'Digital Product',
+        'physical_product' => 'Physical Product',
+        'hybrid' => 'Hybrid',
+    ];
+
     protected $fillable = [
         'tenant_id',
         'created_by',
         'name',
         'slug',
         'description',
+        'purpose',
         'default_tags',
         'status',
         'require_double_opt_in',
@@ -34,11 +42,28 @@ class Funnel extends Model
         $this->attributes['status'] = self::normalizeStatus($value);
     }
 
+    public function setPurposeAttribute($value): void
+    {
+        $this->attributes['purpose'] = self::normalizePurpose($value);
+    }
+
     public static function normalizeStatus(mixed $value): string
     {
         $normalized = mb_strtolower(trim((string) $value));
 
         return array_key_exists($normalized, self::STATUSES) ? $normalized : $normalized;
+    }
+
+    public static function normalizePurpose(mixed $value): string
+    {
+        $normalized = mb_strtolower(trim((string) $value));
+
+        return array_key_exists($normalized, self::PURPOSES) ? $normalized : 'service';
+    }
+
+    public function purposeLabel(): string
+    {
+        return self::PURPOSES[$this->purpose] ?? self::PURPOSES['service'];
     }
 
     public function tenant(): BelongsTo
@@ -59,5 +84,10 @@ class Funnel extends Model
     public function events(): HasMany
     {
         return $this->hasMany(FunnelEvent::class);
+    }
+
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(FunnelReview::class);
     }
 }

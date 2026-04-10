@@ -143,22 +143,46 @@
 
     <div class="charts">
         <div class="chart">
-            <h3>Platform Lead Volume Trend</h3>
+            <div class="chart-heading">
+                <h3>Platform Lead Volume Trend</h3>
+                <span class="chart-help-wrap">
+                    <span class="chart-help-dot" tabindex="0" aria-label="Lead volume trend help">?</span>
+                    <span class="chart-help-tip">Shows how total leads are trending over time across all tenants.</span>
+                </span>
+            </div>
             <canvas id="leadTrendChart"></canvas>
         </div>
         <div class="chart">
-            <h3>Total Users by Role</h3>
+            <div class="chart-heading">
+                <h3>Total Users by Role</h3>
+                <span class="chart-help-wrap">
+                    <span class="chart-help-dot" tabindex="0" aria-label="Users by role help">?</span>
+                    <span class="chart-help-tip">Shows how users are distributed across platform roles.</span>
+                </span>
+            </div>
             <canvas id="usersByRoleChart"></canvas>
         </div>
     </div>
 
     <div class="charts">
         <div class="chart">
-            <h3>Tenant Growth (Last 6 Months)</h3>
+            <div class="chart-heading">
+                <h3>Tenant Growth (Last 6 Months)</h3>
+                <span class="chart-help-wrap">
+                    <span class="chart-help-dot" tabindex="0" aria-label="Tenant growth help">?</span>
+                    <span class="chart-help-tip">Shows new tenant signups month by month for the last six months.</span>
+                </span>
+            </div>
             <canvas id="tenantGrowthChart"></canvas>
         </div>
         <div class="chart">
-            <h3>Platform Usage Snapshot</h3>
+            <div class="chart-heading">
+                <h3>Platform Usage Snapshot</h3>
+                <span class="chart-help-wrap">
+                    <span class="chart-help-dot" tabindex="0" aria-label="Usage snapshot help">?</span>
+                    <span class="chart-help-tip">Shows current counts for key platform activity metrics.</span>
+                </span>
+            </div>
             <canvas id="usageMetricsChart"></canvas>
         </div>
     </div>

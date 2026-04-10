@@ -1,19 +1,9 @@
-@extends('layouts.admin')
+﻿@extends('layouts.admin')
 
 @section('title', 'All Leads')
 
 @section('styles')
-    <style>
-        .sa-table-scroll {
-            width: 100%;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-        }
-
-        .sa-table {
-            min-width: 900px;
-        }
-    </style>
+        <link rel="stylesheet" href="{{ asset('css/extracted/admin-leads-index-style1.css') }}">
 @endsection
 
 @section('content')
@@ -85,3 +75,4 @@
         });
     </script>
 @endsection
+

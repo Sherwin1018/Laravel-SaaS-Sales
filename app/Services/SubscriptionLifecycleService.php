@@ -73,6 +73,12 @@ class SubscriptionLifecycleService
                     'billing_grace_ends_at' => now()->addDays(self::GRACE_DAYS),
                     'last_payment_failed_at' => now(),
                 ]);
+
+                $this->dispatchAutomationEvent('payment_failed', [
+                    'tenant_id' => $tenant->id,
+                    'invoice_id' => (string) ($payment->provider_reference ?: $payment->id),
+                    'payment_id' => $payment->id,
+                ]);
             }
 
             return $tenant->fresh();
@@ -106,6 +112,10 @@ class SubscriptionLifecycleService
             'subscription_activated_at' => $tenant->subscription_activated_at ?? now(),
         ]);
 
+        $this->dispatchAutomationEvent('payment_recovered', [
+            'tenant_id' => $tenant->id,
+        ]);
+
         return $tenant->fresh();
     }
 
@@ -117,5 +127,17 @@ class SubscriptionLifecycleService
             self::BILLING_TRIAL => 'Trial',
             default => 'Current',
         };
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function dispatchAutomationEvent(string $eventName, array $payload): void
+    {
+        try {
+            app(N8nEmailOrchestrator::class)->dispatch($eventName, $payload);
+        } catch (\Throwable) {
+            // Best-effort dispatch only.
+        }
     }
 }

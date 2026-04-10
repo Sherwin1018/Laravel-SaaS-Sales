@@ -1,9 +1,10 @@
-@extends('layouts.admin')
+﻿@extends('layouts.admin')
 @section('title', 'Funnel Builder')
 @section('styles')
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Manrope:wght@400;600;700;800&family=Montserrat:wght@400;600;700;800&family=Nunito:wght@400;600;700;800&family=Open+Sans:wght@400;600;700;800&family=Playfair+Display:wght@400;600;700&family=Poppins:wght@400;600;700;800&family=Raleway:wght@400;600;700;800&family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ asset('css/extracted/funnels-edit-style1.css') }}">
 @endsection
 
 @section('content')
@@ -54,6 +55,21 @@
 #canvas{overflow-x:hidden;overflow-y:auto;box-sizing:border-box}
 #canvas .sec,#canvas .row,#canvas .col,#canvas .el,#canvas .sec-inner,#canvas .row-inner,#canvas .col-inner{max-width:100%;box-sizing:border-box}
 #canvas img,#canvas video,#canvas iframe{max-width:100%;height:auto}
+.fb-image-placeholder{width:100%;min-height:140px;border:2px solid #6ea0ff;border-radius:12px;background:linear-gradient(180deg,#ffffff,#fbfcff);display:block;position:relative;box-sizing:border-box;overflow:hidden}
+.fb-image-placeholder--compact{min-height:84px;border-width:1px;border-style:dashed;border-color:#b9c9ea;border-radius:10px;background:#fcfdff}
+.fb-image-placeholder__center{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:18px}
+.fb-image-placeholder__plus{width:58px;height:58px;border-radius:999px;background:#d9d9d9;color:#5f6368;display:flex;align-items:center;justify-content:center;font-size:40px;font-weight:300;line-height:1;box-shadow:0 6px 18px rgba(15,23,42,.16);border:none}
+.fb-image-placeholder__center .fb-image-placeholder__plus{cursor:pointer}
+.fb-image-placeholder--compact .fb-image-placeholder__center{justify-content:flex-start;gap:12px;position:static;padding:18px;height:100%}
+.fb-image-placeholder--compact .fb-image-placeholder__plus{width:34px;height:34px;font-size:26px;box-shadow:none;background:#ffffff;border:1px solid #240E35;color:#240E35;cursor:default}
+.fb-image-placeholder__label{position:absolute;left:16px;right:16px;bottom:18px;text-align:center;font-size:14px;font-weight:600;color:#5f6368;letter-spacing:.01em;pointer-events:none}
+.fb-image-placeholder--compact .fb-image-placeholder__label{position:static;text-align:left;font-size:13px;color:#1f2937;font-weight:500}
+.fb-image-placeholder--actionable{cursor:pointer}
+.fb-image-placeholder__menu{position:fixed;left:0;top:0;transform:none;margin-top:0;display:flex;flex-direction:column;gap:10px;min-width:230px;padding:14px;border:2px solid #240E35;border-radius:16px;background:rgba(255,255,255,.98);box-shadow:0 22px 48px rgba(36,14,53,.26);z-index:2200;backdrop-filter:blur(8px)}
+.fb-image-placeholder__menu[hidden]{display:none}
+.fb-image-placeholder__menu::before{content:"Choose image";font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#6B4A7A}
+.fb-image-placeholder__menu button{width:100%;min-height:46px;border:2px solid #D8C8EA;border-radius:12px;background:#ffffff;color:#240E35;padding:12px 14px;text-align:left;font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 6px 14px rgba(36,14,53,.08);transition:transform .12s ease,box-shadow .16s ease,border-color .16s ease,background .16s ease}
+.fb-image-placeholder__menu button:hover{background:#F8F5FB;border-color:#240E35;box-shadow:0 10px 22px rgba(36,14,53,.14);transform:translateY(-1px)}
 #fbSettingsCard{display:flex;flex-direction:column;max-height:calc(100vh - 120px);min-height:0}
 #fbSettingsCard .fb-h{flex-shrink:0}
 #fbSettingsCard #settings{overflow-y:auto;overflow-x:hidden;flex:1;min-height:0;padding-right:4px}
@@ -156,7 +172,7 @@
 .fb-lib-group:last-child{margin-bottom:0;padding-bottom:0;border-bottom:0}
 .fb-lib-group-title{font-size:12px;font-weight:900;letter-spacing:.02em;text-transform:uppercase;color:#2E1244;margin:0 0 8px}
 .fb-template-grid{display:grid;grid-template-columns:1fr;gap:12px}
-.fb-template-card{border:1px solid #E6E1EF;border-radius:14px;background:#fff;padding:12px;display:flex;flex-direction:column;gap:10px;box-shadow:0 10px 20px rgba(36,14,53,.06);transition:transform .16s ease,box-shadow .2s ease,border-color .2s ease}
+.fb-template-card{border:1px solid #E6E1EF;border-radius:16px;background:#fff;padding:14px;display:flex;flex-direction:column;gap:12px;box-shadow:0 10px 20px rgba(36,14,53,.06);transition:transform .16s ease,box-shadow .2s ease,border-color .2s ease}
 .fb-template-card:hover{transform:translateY(-1px);border-color:#D8C8EA;box-shadow:0 16px 28px rgba(36,14,53,.10)}
 .fb-template-status{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 8px}
 .fb-template-pill{display:inline-flex;align-items:center;justify-content:center;padding:6px 10px;border-radius:999px;background:#F3EEF7;color:#240E35;font-size:11px;font-weight:800;white-space:nowrap;border:1px solid #E6E1EF}
@@ -166,12 +182,23 @@
 .fb-template-mode-btn:not(.active):hover{background:#F8F5FB;border-color:#D8C8EA}
 .fb-template-current{margin:0 0 12px;font-size:12px;color:#64748b;line-height:1.45}
 .fb-template-pane.hidden{display:none}
-.fb-template-preview{height:92px;border-radius:10px;border:1px dashed #E6E1EF;background:linear-gradient(135deg,#F8F5FB,#F3EEF7);position:relative;overflow:hidden}
-.fb-template-title{font-size:13px;font-weight:800;color:#240E35;margin:0}
-.fb-template-desc{font-size:12px;color:#64748b;line-height:1.4;margin:0}
-.fb-template-actions{display:flex;align-items:flex-end;justify-content:space-between;gap:8px}
+.fb-template-preview{height:92px;border-radius:12px;border:1px dashed #E6E1EF;background:linear-gradient(135deg,#F8F5FB,#F3EEF7);position:relative;overflow:hidden}
+.fb-template-title{font-size:15px;font-weight:800;color:#240E35;margin:0;line-height:1.25}
+.fb-template-desc{font-size:12px;color:#64748b;line-height:1.55;margin:0}
+.fb-template-actions{display:flex;flex-direction:column;align-items:stretch;gap:10px}
 .fb-template-tags{display:flex;flex-wrap:wrap;gap:6px}
 .fb-template-tag{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:800;color:#6B4A7A;background:#F3EEF7;border:1px solid #E6E1EF;border-radius:999px;padding:2px 6px;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}
+.fb-template-card-meta{display:grid;gap:6px}
+.fb-template-card-controls{display:flex;gap:8px;align-items:stretch;justify-content:space-between;flex-wrap:wrap}
+.fb-template-card-controls .fb-btn{min-height:42px}
+.fb-template-card-controls .fb-btn.primary{flex:1 1 160px;justify-content:center;text-align:center;line-height:1.2;padding:10px 14px}
+.fb-template-card-controls .fb-btn:not(.primary){flex:0 0 auto}
+@media (max-width:640px){
+    .fb-template-card{padding:12px}
+    .fb-template-card-controls{flex-direction:column;align-items:stretch}
+    .fb-template-card-controls .fb-btn,
+    .fb-template-card-controls .fb-btn.primary{width:100%;flex:1 1 auto}
+}
 .fb-template-preview .tp-line{height:6px;background:#E6E1EF;border-radius:999px;margin:6px 8px}
 .fb-template-preview .tp-line-lg{height:10px;width:70%;background:#D6C6E2}
 .fb-template-preview .tp-line-md{width:88%}
@@ -245,7 +272,7 @@
 .el.el--carousel{border:0 !important;background:transparent !important;padding:0 !important}
 .el.el--form{border:0 !important;background:transparent !important;padding:0 !important}
 #canvas .el.el--menu ul{flex-wrap:nowrap !important;white-space:nowrap}
-#canvas.canvas-outline-mode .sec,#canvas.canvas-outline-mode .row,#canvas.canvas-outline-mode .col,#canvas.canvas-outline-mode .el{position:relative;background:transparent;border:1px dashed #E7D8F0 !important;border-radius:0;box-shadow:none !important}
+#canvas.canvas-outline-mode .sec,#canvas.canvas-outline-mode .row,#canvas.canvas-outline-mode .col,#canvas.canvas-outline-mode .el{position:relative;border:1px dashed #E7D8F0 !important;border-radius:0;box-shadow:none !important}
 #canvas.canvas-outline-mode .sec.sec--bare-wrap,#canvas.canvas-outline-mode .sec.sec--bare-carousel{border:0 !important;background:transparent !important;padding:0 !important;margin-bottom:0 !important}
 #canvas.canvas-outline-mode .sec.sec--freeform-canvas{border:0 !important;background:transparent !important;padding:0 !important;margin:0 !important}
 #canvas.canvas-outline-mode .sec{padding:5px !important;margin-bottom:6px}
@@ -355,12 +382,57 @@
 .fb-testimonial-avatar{width:40px;height:40px;border-radius:999px;object-fit:cover;background:#E6E1EF;flex-shrink:0}
 .fb-testimonial-name{font-weight:800;color:#240E35}
 .fb-testimonial-role{font-size:12px;color:#64748b}
+.fb-review-form{display:grid;gap:10px}
+.fb-review-form-title{font-size:18px;font-weight:900;color:#240E35}
+.fb-review-form-subtitle{font-size:12px;color:#64748b;line-height:1.5}
+.fb-review-stars{display:flex;gap:6px;color:#f59e0b;font-size:18px}
+.fb-review-input,.fb-review-textarea{width:100%;padding:10px 12px;border:1px solid #E6E1EF;border-radius:10px;background:#fff}
+.fb-review-textarea{min-height:84px;resize:vertical}
+.fb-review-check{display:flex;align-items:flex-start;gap:8px;font-size:12px;color:#475569}
+.fb-review-form{width:100%;min-width:0}
+.fb-review-list{display:grid;gap:12px;width:100%;min-width:0}
+.fb-review-list.grid{grid-template-columns:repeat(auto-fit,minmax(min(280px,100%),1fr))}
+.fb-review-card{border:1px solid #E6E1EF;border-radius:14px;padding:14px;width:100%;min-width:0;box-sizing:border-box;background:#fff;display:grid;gap:8px}
+.fb-review-card-head{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.fb-review-card-name{font-weight:800;color:#240E35}
+.fb-review-card-date{font-size:11px;color:#64748b}
+.fb-review-card-text{font-size:13px;color:#334155;line-height:1.55}
+.fb-review-card-stars{color:#f59e0b;font-size:14px;letter-spacing:.05em}
 .fb-faq{display:grid;gap:10px}
 .fb-faq-item{border-bottom:1px solid #E6E1EF;padding-bottom:8px}
 .fb-faq-item:last-child{border-bottom:0;padding-bottom:0}
 .fb-faq-q{font-weight:800;color:#240E35}
 .fb-faq-a{color:#475569;font-size:13px;margin-top:4px;white-space:pre-wrap}
 .fb-pricing{display:grid;gap:10px}
+.fb-product-offer{display:grid;gap:4px}
+.fb-product-offer .fb-pricing-badge{padding:2px 6px;font-size:9px}
+.fb-product-offer .fb-pricing-title{font-size:13px;line-height:1.25}
+.fb-product-offer .fb-pricing-price{font-size:20px;line-height:1}
+.fb-product-offer .fb-pricing-period{font-size:10px}
+.fb-product-offer .fb-pricing-subtitle{font-size:10px;line-height:1.3}
+.fb-product-offer .fb-pricing-features{gap:4px}
+.fb-product-offer .fb-pricing-features li{font-size:10px;gap:4px}
+.fb-product-offer .fb-product-actions{display:grid;gap:6px}
+.fb-product-offer .fb-product-utility{display:grid;grid-template-columns:minmax(0,1fr) 32px;gap:6px}
+.fb-product-offer .fb-pricing-cta{width:100%;padding:7px 8px;font-size:11px}
+.fb-product-offer .fb-product-secondary{width:100%;padding:6px 8px;font-size:10px;border-radius:999px;border:1px solid #d7cdea;background:#fff;color:#240E35;font-weight:700;text-align:center}
+.fb-product-offer .fb-product-cart{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:999px;border:1px solid #d7cdea;background:#fff;color:#240E35;font-size:12px;font-weight:700}
+.fb-product-media{position:relative;border:1px solid #E6E1EF;border-radius:12px;overflow:hidden;background:linear-gradient(180deg,#ffffff,#F8FAFC);min-height:88px}
+.fb-product-media-stage{position:relative;display:flex;align-items:center;justify-content:center;aspect-ratio:1/1;min-height:88px;background:#fff}
+.fb-product-media-stage img,.fb-product-media-stage video{width:100%;height:100%;display:block;object-fit:cover;background:#fff}
+.fb-product-media-placeholder{width:100%;height:100%;min-height:88px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#64748b;text-align:center;padding:8px;font-size:10px;cursor:pointer}
+.fb-product-media-placeholder i{font-size:16px}
+.fb-product-media-nav{position:absolute;top:50%;transform:translateY(-50%);width:36px;height:36px;border:1px solid rgba(255,255,255,.72);border-radius:999px;background:rgba(15,23,42,.6);color:#fff;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;z-index:2}
+.fb-product-media-nav.is-left{left:10px}
+.fb-product-media-nav.is-right{right:10px}
+.fb-product-media-nav[disabled]{opacity:.45;cursor:default}
+.fb-product-media:hover .fb-product-media-nav,.fb-product-media:focus-within .fb-product-media-nav{opacity:1;pointer-events:auto;transform:translateY(-50%) scale(1)}
+@media (hover:hover) and (pointer:fine){
+  .fb-product-media .fb-product-media-nav{opacity:0;pointer-events:none;transform:translateY(-50%) scale(.92);transition:opacity .18s ease,transform .18s ease}
+}
+.fb-product-media-dots{display:flex;align-items:center;justify-content:center;gap:6px}
+.fb-product-media-dot{width:8px;height:8px;border-radius:999px;background:#CBD5E1}
+.fb-product-media-dot.is-active{width:22px;background:#240E35}
 .fb-pricing-badge{align-self:flex-start;background:#E7D8F0;color:#2E1244;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em}
 .fb-pricing-title{font-size:18px;font-weight:900;color:#240E35}
 .fb-pricing-price{font-size:30px;font-weight:900;color:#16a34a}
@@ -369,6 +441,37 @@
 .fb-pricing-features{list-style:none;padding:0;margin:0;display:grid;gap:6px}
 .fb-pricing-features li{display:flex;align-items:flex-start;gap:6px;font-size:12px;color:#334155}
 .fb-pricing-cta{display:inline-flex;align-items:center;justify-content:center;padding:8px 12px;border-radius:8px;font-weight:700;text-decoration:none;border:0;cursor:pointer}
+.fb-physical-checkout{display:grid;gap:12px;padding:16px}
+.fb-physical-checkout .fb-pricing-badge{background:#eaf2ff;color:#1d4ed8}
+.fb-physical-checkout-head{display:grid;gap:4px}
+.fb-physical-checkout-label{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#64748b}
+.fb-physical-checkout-product{display:grid;grid-template-columns:64px minmax(0,1fr);gap:12px;align-items:center;padding:12px;border:1px solid #e6eaf2;border-radius:16px;background:linear-gradient(180deg,#ffffff,#faf8fd)}
+.fb-physical-checkout-thumb{width:64px;height:64px;border-radius:16px;border:1px solid #dbe3f0;background:#f8fafc;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.fb-physical-checkout-thumb i{font-size:22px;color:#94a3b8}
+.fb-physical-checkout-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.fb-physical-checkout-meta{display:grid;gap:4px;min-width:0}
+.fb-physical-checkout-meta .fb-pricing-title{font-size:16px;line-height:1.2}
+.fb-physical-checkout-meta .fb-pricing-subtitle{font-size:11px;line-height:1.35}
+.fb-physical-checkout-price{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.fb-physical-checkout-price .fb-pricing-price{font-size:24px}
+.fb-physical-checkout-price .fb-pricing-period{margin-left:0}
+.fb-physical-checkout-rows{display:grid;gap:8px;padding:10px 0;border-top:1px solid #eef2f7;border-bottom:1px solid #eef2f7}
+.fb-physical-checkout-row{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;color:#475569}
+.fb-physical-checkout-row strong{color:#0f172a;font-size:13px}
+.fb-physical-checkout-row--total strong:last-child{font-size:18px;color:#16a34a}
+.fb-physical-checkout-lines{display:grid;gap:8px}
+.fb-physical-checkout-line{display:grid;grid-template-columns:40px 1fr auto;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid #eef2f7}
+.fb-physical-checkout-line:last-child{border-bottom:0;padding-bottom:0}
+.fb-physical-checkout-line-thumb{width:40px;height:40px;border-radius:12px;border:1px solid #dbe3f0;background:#f8fafc;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.fb-physical-checkout-line-thumb i{font-size:14px;color:#94a3b8}
+.fb-physical-checkout-line-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.fb-physical-checkout-line-meta{min-width:0;display:grid;gap:2px}
+.fb-physical-checkout-line-title{font-size:12px;font-weight:800;color:#0f172a;line-height:1.25}
+.fb-physical-checkout-line-sub{font-size:11px;color:#64748b;line-height:1.25}
+.fb-physical-checkout-line-total{font-size:12px;font-weight:800;color:#0f172a}
+.fb-physical-checkout .fb-pricing-features{gap:5px}
+.fb-physical-checkout .fb-pricing-features li{font-size:11px}
+.fb-physical-checkout .fb-pricing-cta{width:100%;padding:10px 14px;border-radius:12px}
 .fb-countdown{display:grid;gap:8px}
 .fb-countdown-label{font-size:12px;font-weight:800;color:#334155;text-transform:uppercase;letter-spacing:.08em}
 .fb-countdown-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
@@ -532,11 +635,34 @@
 <div class="fb-top">
     <div><strong>{{ $funnel->name }}</strong> <span style="font-size:12px;opacity:.9;">({{ ucfirst($funnel->status) }})</span></div>
     <div class="fb-actions">
-        <form method="POST" action="{{ route('funnels.update', $funnel) }}" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+        <form method="POST" action="{{ $builderUpdateUrl ?? route('funnels.update', $funnel) }}" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
             @csrf
             @method('PUT')
             <input type="hidden" name="name" value="{{ $funnel->name }}">
-            <input type="hidden" name="description" value="{{ $funnel->description }}">
+            @if(($builderMode ?? 'funnel') === 'template')
+                <input
+                    type="text"
+                    name="description"
+                    value="{{ old('description', $funnel->description) }}"
+                    placeholder="Template description"
+                    style="min-width:320px;padding:6px 8px;border:1px solid #E6E1EF;border-radius:8px;font-size:12px;"
+                >
+                <select
+                    name="template_type"
+                    style="min-width:190px;padding:6px 8px;border:1px solid #E6E1EF;border-radius:8px;font-size:12px;background:#fff;"
+                    title="Template Purpose"
+                >
+                    @foreach(\App\Models\FunnelTemplate::TEMPLATE_TYPES as $value => $label)
+                        @if(in_array($value, ['service', 'physical_product'], true))
+                            <option value="{{ $value }}" {{ old('template_type', $funnel->template_type) === $value ? 'selected' : '' }}>
+                                {{ $label }}
+                            </option>
+                        @endif
+                    @endforeach
+                </select>
+            @else
+                <input type="hidden" name="description" value="{{ $funnel->description }}">
+            @endif
             <input type="hidden" name="status" value="{{ $funnel->status }}">
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;font-weight:700;" title="Require email confirmation before automation runs">
                 <input type="checkbox" name="require_double_opt_in" value="1" {{ $funnel->require_double_opt_in ? 'checked' : '' }}>
@@ -545,20 +671,27 @@
             <input
                 type="text"
                 name="default_tags"
-                value="{{ old('default_tags', implode(', ', $funnel->default_tags ?? [])) }}"
-                placeholder="Funnel tags: e.g. webinar, q1-campaign"
+                value="{{ old('default_tags', $builderTagValue ?? implode(', ', $funnel->default_tags ?? [])) }}"
+                placeholder="{{ $builderTagPlaceholder ?? 'Funnel tags: e.g. webinar, q1-campaign' }}"
+                @if($builderTagInputDisabled ?? false) disabled @endif
                 style="min-width:280px;padding:6px 8px;border:1px solid #E6E1EF;border-radius:8px;font-size:12px;"
             >
-            <button class="fb-btn" type="submit"><i class="fas fa-tags"></i> Save Tags</button>
+            <button class="fb-btn" type="submit"><i class="fas fa-tags"></i> {{ ($builderMode ?? 'funnel') === 'template' ? 'Save Template' : 'Save Tags' }}</button>
         </form>
         <button id="saveBtn" class="fb-btn primary" type="button"><i class="fas fa-save"></i> Save</button>
         <button id="previewBtn" class="fb-btn" type="button"><i class="fas fa-eye"></i> Preview</button>
-        @if($funnel->status === 'published')
-            <form method="POST" action="{{ route('funnels.unpublish', $funnel) }}">@csrf<button class="fb-btn danger" type="submit"><i class="fas fa-ban"></i> Unpublish</button></form>
-        @else
-            <form method="POST" action="{{ route('funnels.publish', $funnel) }}">@csrf<button class="fb-btn success" type="submit"><i class="fas fa-upload"></i> Publish</button></form>
+        @if(($builderMode ?? 'funnel') !== 'template')
+            <a href="{{ route('funnels.reviews.index', $funnel) }}" class="fb-btn"><i class="fas fa-star-half-alt"></i> Reviews</a>
         @endif
-        <a href="{{ route('funnels.index') }}" class="fb-btn"><i class="fas fa-door-open"></i> Exit Builder</a>
+        @if(($builderMode ?? 'funnel') === 'template')
+            <button id="testFlowBtn" class="fb-btn" type="button"><i class="fas fa-vial"></i> Test Flow</button>
+        @endif
+        @if($funnel->status === 'published')
+            <form method="POST" action="{{ $builderUnpublishUrl ?? route('funnels.unpublish', $funnel) }}" id="builderUnpublishForm">@csrf<button class="fb-btn danger" type="submit"><i class="fas fa-ban"></i> Unpublish</button></form>
+        @else
+            <form method="POST" action="{{ $builderPublishUrl ?? route('funnels.publish', $funnel) }}" id="builderPublishForm">@csrf<button class="fb-btn success" type="submit" id="builderPublishBtn"><i class="fas fa-upload"></i> {{ ($builderMode ?? 'funnel') === 'template' ? 'Save as Template' : 'Publish' }}</button></form>
+        @endif
+        <a href="{{ $builderExitUrl ?? route('funnels.index') }}" class="fb-btn"><i class="fas fa-door-open"></i> Exit Builder</a>
     </div>
 </div>
 
@@ -573,57 +706,58 @@
         <div class="fb-left-panel" id="fbLeftPanelComponents">
             <div class="fb-card fb-lib">
                 <h3 class="fb-h">Components</h3>
-                <div class="fb-lib-group">
+                <p class="meta" id="fbPurposeMeta" style="margin:0 0 10px;">
+                    Component library adjusts to this funnel purpose.
+                </p>
+                <div class="fb-lib-group" data-component-group>
                     <div class="fb-lib-group-title">Layout & Structure</div>
-                    <button draggable="true" data-c="section"><i class="fas fa-square"></i>Section</button>
-                    <button draggable="true" data-c="row"><i class="fas fa-grip-lines"></i>Row</button>
-                    <button draggable="true" data-c="column"><i class="fas fa-columns"></i>Column</button>
-                    <button draggable="true" data-c="spacer"><i class="fas fa-arrows-up-down"></i>Spacer</button>
+                    <button draggable="true" data-c="section" data-purpose="all"><i class="fas fa-square"></i>Section</button>
+                    <button draggable="true" data-c="row" data-purpose="all"><i class="fas fa-grip-lines"></i>Row</button>
+                    <button draggable="true" data-c="column" data-purpose="all"><i class="fas fa-columns"></i>Column</button>
+                    <button draggable="true" data-c="spacer" data-purpose="all"><i class="fas fa-arrows-up-down"></i>Spacer</button>
                 </div>
-                <div class="fb-lib-group">
+                <div class="fb-lib-group" data-component-group>
                     <div class="fb-lib-group-title">Basic Content</div>
-                    <button draggable="true" data-c="heading"><i class="fas fa-heading"></i>Heading</button>
-                    <button draggable="true" data-c="text"><i class="fas fa-font"></i>Text</button>
-                    <button draggable="true" data-c="button"><i class="fas fa-square-plus"></i>Button</button>
-                    <button draggable="true" data-c="icon"><i class="fas fa-icons"></i>Icon</button>
+                    <button draggable="true" data-c="heading" data-purpose="all"><i class="fas fa-heading"></i>Heading</button>
+                    <button draggable="true" data-c="text" data-purpose="all"><i class="fas fa-font"></i>Text</button>
+                    <button draggable="true" data-c="button" data-purpose="all"><i class="fas fa-square-plus"></i>Button</button>
+                    <button draggable="true" data-c="icon" data-purpose="all"><i class="fas fa-icons"></i>Icon</button>
                 </div>
-                <div class="fb-lib-group">
+                <div class="fb-lib-group" data-component-group>
                     <div class="fb-lib-group-title">Media & Visuals</div>
-                    <button draggable="true" data-c="image"><i class="fas fa-image"></i>Image</button>
-                    <button draggable="true" data-c="video"><i class="fas fa-video"></i>Video</button>
-                    <button draggable="true" data-c="carousel"><i class="fas fa-images"></i>Carousel</button>
+                    <button draggable="true" data-c="image" data-purpose="all"><i class="fas fa-image"></i>Image</button>
+                    <button draggable="true" data-c="video" data-purpose="all"><i class="fas fa-video"></i>Video</button>
+                    <button draggable="true" data-c="carousel" data-purpose="all"><i class="fas fa-images"></i>Carousel</button>
                 </div>
-                <div class="fb-lib-group">
+                <div class="fb-lib-group" data-component-group>
                     <div class="fb-lib-group-title">Interaction & Navigation</div>
-                    <button draggable="true" data-c="menu"><i class="fas fa-bars"></i>Menu</button>
-                    <button draggable="true" data-c="form"><i class="fas fa-file-lines"></i>Form</button>
+                    <button draggable="true" data-c="menu" data-purpose="all"><i class="fas fa-bars"></i>Menu</button>
+                    <button draggable="true" data-c="form" data-purpose="service,physical_product"><i class="fas fa-file-lines"></i>Form</button>
                 </div>
-                <div class="fb-lib-group">
+                <div class="fb-lib-group" data-component-group>
                     <div class="fb-lib-group-title">Advanced Blocks</div>
-                    <button draggable="true" data-c="testimonial"><i class="fas fa-quote-right"></i>Testimonial</button>
-                    <button draggable="true" data-c="faq"><i class="fas fa-circle-question"></i>FAQ</button>
-                    <button draggable="true" data-c="pricing"><i class="fas fa-tags"></i>Pricing</button>
-                    <button draggable="true" data-c="countdown"><i class="fas fa-stopwatch"></i>Countdown</button>
+                    <button draggable="true" data-c="testimonial" data-purpose="service"><i class="fas fa-quote-right"></i>Testimonial</button>
+                    <button draggable="true" data-c="review_form" data-purpose="service,physical_product"><i class="fas fa-star-half-stroke"></i>Review Form</button>
+                    <button draggable="true" data-c="reviews" data-purpose="service,physical_product"><i class="fas fa-stars"></i>Reviews</button>
+                    <button draggable="true" data-c="faq" data-purpose="service"><i class="fas fa-circle-question"></i>FAQ</button>
+                    <button draggable="true" data-c="pricing" data-purpose="service"><i class="fas fa-tags"></i>Pricing</button>
+                    <button draggable="true" data-c="product_offer" data-purpose="physical_product"><i class="fas fa-box-open"></i>Product Offer</button>
+                    <button draggable="true" data-c="checkout_summary" data-purpose="service"><i class="fas fa-receipt"></i>Checkout Summary</button>
+                    <button draggable="true" data-c="physical_checkout_summary" data-purpose="physical_product"><i class="fas fa-basket-shopping"></i>Physical Checkout Summary</button>
+                    <button draggable="true" data-c="countdown" data-purpose="service"><i class="fas fa-stopwatch"></i>Countdown</button>
                 </div>
             </div>
         </div>
         <div class="fb-left-panel hidden" id="fbLeftPanelTemplates">
             <div class="fb-card settings">
                 <h3 class="fb-h" id="fbTemplateHeading">Templates</h3>
-                <p class="meta" id="fbTemplateMeta" style="margin:0 0 10px;">Replace the current page with a starter layout.</p>
+                <p class="meta" id="fbTemplateMeta" style="margin:0 0 10px;">Apply a saved super-admin template across this funnel.</p>
                 <div class="fb-template-status">
-                    <span class="fb-template-pill" id="fbTemplateTypePill">Current Page</span>
-                    <span class="fb-template-pill" id="fbTemplateCountPill">0 layouts</span>
+                    <span class="fb-template-pill" id="fbTemplateTypePill">Super Admin</span>
+                    <span class="fb-template-pill" id="fbTemplateCountPill">0 templates</span>
                 </div>
-                <div class="fb-template-mode" role="tablist" aria-label="Template scope">
-                    <button type="button" class="fb-template-mode-btn active" id="fbTemplateModePage">Single Page</button>
-                    <button type="button" class="fb-template-mode-btn" id="fbTemplateModeFunnel">All Pages</button>
-                </div>
-                <p class="fb-template-current" id="fbTemplateCurrentPage">Choose a page to see its starter layouts.</p>
-                <div id="fbTemplatePagePane" class="fb-template-pane">
-                    <div id="fbTemplateGrid" class="fb-template-grid"></div>
-                </div>
-                <div id="fbTemplateFunnelPane" class="fb-template-pane hidden">
+                <p class="fb-template-current" id="fbTemplateCurrentPage">Choose a saved super-admin template to apply it to all pages in this funnel.</p>
+                <div id="fbTemplateFunnelPane" class="fb-template-pane">
                     <div id="fbFunnelTemplateGrid" class="fb-template-grid"></div>
                 </div>
             </div>
@@ -673,6 +807,7 @@
             <div class="page-mgr-col">
                 <div class="page-mgr-section">
                     <h5>Add Page</h5>
+                    <div class="page-mgr-note">Repeated page types are suggested as numbered groups like Sales 1, Sales 2, and Sales 3 so they are easier to find later.</div>
                     <label for="pageMgrAddType">Type</label>
                     <select id="pageMgrAddType">
                         <option value="landing">Landing</option>
@@ -685,9 +820,9 @@
                         <option value="custom">Custom</option>
                     </select>
                     <label for="pageMgrAddTitle">Page title</label>
-                    <input id="pageMgrAddTitle" type="text" placeholder="e.g. About Offer">
+                    <input id="pageMgrAddTitle" type="text" placeholder="e.g. Sales 2 - Bundle Offer">
                     <label for="pageMgrAddSlug">Page slug (optional)</label>
-                    <input id="pageMgrAddSlug" type="text" placeholder="e.g. about-offer">
+                    <input id="pageMgrAddSlug" type="text" placeholder="e.g. sales-2-bundle-offer">
                     <button id="pageMgrCreateBtn" type="button" class="fb-btn primary page-mgr-create-btn">Create Page</button>
                 </div>
                 <div class="page-mgr-section">
@@ -750,6 +885,27 @@
         </div>
     </div>
 </div>
+<div class="fb-modal" id="fbSharedTemplateEditModal" aria-hidden="true">
+    <div class="fb-modal-card" role="dialog" aria-modal="true" aria-labelledby="fbSharedTemplateEditTitle">
+        <div class="fb-modal-title" id="fbSharedTemplateEditTitle">Edit saved template</div>
+        <p class="fb-modal-desc">Update the builder card description and the chips shown under it.</p>
+        <div style="display:grid;gap:14px;">
+            <div>
+                <label for="fbSharedTemplateEditDescription" style="display:block;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#5d4476;margin-bottom:6px;">Description</label>
+                <textarea id="fbSharedTemplateEditDescription" rows="4" style="width:100%;border:1px solid #d7cce8;border-radius:14px;padding:12px 14px;font:inherit;resize:vertical;background:#fff;color:#240e35;" placeholder="What this template is for"></textarea>
+            </div>
+            <div>
+                <label for="fbSharedTemplateEditTags" style="display:block;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#5d4476;margin-bottom:6px;">Card chips</label>
+                <input id="fbSharedTemplateEditTags" type="text" style="width:100%;border:1px solid #d7cce8;border-radius:14px;padding:12px 14px;font:inherit;background:#fff;color:#240e35;" placeholder="5 Pages, Landing, Opt In, Published">
+                <div style="margin-top:6px;font-size:12px;color:#7a6890;">Use commas to separate each chip.</div>
+            </div>
+        </div>
+        <div class="fb-modal-actions" style="margin-top:18px;">
+            <button type="button" class="fb-btn" id="fbSharedTemplateEditCancel">Cancel</button>
+            <button type="button" class="fb-btn primary" id="fbSharedTemplateEditSave">Save Changes</button>
+        </div>
+    </div>
+</div>
 @endsection
 
 @section('scripts')
@@ -791,20 +947,26 @@
 @endphp
 <script>
 (function(){
-const saveUrl="{{ route('funnels.builder.layout.save',$funnel) }}";
-const assetLibraryUrl="{{ route('funnels.builder.assets.index',$funnel) }}";
-const assetLibraryDeleteUrl="{{ route('funnels.builder.assets.destroy',$funnel) }}";
-const uploadUrl="{{ route('funnels.builder.image.upload',$funnel) }}";
-const previewTpl="{{ route('funnels.preview',['funnel'=>$funnel,'step'=>'__STEP__']) }}";
-const stepVersionTpl="{{ route('funnels.steps.versions.store',['funnel'=>$funnel,'step'=>'__STEP__']) }}";
-const stepStoreUrl="{{ route('funnels.steps.store',$funnel) }}";
-const stepUpdateTpl="{{ route('funnels.steps.update',['funnel'=>$funnel,'step'=>'__STEP__']) }}";
-const stepDeleteTpl="{{ route('funnels.steps.destroy',['funnel'=>$funnel,'step'=>'__STEP__']) }}";
-const stepReorderUrl="{{ route('funnels.steps.reorder',$funnel) }}";
+const saveUrl=@json($builderSaveUrl ?? route('funnels.builder.layout.save',$funnel));
+const assetLibraryUrl=@json($builderAssetLibraryUrl ?? route('funnels.builder.assets.index',$funnel));
+const assetLibraryDeleteUrl=@json($builderAssetDeleteUrl ?? route('funnels.builder.assets.destroy',$funnel));
+const uploadUrl=@json($builderUploadUrl ?? route('funnels.builder.image.upload',$funnel));
+const previewTpl=@json($builderPreviewUrlTemplate ?? route('funnels.preview',['funnel'=>$funnel,'step'=>'__STEP__']));
+const testFlowTpl=@json($builderTestUrlTemplate ?? null);
+const stepVersionTpl=@json($builderStepVersionUrlTemplate ?? route('funnels.steps.versions.store',['funnel'=>$funnel,'step'=>'__STEP__']));
+const stepStoreUrl=@json($builderStepStoreUrl ?? route('funnels.steps.store',$funnel));
+const stepUpdateTpl=@json($builderStepUpdateUrlTemplate ?? route('funnels.steps.update',['funnel'=>$funnel,'step'=>'__STEP__']));
+const stepDeleteTpl=@json($builderStepDeleteUrlTemplate ?? route('funnels.steps.destroy',['funnel'=>$funnel,'step'=>'__STEP__']));
+const stepReorderUrl=@json($builderStepReorderUrl ?? route('funnels.steps.reorder',$funnel));
+const funnelUpdateUrl=@json($builderUpdateUrl ?? route('funnels.update', $funnel));
 const csrf="{{ csrf_token() }}";
 const funnelSlug=@json($funnel->slug);
-const funnelStepUrlTpl=@json(route('funnels.portal.step',['funnelSlug'=>$funnel->slug,'stepSlug'=>'__STEP__']));
+const builderPurposeRaw=@json(($funnel->purpose ?? $funnel->template_type ?? 'service'));
+let builderPurpose=String(builderPurposeRaw||"service").toLowerCase();
+const funnelStepUrlTpl=@json($builderPublicStepUrlTemplate ?? route('funnels.portal.step',['funnelSlug'=>$funnel->slug,'stepSlug'=>'__STEP__']));
 const steps=@json($builderSteps);
+const sharedTemplatesUrl=@json($builderSharedTemplatesUrl ?? null);
+let sharedFunnelTemplates=@json($builderSharedTemplates ?? []);
 const state={sid:{{ (int)($defaultStepId??0) }}||((steps[0]&&steps[0].id)||null),layout:null,sel:null,carouselSel:null,clipboard:null,pasteAnchor:null,editingEl:null,mediaLoading:new Set()};
 const fonts=[
     {value:"Inter, sans-serif",label:"Inter"},
@@ -879,6 +1041,7 @@ const iconCatalog=[
 ];
 
 const stepSel=document.getElementById("stepSel"),stepAddBtn=document.getElementById("stepAddBtn"),pageMgrModal=document.getElementById("pageMgrModal"),pageMgrClose=document.getElementById("pageMgrClose"),pageMgrList=document.getElementById("pageMgrList"),pageMgrAddType=document.getElementById("pageMgrAddType"),pageMgrAddTitle=document.getElementById("pageMgrAddTitle"),pageMgrAddSlug=document.getElementById("pageMgrAddSlug"),pageMgrCreateBtn=document.getElementById("pageMgrCreateBtn"),pageMgrRenameTitle=document.getElementById("pageMgrRenameTitle"),pageMgrRenameType=document.getElementById("pageMgrRenameType"),pageMgrRenameSlug=document.getElementById("pageMgrRenameSlug"),pageMgrRenameTags=document.getElementById("pageMgrRenameTags"),pageMgrRenameBtn=document.getElementById("pageMgrRenameBtn"),pageMgrDeleteBtn=document.getElementById("pageMgrDeleteBtn"),pageMgrUpBtn=document.getElementById("pageMgrUpBtn"),pageMgrDownBtn=document.getElementById("pageMgrDownBtn"),versionModal=document.getElementById("versionModal"),versionModalClose=document.getElementById("versionModalClose"),versionModalCancel=document.getElementById("versionModalCancel"),versionModalSave=document.getElementById("versionModalSave"),versionModalLabel=document.getElementById("versionModalLabel"),versionModalPageName=document.getElementById("versionModalPageName"),canvas=document.getElementById("canvas"),settings=document.getElementById("settings"),saveMsg=document.getElementById("saveMsg"),settingsTitle=document.getElementById("settingsTitle"),canvasBgColor=document.getElementById("canvasBgColor"),canvasBgReset=document.getElementById("canvasBgReset");
+const fbPurposeMeta=document.getElementById("fbPurposeMeta");
 let _autoSaveTimer=null;
 let _autoSaveInFlight=false;
 let _autoSavePending=false;
@@ -935,15 +1098,65 @@ function renderStepOptions(){
     steps.forEach(function(s){
         var o=document.createElement("option");
         o.value=String(s.id);
-        var stepTitle=String(s.title||("Step "+String(s.id)));
-        o.textContent=stepTitle+" ("+pageTypeLabel(s.type)+")";
+        o.textContent=pageDisplayLabel(s);
         stepSel.appendChild(o);
     });
     var hasCurrent=steps.some(function(s){return +s.id===+state.sid;});
     if(!hasCurrent && steps.length)state.sid=steps[0].id;
     stepSel.value=String(state.sid||"");
 }
+function applyPurposeComponentVisibility(){
+    var labels={
+        service:"Service Funnel",
+        physical_product:"Physical Product Funnel"
+    };
+    if(fbPurposeMeta){
+        var purposeLabel=labels[builderPurpose]||"Service Funnel";
+        if(builderPurpose==="physical_product"){
+            fbPurposeMeta.textContent=purposeLabel+" components are focused on product selling and checkout-related blocks.";
+        }else if(builderPurpose==="service"){
+            fbPurposeMeta.textContent=purposeLabel+" components are focused on offers, forms, proof, and service-style selling.";
+        }
+    }
+    document.querySelectorAll("[data-c][data-purpose]").forEach(function(btn){
+        var allowed=String(btn.getAttribute("data-purpose")||"all").split(",").map(function(v){return String(v||"").trim().toLowerCase();}).filter(Boolean);
+        var visible=allowed.indexOf("all")>=0||allowed.indexOf(builderPurpose)>=0;
+        btn.style.display=visible?"":"none";
+    });
+    document.querySelectorAll("[data-component-group]").forEach(function(group){
+        var visibleButtons=Array.from(group.querySelectorAll("[data-c]")).filter(function(btn){
+            return btn.style.display!=="none";
+        });
+        group.style.display=visibleButtons.length?"":"none";
+    });
+}
+function normalizeBuilderPurpose(value){
+    var normalized=String(value||"service").trim().toLowerCase();
+    if(normalized==="digital_product"||normalized==="hybrid")return "service";
+    return ["service","physical_product"].indexOf(normalized)>=0?normalized:"service";
+}
+function setBuilderPurpose(nextPurpose){
+    builderPurpose=normalizeBuilderPurpose(nextPurpose);
+    applyPurposeComponentVisibility();
+}
+function syncBuilderPurposeFromTemplate(template){
+    var nextPurpose=normalizeBuilderPurpose(template&&template.template_type||"service");
+    if(!funnelUpdateUrl){
+        setBuilderPurpose(nextPurpose);
+        return Promise.resolve(nextPurpose);
+    }
+    if(nextPurpose===builderPurpose){
+        setBuilderPurpose(nextPurpose);
+        return Promise.resolve(nextPurpose);
+    }
+    return requestJson(funnelUpdateUrl,"PUT",{purpose:nextPurpose}).then(function(resp){
+        var savedPurpose=normalizeBuilderPurpose((resp&&resp.funnel&&resp.funnel.purpose)||nextPurpose);
+        setBuilderPurpose(savedPurpose);
+        return savedPurpose;
+    });
+}
 renderStepOptions();
+applyPurposeComponentVisibility();
 if(canvasBgColor){
     canvasBgColor.addEventListener("input",()=>{
         if(!state.layout)return;
@@ -1035,6 +1248,50 @@ const makeStretchColumn=(elements,style,settings)=>makeColumn(
     Object.assign({flex:"1"},style||{}),
     Object.assign({stretch:true,stretchJustify:"flex-start",stretchAlign:"stretch"},settings||{})
 );
+function makeCheckoutSummaryEl(opts,style){
+    opts=opts||{};
+    return makeEl("checkout_summary","",Object.assign({
+        width:"100%",
+        padding:"22px",
+        backgroundColor:"#ffffff",
+        border:"1px solid #E6E1EF",
+        borderRadius:"20px",
+        boxShadow:"0 12px 24px rgba(15,23,42,.08)"
+    },style||{}),{
+        heading:opts.heading||"Complete Your Order",
+        plan:opts.plan||"Chosen Plan",
+        price:opts.price||"Selected price",
+        period:opts.period||"/month",
+        subtitle:opts.subtitle||"This summary updates from the pricing selected earlier in the funnel.",
+        badge:opts.badge||"Selected Plan",
+        features:Array.isArray(opts.features)&&opts.features.length?opts.features:["Unlimited steps","Custom domains","Email support"],
+        ctaLabel:opts.ctaLabel||"Pay Now",
+        ctaBgColor:opts.ctaBgColor||"#240E35",
+        ctaTextColor:opts.ctaTextColor||"#ffffff"
+    });
+}
+function makePhysicalCheckoutSummaryEl(opts,style){
+    opts=opts||{};
+    return makeEl("physical_checkout_summary","",Object.assign({
+        width:"100%",
+        padding:"22px",
+        backgroundColor:"#ffffff",
+        border:"1px solid #E6E1EF",
+        borderRadius:"20px",
+        boxShadow:"0 12px 24px rgba(15,23,42,.08)"
+    },style||{}),{
+        heading:opts.heading||"Cart Summary",
+        plan:opts.plan||"3 items",
+        price:opts.price||"â‚±4,000",
+        period:opts.period||"",
+        subtitle:opts.subtitle||"Review the products in your cart before paying.",
+        badge:opts.badge||"Cart",
+        features:Array.isArray(opts.features)&&opts.features.length?opts.features:["Product subtotal updates automatically","Cart items show here before payment","Shipping details are completed before payment"],
+        ctaLabel:opts.ctaLabel||"Place Order",
+        ctaBgColor:opts.ctaBgColor||"#240E35",
+        ctaTextColor:opts.ctaTextColor||"#ffffff"
+    });
+}
 const makeFeatureCardColumn=(iconName,title,body)=>makeStretchColumn([
     makeEl("icon","",{fontSize:"28px",color:"#6B4A7A",margin:"0 0 10px"},{iconName:iconName||"star",iconStyle:"solid",alignment:"left",link:""}),
     makeEl("heading",title||"Feature title",{fontSize:"18px",color:"#240E35",fontWeight:"800",margin:"0 0 6px"},{}),
@@ -1087,7 +1344,7 @@ function templatePricingFaqLayout(){
             makeEl("text","Start today and upgrade anytime.",{fontSize:"16px",color:"#64748b",lineHeight:"1.6",textAlign:"center"},{})
         ],{textAlign:"center"})],{gap:"10px"})]
     });
-    var pricing=makePricingCardEl({plan:"Pro",price:"₱49",period:"/month",subtitle:"Best for growing teams",features:["Unlimited pages","Custom domains","Priority support"],badge:"Popular"},makeBareCardStyle());
+    var pricing=makePricingCardEl({plan:"Pro",price:"â‚±49",period:"/month",subtitle:"Best for growing teams",features:["Unlimited pages","Custom domains","Priority support"],badge:"Popular"},makeBareCardStyle());
     var faq=makeFaqCardEl([{q:"Can I cancel anytime?",a:"Yes, cancel anytime from your account settings."},{q:"Do you offer a free trial?",a:"Yes, you get a 14-day free trial."}],makeBareCardStyle());
     var gridSection=makeSection({
         style:{padding:"28px 24px 64px",backgroundColor:"#ffffff"},
@@ -1159,13 +1416,15 @@ function templateWebinarLayout(){
 }
 function templateCheckoutLayout(){
     var section=makeSplitInfoSection(
-        makePanelColumn([makePricingCardEl({
-            plan:"Starter",
-            price:"₱29",
-            period:"/month",
-            subtitle:"Everything you need to launch",
+        makePanelColumn([makeCheckoutSummaryEl({
+            heading:"Complete Your Order",
+            plan:"Chosen Plan",
+            price:"Selected price",
+            period:"/billing cycle",
+            subtitle:"This summary updates from the pricing selected earlier in the funnel.",
             features:["Unlimited steps","Custom domains","Email support"],
-            badge:"Most popular"
+            badge:"Selected Plan",
+            ctaLabel:"Pay Now"
         },makeBareCardStyle())]),
         makePanelColumn([
             makeEl("heading","Complete your order",{fontSize:"24px",color:"#240E35",fontWeight:"800",margin:"0 0 10px"},{}),
@@ -1286,7 +1545,7 @@ function makePricingCardEl(opts,style){
         boxShadow:"0 12px 24px rgba(36,14,53,.08)"
     },style||{}),{
         plan:opts.plan||"Growth",
-        price:opts.price||"₱49",
+        price:opts.price||"â‚±49",
         period:opts.period||"/month",
         subtitle:opts.subtitle||"Best for growing teams",
         features:Array.isArray(opts.features)&&opts.features.length?opts.features:["Unlimited funnels","Priority support","Conversion analytics"],
@@ -1668,7 +1927,7 @@ function templateSalesOfferStackLayout(){
         makePanelColumn([
             makePricingCardEl({
                 plan:"Signature Offer",
-                price:"₱1,500",
+                price:"â‚±1,500",
                 period:"",
                 subtitle:"Ideal for clients who want faster implementation",
                 features:["Strategy kickoff","Custom build","Launch support"],
@@ -1728,7 +1987,7 @@ function templateVideoSalesLetterLayout(){
         columns:[
             makePanelColumn([makePricingCardEl({
                 plan:"Launch Intensive",
-                price:"₱497",
+                price:"â‚±497",
                 period:"",
                 subtitle:"Fast-start program with templates and support",
                 features:["Video training","Templates","Q and A session"],
@@ -1754,9 +2013,9 @@ function templateComparisonSalesLayout(){
         padding:"0 24px 32px",
         backgroundColor:"#ffffff",
         columns:[
-            makePanelColumn([makePricingCardEl({plan:"Starter",price:"₱49",period:"/month",subtitle:"For getting started",features:["Core pages","Email capture","Basic support"]},makeBareCardStyle())]),
-            makePanelColumn([makePricingCardEl({plan:"Growth",price:"₱99",period:"/month",subtitle:"For serious launches",features:["Unlimited funnels","Priority support","Analytics"],badge:"Best Value"},makeBareCardStyle())]),
-            makePanelColumn([makePricingCardEl({plan:"Scale",price:"₱199",period:"/month",subtitle:"For advanced teams",features:["Advanced insights","Team access","Hands-on onboarding"]},makeBareCardStyle())])
+            makePanelColumn([makePricingCardEl({plan:"Starter",price:"â‚±49",period:"/month",subtitle:"For getting started",features:["Core pages","Email capture","Basic support"]},makeBareCardStyle())]),
+            makePanelColumn([makePricingCardEl({plan:"Growth",price:"â‚±99",period:"/month",subtitle:"For serious launches",features:["Unlimited funnels","Priority support","Analytics"],badge:"Best Value"},makeBareCardStyle())]),
+            makePanelColumn([makePricingCardEl({plan:"Scale",price:"â‚±199",period:"/month",subtitle:"For advanced teams",features:["Advanced insights","Team access","Hands-on onboarding"]},makeBareCardStyle())])
         ]
     });
     var faq=makeCardGridSection({
@@ -1779,7 +2038,7 @@ function templatePremiumCheckoutLayout(){
     var summary=makeSplitInfoSection(
         makePanelColumn([makePricingCardEl({
             plan:"Premium Access",
-            price:"₱299",
+            price:"â‚±299",
             period:"",
             subtitle:"Everything needed to launch with confidence",
             features:["Templates included","Priority email support","Bonus training vault"],
@@ -1820,7 +2079,7 @@ function templateWorkshopTicketCheckoutLayout(){
         ]),
         makePanelColumn([makePricingCardEl({
             plan:"Workshop Ticket",
-            price:"₱97",
+            price:"â‚±97",
             period:"",
             subtitle:"Live training plus replay and workbook",
             features:["90-minute workshop","Replay access","Action workbook"],
@@ -1858,8 +2117,8 @@ function templateWorkshopTicketCheckoutDiscountLayout(){
         ]),
         makePanelColumn([makePricingCardEl({
             plan:"Workshop Ticket",
-            price:"₱97",
-            regularPrice:"₱117",
+            price:"â‚±97",
+            regularPrice:"â‚±117",
             period:"",
             subtitle:"Live training plus replay and workbook",
             features:["90-minute workshop","Replay access","Action workbook"],
@@ -1887,7 +2146,7 @@ function templateBundleCheckoutLayout(){
         )),
         makePanelColumn([makePricingCardEl({
             plan:"Launch Bundle",
-            price:"₱149",
+            price:"â‚±149",
             period:"",
             subtitle:"Core offer plus valuable bonuses",
             features:["Main product","Bonus template pack","Private Q and A","Quick-start checklist"],
@@ -1920,7 +2179,7 @@ function templateMembershipCheckoutLayout(){
     var section=makeSplitInfoSection(
         makePanelColumn([makePricingCardEl({
             plan:"Membership Access",
-            price:"₱39",
+            price:"â‚±39",
             period:"/month",
             subtitle:"Ongoing training, resources, and support",
             features:["New sessions monthly","Resource vault","Member-only updates"],
@@ -1965,7 +2224,7 @@ function templateUpsellVipUpgradeLayout(){
         makePanelColumn([
             makePricingCardEl({
                 plan:"VIP Upgrade",
-                price:"₱19",
+                price:"â‚±19",
                 period:"",
                 subtitle:"Extra support, premium resources, and a faster path to results",
                 features:["Priority Q and A","Bonus implementation guide","VIP-only template pack"],
@@ -2002,7 +2261,7 @@ function templateDownsellLiteLayout(){
         makePanelColumn([
             makePricingCardEl({
                 plan:"Lite Bonus Pack",
-                price:"₱9",
+                price:"â‚±9",
                 period:"",
                 subtitle:"A smaller add-on for buyers who want one practical extra",
                 features:["Quick-start checklist","Bonus worksheet","Mini resource pack"],
@@ -3104,6 +3363,21 @@ function confirmTemplateApply(message){
         document.addEventListener("keydown",onKey);
     });
 }
+function bindSharedTemplateEditModal(){
+    var modal=document.getElementById("fbSharedTemplateEditModal");
+    var btnCancel=document.getElementById("fbSharedTemplateEditCancel");
+    var btnSave=document.getElementById("fbSharedTemplateEditSave");
+    if(!modal||!btnCancel||!btnSave)return;
+    btnCancel.addEventListener("click",closeSharedTemplateEditModal);
+    btnSave.addEventListener("click",saveSharedTemplateEdit);
+    modal.addEventListener("click",function(e){
+        if(e.target===modal)closeSharedTemplateEditModal();
+    });
+    document.addEventListener("keydown",function(e){
+        var k=String(e.key||"").toLowerCase();
+        if(k==="escape"&&modal.classList.contains("open"))closeSharedTemplateEditModal();
+    });
+}
 function applyPageTemplate(tpl){
     var s=cur();
     if(!s||!tpl||typeof tpl.build!=="function")return;
@@ -3133,10 +3407,10 @@ function applyPageTemplate(tpl){
     queueAutoSave();
     if(saveMsg)saveMsg.textContent="Template applied and call to actions auto-connected. Not saved yet.";
 }
-var templateLibraryMode="page";
+var templateLibraryMode="shared";
 const funnelPackStepOrder=["landing","opt_in","sales","checkout","upsell","downsell","thank_you"];
 function setTemplateLibraryMode(mode){
-    templateLibraryMode=(String(mode||"").toLowerCase()==="funnel")?"funnel":"page";
+    templateLibraryMode="shared";
     renderTemplateLibrary();
 }
 function funnelPackManagedTypes(pack){
@@ -3222,7 +3496,7 @@ function applyFunnelTemplatePack(pack){
     confirmTemplateApply(msg).then(function(ok){
         if(!ok)return;
         saveToHistory();
-        ensurePackStepsExist(pack).then(function(createdTypes){
+        return ensurePackStepsExist(pack).then(function(createdTypes){
             var currentStepId=current?+current.id:null;
             var nextStateLayout=null;
             steps.forEach(function(step){
@@ -3250,15 +3524,243 @@ function applyFunnelTemplatePack(pack){
             syncCanvasBgControls();
             renderTemplateLibrary();
             render();
-            queueAutoSave();
-            if(saveMsg){
-                saveMsg.textContent=createdTypes.length
-                    ? "Funnel pack applied and created missing pages: "+createdTypes.map(pageTypeLabel).join(", ")+". Not saved yet."
-                    : "Funnel pack applied to all pages with auto-connected call to actions. Not saved yet.";
-            }
+            return persistStepDefinitions(steps).then(function(){
+                return persistLayoutsForSteps(steps,true);
+            }).then(function(){
+                if(saveMsg){
+                    saveMsg.textContent=createdTypes.length
+                        ? "Funnel pack saved on all "+steps.length+" page(s); created: "+createdTypes.map(pageTypeLabel).join(", ")+"."
+                        : "Funnel pack saved on all "+steps.length+" page(s).";
+                }
+            });
         }).catch(function(err){
             showBuilderToast((err&&err.message)||"Failed to apply funnel pack.","error");
         });
+    });
+}
+function sharedTemplateSteps(template){
+    return ((template&&template.steps)||[]).slice().sort(function(a,b){
+        return Number(a&&a.position||0)-Number(b&&b.position||0);
+    });
+}
+function replaceSharedTemplateSnapshot(template){
+    if(!template||!template.template_id)return;
+    var replaced=false;
+    sharedFunnelTemplates=(sharedFunnelTemplates||[]).map(function(item){
+        if(String(item&&item.template_id||"")===String(template.template_id||"")){
+            replaced=true;
+            return template;
+        }
+        return item;
+    });
+    if(!replaced){
+        sharedFunnelTemplates.push(template);
+    }
+}
+function fetchLatestSharedTemplate(templateId){
+    var id=String(templateId||"");
+    var fallback=(sharedFunnelTemplates||[]).find(function(item){return String(item&&item.template_id||"")===id;})||null;
+    if(!sharedTemplatesUrl)return Promise.resolve(fallback);
+    return requestGetJson(sharedTemplatesUrl).then(function(resp){
+        var templates=(resp&&Array.isArray(resp.templates))?resp.templates:[];
+        if(templates.length){
+            sharedFunnelTemplates=templates;
+        }
+        return templates.find(function(item){return String(item&&item.template_id||"")===id;})||fallback;
+    }).catch(function(){
+        return fallback;
+    });
+}
+function ensureSharedTemplateStepCount(template){
+    var tplSteps=sharedTemplateSteps(template);
+    var need=Math.max(0,tplSteps.length-steps.length);
+    var existingStepCount=steps.length;
+    var seq=Promise.resolve([]);
+    for(var i=0;i<need;i++){
+        (function(idx){
+            seq=seq.then(function(created){
+                var source=tplSteps[existingStepCount+idx]||tplSteps[idx]||{};
+                return createStepForPack(String(source.type||"custom")).then(function(){
+                    created.push(String(source.type||"custom"));
+                    return created;
+                });
+            });
+        })(i);
+    }
+    return seq.then(function(createdTypes){
+        renderStepOptions();
+        syncPageManagerList();
+        return createdTypes;
+    });
+}
+function applySharedFunnelTemplate(template){
+    if(!template)return Promise.resolve(false);
+    replaceSharedTemplateSnapshot(template);
+    var loadPromise=Promise.resolve(template);
+    if(template.template_id&&sharedTemplatesUrl){
+        loadPromise=fetchLatestSharedTemplate(template.template_id).then(function(latest){
+            return latest||template;
+        });
+    }
+    return loadPromise.then(function(resolved){
+        template=resolved||template;
+        replaceSharedTemplateSnapshot(template);
+        var tplSteps=sharedTemplateSteps(template);
+        if(!tplSteps.length){
+            showBuilderToast("This saved template has no pages to apply.","error");
+            return Promise.resolve(false);
+        }
+        var msg='Apply the saved template "'+String(template.name||"template")+'" to this funnel? This will replace the layouts of the first '+tplSteps.length+' page'+(tplSteps.length===1?"":"s")+' and save them to the server.';
+        if(steps.length>tplSteps.length){
+            msg+=' Extra pages in the current funnel will stay after the applied template pages.';
+        }
+        return confirmTemplateApply(msg).then(function(ok){
+            if(!ok)return Promise.resolve(false);
+            saveToHistory();
+            return ensureSharedTemplateStepCount(template).then(function(createdTypes){
+                sortStepsByPosition();
+                var ordered=steps.slice().sort(function(a,b){return Number(a.position||0)-Number(b.position||0);});
+                var currentStepId=cur()?+cur().id:null;
+                var nextStateLayout=null;
+                var appliedIds={};
+                tplSteps.forEach(function(sourceStep,idx){
+                    var targetStep=ordered[idx]||null;
+                    if(!targetStep)return;
+                    appliedIds[String(targetStep.id||"")]=true;
+                    targetStep.position=idx+1;
+                    targetStep.title=String(sourceStep.title||defaultStepTitleForType(sourceStep.type)||"Untitled");
+                    targetStep.subtitle=String(sourceStep.subtitle||"");
+                    targetStep.slug=uniqueStepSlug(sourceStep.slug||targetStep.title,targetStep.id);
+                    targetStep.type=String(sourceStep.type||"custom");
+                    targetStep.template=String(sourceStep.template||"simple");
+                    targetStep.template_data=clone(sourceStep.template_data||null);
+                    targetStep.layout_style=String(sourceStep.layout_style||"centered");
+                    targetStep.content=String(sourceStep.content||"");
+                    targetStep.cta_label=String(sourceStep.cta_label||"");
+                    targetStep.price=(sourceStep.price==null||String(sourceStep.price)==="")?"":String(sourceStep.price);
+                    targetStep.background_color=String(sourceStep.background_color||"");
+                    targetStep.button_color=String(sourceStep.button_color||"");
+                    targetStep.is_active=!(sourceStep.is_active===false||String(sourceStep.is_active)==="0");
+                    targetStep.step_tags=Array.isArray(sourceStep.step_tags)?clone(sourceStep.step_tags):[];
+                    targetStep.layout_json=clone(sourceStep.layout_json||{root:[],sections:[]});
+                });
+                var extraPosition=tplSteps.length+1;
+                ordered.forEach(function(step,idx){
+                    if(appliedIds[String(step&&step.id||"")])return;
+                    step.position=extraPosition;
+                    extraPosition++;
+                });
+                sortStepsByPosition();
+                steps.forEach(function(step){
+                    step.layout_json=wireTemplateLayoutForStep(
+                        clone(step.layout_json||{root:[],sections:[]}),
+                        step,
+                        steps
+                    );
+                    if(currentStepId!==null&&+step.id===currentStepId){
+                        nextStateLayout=clone(step.layout_json||{root:[],sections:[]});
+                    }
+                });
+                var appliedSteps=ordered.filter(function(step){
+                    return !!appliedIds[String(step&&step.id||"")];
+                });
+                return persistStepDefinitions(ordered).then(function(){
+                    return persistStepOrder(orderedStepIdsWithPositions());
+                }).then(function(){
+                    return persistLayoutsForSteps(ordered,true);
+                }).then(function(){
+                    renderStepOptions();
+                    syncPageManagerList();
+                    if(nextStateLayout)state.layout=nextStateLayout;
+                    state.sel=null;
+                    state.carouselSel=null;
+                    state.editingEl=null;
+                    state.linkPick=null;
+                    renderTemplateLibrary();
+                    render();
+                    return syncBuilderPurposeFromTemplate(template).catch(function(err){
+                        showBuilderToast((err&&err.message)||"Template applied, but funnel purpose could not be updated.","error");
+                        return builderPurpose;
+                    }).then(function(){
+                        if(saveMsg){
+                            saveMsg.textContent=createdTypes.length
+                                ? 'Saved template applied to '+appliedSteps.length+' page(s); created: '+createdTypes.map(pageTypeLabel).join(", ")+'.'
+                                : 'Saved template applied to all '+appliedSteps.length+' page(s).';
+                        }
+                        return true;
+                    });
+                });
+            }).catch(function(err){
+                showBuilderToast((err&&err.message)||"Failed to apply saved template.","error");
+                throw err;
+            });
+        });
+    });
+}
+function editSharedTemplateDescription(template){
+    if(!template||!template.update_url){
+        showBuilderToast("Template description can't be edited here.","error");
+        return;
+    }
+    openSharedTemplateEditModal(template);
+}
+var sharedTemplateEditState={template:null};
+function sharedTemplateTagsInputValue(template){
+    return (template&&Array.isArray(template.tags)?template.tags:[]).map(function(tag){
+        return String(tag||"").trim();
+    }).filter(Boolean).join(", ");
+}
+function openSharedTemplateEditModal(template){
+    var modal=document.getElementById("fbSharedTemplateEditModal");
+    var desc=document.getElementById("fbSharedTemplateEditDescription");
+    var tags=document.getElementById("fbSharedTemplateEditTags");
+    var title=document.getElementById("fbSharedTemplateEditTitle");
+    var saveBtn=document.getElementById("fbSharedTemplateEditSave");
+    if(!modal||!desc||!tags||!saveBtn)return;
+    sharedTemplateEditState.template=template||null;
+    if(title)title.textContent='Edit "'+String((template&&template.name)||"Saved Template")+'"';
+    desc.value=String((template&&template.description)||"");
+    tags.value=sharedTemplateTagsInputValue(template);
+    saveBtn.disabled=false;
+    modal.classList.add("open");
+    modal.setAttribute("aria-hidden","false");
+    setTimeout(function(){ desc.focus(); desc.select(); },10);
+}
+function closeSharedTemplateEditModal(){
+    var modal=document.getElementById("fbSharedTemplateEditModal");
+    if(!modal)return;
+    modal.classList.remove("open");
+    modal.setAttribute("aria-hidden","true");
+    sharedTemplateEditState.template=null;
+}
+function parseSharedTemplateTags(raw){
+    return String(raw||"").split(",").map(function(tag){
+        return String(tag||"").trim();
+    }).filter(Boolean).slice(0,6);
+}
+function saveSharedTemplateEdit(){
+    var template=sharedTemplateEditState.template;
+    var desc=document.getElementById("fbSharedTemplateEditDescription");
+    var tags=document.getElementById("fbSharedTemplateEditTags");
+    var saveBtn=document.getElementById("fbSharedTemplateEditSave");
+    if(!template||!template.update_url||!desc||!tags||!saveBtn)return;
+    var nextDescription=String(desc.value||"").trim();
+    var nextTags=parseSharedTemplateTags(tags.value);
+    saveBtn.disabled=true;
+    requestJson(String(template.update_url),"PUT",{
+        name:String(template.name||"Untitled Template").trim()||"Untitled Template",
+        description:nextDescription,
+        status:String(template.status||"draft").trim()||"draft",
+        template_tags:nextTags
+    }).then(function(){
+        template.description=nextDescription;
+        template.tags=nextTags;
+        closeSharedTemplateEditModal();
+        renderTemplateLibrary();
+        showBuilderToast("Template card updated.","success");
+    }).catch(function(err){
+        saveBtn.disabled=false;
+        showBuilderToast((err&&err.message)||"Failed to update template card.","error");
     });
 }
 function renderTemplateLibrary(){
@@ -3273,12 +3775,20 @@ function renderTemplateLibrary(){
     var typePill=document.getElementById("fbTemplateTypePill");
     var countPill=document.getElementById("fbTemplateCountPill");
     var currentPageEl=document.getElementById("fbTemplateCurrentPage");
-    if(!grid)return;
     var step=cur();
     var pageType=currentTemplateType();
     var templates=currentPageTemplates();
     var pageLabel=pageTypeLabel(pageType);
-    var mode=(templateLibraryMode==="funnel")?"funnel":"page";
+    var mode="shared";
+    var allFunnelTemplates=(sharedFunnelTemplates||[]);
+    var matchingFunnelTemplates=allFunnelTemplates.filter(function(template){
+        return normalizeBuilderPurpose(template&&template.template_type||"service")===builderPurpose;
+    });
+    var purposeLabels={
+        service:"Service Funnel",
+        physical_product:"Physical Product Funnel"
+    };
+    var activePurposeLabel=purposeLabels[builderPurpose]||"Service Funnel";
     if(pageModeBtn){
         pageModeBtn.classList.toggle("active",mode==="page");
         pageModeBtn.setAttribute("aria-pressed",mode==="page"?"true":"false");
@@ -3290,70 +3800,64 @@ function renderTemplateLibrary(){
         funnelModeBtn.onclick=function(){setTemplateLibraryMode("funnel");};
     }
     if(pagePane)pagePane.classList.toggle("hidden",mode!=="page");
-    if(funnelPane)funnelPane.classList.toggle("hidden",mode!=="funnel");
-    if(mode==="funnel"){
-        if(titleEl)titleEl.textContent="Funnel Packs";
-        if(metaEl)metaEl.textContent="Showing "+funnelTemplatePacks.length+" coordinated template systems. Applying one replaces the layouts across all pages and auto-connects the main call to actions for this funnel.";
-        if(typePill)typePill.textContent="All Pages";
-        if(countPill)countPill.textContent=String(funnelTemplatePacks.length)+" packs";
-        if(currentPageEl)currentPageEl.textContent="This will restyle "+steps.length+" page"+(steps.length===1?"":"s")+" in the current funnel with one consistent system and ready-to-use step links.";
-    }else{
-        if(titleEl)titleEl.textContent=pageLabel+" Templates";
-        if(metaEl)metaEl.textContent="Showing "+templates.length+" ready-to-use "+pageLabel.toLowerCase()+" layouts. Applying one replaces the current page.";
-        if(typePill)typePill.textContent=pageLabel+" Page";
-        if(countPill)countPill.textContent=String(templates.length)+" layouts";
-        if(currentPageEl)currentPageEl.textContent=step?"Current page: "+String(step.title||pageLabel):"Choose a page to see its starter layouts.";
+    if(funnelPane)funnelPane.classList.toggle("hidden",mode==="page");
+    if(titleEl)titleEl.textContent=activePurposeLabel+" Templates";
+    if(metaEl)metaEl.textContent="Showing "+matchingFunnelTemplates.length+" saved super-admin template"+(matchingFunnelTemplates.length===1?"":"s")+" for "+activePurposeLabel+". Applying one replaces the layouts across all pages in this funnel.";
+    if(typePill)typePill.textContent=activePurposeLabel;
+    if(countPill)countPill.textContent=String(matchingFunnelTemplates.length)+" template"+(matchingFunnelTemplates.length===1?"":"s");
+    if(currentPageEl)currentPageEl.textContent="Choose one "+activePurposeLabel.toLowerCase()+" template to update all "+steps.length+" page"+(steps.length===1?"":"s")+" in this funnel.";
+    if(grid){
+        grid.innerHTML="";
     }
-    grid.innerHTML=(templates||[]).map(function(t){
-        var tags=(t.tags||[]).map(function(tag){return '<span class="fb-template-tag">'+String(tag)+'</span>';}).join("");
-        return '<div class="fb-template-card">'
-            +'<div class="fb-template-preview">'+templatePreviewHtml(t.preview)+'</div>'
-            +'<div>'
-            +'<p class="fb-template-title">'+String(t.name||"Template")+'</p>'
-            +'<p class="fb-template-desc">'+String(t.description||"")+'</p>'
-            +'</div>'
-            +'<div class="fb-template-actions">'
-            +'<div class="fb-template-tags">'+tags+'</div>'
-            +'<button type="button" class="fb-btn primary" data-template-id="'+String(t.id||"")+'">Apply</button>'
-            +'</div>'
-            +'</div>';
-    }).join("");
-    grid.querySelectorAll("[data-template-id]").forEach(function(btn){
-        btn.addEventListener("click",function(){
-            var id=String(btn.getAttribute("data-template-id")||"");
-            var tpl=templates.find(function(t){return t.id===id;});
-            if(!tpl||typeof tpl.build!=="function")return;
-            var s=cur();
-            if(!s){alert("No page selected.");return;}
-            var label=String(s.title||"this page");
-            var msg='Apply the "'+String(tpl.name||"template")+'" template to '+label+'? This will replace the current layout.';
-            confirmTemplateApply(msg).then(function(ok){
-                if(!ok)return;
-                applyPageTemplate(tpl);
-            });
-        });
-    });
     if(funnelGrid){
-        funnelGrid.innerHTML=(funnelTemplatePacks||[]).map(function(pack){
-            var tags=(pack.tags||[]).map(function(tag){return '<span class="fb-template-tag">'+String(tag)+'</span>';}).join("");
+        var sharedCards=matchingFunnelTemplates.map(function(template){
+            var tags=(template.tags||[]).map(function(tag){return '<span class="fb-template-tag">'+String(tag)+'</span>';}).join("");
+            var editBtn=template.update_url
+                ? '<button type="button" class="fb-btn" data-edit-shared-template-id="'+String(template.template_id||"")+'" style="font-size:12px;padding:8px 10px;">Edit Card</button>'
+                : '';
             return '<div class="fb-template-card">'
-                +'<div class="fb-template-preview">'+templatePreviewHtml(pack.preview)+'</div>'
-                +'<div>'
-                +'<p class="fb-template-title">'+String(pack.name||"Funnel Pack")+'</p>'
-                +'<p class="fb-template-desc">'+String(pack.description||"")+'</p>'
+                +'<div class="fb-template-preview">'+templatePreviewHtml(template.preview)+'</div>'
+                +'<div class="fb-template-card-meta">'
+                +'<p class="fb-template-title">'+String(template.name||"Saved Template")+'</p>'
+                +'<p class="fb-template-desc">'+String(template.description||"")+'</p>'
+                +'<p class="fb-template-desc" style="margin-top:6px;font-size:12px;color:#64748b;">Applies the saved super-admin template across '+String(sharedTemplateSteps(template).length||0)+' page(s) in this funnel.</p>'
                 +'</div>'
                 +'<div class="fb-template-actions">'
                 +'<div class="fb-template-tags">'+tags+'</div>'
-                +'<button type="button" class="fb-btn primary" data-funnel-pack-id="'+String(pack.id||"")+'">Apply To All Pages</button>'
+                +'<div class="fb-template-card-controls">'
+                +editBtn
+                +'<button type="button" class="fb-btn primary" data-shared-template-id="'+String(template.template_id||"")+'">Apply To All Pages</button>'
+                +'</div>'
                 +'</div>'
                 +'</div>';
         }).join("");
-        funnelGrid.querySelectorAll("[data-funnel-pack-id]").forEach(function(btn){
+        funnelGrid.innerHTML=sharedCards || '<div class="fb-template-card"><div><p class="fb-template-title">No matching templates</p><p class="fb-template-desc">There are no saved super-admin templates yet for '+activePurposeLabel+'. Create or publish one in that category so AO sees only relevant templates here.</p></div></div>';
+        funnelGrid.querySelectorAll("[data-shared-template-id]").forEach(function(btn){
             btn.addEventListener("click",function(){
-                var id=String(btn.getAttribute("data-funnel-pack-id")||"");
-                var pack=(funnelTemplatePacks||[]).find(function(item){return String(item.id||"")===id;});
-                if(!pack)return;
-                applyFunnelTemplatePack(pack);
+                if(btn.disabled)return;
+                var id=String(btn.getAttribute("data-shared-template-id")||"");
+                var originalLabel=btn.innerHTML;
+                btn.disabled=true;
+                btn.textContent="Applying...";
+                fetchLatestSharedTemplate(id).then(function(template){
+                    if(!template){
+                        throw new Error("Saved template could not be loaded.");
+                    }
+                    return applySharedFunnelTemplate(template);
+                }).catch(function(err){
+                    showBuilderToast((err&&err.message)||"Failed to load the latest template.","error");
+                }).finally(function(){
+                    btn.disabled=false;
+                    btn.innerHTML=originalLabel;
+                });
+            });
+        });
+        funnelGrid.querySelectorAll("[data-edit-shared-template-id]").forEach(function(btn){
+            btn.addEventListener("click",function(){
+                var id=String(btn.getAttribute("data-edit-shared-template-id")||"");
+                var template=(sharedFunnelTemplates||[]).find(function(item){return String(item.template_id||"")===id;});
+                if(!template)return;
+                editSharedTemplateDescription(template);
             });
         });
     }
@@ -3413,9 +3917,9 @@ const componentTemplates=[
             style:{padding:"56px 24px",backgroundColor:"#ffffff"},
             settings:{contentWidth:"wide"},
             rows:[makeRow([
-                makeColumn([makeEl("pricing","",{width:"100%"},{plan:"Starter",price:"₱19",period:"/month",subtitle:"For new teams",features:["1 funnel","Basic support","Email capture"],ctaLabel:"Choose Starter",ctaLink:"#",ctaBgColor:"#240E35",ctaTextColor:"#ffffff",badge:""})],{flex:"1"}),
-                makeColumn([makeEl("pricing","",{width:"100%"},{plan:"Growth",price:"₱49",period:"/month",subtitle:"For growing teams",features:["Unlimited funnels","Custom domains","Priority support"],ctaLabel:"Choose Growth",ctaLink:"#",ctaBgColor:"#240E35",ctaTextColor:"#ffffff",badge:"Popular"})],{flex:"1"}),
-                makeColumn([makeEl("pricing","",{width:"100%"},{plan:"Scale",price:"₱99",period:"/month",subtitle:"For scale-ups",features:["Advanced analytics","SLA support","Custom onboarding"],ctaLabel:"Choose Scale",ctaLink:"#",ctaBgColor:"#240E35",ctaTextColor:"#ffffff",badge:""})],{flex:"1"})
+                makeColumn([makeEl("pricing","",{width:"100%"},{plan:"Starter",price:"â‚±19",period:"/month",subtitle:"For new teams",features:["1 funnel","Basic support","Email capture"],ctaLabel:"Choose Starter",ctaLink:"#",ctaBgColor:"#240E35",ctaTextColor:"#ffffff",badge:""})],{flex:"1"}),
+                makeColumn([makeEl("pricing","",{width:"100%"},{plan:"Growth",price:"â‚±49",period:"/month",subtitle:"For growing teams",features:["Unlimited funnels","Custom domains","Priority support"],ctaLabel:"Choose Growth",ctaLink:"#",ctaBgColor:"#240E35",ctaTextColor:"#ffffff",badge:"Popular"})],{flex:"1"}),
+                makeColumn([makeEl("pricing","",{width:"100%"},{plan:"Scale",price:"â‚±99",period:"/month",subtitle:"For scale-ups",features:["Advanced analytics","SLA support","Custom onboarding"],ctaLabel:"Choose Scale",ctaLink:"#",ctaBgColor:"#240E35",ctaTextColor:"#ffffff",badge:""})],{flex:"1"})
             ],{gap:"18px",alignItems:"stretch"})]
         });
     }},
@@ -3555,6 +4059,43 @@ function pageTypeLabel(v){
     if(t==="custom")return "Custom";
     return titleCase(t);
 }
+function stepsOfType(type,excludeStepId){
+    var wanted=String(type||"").toLowerCase();
+    return steps.filter(function(step){
+        if(excludeStepId!=null && +step.id===+excludeStepId)return false;
+        return String(step&&step.type||"").toLowerCase()===wanted;
+    }).sort(function(a,b){
+        var ap=Number(a&&a.position)||0;
+        var bp=Number(b&&b.position)||0;
+        if(ap!==bp)return ap-bp;
+        return (Number(a&&a.id)||0)-(Number(b&&b.id)||0);
+    });
+}
+function repeatedTypeIndex(step){
+    if(!step)return 1;
+    var sameType=stepsOfType(step.type);
+    var idx=sameType.findIndex(function(item){return +item.id===+step.id;});
+    return idx>=0?idx+1:Math.max(1,sameType.length);
+}
+function numberedPageTypeLabel(type,index,total){
+    var base=pageTypeLabel(type);
+    var count=Math.max(0,Number(total||0));
+    var order=Math.max(1,Number(index||1));
+    if(count<=1)return base;
+    return base+" "+order;
+}
+function suggestedStepTitleForType(type,excludeStepId){
+    var sameType=stepsOfType(type,excludeStepId);
+    return numberedPageTypeLabel(type,sameType.length+1,sameType.length+1);
+}
+function pageDisplayLabel(step){
+    if(!step)return "Untitled";
+    var sameType=stepsOfType(step.type);
+    var fallbackLabel=numberedPageTypeLabel(step.type,repeatedTypeIndex(step),sameType.length);
+    var stepTitle=String(step.title||"").trim();
+    if(stepTitle==="")return fallbackLabel;
+    return stepTitle+" ("+fallbackLabel+")";
+}
 function stepUrlFromTpl(tpl,id){return String(tpl||"").replace("__STEP__",String(id));}
 function asFormUrlEncoded(obj){
     var body=new URLSearchParams();
@@ -3592,6 +4133,25 @@ function requestJson(url,method,data){
             "Accept":"application/json"
         },
         body:asFormUrlEncoded(payload)
+    }).then(function(r){
+        return r.text().then(function(t){
+            var data={};
+            try{data=t?JSON.parse(t):{};}catch(_e){data={message:t||"Request failed"};}
+            if(!r.ok){
+                var msg=(data&&data.message)?data.message:("HTTP "+r.status);
+                throw new Error(msg);
+            }
+            return data||{};
+        });
+    });
+}
+function requestGetJson(url){
+    return fetch(url,{
+        method:"GET",
+        headers:{
+            "X-CSRF-TOKEN":csrf,
+            "Accept":"application/json"
+        }
     }).then(function(r){
         return r.text().then(function(t){
             var data={};
@@ -3659,6 +4219,75 @@ function buildStepPayload(stepLike,overrides){
         step_tags:normalizeTagArray(s.step_tags).join(", ")
     };
 }
+function persistStepDefinition(stepLike){
+    var s=stepLike||{};
+    if(!s.id)return Promise.resolve(null);
+    return requestJson(stepUrlFromTpl(stepUpdateTpl,s.id),"PUT",buildStepPayload(s)).then(function(resp){
+        return applyStepUpdate((resp&&resp.step)||s);
+    });
+}
+function persistStepDefinitions(stepList){
+    var queue=Promise.resolve([]);
+    (Array.isArray(stepList)?stepList:[]).forEach(function(step){
+        queue=queue.then(function(saved){
+            return persistStepDefinition(step).then(function(updated){
+                if(updated)saved.push(updated);
+                return saved;
+            });
+        });
+    });
+    return queue;
+}
+/** Persist layout_json + background via builder save endpoint (PUT updateStep ignores layout). */
+function postStepLayoutSave(stepId,layoutJson,bgColor,skipRevision){
+    var requestHeaders={"Content-Type":"application/json","X-CSRF-TOKEN":csrf,"Accept":"application/json"};
+    var bg=bgColor;
+    if(typeof bg==="string"&&bg.trim()==="")bg=null;
+    return fetch(saveUrl,{
+        method:"POST",
+        headers:requestHeaders,
+        body:JSON.stringify({
+            step_id:stepId,
+            layout_json:layoutJson,
+            background_color:bg,
+            skip_revision:!!skipRevision
+        })
+    }).then(function(r){
+        if(!r.ok){
+            return r.text().then(function(t){
+                var msg=t||("HTTP "+r.status);
+                try{var j=JSON.parse(t);if(j&&j.message)msg=j.message;}catch(_e){}
+                throw new Error(msg);
+            });
+        }
+        return r.json();
+    });
+}
+function persistLayoutsForSteps(stepList,skipRevision){
+    var list=Array.isArray(stepList)?stepList:[];
+    var sr=skipRevision!==false;
+    var queue=Promise.resolve(true);
+    list.forEach(function(step){
+        if(!step||!step.id)return;
+        queue=queue.then(function(){
+            var layout=(step.layout_json&&typeof step.layout_json==="object"&&!Array.isArray(step.layout_json))
+                ?clone(step.layout_json)
+                :{root:[],sections:[]};
+            var bg=(typeof step.background_color==="string"&&step.background_color.trim()!=="")?step.background_color.trim():null;
+            if(!bg&&layout&&layout.__editor&&typeof layout.__editor.canvasBg==="string"&&layout.__editor.canvasBg.trim()!==""){
+                bg=layout.__editor.canvasBg.trim();
+            }
+            return postStepLayoutSave(step.id,layout,bg,sr).then(function(resp){
+                if(resp&&resp.layout_json)step.layout_json=resp.layout_json;
+                if(resp&&typeof resp.background_color==="string"){
+                    step.background_color=resp.background_color.trim()||null;
+                }
+                return true;
+            });
+        });
+    });
+    return queue;
+}
 function defaultStepTitleForType(type){
     var t=String(type||"custom").toLowerCase();
     if(t==="opt_in")return "Opt-in";
@@ -3704,6 +4333,12 @@ function mergeStepData(raw){
         revision_history:normalizeRevisionHistory(r.revision_history||r.manual_versions),
     };
 }
+function layoutHasContent(layout){
+    if(!layout||typeof layout!=="object"||Array.isArray(layout))return false;
+    var rootCount=Array.isArray(layout.root)?layout.root.length:0;
+    var sectionCount=Array.isArray(layout.sections)?layout.sections.length:0;
+    return rootCount>0||sectionCount>0;
+}
 function normalizeRevisionHistory(raw){
     var list=Array.isArray(raw)?raw:[];
     return list.map(function(item){
@@ -3737,6 +4372,15 @@ function applyStepUpdate(rawStep){
     var merged=mergeStepData(rawStep);
     var idx=steps.findIndex(function(s){return +s.id===+merged.id;});
     if(idx>=0){
+        if((!merged.layout_json||typeof merged.layout_json!=="object")&&steps[idx]&&steps[idx].layout_json&&typeof steps[idx].layout_json==="object"){
+            merged.layout_json=steps[idx].layout_json;
+        }else if(
+            steps[idx]&&steps[idx].layout_json&&typeof steps[idx].layout_json==="object"&&
+            layoutHasContent(steps[idx].layout_json)&&
+            !layoutHasContent(merged.layout_json)
+        ){
+            merged.layout_json=steps[idx].layout_json;
+        }
         steps[idx]=Object.assign({},steps[idx],merged);
     }else{
         steps.push(merged);
@@ -3796,7 +4440,7 @@ function moveSelectedStepBy(delta){
 }
 function syncAddPageDraftFromType(force){
     var type=String((pageMgrAddType&&pageMgrAddType.value)||"landing").toLowerCase();
-    var defaultTitle=defaultStepTitleForType(type);
+    var defaultTitle=suggestedStepTitleForType(type);
     var currentTitle=String((pageMgrAddTitle&&pageMgrAddTitle.value)||"").trim();
     if(pageMgrAddTitle && (force||currentTitle==="")){
         pageMgrAddTitle.value=defaultTitle;
@@ -3827,13 +4471,16 @@ function syncPageManagerList(){
     sortStepsByPosition();
     pageMgrList.innerHTML="";
     steps.forEach(function(s){
+        var sameTypeCount=stepsOfType(s.type).length;
+        var typeLabel=numberedPageTypeLabel(s.type,repeatedTypeIndex(s),sameTypeCount);
+        var titleLabel=String((s.title&&String(s.title).trim())||typeLabel);
         var item=document.createElement("div");
         item.className="page-mgr-item"+(String(state.sid)===String(s.id)?" is-selected":"");
         item.setAttribute("role","option");
         item.setAttribute("aria-selected",String(state.sid)===String(s.id)?"true":"false");
         item.setAttribute("data-id",String(s.id));
         item.setAttribute("draggable","true");
-        item.innerHTML='<div class="page-mgr-item-copy"><span class="page-mgr-item-title">'+String(s.title||("Step "+String(s.id))).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")+'</span><span class="page-mgr-item-meta">'+pageTypeLabel(s.type).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")+'</span></div><span class="page-mgr-item-handle"><i class="fas fa-grip-vertical"></i></span>';
+        item.innerHTML='<div class="page-mgr-item-copy"><span class="page-mgr-item-title">'+titleLabel.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")+'</span><span class="page-mgr-item-meta">'+typeLabel.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")+'</span></div><span class="page-mgr-item-handle"><i class="fas fa-grip-vertical"></i></span>';
         item.addEventListener("click",function(){
             var id=Number(item.getAttribute("data-id")||0);
             if(!id)return;
@@ -3953,7 +4600,7 @@ function createPageFromManager(){
         if(pageMgrAddTitle)pageMgrAddTitle.focus();
         return;
     }
-    var title=titleRaw!==""?titleRaw:defaultStepTitleForType(type);
+    var title=titleRaw!==""?titleRaw:suggestedStepTitleForType(type);
     if(String(title).trim()===""){
         showBuilderToast("Page title is required.","error");
         if(pageMgrAddTitle)pageMgrAddTitle.focus();
@@ -4587,20 +5234,43 @@ function syncSectionsFromRoot(){
     state.layout.root=Array.isArray(state.layout.root)?state.layout.root:[];
     const out=[];
     var freeformEls=[];
+    var freeformIndex=0;
+    function flushFreeformGroup(){
+        if(!freeformEls.length)return;
+        var wrapId="sec_freeform_canvas_"+String(freeformIndex++);
+        var existingFreeform=(state.layout.sections||[]).find(function(s){
+            return !!s.__freeformCanvas && String(s.id||"")===wrapId;
+        });
+        out.push({
+            id:wrapId,
+            style:existingFreeform?existingFreeform.style:{},
+            settings:existingFreeform?existingFreeform.settings:{contentWidth:"full"},
+            elements:freeformEls.slice(),
+            rows:[],
+            __rootWrap:true,
+            __rootKind:"el",
+            __bareRootWrap:true,
+            __freeformCanvas:true
+        });
+        freeformEls=[];
+    }
     state.layout.root.forEach((it,idx)=>{
         const kind=String((it&&it.kind)||"section").toLowerCase();
         if(kind==="section"){
+            flushFreeformGroup();
             it.elements=Array.isArray(it.elements)?it.elements:[];
             it.rows=Array.isArray(it.rows)?it.rows:[];
             out.push(it);
             return;
         }
         if(kind==="row"){
+            flushFreeformGroup();
             const wrap={id:"sec_wrap_row_"+String(it.id||idx),style:{},settings:{contentWidth:"full"},elements:[],rows:[it],__rootWrap:true,__rootKind:"row",__rootRef:it,__bareRootWrap:true};
             out.push(wrap);
             return;
         }
         if(kind==="column"){
+            flushFreeformGroup();
             const rw={id:"row_wrap_col_"+String(it.id||idx),style:{gap:"8px"},settings:{},columns:[it]};
             const wrap={id:"sec_wrap_col_"+String(it.id||idx),style:{},settings:{contentWidth:"full"},elements:[],rows:[rw],__rootWrap:true,__rootKind:"column",__rootRef:it,__bareRootWrap:true};
             out.push(wrap);
@@ -4614,20 +5284,7 @@ function syncSectionsFromRoot(){
         it.rows=Array.isArray(it.rows)?it.rows:[];
         out.push(it);
     });
-    if(freeformEls.length>0){
-        var existingFreeform=(state.layout.sections||[]).find(function(s){return !!s.__freeformCanvas;});
-        out.push({
-            id:existingFreeform?existingFreeform.id:"sec_freeform_canvas",
-            style:existingFreeform?existingFreeform.style:{},
-            settings:existingFreeform?existingFreeform.settings:{contentWidth:"full"},
-            elements:freeformEls,
-            rows:[],
-            __rootWrap:true,
-            __rootKind:"el",
-            __bareRootWrap:true,
-            __freeformCanvas:true
-        });
-    }
+    flushFreeformGroup();
     state.layout.sections=out;
 }
 
@@ -4701,6 +5358,30 @@ function normalizeFeatureList(raw){
     }
     return out;
 }
+function normalizeProductOfferMediaList(raw){
+    var list=Array.isArray(raw)?raw:[];
+    var out=list.map(function(item,idx){
+        if(typeof item==="string"){
+            return {type:"image",src:String(item||"").trim(),alt:"Media "+(idx+1),poster:""};
+        }
+        item=(item&&typeof item==="object")?item:{};
+        var type=String(item.type||"image").trim().toLowerCase();
+        if(type!=="video")type="image";
+        return {
+            type:type,
+            src:String(item.src||"").trim(),
+            alt:String(item.alt||item.label||("Media "+(idx+1))).trim(),
+            poster:String(item.poster||"").trim()
+        };
+    });
+    if(!out.length){
+        out=[
+            {type:"image",src:"",alt:"Main product image",poster:""},
+            {type:"image",src:"",alt:"Detail image",poster:""}
+        ];
+    }
+    return out;
+}
 function formatDateTimeLocal(v){
     var raw=String(v||"").trim();
     if(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(raw))return raw.slice(0,16);
@@ -4739,6 +5420,42 @@ function withCanvasBgInLayout(layout,bg){
     else if(Object.prototype.hasOwnProperty.call(out.__editor,"canvasBg"))delete out.__editor.canvasBg;
     if(_canvasLockedWidth>0)out.__editor.canvasWidth=_canvasLockedWidth;
     if(_canvasInnerWidth>0)out.__editor.canvasInnerWidth=_canvasInnerWidth;
+    if(_canvasContentWidth>0)out.__editor.canvasContentWidth=_canvasContentWidth;
+    return out;
+}
+function measureSectionStageWidths(){
+    var out={};
+    if(!canvas||!canvas.querySelectorAll)return out;
+    canvas.querySelectorAll(".sec[data-sec-id]").forEach(function(sectionNode){
+        if(!sectionNode||sectionNode.classList.contains("sec--freeform-canvas"))return;
+        var secId=String(sectionNode.getAttribute("data-sec-id")||"").trim();
+        if(secId==="")return;
+        var inner=sectionNode.querySelector(".sec-inner")||sectionNode;
+        var width=Math.max(
+            Math.round(inner.clientWidth||0),
+            inner.getBoundingClientRect?Math.round(inner.getBoundingClientRect().width||0):0
+        );
+        if(width>0)out[secId]=width;
+    });
+    return out;
+}
+function withMeasuredSectionStageWidths(layout){
+    var out=(layout&&typeof layout==="object")?clone(layout):{root:[],sections:[]};
+    var measured=measureSectionStageWidths();
+    var applyStageWidth=function(section){
+        if(!section||typeof section!=="object"||section.__freeformCanvas)return;
+        var secId=String(section.id||"").trim();
+        var stageWidth=Math.round(Number(measured[secId])||0);
+        if(stageWidth<=0)return;
+        section.settings=(section.settings&&typeof section.settings==="object")?section.settings:{};
+        section.settings.stageWidth=stageWidth;
+    };
+    (Array.isArray(out.sections)?out.sections:[]).forEach(applyStageWidth);
+    (Array.isArray(out.root)?out.root:[]).forEach(function(node){
+        if(!node||typeof node!=="object")return;
+        if(String(node.kind||"").toLowerCase()!=="section")return;
+        applyStageWidth(node);
+    });
     return out;
 }
 function propagateCanvasBgToAllSteps(bg){
@@ -5937,7 +6654,7 @@ function titleCase(v){
 }
 function isAdvancedScaleComponent(t){
     var type=String(t||"").toLowerCase();
-    return type==="testimonial"||type==="faq"||type==="pricing"||type==="countdown";
+    return type==="testimonial"||type==="review_form"||type==="reviews"||type==="faq"||type==="pricing"||type==="product_offer"||type==="checkout_summary"||type==="physical_checkout_summary"||type==="shipping_details"||type==="countdown"||type==="form";
 }
 function parsePxVal(v){
     var n=Number(String(v||"0").replace("px","").trim());
@@ -6028,6 +6745,139 @@ function applyAdvancedScaleToNode(node,item,scale){
             cta.style.padding=Math.round(8*s)+"px "+Math.round(12*s)+"px";
         }
     }
+    if(type==="checkout_summary"||type==="physical_checkout_summary"){
+        var isPhysicalSummaryScale=type==="physical_checkout_summary";
+        var checkoutCard=node.querySelector(".fb-pricing");
+        var checkoutBadge=node.querySelector(".fb-pricing-badge");
+        var checkoutTitle=node.querySelector(".fb-pricing-title");
+        var checkoutPrice=node.querySelector(".fb-pricing-price");
+        var checkoutPeriods=node.querySelectorAll(".fb-pricing-period");
+        var checkoutSubtitle=node.querySelector(".fb-pricing-subtitle");
+        var checkoutFeatures=node.querySelector(".fb-pricing-features");
+        var checkoutFeatureItems=node.querySelectorAll(".fb-pricing-features li");
+        var checkoutCta=node.querySelector(".fb-pricing-cta");
+        if(checkoutCard)checkoutCard.style.gap=Math.max(6,Math.round((isPhysicalSummaryScale?12:10)*s))+"px";
+        if(checkoutBadge){
+            checkoutBadge.style.fontSize=Math.max(8,Math.round(11*s))+"px";
+            checkoutBadge.style.padding=Math.max(2,Math.round(4*s))+"px "+Math.max(6,Math.round(10*s))+"px";
+        }
+        if(checkoutTitle)checkoutTitle.style.fontSize=Math.max(12,Math.round((isPhysicalSummaryScale?16:18)*s))+"px";
+        if(checkoutPrice)checkoutPrice.style.fontSize=Math.max(18,Math.round((isPhysicalSummaryScale?24:30)*s))+"px";
+        checkoutPeriods.forEach(function(el){el.style.fontSize=Math.max(9,Math.round(12*s))+"px";});
+        if(checkoutSubtitle)checkoutSubtitle.style.fontSize=Math.max(9,Math.round(12*s))+"px";
+        if(checkoutFeatures)checkoutFeatures.style.gap=Math.max(3,Math.round((isPhysicalSummaryScale?5:6)*s))+"px";
+        checkoutFeatureItems.forEach(function(el){el.style.fontSize=Math.max(9,Math.round((isPhysicalSummaryScale?11:12)*s))+"px";});
+        if(checkoutCta){
+            checkoutCta.style.fontSize=Math.max(11,Math.round(16*s))+"px";
+            checkoutCta.style.padding=Math.max(7,Math.round((isPhysicalSummaryScale?10:8)*s))+"px "+Math.max(10,Math.round((isPhysicalSummaryScale?14:12)*s))+"px";
+        }
+        if(isPhysicalSummaryScale){
+            var physicalLabel=node.querySelector(".fb-physical-checkout-label");
+            var physicalProduct=node.querySelector(".fb-physical-checkout-product");
+            var physicalThumb=node.querySelector(".fb-physical-checkout-thumb");
+            var physicalThumbIcon=node.querySelector(".fb-physical-checkout-thumb i");
+            var physicalRows=node.querySelector(".fb-physical-checkout-rows");
+            var physicalRowItems=node.querySelectorAll(".fb-physical-checkout-row");
+            var physicalRowStrong=node.querySelectorAll(".fb-physical-checkout-row strong");
+            var physicalLines=node.querySelector(".fb-physical-checkout-lines");
+            var physicalLineItems=node.querySelectorAll(".fb-physical-checkout-line");
+            var physicalLineThumbs=node.querySelectorAll(".fb-physical-checkout-line-thumb");
+            var physicalLineThumbIcons=node.querySelectorAll(".fb-physical-checkout-line-thumb i");
+            var physicalLineTitles=node.querySelectorAll(".fb-physical-checkout-line-title");
+            var physicalLineSubs=node.querySelectorAll(".fb-physical-checkout-line-sub");
+            var physicalLineTotals=node.querySelectorAll(".fb-physical-checkout-line-total");
+            if(physicalLabel)physicalLabel.style.fontSize=Math.max(8,Math.round(11*s))+"px";
+            if(physicalProduct){
+                physicalProduct.style.gridTemplateColumns=Math.max(44,Math.round(64*s))+"px minmax(0,1fr)";
+                physicalProduct.style.gap=Math.max(8,Math.round(12*s))+"px";
+                physicalProduct.style.padding=Math.max(8,Math.round(12*s))+"px";
+            }
+            if(physicalThumb){
+                var thumbSize=Math.max(44,Math.round(64*s));
+                physicalThumb.style.width=thumbSize+"px";
+                physicalThumb.style.height=thumbSize+"px";
+                physicalThumb.style.borderRadius=Math.max(10,Math.round(16*s))+"px";
+            }
+            if(physicalThumbIcon)physicalThumbIcon.style.fontSize=Math.max(14,Math.round(22*s))+"px";
+            if(physicalRows){
+                physicalRows.style.gap=Math.max(5,Math.round(8*s))+"px";
+                physicalRows.style.padding=Math.max(6,Math.round(10*s))+"px 0";
+            }
+            physicalRowItems.forEach(function(el){el.style.fontSize=Math.max(9,Math.round(12*s))+"px";});
+            physicalRowStrong.forEach(function(el){el.style.fontSize=Math.max(10,Math.round(13*s))+"px";});
+            if(physicalLines)physicalLines.style.gap=Math.max(5,Math.round(8*s))+"px";
+            physicalLineItems.forEach(function(el){
+                el.style.gridTemplateColumns=Math.max(30,Math.round(40*s))+"px 1fr auto";
+                el.style.gap=Math.max(6,Math.round(10*s))+"px";
+                el.style.padding=Math.max(5,Math.round(8*s))+"px 0";
+            });
+            physicalLineThumbs.forEach(function(el){
+                var lineThumbSize=Math.max(30,Math.round(40*s));
+                el.style.width=lineThumbSize+"px";
+                el.style.height=lineThumbSize+"px";
+                el.style.borderRadius=Math.max(8,Math.round(12*s))+"px";
+            });
+            physicalLineThumbIcons.forEach(function(el){el.style.fontSize=Math.max(10,Math.round(14*s))+"px";});
+            physicalLineTitles.forEach(function(el){el.style.fontSize=Math.max(9,Math.round(12*s))+"px";});
+            physicalLineSubs.forEach(function(el){el.style.fontSize=Math.max(8,Math.round(11*s))+"px";});
+            physicalLineTotals.forEach(function(el){el.style.fontSize=Math.max(9,Math.round(12*s))+"px";});
+        }
+    }
+    if(type==="product_offer"){
+        var productCard=node.querySelector(".fb-product-offer");
+        var productMedia=node.querySelector(".fb-product-media");
+        var productMediaStage=node.querySelector(".fb-product-media-stage");
+        var productPlaceholder=node.querySelector(".fb-product-media-placeholder");
+        var productPlaceholderIcon=node.querySelector(".fb-product-media-placeholder i");
+        var productNavs=node.querySelectorAll(".fb-product-media-nav");
+        var productDots=node.querySelector(".fb-product-media-dots");
+        var productDotItems=node.querySelectorAll(".fb-product-media-dot");
+        var productBadge=node.querySelector(".fb-pricing-badge");
+        var productTitle=node.querySelector(".fb-pricing-title");
+        var productPrice=node.querySelector(".fb-pricing-price");
+        var productPeriods=node.querySelectorAll(".fb-pricing-period");
+        var productSubtitle=node.querySelector(".fb-pricing-subtitle");
+        var productFeatures=node.querySelector(".fb-pricing-features");
+        var productFeatureItems=node.querySelectorAll(".fb-pricing-features li");
+        var productCta=node.querySelector(".fb-pricing-cta");
+        var mediaMin=Math.max(64,Math.round(88*s));
+        if(productCard)productCard.style.gap=Math.round(4*s)+"px";
+        if(productMedia)productMedia.style.minHeight=mediaMin+"px";
+        if(productMediaStage)productMediaStage.style.minHeight=mediaMin+"px";
+        if(productPlaceholder){
+            productPlaceholder.style.minHeight=mediaMin+"px";
+            productPlaceholder.style.gap=Math.max(3,Math.round(4*s))+"px";
+            productPlaceholder.style.padding=Math.max(6,Math.round(8*s))+"px";
+            productPlaceholder.style.fontSize=Math.max(9,Math.round(10*s))+"px";
+        }
+        if(productPlaceholderIcon)productPlaceholderIcon.style.fontSize=Math.max(14,Math.round(16*s))+"px";
+        productNavs.forEach(function(el){
+            var navSize=Math.max(16,Math.round(22*s));
+            el.style.width=navSize+"px";
+            el.style.height=navSize+"px";
+            el.style.fontSize=Math.max(8,Math.round(9*s))+"px";
+        });
+        if(productDots)productDots.style.gap=Math.max(3,Math.round(4*s))+"px";
+        productDotItems.forEach(function(el){
+            var isActive=el.classList.contains("is-active");
+            el.style.width=(isActive?Math.max(8,Math.round(12*s)):Math.max(3,Math.round(5*s)))+"px";
+            el.style.height=Math.max(3,Math.round(5*s))+"px";
+        });
+        if(productBadge){
+            productBadge.style.fontSize=Math.round(9*s)+"px";
+            productBadge.style.padding=Math.round(2*s)+"px "+Math.round(6*s)+"px";
+        }
+        if(productTitle)productTitle.style.fontSize=Math.round(13*s)+"px";
+        if(productPrice)productPrice.style.fontSize=Math.round(20*s)+"px";
+        productPeriods.forEach(function(el){el.style.fontSize=Math.round(10*s)+"px";});
+        if(productSubtitle)productSubtitle.style.fontSize=Math.round(10*s)+"px";
+        if(productFeatures)productFeatures.style.gap=Math.round(4*s)+"px";
+        productFeatureItems.forEach(function(el){el.style.fontSize=Math.round(10*s)+"px";});
+        if(productCta){
+            productCta.style.fontSize=Math.round(11*s)+"px";
+            productCta.style.padding=Math.round(7*s)+"px "+Math.round(8*s)+"px";
+        }
+    }
     if(type==="countdown"){
         var cd=node.querySelector(".fb-countdown");
         var label=node.querySelector(".fb-countdown-label");
@@ -6044,6 +6894,41 @@ function applyAdvancedScaleToNode(node,item,scale){
         boxes.forEach(function(el){el.style.padding=Math.round(8*s)+"px";});
         nums.forEach(function(el){el.style.fontSize=Math.round(20*s)+"px";});
         units.forEach(function(el){el.style.fontSize=Math.round(10*s)+"px";});
+    }
+    if(type==="form"||type==="shipping_details"){
+        var isShippingDetails=type==="shipping_details";
+        var shippingHeading=node.querySelector(".fb-shipping-heading");
+        var shippingSubtitle=node.querySelector(".fb-shipping-subtitle");
+        var labels=node.querySelectorAll("label");
+        var inputs=node.querySelectorAll(".fb-form-input");
+        var submit=node.querySelector("button");
+        var formBox=node.firstElementChild;
+        if(formBox&&formBox.style){
+            formBox.style.gap=Math.max(0,Math.round(2*s))+"px";
+        }
+        if(shippingHeading){
+            shippingHeading.style.fontSize=Math.max(12,Math.round(20*s))+"px";
+            shippingHeading.style.marginBottom=Math.max(3,Math.round(6*s))+"px";
+        }
+        if(shippingSubtitle){
+            shippingSubtitle.style.fontSize=Math.max(9,Math.round(12*s))+"px";
+            shippingSubtitle.style.marginBottom=Math.max(5,Math.round(10*s))+"px";
+        }
+        labels.forEach(function(el){
+            el.style.fontSize=Math.max(9,Math.round(12*s))+"px";
+            el.style.marginBottom=Math.max(2,Math.round(4*s))+"px";
+        });
+        inputs.forEach(function(el){
+            el.style.fontSize=Math.max(10,Math.round(14*s))+"px";
+            el.style.padding=Math.max(5,Math.round(8*s))+"px";
+            el.style.borderRadius=Math.max(4,Math.round(8*s))+"px";
+            el.style.marginBottom=Math.max(4,Math.round(8*s))+"px";
+        });
+        if(!isShippingDetails&&submit){
+            submit.style.fontSize=Math.round(14*s)+"px";
+            submit.style.padding=Math.round(8*s)+"px "+Math.round(12*s)+"px";
+            submit.style.borderRadius=Math.max(6,Math.round(8*s))+"px";
+        }
     }
 }
 function syncAdvancedElementHeight(node,item){
@@ -6310,7 +7195,7 @@ function renderCarouselPreviewItem(item,onDelete,onSelect,isSelected){
         wrap.appendChild(p);
     }else if(type==="image"){
         var imgBody=document.createElement("div");
-        imgBody.innerHTML=(item.settings&&item.settings.src)?'<img src="'+item.settings.src+'" alt="'+(item.settings.alt||"Image")+'" style="max-width:100%;height:auto;display:block;">':'<div style="padding:12px;border:1px dashed #94a3b8;border-radius:8px;">Image placeholder</div>';
+        imgBody.innerHTML=(item.settings&&item.settings.src)?'<img src="'+item.settings.src+'" alt="'+(item.settings.alt||"Image")+'" style="max-width:100%;height:auto;display:block;">':'<div class="fb-image-placeholder fb-image-placeholder--compact"><div class="fb-image-placeholder__plus">+</div><div class="fb-image-placeholder__label">Image placeholder</div></div>';
         wrap.appendChild(imgBody);
     }else if(type==="video"){
         const raw=(item.settings&&item.settings.src)||"";
@@ -6319,9 +7204,9 @@ function renderCarouselPreviewItem(item,onDelete,onSelect,isSelected){
         var vidBody=document.createElement("div");
         if(vurl){
             const label=vurl.length>50?vurl.slice(0,47)+"...":vurl;
-            vidBody.innerHTML='<div style="'+wrapStyle+'"><div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:rgba(255,255,255,0.9);padding:12px;text-align:center;"><span style="font-size:32px;margin-bottom:8px;opacity:0.9;">▶</span><span style="font-size:12px;font-weight:700;">Video</span><span style="font-size:11px;opacity:0.8;word-break:break-all;max-width:100%;">'+label.replace(/</g,"&lt;").replace(/>/g,"&gt;")+'</span></div></div>';
+            vidBody.innerHTML='<div style="'+wrapStyle+'"><div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:rgba(255,255,255,0.9);padding:12px;text-align:center;"><span style="font-size:32px;margin-bottom:8px;opacity:0.9;">â–¶</span><span style="font-size:12px;font-weight:700;">Video</span><span style="font-size:11px;opacity:0.8;word-break:break-all;max-width:100%;">'+label.replace(/</g,"&lt;").replace(/>/g,"&gt;")+'</span></div></div>';
         } else {
-            vidBody.innerHTML='<div style="'+wrapStyle+'"><div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:rgba(255,255,255,0.8);padding:12px;"><span style="font-size:28px;margin-bottom:6px;">▶</span><span style="font-size:12px;">Video URL placeholder</span><span style="font-size:11px;margin-top:4px;">Paste link or upload</span></div></div>';
+            vidBody.innerHTML='<div style="'+wrapStyle+'"><div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:rgba(255,255,255,0.8);padding:12px;"><span style="font-size:28px;margin-bottom:6px;">â–¶</span><span style="font-size:12px;">Video URL placeholder</span><span style="font-size:11px;margin-top:4px;">Paste link or upload</span></div></div>';
         }
         wrap.appendChild(vidBody);
     }else if(type==="button"){
@@ -6425,9 +7310,32 @@ function createDefaultElement(type){
     var _cd=new Date(Date.now()+7*24*60*60*1000);
     var _pad=n=>String(n).padStart(2,"0");
     var countdownEndVal=_cd.getFullYear()+"-"+_pad(_cd.getMonth()+1)+"-"+_pad(_cd.getDate())+"T"+_pad(_cd.getHours())+":"+_pad(_cd.getMinutes());
-    const d={heading:{content:"Heading",style:{fontSize:"32px",color:"#000000",position:"absolute"},settings:{positionMode:"absolute"}},text:{content:"Text",style:{fontSize:"16px",color:"#000000",position:"absolute"},settings:{positionMode:"absolute"}},menu:{content:"",style:{fontSize:"16px",width:"400px",position:"absolute"},settings:{positionMode:"absolute",items:[{label:"Home",url:"#",newWindow:false,hasSubmenu:false},{label:"Contact",url:"/contact",newWindow:false,hasSubmenu:false}],itemGap:13,activeIndex:0,menuAlign:"left",underlineColor:""}},carousel:{content:"",style:{width:"200px",height:"200px",padding:"0px",position:"absolute"},settings:{positionMode:"absolute",slides:[defaultCarouselSlide("Slide #1")],activeSlide:0,vAlign:"center",alignment:"left",showArrows:true,slideshowMode:"manual",controlsColor:"#64748b",arrowColor:"#ffffff",fixedWidth:200,fixedHeight:200}},image:{content:"",style:{width:"300px",position:"absolute"},settings:{positionMode:"absolute",src:"",alt:"Image",alignment:"left"}},button:{content:"Click Me",style:{backgroundColor:"#240E35",color:"#fff",borderRadius:"999px",padding:"10px 18px",textAlign:"center",position:"absolute"},settings:{positionMode:"absolute",actionType:"next_step",actionStepSlug:"",link:"#"}},icon:{content:"",style:{fontSize:"36px",color:"#2E1244",padding:"0px",borderRadius:"0px",position:"absolute"},settings:{positionMode:"absolute",iconName:"star",iconStyle:"solid",alignment:"center",link:""}},form:{content:"Submit",style:{width:"350px",position:"absolute"},settings:{positionMode:"absolute",alignment:"left",width:"350px",buttonAlign:"left",buttonBold:false,buttonItalic:false,labelColor:"#240E35",placeholderColor:"#94a3b8",buttonBgColor:"#240E35",buttonTextColor:"#ffffff",fields:[{type:"text",label:"First name",placeholder:"First name",required:false}]}},video:{content:"",style:{width:"400px",position:"absolute"},settings:{positionMode:"absolute",src:"",alignment:"left"}},spacer:{content:"",style:{height:"24px",width:"200px",position:"absolute"},settings:{positionMode:"absolute"}},testimonial:{content:"",style:{width:"320px",padding:"16px",backgroundColor:"#ffffff",border:"1px solid #E6E1EF",borderRadius:"16px",boxShadow:"0 12px 24px rgba(15,23,42,.08)",position:"absolute"},settings:{positionMode:"absolute",quote:"This product changed how we work.",name:"Alex Johnson",role:"Founder, Startify",avatar:""}},faq:{content:"",style:{width:"420px",padding:"16px",backgroundColor:"#ffffff",border:"1px solid #E6E1EF",borderRadius:"16px",boxShadow:"0 12px 24px rgba(15,23,42,.08)",position:"absolute"},settings:{positionMode:"absolute",items:[{q:"How does it work?",a:"Choose a template, customize, and publish."},{q:"Is there a free trial?",a:"Yes, you can start with a 14-day trial."}],itemGap:10,questionColor:"#240E35",answerColor:"#475569"}},pricing:{content:"",style:{width:"320px",padding:"18px",backgroundColor:"#ffffff",border:"1px solid #E6E1EF",borderRadius:"18px",boxShadow:"0 12px 24px rgba(15,23,42,.08)",position:"absolute"},settings:{positionMode:"absolute",plan:"Pro",price:"₱49",period:"/month",subtitle:"Best for growing teams",features:["Unlimited pages","Custom domains","Priority support"],ctaLabel:"Get Started",ctaActionType:"next_step",ctaActionStepSlug:"",ctaLink:"#",ctaBgColor:"#240E35",ctaTextColor:"#ffffff",badge:"Popular"}},countdown:{content:"",style:{width:"300px",padding:"16px",backgroundColor:"#ffffff",border:"1px solid #E6E1EF",borderRadius:"16px",boxShadow:"0 12px 24px rgba(15,23,42,.08)",position:"absolute"},settings:{positionMode:"absolute",endAt:countdownEndVal,label:"Offer ends in",expiredText:"Offer ended",numberColor:"#240E35",labelColor:"#64748b",itemGap:8}}}[type]||null;
+const d={heading:{content:"Heading",style:{fontSize:"32px",color:"#000000",position:"absolute"},settings:{positionMode:"absolute"}},text:{content:"Text",style:{fontSize:"16px",color:"#000000",position:"absolute"},settings:{positionMode:"absolute"}},menu:{content:"",style:{fontSize:"16px",width:"400px",position:"absolute"},settings:{positionMode:"absolute",items:[{label:"Home",url:"#",newWindow:false,hasSubmenu:false},{label:"Contact",url:"/contact",newWindow:false,hasSubmenu:false}],itemGap:13,activeIndex:0,menuAlign:"left",underlineColor:""}},carousel:{content:"",style:{width:"200px",height:"200px",padding:"0px",position:"absolute"},settings:{positionMode:"absolute",slides:[defaultCarouselSlide("Slide #1")],activeSlide:0,vAlign:"center",alignment:"left",showArrows:true,slideshowMode:"manual",controlsColor:"#64748b",arrowColor:"#ffffff",fixedWidth:200,fixedHeight:200}},image:{content:"",style:{width:"300px",position:"absolute"},settings:{positionMode:"absolute",src:"",alt:"Image",alignment:"left"}},button:{content:"Click Me",style:{backgroundColor:"#240E35",color:"#fff",borderRadius:"999px",padding:"10px 18px",textAlign:"center",position:"absolute"},settings:{positionMode:"absolute",actionType:"next_step",actionStepSlug:"",link:"#"}},icon:{content:"",style:{fontSize:"36px",color:"#2E1244",padding:"0px",borderRadius:"0px",position:"absolute"},settings:{positionMode:"absolute",iconName:"star",iconStyle:"solid",alignment:"center",link:""}},form:{content:"Submit",style:{width:"350px",position:"absolute"},settings:{positionMode:"absolute",alignment:"left",width:"350px",buttonAlign:"left",buttonBold:false,buttonItalic:false,labelColor:"#240E35",placeholderColor:"#94a3b8",buttonBgColor:"#240E35",buttonTextColor:"#ffffff",fields:[{type:"text",label:"First name",placeholder:"First name",required:false}]}},shipping_details:{content:"",style:{width:"420px",padding:"18px",backgroundColor:"#ffffff",border:"1px solid #E6E1EF",borderRadius:"18px",boxShadow:"0 12px 24px rgba(15,23,42,.08)",position:"absolute"},settings:{positionMode:"absolute",heading:"Shipping Details",subtitle:"Enter your delivery and contact information before placing the order.",labelColor:"#240E35",placeholderColor:"#94a3b8",fields:[{type:"first_name",label:"First name",placeholder:"First name",required:true},{type:"last_name",label:"Last name",placeholder:"Last name",required:true},{type:"email",label:"Email",placeholder:"Email address",required:true},{type:"phone_number",label:"Phone number",placeholder:"09XXXXXXXXX",required:true},{type:"province",label:"Province",placeholder:"Province",required:true},{type:"city_municipality",label:"City / Municipality",placeholder:"City / Municipality",required:true},{type:"barangay",label:"Barangay",placeholder:"Barangay",required:true},{type:"street",label:"Street address",placeholder:"House no., street, building",required:true},{type:"postal_code",label:"Postal code",placeholder:"Postal code",required:false},{type:"notes",label:"Order notes",placeholder:"Optional notes for delivery",required:false}]}},video:{content:"",style:{width:"400px",position:"absolute"},settings:{positionMode:"absolute",src:"",alignment:"left"}},spacer:{content:"",style:{height:"24px",width:"200px",position:"absolute"},settings:{positionMode:"absolute"}},testimonial:{content:"",style:{width:"320px",padding:"16px",backgroundColor:"#ffffff",border:"1px solid #E6E1EF",borderRadius:"16px",boxShadow:"0 12px 24px rgba(15,23,42,.08)",position:"absolute"},settings:{positionMode:"absolute",quote:"This product changed how we work.",name:"Alex Johnson",role:"Founder, Startify",avatar:""}},review_form:{content:"",style:{width:"360px",padding:"18px",backgroundColor:"#ffffff",border:"1px solid #E6E1EF",borderRadius:"18px",boxShadow:"0 12px 24px rgba(15,23,42,.08)",position:"absolute"},settings:{positionMode:"absolute",heading:"How was your experience?",subtitle:"Share a quick review after your order or service experience.",physicalHeading:"How was your order experience?",physicalSubtitle:"Tell us how the ordering and checkout experience felt while your item is on the way.",buttonLabel:"Submit Review",successMessage:"Thanks for the review. It is now waiting for approval.",publicLabel:"I am okay with showing this review publicly."}},reviews:{content:"",style:{width:"420px",padding:"18px",backgroundColor:"#ffffff",border:"1px solid #E6E1EF",borderRadius:"18px",boxShadow:"0 12px 24px rgba(15,23,42,.08)",position:"absolute"},settings:{positionMode:"absolute",heading:"What customers are saying",subtitle:"Approved reviews from this funnel appear here automatically.",emptyText:"Approved reviews will appear here after customers submit them.",maxItems:6,filterRating:0,layout:"list",showRating:true,showDate:false,collapsible:true,collapsedCount:3,expandLabel:"Show all reviews",collapseLabel:"Show fewer reviews"}},faq:{content:"",style:{width:"420px",padding:"16px",backgroundColor:"#ffffff",border:"1px solid #E6E1EF",borderRadius:"16px",boxShadow:"0 12px 24px rgba(15,23,42,.08)",position:"absolute"},settings:{positionMode:"absolute",items:[{q:"How does it work?",a:"Choose a template, customize, and publish."},{q:"Is there a free trial?",a:"Yes, you can start with a 14-day trial."}],itemGap:10,questionColor:"#240E35",answerColor:"#475569"}},pricing:{content:"",style:{width:"320px",padding:"18px",backgroundColor:"#ffffff",border:"1px solid #E6E1EF",borderRadius:"18px",boxShadow:"0 12px 24px rgba(15,23,42,.08)",position:"absolute"},settings:{positionMode:"absolute",plan:"Pro",price:"₱49",period:"/month",subtitle:"Best for growing teams",features:["Unlimited pages","Custom domains","Priority support"],ctaLabel:"Get Started",ctaActionType:"next_step",ctaActionStepSlug:"",ctaLink:"#",ctaBgColor:"#240E35",ctaTextColor:"#ffffff",badge:"Popular"}},product_offer:{content:"",style:{width:"160px",padding:"8px",backgroundColor:"#ffffff",border:"1px solid #E6E1EF",borderRadius:"16px",boxShadow:"0 12px 24px rgba(15,23,42,.08)",position:"absolute"},settings:{positionMode:"absolute",plan:"Starter Bundle",price:"₱299",regularPrice:"₱499",period:"",subtitle:"",description:"Add a fuller product description here for your quick-view modal.",features:[],ctaLabel:"Buy",ctaActionType:"next_step",ctaActionStepSlug:"",ctaLink:"#",ctaBgColor:"#240E35",ctaTextColor:"#ffffff",badge:"Best Seller",stockQuantity:"",quickViewEnabled:true,quickViewLabel:"Details",cartEnabled:true,activeMedia:0,media:[{type:"image",src:"",alt:"Main product image",poster:""}]}},checkout_summary:{content:"",style:{width:"360px",padding:"22px",backgroundColor:"#ffffff",border:"1px solid #E6E1EF",borderRadius:"20px",boxShadow:"0 12px 24px rgba(15,23,42,.08)",position:"absolute"},settings:{positionMode:"absolute",heading:"Complete Your Order",plan:"Chosen Plan",price:"Selected price",period:"/billing cycle",subtitle:"This summary updates from the pricing selected earlier in the funnel.",features:["Unlimited steps","Custom domains","Email support"],ctaLabel:"Pay Now",ctaBgColor:"#240E35",ctaTextColor:"#ffffff",badge:"Selected Plan"}},physical_checkout_summary:{content:"",style:{width:"360px",padding:"22px",backgroundColor:"#ffffff",border:"1px solid #E6E1EF",borderRadius:"20px",boxShadow:"0 12px 24px rgba(15,23,42,.08)",position:"absolute"},settings:{positionMode:"absolute",heading:"Cart Summary",plan:"3 items",price:"₱4,000",period:"",subtitle:"Review the products in your cart before paying.",features:["Product subtotal updates automatically","Cart items show here before payment","Shipping details are collected before payment"],ctaLabel:"Place Order",ctaBgColor:"#240E35",ctaTextColor:"#ffffff",badge:"Cart"}},countdown:{content:"",style:{width:"300px",padding:"16px",backgroundColor:"#ffffff",border:"1px solid #E6E1EF",borderRadius:"16px",boxShadow:"0 12px 24px rgba(15,23,42,.08)",position:"absolute"},settings:{positionMode:"absolute",endAt:countdownEndVal,label:"Offer ends in",expiredText:"Offer ended",numberColor:"#240E35",labelColor:"#64748b",itemGap:8}}}[type]||null;
     if(!d)return null;
     return {id:uid("el"),type:type,content:d.content,style:clone(d.style),settings:clone(d.settings)};
+}
+
+function findLooseRootSection(){
+    return (state.layout.sections||[]).find(function(secNode){
+        return secNode && !secNode.__rootWrap && !secNode.__freeformCanvas;
+    })||null;
+}
+
+function ensureLooseRootSection(createFresh,insertIndex){
+    ensureRootModel();
+    var existing=createFresh?null:findLooseRootSection();
+    if(existing)return existing;
+    var rs=rootItems();
+    var newSection=createRootItem("section");
+    if(!newSection)return null;
+    if(typeof insertIndex==="number" && isFinite(insertIndex)){
+        var idx=Math.max(0,Math.min(Math.round(insertIndex),rs.length));
+        rs.splice(idx,0,newSection);
+    }else{
+        rs.push(newSection);
+    }
+    syncSectionsFromRoot();
+    return sec(newSection.id)||newSection;
 }
 
 
@@ -6436,25 +7344,63 @@ function addComponent(type){
     const p=state.sel||{};
     ensureRootModel();
     const rs=rootItems();
+    function convertToFlowElement(node){
+        if(!node)return node;
+        node.style=node.style||{};
+        node.settings=node.settings||{};
+        ["position","left","top","right","bottom","zIndex"].forEach(function(key){
+            if(Object.prototype.hasOwnProperty.call(node.style,key))delete node.style[key];
+        });
+        ["positionMode","freeX","freeY"].forEach(function(key){
+            if(Object.prototype.hasOwnProperty.call(node.settings,key))delete node.settings[key];
+        });
+        return node;
+    }
     if(!p||!p.k){
+        if(isStandaloneRootComponent(type)){
+            const rootLoose=createRootItem(type);
+            if(!rootLoose)return;
+            rs.push(rootLoose);
+            syncSectionsFromRoot();
+            state.sel={k:"el",scope:"root",e:rootLoose.id};
+            return;
+        }
+        if(!isStructureComponent(type)){
+            let targetSection=ensureLooseRootSection(false);
+            targetSection.elements=Array.isArray(targetSection.elements)?targetSection.elements:[];
+            const freeEl=convertToFlowElement(createDefaultElement(type));
+            if(!freeEl)return;
+            targetSection.elements.push(freeEl);
+            state.sel={k:"el",scope:"section",s:targetSection.id,e:freeEl.id};
+            return;
+        }
         const rootIt=createRootItem(type);
         if(!rootIt)return;
-        if(!isStructureComponent(type)){
-            var freeEls=rs.filter(function(r){return String((r&&r.kind)||"").toLowerCase()==="el";});
-            autoPlaceElement(rootIt,{elements:freeEls});
-        }
         rs.push(rootIt);
         syncSectionsFromRoot();
         return;
     }
     const pRootCtx=sectionRootContext(p.s);
     if(pRootCtx.isWrap||pRootCtx.isFreeform){
+        if(isStandaloneRootComponent(type)){
+            const rootLoose2=createRootItem(type);
+            if(!rootLoose2)return;
+            rs.push(rootLoose2);
+            syncSectionsFromRoot();
+            state.sel={k:"el",scope:"root",e:rootLoose2.id};
+            return;
+        }
+        if(!isStructureComponent(type)){
+            let targetSection=ensureLooseRootSection(false);
+            targetSection.elements=Array.isArray(targetSection.elements)?targetSection.elements:[];
+            const freeEl2=convertToFlowElement(createDefaultElement(type));
+            if(!freeEl2)return;
+            targetSection.elements.push(freeEl2);
+            state.sel={k:"el",scope:"section",s:targetSection.id,e:freeEl2.id};
+            return;
+        }
         const rootIt=createRootItem(type);
         if(!rootIt)return;
-        if(!isStructureComponent(type)){
-            var freeEls2=rs.filter(function(r){return String((r&&r.kind)||"").toLowerCase()==="el";});
-            autoPlaceElement(rootIt,{elements:freeEls2});
-        }
         rs.push(rootIt);
         syncSectionsFromRoot();
         return;
@@ -6462,12 +7408,25 @@ function addComponent(type){
     if(type==="section"){rs.push(createRootItem("section"));syncSectionsFromRoot();return;}
     let s=sec(p.s)||state.layout.sections[0];
     if(!s){
+        if(isStandaloneRootComponent(type)){
+            const rootLoose3=createRootItem(type);
+            if(!rootLoose3)return;
+            rs.push(rootLoose3);
+            syncSectionsFromRoot();
+            state.sel={k:"el",scope:"root",e:rootLoose3.id};
+            return;
+        }
+        if(!isStructureComponent(type)){
+            let targetSection=ensureLooseRootSection(false);
+            targetSection.elements=Array.isArray(targetSection.elements)?targetSection.elements:[];
+            const freeEl3=convertToFlowElement(createDefaultElement(type));
+            if(!freeEl3)return;
+            targetSection.elements.push(freeEl3);
+            state.sel={k:"el",scope:"section",s:targetSection.id,e:freeEl3.id};
+            return;
+        }
         const rootIt=createRootItem(type);
         if(!rootIt)return;
-        if(!isStructureComponent(type)){
-            var freeEls3=rs.filter(function(r){return String((r&&r.kind)||"").toLowerCase()==="el";});
-            autoPlaceElement(rootIt,{elements:freeEls3});
-        }
         rs.push(rootIt);
         syncSectionsFromRoot();
         return;
@@ -6521,6 +7480,10 @@ function dropPlacement(ev,node){
 function isStructureComponent(type){
     var t=String(type||"").toLowerCase();
     return t==="section"||t==="row"||t==="column";
+}
+function isStandaloneRootComponent(type){
+    var t=String(type||"").toLowerCase();
+    return t==="menu";
 }
 
 const freeDropGuides={host:null,v:null,h:null};
@@ -6864,7 +7827,7 @@ function autoPlaceElement(it,container){
     it.settings.freeY=cy;
 }
 
-/* ─── Z-order / layering helpers ─── */
+/* â”€â”€â”€ Z-order / layering helpers â”€â”€â”€ */
 function getElZIndex(item){return Number(item&&item.style&&item.style.zIndex)||0;}
 function getSiblingElements(ctx){
     if(!ctx)return [];
@@ -6885,13 +7848,13 @@ function layerToBack(item,ctx){
     item.style=item.style||{};item.style.zIndex=String(Math.max(0,(min===Infinity?0:min)-1));
 }
 
-/* ─── Universal resize handles for all elements ─── */
+/* â”€â”€â”€ Universal resize handles for all elements â”€â”€â”€ */
 function attachElResizeHandles(w,item){
     if(!w||!item)return;
     function parsePx(v){var n=Number(String(v||"0").replace("px","").trim());return isNaN(n)?0:n;}
     function clamp(n,mn,mx){return Math.max(mn,Math.min(mx,n));}
     var isCorner=function(h){return h==="nw"||h==="ne"||h==="sw"||h==="se";};
-    var isScalable=function(){return item.type==="heading"||item.type==="text"||item.type==="button"||item.type==="icon";};
+    var isScalable=function(){return item.type==="heading"||item.type==="text"||item.type==="icon";};
     var scaleAdvanced=isAdvancedScaleComponent(item.type);
     function startResize(handle,e){
         e.preventDefault();
@@ -6907,6 +7870,7 @@ function attachElResizeHandles(w,item){
         var hadHeight=!!(item.style&&String(item.style.height||"").trim()!=="");
         var startW=Math.max(30,rect.width||parsePx(item.style.width)||200);
         var startH=Math.max(20,rect.height||parsePx(item.style.height)||100);
+        var wasAbsolute=((item.settings&&item.settings.positionMode)==="absolute"||String((item.style&&item.style.position)||"").toLowerCase()==="absolute");
         var hasLeft=!!(item.style&&String(item.style.left||"").trim()!=="");
         var hasTop=!!(item.style&&String(item.style.top||"").trim()!=="");
         var startX=hasLeft?parsePx(item.style.left):(Number(item.settings&&item.settings.freeX)||0);
@@ -6929,7 +7893,7 @@ function attachElResizeHandles(w,item){
         var contentEl=w.querySelector("[data-editable],i.fa,i.fas,i.far,i.fab,svg");
         var sx=e.clientX,sy=e.clientY;
         var didSave=false;
-        var lockRatio=isCorner(handle)&&(isScalable()||item.type==="image"||item.type==="video"||item.type==="carousel");
+        var lockRatio=isCorner(handle)&&(item.type==="carousel");
         var doScale=isCorner(handle)&&isScalable();
         var affectsW=(handle==="e"||handle==="w"||isCorner(handle));
         var affectsH=(handle==="n"||handle==="s"||isCorner(handle));
@@ -6978,25 +7942,41 @@ function attachElResizeHandles(w,item){
                 item.settings.contentScale=clamp(startScale*scaleFactor,0.5,3);
                 applyAdvancedScaleToNode(w,item,item.settings.contentScale);
             }
-            item.style.position="absolute";
-            item.settings.positionMode="absolute";
-            item.style.left=Math.round(nx)+"px";
-            item.style.top=Math.round(ny)+"px";
-            item.settings.freeX=Math.round(nx);
-            item.settings.freeY=Math.round(ny);
-            w.style.position="absolute";
-            w.style.left=item.style.left;
-            w.style.top=item.style.top;
+            if(wasAbsolute){
+                item.style.position="absolute";
+                item.settings.positionMode="absolute";
+                item.style.left=Math.round(nx)+"px";
+                item.style.top=Math.round(ny)+"px";
+                item.settings.freeX=Math.round(nx);
+                item.settings.freeY=Math.round(ny);
+                w.style.position="absolute";
+                w.style.left=item.style.left;
+                w.style.top=item.style.top;
+            }else{
+                if(item.style&&Object.prototype.hasOwnProperty.call(item.style,"position"))delete item.style.position;
+                if(item.style&&Object.prototype.hasOwnProperty.call(item.style,"left"))delete item.style.left;
+                if(item.style&&Object.prototype.hasOwnProperty.call(item.style,"top"))delete item.style.top;
+                if(item.settings){
+                    if(Object.prototype.hasOwnProperty.call(item.settings,"positionMode"))delete item.settings.positionMode;
+                    if(Object.prototype.hasOwnProperty.call(item.settings,"freeX"))delete item.settings.freeX;
+                    if(Object.prototype.hasOwnProperty.call(item.settings,"freeY"))delete item.settings.freeY;
+                }
+                w.style.position="";
+                w.style.left="";
+                w.style.top="";
+            }
             if(affectsW || hadWidth){
                 item.style.width=Math.round(nw)+"px";
                 w.style.width=item.style.width;
             }
-            if(affectsH || hadHeight){
+            if((affectsH || hadHeight) && !isScalable()){
                 item.style.height=Math.round(nh)+"px";
                 w.style.height=item.style.height;
             }
             if(doScale&&startW>0){
-                var scale=nw/startW;
+                var wr=nw/startW;
+                var hr=startH>0?(nh/startH):wr;
+                var scale=(handle==="e"||handle==="w")?wr:((handle==="n"||handle==="s")?hr:Math.max(wr,hr));
                 var newFs=Math.max(8,Math.round(startFontSize*scale*10)/10);
                 item.style.fontSize=newFs+"px";
                 if(contentEl)contentEl.style.fontSize=newFs+"px";
@@ -7008,8 +7988,13 @@ function attachElResizeHandles(w,item){
                     item.style.borderRadius=newBR+"px";
                     if(contentEl)contentEl.style.borderRadius=newBR+"px";
                 }
+                if(item.style&&Object.prototype.hasOwnProperty.call(item.style,"height"))delete item.style.height;
+                w.style.height="auto";
             }
             if(scaleAdvanced)syncAdvancedElementHeight(w,item);
+            if(!wasAbsolute){
+                syncFlowContainerMinHeights(w,nh);
+            }
             drawLinkWires();
         }
         function onUp(){
@@ -7041,7 +8026,66 @@ function attachElResizeHandles(w,item){
     });
 }
 
-/* ─── Canva-style drag-to-move system ─── */
+function getNodeContentMinHeight(containerNode){
+    if(!containerNode)return 0;
+    var minNeeded=0;
+    Array.from(containerNode.children||[]).forEach(function(child){
+        if(!child)return;
+        if(child.classList&&(
+            child.classList.contains("section-resize-handle-y")
+            || child.classList.contains("row-resize-handle-y")
+        ))return;
+        var mb=0;
+        try{
+            mb=parseFloat((window.getComputedStyle(child).marginBottom)||"0")||0;
+        }catch(_e){mb=0;}
+        var bottom=(Number(child.offsetTop)||0)+(Number(child.offsetHeight)||0)+mb;
+        if(bottom>minNeeded)minNeeded=bottom;
+    });
+    var padTop=0,padBottom=0;
+    try{
+        var css=window.getComputedStyle(containerNode);
+        padTop=parseFloat(css.paddingTop||"0")||0;
+        padBottom=parseFloat(css.paddingBottom||"0")||0;
+    }catch(_e){}
+    return Math.max(0,Math.round(minNeeded+padTop+padBottom));
+}
+
+function syncFlowContainerMinHeights(node,preferredHeight){
+    if(!node)return;
+    var flowCol=node.closest(".col");
+    var flowRow=node.closest(".row");
+    var flowSec=node.closest(".sec");
+    if(flowCol){
+        flowCol.style.minHeight=Math.max(58,Number(preferredHeight)||0,getNodeContentMinHeight(flowCol))+"px";
+    }
+    if(flowRow){
+        requestAnimationFrame(function(){
+            flowRow.style.minHeight=Math.max(58,getNodeContentMinHeight(flowRow))+"px";
+        });
+    }
+    if(flowSec){
+        requestAnimationFrame(function(){
+            applySectionMinHeight(flowSec,Math.max(80,getSectionContentMinHeight(flowSec)));
+        });
+    }
+}
+
+function applySectionMinHeight(sectionNode,nextMin){
+    if(!sectionNode)return;
+    var value=Math.max(80,Number(nextMin)||0)+"px";
+    sectionNode.style.minHeight=value;
+    var inner=sectionNode.querySelector(".sec-inner");
+    if(inner)inner.style.minHeight=value;
+    var secId=String(sectionNode.getAttribute("data-sec-id")||"");
+    var sObj=secId?sec(secId):null;
+    if(sObj){
+        sObj.style=sObj.style||{};
+        sObj.style.minHeight=value;
+    }
+}
+
+/* â”€â”€â”€ Canva-style drag-to-move system â”€â”€â”€ */
 const elDrag={active:false,el:null,item:null,ctx:null,startX:0,startY:0,origX:0,origY:0,host:null,moved:false,snapGuides:[],justFinished:false};
 const DRAG_THRESHOLD=4;
 const SNAP_THRESHOLD=6;
@@ -7085,38 +8129,61 @@ function addSnapGuide(host,orient,pos){
 }
 
 function computeSnap(newX,newY,elW,elH,hostW,hostH,siblings){
-    var snapX=null,snapY=null;
-    var guidesV=[],guidesH=[];
     var elCx=newX+elW/2, elCy=newY+elH/2;
     var elRight=newX+elW, elBottom=newY+elH;
+    var bestX={dist:SNAP_THRESHOLD+1,pos:null,guides:[],label:""};
+    var bestY={dist:SNAP_THRESHOLD+1,pos:null,guides:[],label:""};
+
+    function tryX(current,target,finalPos,guides,label){
+        var d=Math.abs(current-target);
+        if(d<=SNAP_THRESHOLD&&d<bestX.dist){
+            bestX={dist:d,pos:finalPos,guides:(guides||[]),label:String(label||"").trim()};
+        }
+    }
+
+    function tryY(current,target,finalPos,guides,label){
+        var d=Math.abs(current-target);
+        if(d<=SNAP_THRESHOLD&&d<bestY.dist){
+            bestY={dist:d,pos:finalPos,guides:(guides||[]),label:String(label||"").trim()};
+        }
+    }
+
     var hostCx=hostW/2, hostCy=hostH/2;
-    var best=SNAP_THRESHOLD+1;
-
-    function tryV(val,target){var d=Math.abs(val-target);if(d<SNAP_THRESHOLD&&d<best){best=d;return true;}return false;}
-
-    best=SNAP_THRESHOLD+1;
-    if(tryV(elCx,hostCx)){snapX=hostCx-elW/2;guidesV=[hostCx];}
-    best=SNAP_THRESHOLD+1;
-    if(tryV(elCy,hostCy)){snapY=hostCy-elH/2;guidesH=[hostCy];}
+    tryX(elCx,hostCx,hostCx-elW/2,[hostCx],"Canvas center");
+    tryY(elCy,hostCy,hostCy-elH/2,[hostCy],"Canvas center");
 
     siblings.forEach(function(sib){
-        if(snapX===null){
-            if(Math.abs(elCx-sib.cx)<SNAP_THRESHOLD){snapX=sib.cx-elW/2;guidesV.push(sib.cx);}
-            else if(Math.abs(newX-sib.left)<SNAP_THRESHOLD){snapX=sib.left;guidesV.push(sib.left);}
-            else if(Math.abs(elRight-sib.right)<SNAP_THRESHOLD){snapX=sib.right-elW;guidesV.push(sib.right);}
-            else if(Math.abs(newX-sib.right)<SNAP_THRESHOLD){snapX=sib.right;guidesV.push(sib.right);}
-            else if(Math.abs(elRight-sib.left)<SNAP_THRESHOLD){snapX=sib.left-elW;guidesV.push(sib.left);}
-        }
-        if(snapY===null){
-            if(Math.abs(elCy-sib.cy)<SNAP_THRESHOLD){snapY=sib.cy-elH/2;guidesH.push(sib.cy);}
-            else if(Math.abs(newY-sib.top)<SNAP_THRESHOLD){snapY=sib.top;guidesH.push(sib.top);}
-            else if(Math.abs(elBottom-sib.bottom)<SNAP_THRESHOLD){snapY=sib.bottom-elH;guidesH.push(sib.bottom);}
-            else if(Math.abs(newY-sib.bottom)<SNAP_THRESHOLD){snapY=sib.bottom;guidesH.push(sib.bottom);}
-            else if(Math.abs(elBottom-sib.top)<SNAP_THRESHOLD){snapY=sib.top-elH;guidesH.push(sib.top);}
-        }
+        tryX(elCx,sib.cx,sib.cx-elW/2,[sib.cx],"Align center");
+        tryX(newX,sib.left,sib.left,[sib.left],"Align left");
+        tryX(elRight,sib.right,sib.right-elW,[sib.right],"Align right");
+        tryX(newX,sib.right,sib.right,[sib.right],"Snap to edge");
+        tryX(elRight,sib.left,sib.left-elW,[sib.left],"Snap to edge");
+
+        tryY(elCy,sib.cy,sib.cy-elH/2,[sib.cy],"Align middle");
+        tryY(newY,sib.top,sib.top,[sib.top],"Align top");
+        tryY(elBottom,sib.bottom,sib.bottom-elH,[sib.bottom],"Align bottom");
+        tryY(newY,sib.bottom,sib.bottom,[sib.bottom],"Snap to edge");
+        tryY(elBottom,sib.top,sib.top-elH,[sib.top],"Snap to edge");
     });
 
-    return {x:snapX,y:snapY,guidesV:guidesV,guidesH:guidesH};
+    for(var i=0;i<siblings.length;i++){
+        for(var j=i+1;j<siblings.length;j++){
+            var pair=siblings[i],other=siblings[j];
+            var midCx=(pair.cx+other.cx)/2;
+            var midCy=(pair.cy+other.cy)/2;
+            tryX(elCx,midCx,midCx-elW/2,[midCx],"Center between");
+            tryY(elCy,midCy,midCy-elH/2,[midCy],"Center between");
+        }
+    }
+
+    return {
+        x:bestX.pos,
+        y:bestY.pos,
+        guidesV:bestX.guides,
+        guidesH:bestY.guides,
+        labelV:bestX.label,
+        labelH:bestY.label
+    };
 }
 
 function startElDrag(e,w,item,ctx){
@@ -7254,7 +8321,7 @@ document.addEventListener("mouseup",function(e){
     queueAutoSave();
     setTimeout(function(){elDrag.justFinished=false;},0);
 });
-/* ─── end drag-to-move system ─── */
+/* â”€â”€â”€ end drag-to-move system â”€â”€â”€ */
 
 function addComponentAt(type,target,place){
     var freePlacement=(place&&typeof place==="object"&&place.mode==="free")?place:null;
@@ -7265,13 +8332,40 @@ function addComponentAt(type,target,place){
     ensureRootModel();
     const rs=rootItems();
     state.layout.sections=Array.isArray(state.layout.sections)?state.layout.sections:[];
+    function convertToFlowElement(node){
+        if(!node)return node;
+        node.style=node.style||{};
+        node.settings=node.settings||{};
+        ["position","left","top","right","bottom","zIndex"].forEach(function(key){
+            if(Object.prototype.hasOwnProperty.call(node.style,key))delete node.style[key];
+        });
+        ["positionMode","freeX","freeY"].forEach(function(key){
+            if(Object.prototype.hasOwnProperty.call(node.settings,key))delete node.settings[key];
+        });
+        return node;
+    }
     if(!t||!t.k){
+        if(isStandaloneRootComponent(type)){
+            var rootLoose=createRootItem(type);
+            if(!rootLoose)return false;
+            rs.push(rootLoose);
+            syncSectionsFromRoot();
+            state.sel={k:"el",scope:"root",e:rootLoose.id};
+            return true;
+        }
+        if(!isStructureComponent(type)){
+            var emptyTargetSection=freePlacement
+                ? ensureLooseRootSection(true)
+                : ensureLooseRootSection(false);
+            emptyTargetSection.elements=Array.isArray(emptyTargetSection.elements)?emptyTargetSection.elements:[];
+            var emptyFlowEl=convertToFlowElement(createDefaultElement(type));
+            if(!emptyFlowEl)return false;
+            emptyTargetSection.elements.push(emptyFlowEl);
+            state.sel={k:"el",scope:"section",s:emptyTargetSection.id,e:emptyFlowEl.id};
+            return true;
+        }
         var rootNew=createRootItem(type);
         if(!rootNew)return false;
-        if(!isStructureComponent(type)){
-            if(freePlacement)applyFreePlacementToElement(rootNew,freePlacement);
-            else{var freeElsAt=rs.filter(function(r){return String((r&&r.kind)||"").toLowerCase()==="el";});autoPlaceElement(rootNew,{elements:freeElsAt});}
-        }
         rs.push(rootNew);
         syncSectionsFromRoot();
         return true;
@@ -7279,12 +8373,26 @@ function addComponentAt(type,target,place){
     var tRootCtx=sectionRootContext(t.s);
     var isNestedGridTarget=(t.k==="row"||t.k==="col"||(t.k==="el"&&!!t.c));
     if((tRootCtx.isWrap||tRootCtx.isFreeform)&&tRootCtx.index>=0&&!isNestedGridTarget){
+        if(isStandaloneRootComponent(type)){
+            var wrapLoose=createRootItem(type);
+            if(!wrapLoose)return false;
+            var wrapLooseIdx=(place==="before"?tRootCtx.index:tRootCtx.index+1);
+            rs.splice(Math.max(0,Math.min(wrapLooseIdx,rs.length)),0,wrapLoose);
+            syncSectionsFromRoot();
+            state.sel={k:"el",scope:"root",e:wrapLoose.id};
+            return true;
+        }
+        if(!isStructureComponent(type)){
+            var wrapTargetSection=ensureLooseRootSection(true,tRootCtx.index+1);
+            wrapTargetSection.elements=Array.isArray(wrapTargetSection.elements)?wrapTargetSection.elements:[];
+            var wrapFlowEl=convertToFlowElement(createDefaultElement(type));
+            if(!wrapFlowEl)return false;
+            wrapTargetSection.elements.push(wrapFlowEl);
+            state.sel={k:"el",scope:"section",s:wrapTargetSection.id,e:wrapFlowEl.id};
+            return true;
+        }
         var wrapInsert=createRootItem(type);
         if(!wrapInsert)return false;
-        if(!isStructureComponent(type)){
-            if(freePlacement)applyFreePlacementToElement(wrapInsert,freePlacement);
-            else{var freeElsAt2=rs.filter(function(r){return String((r&&r.kind)||"").toLowerCase()==="el";});autoPlaceElement(wrapInsert,{elements:freeElsAt2});}
-        }
         var wrapIdx=(place==="before"?tRootCtx.index:tRootCtx.index+1);
         rs.splice(Math.max(0,Math.min(wrapIdx,rs.length)),0,wrapInsert);
         syncSectionsFromRoot();
@@ -7659,11 +8767,16 @@ function renderElement(item,ctx){
     else if(item.type==="button"){
         var wb=(item.settings&&item.settings.widthBehavior)||"fluid",al=(item.settings&&item.settings.alignment)||((item.style&&item.style.textAlign)||"center");
         var wrapBg=(item.settings&&item.settings.containerBgColor)||"";
+        var hasManualWidth=!!(item.style&&String(item.style.width||"").trim()!=="");
+        var hasManualHeight=!!(item.style&&String(item.style.height||"").trim()!=="");
         w.classList.add(wb==="fill"?"el--button-fill":"el--button");
         w.style.display="flex";w.style.justifyContent=al==="right"?"flex-end":al==="center"?"center":"flex-start";
+        w.style.alignItems=hasManualHeight?"stretch":"center";
         w.style.backgroundColor=wrapBg||"";
+        if(hasManualWidth)w.style.width=String(item.style.width);
+        if(hasManualHeight)w.style.height=String(item.style.height);
         const b=document.createElement("button");b.type="button";b.setAttribute("data-editable","1");b.contentEditable=isEditing?"true":"false";b.style.cursor=isEditing?"text":"move";b.innerHTML=item.content||"Button";
-        contentStyleApply(b,item.style||{});b.style.border="none";b.style.display=wb==="fill"?"flex":"inline-flex";b.style.width=wb==="fill"?"100%":"auto";b.style.alignItems="center";b.style.justifyContent="center";if(!(item.style&&item.style.backgroundColor))b.style.backgroundColor="#240E35";if(!(item.style&&item.style.color))b.style.color="#fff";if(!(item.style&&item.style.padding))b.style.padding="10px 18px";if(!(item.style&&item.style.borderRadius))b.style.borderRadius="999px";
+        contentStyleApply(b,item.style||{});b.style.border="none";b.style.display="flex";b.style.width=(wb==="fill"||hasManualWidth)?"100%":"auto";b.style.height=hasManualHeight?"100%":"auto";b.style.boxSizing="border-box";b.style.alignItems="center";b.style.justifyContent="center";if(!(item.style&&item.style.backgroundColor))b.style.backgroundColor="#240E35";if(!(item.style&&item.style.color))b.style.color="#fff";if(!(item.style&&item.style.padding))b.style.padding="10px 18px";if(!(item.style&&item.style.borderRadius))b.style.borderRadius="999px";
         b.oninput=()=>{item.content=b.innerHTML||"";queueAutoSave();};onRichTextKeys(b,()=>{item.content=b.innerHTML||"";queueAutoSave();});w.appendChild(b);
     }
     else if(item.type==="icon"){
@@ -7693,6 +8806,7 @@ function renderElement(item,ctx){
     }
     else if(item.type==="image"){
         var hasFixedH=!!(item.style&&String(item.style.height||"").trim()!=="");
+        var hasFixedW=!!(item.style&&String(item.style.width||"").trim()!=="");
         var _imgLoading=state.mediaLoading.has(item.id);
         if(item.settings&&item.settings.src){
             var imgWrap=document.createElement("div");
@@ -7710,6 +8824,7 @@ function renderElement(item,ctx){
                 img.style.height="100%";
                 img.style.objectFit="cover";
             }else{
+                if(hasFixedW)img.style.width="100%";
                 img.style.height="auto";
                 img.style.objectFit="contain";
                 img.style.objectPosition="top center";
@@ -7726,15 +8841,79 @@ function renderElement(item,ctx){
             w.innerHTML="";
             w.appendChild(imgWrap);
         }else if(_imgLoading){
-            w.innerHTML='<div style="position:relative;padding:30px 12px;border:1px dashed #94a3b8;border-radius:8px;width:100%;box-sizing:border-box;min-height:80px;"><div class="el-loading-overlay"><div class="el-loading-spinner"></div></div></div>';
+            w.innerHTML='<div class="fb-image-placeholder" style="min-height:120px;"><div class="fb-image-placeholder__center"><div class="fb-image-placeholder__plus">+</div></div><div class="fb-image-placeholder__label">Loading image...</div><div class="el-loading-overlay"><div class="el-loading-spinner"></div></div></div>';
         }else{
-            w.innerHTML='<div style="padding:12px;border:1px dashed #94a3b8;border-radius:8px;width:100%;box-sizing:border-box;">Image placeholder</div>';
+            w.innerHTML="";
+            var ph=document.createElement("div");
+            ph.className="fb-image-placeholder fb-image-placeholder--actionable";
+            var center=document.createElement("div");
+            center.className="fb-image-placeholder__center";
+            var plusBtn=document.createElement("button");
+            plusBtn.type="button";
+            plusBtn.className="fb-image-placeholder__plus";
+            plusBtn.setAttribute("aria-label","Choose image action");
+            plusBtn.textContent="+";
+            var label=document.createElement("div");
+            label.className="fb-image-placeholder__label";
+            label.textContent="Click to upload image";
+            var menu=document.createElement("div");
+            menu.className="fb-image-placeholder__menu";
+            menu.hidden=true;
+            var uploadBtn=document.createElement("button");
+            uploadBtn.type="button";
+            uploadBtn.textContent="Upload image";
+            var libraryBtn=document.createElement("button");
+            libraryBtn.type="button";
+            libraryBtn.textContent="Choose from library";
+            center.appendChild(plusBtn);
+            ph.appendChild(center);
+            ph.appendChild(label);
+            menu.appendChild(uploadBtn);
+            menu.appendChild(libraryBtn);
+            ph.appendChild(menu);
+            [plusBtn,menu,uploadBtn,libraryBtn].forEach(function(node){
+                node.addEventListener("mousedown",function(ev){
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                });
+            });
+            var openPicker=function(ev){
+                if(ev){
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                }
+                openImagePlaceholderMenu(item,ph,menu);
+            };
+            plusBtn.addEventListener("click",openPicker);
+            uploadBtn.addEventListener("click",function(ev){
+                ev.preventDefault();
+                ev.stopPropagation();
+                menu.hidden=true;
+                promptImageUploadForElement(item, ph);
+            });
+            libraryBtn.addEventListener("click",function(ev){
+                ev.preventDefault();
+                ev.stopPropagation();
+                menu.hidden=true;
+                openAssetLibraryModal({
+                    kind:"image",
+                    title:"Image Asset Library",
+                    subtitle:"Reuse stored images or upload a new one.",
+                    onSelect:function(url){
+                        saveToHistory();
+                        applyUploadedImageToElement(item,ph,url);
+                    }
+                });
+            });
+            w.appendChild(ph);
         }
     }
-    else if(item.type==="form"){
+    else if(item.type==="form"||item.type==="shipping_details"){
         item.settings=item.settings||{};
+        var isShippingDetails=item.type==="shipping_details";
         var fal=(item.settings.alignment)||"left";
         var fw=(item.style&&item.style.width)||(item.settings&&item.settings.width)||"100%";
+        var hasFormHeight=!!(item.style&&String(item.style.height||"").trim()!=="");
         var flabelColor=String(item.settings.labelColor||"#240E35");
         var fplaceholderColor=String(item.settings.placeholderColor||"#94a3b8");
         var fbtnBg=String(item.settings.buttonBgColor||"#240E35");
@@ -7758,6 +8937,30 @@ function renderElement(item,ctx){
         formBox.style.maxWidth="100%";
         formBox.style.boxSizing="border-box";
         formBox.style.textAlign="left";
+        formBox.style.display="grid";
+        formBox.style.alignContent="start";
+        if(hasFormHeight)formBox.style.height="100%";
+        if(isShippingDetails){
+            var shipHeading=document.createElement("div");
+            shipHeading.className="fb-shipping-heading";
+            shipHeading.textContent=String(item.settings.heading||"Shipping Details");
+            shipHeading.style.fontSize="20px";
+            shipHeading.style.fontWeight="800";
+            shipHeading.style.marginBottom="6px";
+            shipHeading.style.color="#240E35";
+            formBox.appendChild(shipHeading);
+            var shipSubtitle=String(item.settings.subtitle||"").trim();
+            if(shipSubtitle!==""){
+                var shipSubtitleEl=document.createElement("div");
+                shipSubtitleEl.className="fb-shipping-subtitle";
+                shipSubtitleEl.textContent=shipSubtitle;
+                shipSubtitleEl.style.fontSize="12px";
+                shipSubtitleEl.style.lineHeight="1.5";
+                shipSubtitleEl.style.color="#64748b";
+                shipSubtitleEl.style.marginBottom="10px";
+                formBox.appendChild(shipSubtitleEl);
+            }
+        }
         flist.forEach(function(f){
             var lbl=(f&&f.label)?String(f.label):"Field";
             var lab=document.createElement("label");
@@ -7778,22 +8981,38 @@ function renderElement(item,ctx){
             formBox.appendChild(lab);
             formBox.appendChild(inp);
         });
-        var btnWrap=document.createElement("div");
-        btnWrap.style.display="flex";
-        btnWrap.style.justifyContent=fbtnJustify;
-        var btn=document.createElement("button");
-        btn.type="button";
-        btn.className="fb-btn primary";
-        btn.disabled=true;
-        btn.textContent=(item.content||"Submit");
-        btn.style.backgroundColor=fbtnBg;
-        btn.style.color=fbtnColor;
-        btn.style.fontWeight=fbtnWeight;
-        btn.style.fontStyle=fbtnStyle;
-        btnWrap.appendChild(btn);
-        formBox.appendChild(btnWrap);
+        if(!isShippingDetails){
+            var btnWrap=document.createElement("div");
+            btnWrap.style.display="flex";
+            btnWrap.style.justifyContent=fbtnJustify;
+            btnWrap.style.marginTop="4px";
+            var btn=document.createElement("button");
+            btn.type="button";
+            btn.className="fb-btn primary";
+            btn.disabled=true;
+            btn.textContent=(item.content||"Submit");
+            btn.style.backgroundColor=fbtnBg;
+            btn.style.color=fbtnColor;
+            btn.style.fontWeight=fbtnWeight;
+            btn.style.fontStyle=fbtnStyle;
+            btnWrap.appendChild(btn);
+            formBox.appendChild(btnWrap);
+        }
         w.innerHTML="";
         w.appendChild(formBox);
+        var neededFormHeight=Math.ceil(formBox.scrollHeight||formBox.getBoundingClientRect().height||0);
+        if(neededFormHeight>0){
+            if(hasFormHeight){
+                var currentFormHeight=parsePxVal(item.style&&item.style.height);
+                if(currentFormHeight<neededFormHeight){
+                    item.style.height=neededFormHeight+"px";
+                }
+                w.style.height=String(item.style.height||neededFormHeight+"px");
+            }else{
+                if(item.style&&Object.prototype.hasOwnProperty.call(item.style,"height"))delete item.style.height;
+                w.style.height=neededFormHeight+"px";
+            }
+        }
     }
     else if(item.type==="testimonial"){
         item.settings=item.settings||{};
@@ -7835,6 +9054,119 @@ function renderElement(item,ctx){
         card.appendChild(author);
         w.appendChild(card);
     }
+    else if(item.type==="review_form"){
+        item.settings=item.settings||{};
+        var reviewHeading=String(item.settings.heading||"How was your experience?");
+        var reviewSubtitle=String(item.settings.subtitle||"Share a quick review after your order or service experience.");
+        var reviewButton=String(item.settings.buttonLabel||"Submit Review").trim()||"Submit Review";
+        var reviewPublicLabel=String(item.settings.publicLabel||"I am okay with showing this review publicly.");
+        var reviewCard=document.createElement("div");
+        reviewCard.className="fb-review-form";
+        var reviewTitle=document.createElement("div");
+        reviewTitle.className="fb-review-form-title";
+        reviewTitle.textContent=reviewHeading;
+        var reviewSub=document.createElement("div");
+        reviewSub.className="fb-review-form-subtitle";
+        reviewSub.textContent=reviewSubtitle;
+        var reviewStars=document.createElement("div");
+        reviewStars.className="fb-review-stars";
+        reviewStars.innerHTML='<span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>';
+        var reviewName=document.createElement("input");
+        reviewName.className="fb-review-input";
+        reviewName.placeholder="Your name";
+        reviewName.disabled=true;
+        var reviewEmail=document.createElement("input");
+        reviewEmail.className="fb-review-input";
+        reviewEmail.placeholder="Email address";
+        reviewEmail.disabled=true;
+        var reviewText=document.createElement("textarea");
+        reviewText.className="fb-review-textarea";
+        reviewText.placeholder="Write a quick review...";
+        reviewText.disabled=true;
+        var reviewCheck=document.createElement("label");
+        reviewCheck.className="fb-review-check";
+        reviewCheck.innerHTML='<input type="checkbox" disabled> <span>'+reviewPublicLabel.replace(/</g,"&lt;").replace(/>/g,"&gt;")+'</span>';
+        var reviewBtn=document.createElement("button");
+        reviewBtn.type="button";
+        reviewBtn.className="fb-pricing-cta";
+        reviewBtn.textContent=reviewButton;
+        reviewBtn.disabled=true;
+        reviewBtn.style.background=String(item.settings.ctaBgColor||"#240E35");
+        reviewBtn.style.color=String(item.settings.ctaTextColor||"#ffffff");
+        reviewCard.appendChild(reviewTitle);
+        reviewCard.appendChild(reviewSub);
+        reviewCard.appendChild(reviewStars);
+        reviewCard.appendChild(reviewName);
+        reviewCard.appendChild(reviewEmail);
+        reviewCard.appendChild(reviewText);
+        reviewCard.appendChild(reviewCheck);
+        reviewCard.appendChild(reviewBtn);
+        w.appendChild(reviewCard);
+    }
+    else if(item.type==="reviews"){
+        item.settings=item.settings||{};
+        var listHeading=String(item.settings.heading||"What customers are saying");
+        var listSubtitle=String(item.settings.subtitle||"Approved reviews from this funnel appear here automatically.");
+        var listLayout=String(item.settings.layout||"list").toLowerCase()==="grid"?"grid":"list";
+        var listShowRating=item.settings.showRating!==false;
+        var listShowDate=item.settings.showDate===true;
+        var reviewsShell=document.createElement("div");
+        reviewsShell.style.width="100%";
+        reviewsShell.style.height="100%";
+        reviewsShell.style.minWidth="0";
+        reviewsShell.style.minHeight="0";
+        reviewsShell.style.display="grid";
+        reviewsShell.style.alignContent="start";
+        reviewsShell.style.gap="12px";
+        reviewsShell.style.overflow="hidden";
+        var listWrap=document.createElement("div");
+        listWrap.className="fb-review-list "+listLayout;
+        listWrap.style.minWidth="0";
+        listWrap.style.alignContent="start";
+        var listHeader=document.createElement("div");
+        listHeader.className="fb-review-form";
+        var listHeaderTitle=document.createElement("div");
+        listHeaderTitle.className="fb-review-form-title";
+        listHeaderTitle.textContent=listHeading;
+        var listHeaderSub=document.createElement("div");
+        listHeaderSub.className="fb-review-form-subtitle";
+        listHeaderSub.textContent=listSubtitle;
+        listHeader.appendChild(listHeaderTitle);
+        listHeader.appendChild(listHeaderSub);
+        reviewsShell.appendChild(listHeader);
+        [{name:"Maria Dela Cruz",text:"Fast checkout and very smooth experience.",rating:5,date:"Approved review"},{name:"John Reyes",text:"Clear process and easy to follow from start to finish.",rating:4,date:"Approved review"}].forEach(function(sample){
+            var card=document.createElement("div");
+            card.className="fb-review-card";
+            var head=document.createElement("div");
+            head.className="fb-review-card-head";
+            var meta=document.createElement("div");
+            var name=document.createElement("div");
+            name.className="fb-review-card-name";
+            name.textContent=sample.name;
+            meta.appendChild(name);
+            if(listShowDate){
+                var date=document.createElement("div");
+                date.className="fb-review-card-date";
+                date.textContent=sample.date;
+                meta.appendChild(date);
+            }
+            head.appendChild(meta);
+            if(listShowRating){
+                var stars=document.createElement("div");
+                stars.className="fb-review-card-stars";
+                stars.textContent="★★★★★".slice(0,sample.rating)+"☆☆☆☆☆".slice(0,5-sample.rating);
+                head.appendChild(stars);
+            }
+            var text=document.createElement("div");
+            text.className="fb-review-card-text";
+            text.textContent=sample.text;
+            card.appendChild(head);
+            card.appendChild(text);
+            listWrap.appendChild(card);
+        });
+        reviewsShell.appendChild(listWrap);
+        w.appendChild(reviewsShell);
+    }
     else if(item.type==="faq"){
         item.settings=item.settings||{};
         item.settings.items=normalizeFaqItems(item.settings.items);
@@ -7870,7 +9202,7 @@ function renderElement(item,ctx){
         var plan=String(item.settings.plan||"Plan");
         var salePrice=normalizeTemplateCurrencyValue(item.settings.price||"");
         var regularPrice=normalizeTemplateCurrencyValue(item.settings.regularPrice||"");
-        var price=(salePrice!==""?salePrice:(regularPrice!==""?regularPrice:"₱0"));
+        var price=(salePrice!==""?salePrice:(regularPrice!==""?regularPrice:"â‚±0"));
         var period=String(item.settings.period||"");
         var subtitle=String(item.settings.subtitle||"");
         var badge=String(item.settings.badge||"");
@@ -7940,6 +9272,380 @@ function renderElement(item,ctx){
             pricing.appendChild(cta);
         }
         w.appendChild(pricing);
+    }
+    else if(item.type==="product_offer"){
+        item.settings=item.settings||{};
+        item.settings.features=normalizeFeatureList(item.settings.features);
+        item.settings.media=normalizeProductOfferMediaList(item.settings.media);
+        var activeStepForProduct=cur();
+        var productStepType=normalizeTemplateType((activeStepForProduct&&activeStepForProduct.type)||"custom");
+        var productName=String(item.settings.plan||"Product");
+        var productSale=normalizeTemplateCurrencyValue(item.settings.price||"");
+        var productRegular=normalizeTemplateCurrencyValue(item.settings.regularPrice||"");
+        var productPrice=(productSale!==""?productSale:(productRegular!==""?productRegular:"â‚±0"));
+        var productPeriod=String(item.settings.period||"");
+        var productSubtitle=String(item.settings.subtitle||"");
+        var productBadge=String(item.settings.badge||"");
+        var productDescription=String(item.settings.description||"").trim();
+        var productStockRaw=String(item.settings.stockQuantity||"").trim();
+        var productStockCount=productStockRaw===""?null:Math.max(0,parseInt(productStockRaw,10)||0);
+        var productButtonRaw=(typeof item.settings.ctaLabel==="string")?String(item.settings.ctaLabel).trim():"";
+        var productQuickViewEnabled=item.settings.quickViewEnabled!==false;
+        var productQuickViewLabel=String(item.settings.quickViewLabel||"Details").trim()||"Details";
+        var productCartEnabled=item.settings.cartEnabled!==false;
+        var productButton=productStepType==="checkout"
+            ?"Pay Now"
+            :(productButtonRaw!==""?productButtonRaw:(productStepType==="sales"&&productName!==""?("Buy "+productName):"Buy Now"));
+        var productBg=String(item.settings.ctaBgColor||"#240E35");
+        var productText=String(item.settings.ctaTextColor||"#ffffff");
+        var productColor=(item.style&&item.style.color)?String(item.style.color):"";
+        var mediaList=item.settings.media||[];
+        var activeMedia=Number(item.settings.activeMedia)||0;
+        if(activeMedia<0)activeMedia=0;
+        if(activeMedia>=mediaList.length)activeMedia=mediaList.length-1;
+        if(activeMedia<0)activeMedia=0;
+        item.settings.activeMedia=activeMedia;
+        var productCard=document.createElement("div");
+        productCard.className="fb-pricing fb-product-offer";
+        var mediaWrap=document.createElement("div");
+        mediaWrap.className="fb-product-media";
+        var mediaStage=document.createElement("div");
+        mediaStage.className="fb-product-media-stage";
+        var activeMediaItem=mediaList[activeMedia]||null;
+        if(activeMediaItem&&String(activeMediaItem.src||"").trim()!==""){
+            if(String(activeMediaItem.type||"image")==="video"){
+                var mediaVideo=document.createElement("video");
+                mediaVideo.src=String(activeMediaItem.src||"");
+                mediaVideo.controls=true;
+                mediaVideo.preload="metadata";
+                mediaVideo.playsInline=true;
+                if(String(activeMediaItem.poster||"").trim()!=="")mediaVideo.poster=String(activeMediaItem.poster||"").trim();
+                mediaStage.appendChild(mediaVideo);
+            }else{
+                var mediaImage=document.createElement("img");
+                mediaImage.src=String(activeMediaItem.src||"");
+                mediaImage.alt=String(activeMediaItem.alt||productName||"Product media");
+                mediaStage.appendChild(mediaImage);
+            }
+        }else{
+            var productPlaceholder=document.createElement("div");
+            productPlaceholder.className="fb-product-media-placeholder";
+            productPlaceholder.innerHTML='<i class="fas fa-images"></i><div>Click to upload product image</div>';
+            productPlaceholder.title="Upload product image from your PC";
+            productPlaceholder.addEventListener("click",function(e){
+                e.preventDefault();
+                e.stopPropagation();
+                promptImageUploadForProductOffer(item,activeMedia);
+            });
+            mediaStage.appendChild(productPlaceholder);
+        }
+        mediaWrap.appendChild(mediaStage);
+        if(mediaList.length>1){
+            var productPrev=document.createElement("button");
+            productPrev.type="button";
+            productPrev.className="fb-product-media-nav is-left";
+            productPrev.innerHTML='<i class="fas fa-chevron-left"></i>';
+            productPrev.onclick=function(e){
+                e.preventDefault();e.stopPropagation();
+                saveToHistory();
+                item.settings.activeMedia=(Number(item.settings.activeMedia)||0)-1;
+                if(item.settings.activeMedia<0)item.settings.activeMedia=mediaList.length-1;
+                renderCanvas();
+            };
+            var productNext=document.createElement("button");
+            productNext.type="button";
+            productNext.className="fb-product-media-nav is-right";
+            productNext.innerHTML='<i class="fas fa-chevron-right"></i>';
+            productNext.onclick=function(e){
+                e.preventDefault();e.stopPropagation();
+                saveToHistory();
+                item.settings.activeMedia=((Number(item.settings.activeMedia)||0)+1)%mediaList.length;
+                renderCanvas();
+            };
+            mediaWrap.appendChild(productPrev);
+            mediaWrap.appendChild(productNext);
+        }
+        productCard.appendChild(mediaWrap);
+        if(mediaList.length>1){
+            var mediaDots=document.createElement("div");
+            mediaDots.className="fb-product-media-dots";
+            mediaList.forEach(function(_media,idx){
+                var dot=document.createElement("span");
+                dot.className="fb-product-media-dot"+(idx===activeMedia?" is-active":"");
+                mediaDots.appendChild(dot);
+            });
+            productCard.appendChild(mediaDots);
+        }
+        if(productBadge){
+            var productBd=document.createElement("div");
+            productBd.className="fb-pricing-badge";
+            productBd.textContent=productBadge;
+            productCard.appendChild(productBd);
+        }
+        var productTitle=document.createElement("div");
+        productTitle.className="fb-pricing-title";
+        productTitle.textContent=productName;
+        if(productColor)productTitle.style.color=productColor;
+        productCard.appendChild(productTitle);
+        var productPriceRow=document.createElement("div");
+        var productPriceEl=document.createElement("span");
+        productPriceEl.className="fb-pricing-price";
+        productPriceEl.textContent=productPrice;
+        if(productColor)productPriceEl.style.color=productColor;
+        productPriceRow.appendChild(productPriceEl);
+        if(productRegular&&productRegular!==productPrice){
+            var productRegularEl=document.createElement("span");
+            productRegularEl.className="fb-pricing-period";
+            productRegularEl.textContent=productRegular;
+            productRegularEl.style.textDecoration="line-through";
+            productRegularEl.style.marginLeft="8px";
+            if(productColor){productRegularEl.style.color=productColor;productRegularEl.style.opacity="0.55";}
+            productPriceRow.appendChild(productRegularEl);
+        }
+        if(productPeriod){
+            var productPeriodEl=document.createElement("span");
+            productPeriodEl.className="fb-pricing-period";
+            productPeriodEl.textContent=productPeriod;
+            if(productColor){productPeriodEl.style.color=productColor;productPeriodEl.style.opacity="0.7";}
+            productPriceRow.appendChild(productPeriodEl);
+        }
+        productCard.appendChild(productPriceRow);
+        if(productSubtitle){
+            var productSub=document.createElement("div");
+            productSub.className="fb-pricing-subtitle";
+            productSub.textContent=productSubtitle;
+            if(productColor){productSub.style.color=productColor;productSub.style.opacity="0.7";}
+            productCard.appendChild(productSub);
+        }
+        if(productStockCount!==null){
+            var productStock=document.createElement("div");
+            productStock.className="fb-pricing-subtitle";
+            productStock.textContent=productStockCount===0?"Out of stock":(productStockCount+" in stock");
+            if(productColor){productStock.style.color=productColor;productStock.style.opacity="0.82";}
+            productCard.appendChild(productStock);
+        }
+        var productList=document.createElement("ul");
+        productList.className="fb-pricing-features";
+        item.settings.features.forEach(function(f){
+            var li=document.createElement("li");
+            li.textContent=String(f||"Feature");
+            if(productColor)li.style.color=productColor;
+            productList.appendChild(li);
+        });
+        productCard.appendChild(productList);
+        var productActions=document.createElement("div");
+        productActions.className="fb-product-actions";
+        if(productButton!==""){
+            var productCta=document.createElement("button");
+            productCta.type="button";
+            productCta.className="fb-pricing-cta";
+            productCta.textContent=productButton;
+            productCta.style.background=productBg;
+            productCta.style.color=productText;
+            productActions.appendChild(productCta);
+        }
+        if(productQuickViewEnabled||productCartEnabled){
+            var productUtility=document.createElement("div");
+            productUtility.className="fb-product-utility";
+            if(productQuickViewEnabled){
+                var productMore=document.createElement("button");
+                productMore.type="button";
+                productMore.className="fb-product-secondary";
+                productMore.textContent=productQuickViewLabel;
+                productMore.title=productDescription!==""?productDescription:"Open product details modal in preview or published mode";
+                productUtility.appendChild(productMore);
+            }
+            if(productCartEnabled){
+                var productCart=document.createElement("button");
+                productCart.type="button";
+                productCart.className="fb-product-cart";
+                productCart.innerHTML='<i class="fas fa-cart-shopping"></i>';
+                productCart.title="Add to cart";
+                productUtility.appendChild(productCart);
+            }
+            productActions.appendChild(productUtility);
+        }
+        if(productActions.children.length)productCard.appendChild(productActions);
+        w.appendChild(productCard);
+    }
+    else if(item.type==="checkout_summary"||item.type==="physical_checkout_summary"){
+        item.settings=item.settings||{};
+        item.settings.features=normalizeFeatureList(item.settings.features);
+        var isPhysicalCheckoutSummary=item.type==="physical_checkout_summary";
+        var summaryHeading=String(item.settings.heading||(isPhysicalCheckoutSummary?"Cart Summary":"Order Summary"));
+        var summaryPlan=String(item.settings.plan||(isPhysicalCheckoutSummary?"3 items":"Starter"));
+        var summaryPrice=normalizeTemplateCurrencyValue(item.settings.price||"");
+        var summaryRegular=normalizeTemplateCurrencyValue(item.settings.regularPrice||"");
+        var summaryPeriod=String(item.settings.period||"");
+        var summarySubtitle=String(item.settings.subtitle||"");
+        var summaryBadge=String(item.settings.badge||(isPhysicalCheckoutSummary?"Cart":""));
+        var summaryButton=String(item.settings.ctaLabel||(isPhysicalCheckoutSummary?"Place Order":"Pay Now")).trim()||(isPhysicalCheckoutSummary?"Place Order":"Pay Now");
+        var summaryBg=String(item.settings.ctaBgColor||"#240E35");
+        var summaryText=String(item.settings.ctaTextColor||"#ffffff");
+        var customSummaryColor=(item.style&&item.style.color)?String(item.style.color):"";
+        var priceText=summaryPrice!==""?summaryPrice:(summaryRegular!==""?summaryRegular:"â‚±0");
+        var card=document.createElement("div");
+        card.className=isPhysicalCheckoutSummary?"fb-pricing fb-physical-checkout":"fb-pricing";
+        if(summaryBadge){
+            var sBadge=document.createElement("div");
+            sBadge.className="fb-pricing-badge";
+            sBadge.textContent=isPhysicalCheckoutSummary?"Cart":summaryBadge;
+            card.appendChild(sBadge);
+        }
+        if(isPhysicalCheckoutSummary){
+            var head=document.createElement("div");
+            head.className="fb-physical-checkout-head";
+            var sHeading=document.createElement("div");
+            sHeading.className="fb-physical-checkout-label";
+            sHeading.textContent="Cart Summary";
+            if(customSummaryColor){sHeading.style.color=customSummaryColor;sHeading.style.opacity="0.7";}
+            head.appendChild(sHeading);
+            card.appendChild(head);
+
+            var product=document.createElement("div");
+            product.className="fb-physical-checkout-product";
+            var thumb=document.createElement("div");
+            thumb.className="fb-physical-checkout-thumb";
+            thumb.innerHTML='<i class="fas fa-box-open"></i>';
+            product.appendChild(thumb);
+            var meta=document.createElement("div");
+            meta.className="fb-physical-checkout-meta";
+            var sTitle=document.createElement("div");
+            sTitle.className="fb-pricing-title";
+            sTitle.textContent="3 items";
+            if(customSummaryColor)sTitle.style.color=customSummaryColor;
+            meta.appendChild(sTitle);
+            var sSubtitle=document.createElement("div");
+            sSubtitle.className="fb-pricing-subtitle";
+            sSubtitle.textContent="Review the products in your cart before paying.";
+            if(customSummaryColor){sSubtitle.style.color=customSummaryColor;sSubtitle.style.opacity="0.7";}
+            meta.appendChild(sSubtitle);
+            var priceWrap=document.createElement("div");
+            priceWrap.className="fb-physical-checkout-price";
+            var sPrice=document.createElement("span");
+            sPrice.className="fb-pricing-price";
+            sPrice.textContent="â‚±4,000";
+            if(customSummaryColor)sPrice.style.color=customSummaryColor;
+            priceWrap.appendChild(sPrice);
+            if(summaryPeriod){
+                var sPeriod=document.createElement("span");
+                sPeriod.className="fb-pricing-period";
+                sPeriod.textContent=summaryPeriod;
+                if(customSummaryColor){sPeriod.style.color=customSummaryColor;sPeriod.style.opacity="0.7";}
+                priceWrap.appendChild(sPeriod);
+            }
+            meta.appendChild(priceWrap);
+            product.appendChild(meta);
+            card.appendChild(product);
+
+            var rows=document.createElement("div");
+            rows.className="fb-physical-checkout-rows";
+            var row1=document.createElement("div");
+            row1.className="fb-physical-checkout-row";
+            row1.innerHTML='<span>Items subtotal</span><strong>â‚±4,000</strong>';
+            var row2=document.createElement("div");
+            row2.className="fb-physical-checkout-row";
+            row2.innerHTML='<span>Shipping</span><strong>Calculated at checkout</strong>';
+            var row3=document.createElement("div");
+            row3.className="fb-physical-checkout-row fb-physical-checkout-row--total";
+            row3.innerHTML='<strong>Order total</strong><strong>â‚±4,000</strong>';
+            rows.appendChild(row1);
+            rows.appendChild(row2);
+            rows.appendChild(row3);
+            card.appendChild(rows);
+
+            var placeholderLines=document.createElement("div");
+            placeholderLines.className="fb-physical-checkout-lines";
+            [
+                {name:"Product one",sub:"Qty: 1 â€¢ Best Seller",total:"â‚±500"},
+                {name:"Product two",sub:"Qty: 1 â€¢ Featured",total:"â‚±1,500"}
+            ].forEach(function(line){
+                var row=document.createElement("div");
+                row.className="fb-physical-checkout-line";
+                var rowThumb=document.createElement("div");
+                rowThumb.className="fb-physical-checkout-line-thumb";
+                rowThumb.innerHTML='<i class="fas fa-box-open"></i>';
+                var rowMeta=document.createElement("div");
+                rowMeta.className="fb-physical-checkout-line-meta";
+                var rowTitle=document.createElement("div");
+                rowTitle.className="fb-physical-checkout-line-title";
+                rowTitle.textContent=line.name;
+                var rowSub=document.createElement("div");
+                rowSub.className="fb-physical-checkout-line-sub";
+                rowSub.textContent=line.sub;
+                var rowTotal=document.createElement("div");
+                rowTotal.className="fb-physical-checkout-line-total";
+                rowTotal.textContent=line.total;
+                if(customSummaryColor){
+                    rowTitle.style.color=customSummaryColor;
+                    rowTotal.style.color=customSummaryColor;
+                    rowSub.style.color=customSummaryColor;
+                    rowSub.style.opacity="0.7";
+                }
+                rowMeta.appendChild(rowTitle);
+                rowMeta.appendChild(rowSub);
+                row.appendChild(rowThumb);
+                row.appendChild(rowMeta);
+                row.appendChild(rowTotal);
+                placeholderLines.appendChild(row);
+            });
+            card.appendChild(placeholderLines);
+        }else{
+            var sHeading=document.createElement("div");
+            sHeading.className="fb-pricing-subtitle";
+            sHeading.textContent=summaryHeading;
+            sHeading.style.fontSize="11px";
+            sHeading.style.fontWeight="800";
+            sHeading.style.letterSpacing="0.08em";
+            sHeading.style.textTransform="uppercase";
+            if(customSummaryColor){sHeading.style.color=customSummaryColor;sHeading.style.opacity="0.7";}
+            card.appendChild(sHeading);
+            var sTitle=document.createElement("div");
+            sTitle.className="fb-pricing-title";
+            sTitle.textContent=summaryPlan;
+            if(customSummaryColor)sTitle.style.color=customSummaryColor;
+            card.appendChild(sTitle);
+            var sPriceRow=document.createElement("div");
+            var sPrice=document.createElement("span");
+            sPrice.className="fb-pricing-price";
+            sPrice.textContent=priceText;
+            if(customSummaryColor)sPrice.style.color=customSummaryColor;
+            sPriceRow.appendChild(sPrice);
+            if(summaryPeriod){
+                var sPeriod=document.createElement("span");
+                sPeriod.className="fb-pricing-period";
+                sPeriod.textContent=summaryPeriod;
+                if(customSummaryColor){sPeriod.style.color=customSummaryColor;sPeriod.style.opacity="0.7";}
+                sPriceRow.appendChild(sPeriod);
+            }
+            card.appendChild(sPriceRow);
+            if(summarySubtitle){
+                var sSubtitle=document.createElement("div");
+                sSubtitle.className="fb-pricing-subtitle";
+                sSubtitle.textContent=summarySubtitle;
+                if(customSummaryColor){sSubtitle.style.color=customSummaryColor;sSubtitle.style.opacity="0.7";}
+                card.appendChild(sSubtitle);
+            }
+        }
+        if(!isPhysicalCheckoutSummary){
+            var sList=document.createElement("ul");
+            sList.className="fb-pricing-features";
+            item.settings.features.forEach(function(f){
+                var li=document.createElement("li");
+                li.textContent=String(f||"Feature");
+                if(customSummaryColor)li.style.color=customSummaryColor;
+                sList.appendChild(li);
+            });
+            card.appendChild(sList);
+        }
+        var sButton=document.createElement("button");
+        sButton.type="button";
+        sButton.className="fb-pricing-cta";
+        sButton.textContent=summaryButton;
+        sButton.style.background=summaryBg;
+        sButton.style.color=summaryText;
+        card.appendChild(sButton);
+        w.appendChild(card);
     }
     else if(item.type==="countdown"){
         item.settings=item.settings||{};
@@ -8918,7 +10624,11 @@ function attachSectionHeightResizeHandle(sectionNode,sectionObj){
         sectionObj.style=sectionObj.style||{};
         var cssMin=String(sectionObj.style.minHeight||"").trim();
         var startH=0;
-        if(cssMin.endsWith("px")){
+        var liveMin=String(sectionNode.style.minHeight||"").trim();
+        if(liveMin.endsWith("px")){
+            var liveN=Number(liveMin.replace("px","").trim());
+            if(!isNaN(liveN))startH=liveN;
+        }else if(cssMin.endsWith("px")){
             var n=Number(cssMin.replace("px","").trim());
             if(!isNaN(n))startH=n;
         }else if(cssMin.endsWith("vh")){
@@ -8928,22 +10638,33 @@ function attachSectionHeightResizeHandle(sectionNode,sectionObj){
         if(startH<=0){
             startH=Math.max(120,Math.round(sectionNode.getBoundingClientRect().height||0));
         }
+        var latestH=startH;
         var didSave=false;
         function onMove(ev){
             if(!didSave){saveToHistory();didSave=true;}
             var dy=(Number(ev.clientY)||0)-startY;
-            var next=Math.max(80,Math.min(2200,Math.round(startH+dy)));
-            sectionObj.style.minHeight=next+"px";
-            sectionNode.style.minHeight=sectionObj.style.minHeight;
+            var contentMin=getSectionContentMinHeight(sectionNode);
+            var next=Math.max(contentMin,Math.min(2200,Math.round(startH+dy)));
+            latestH=next;
+            applySectionMinHeight(sectionNode,next);
+            fitFlowImagesWithinSection(sectionNode,next);
         }
         function onUp(){
             document.removeEventListener("mousemove",onMove);
             document.removeEventListener("mouseup",onUp);
+            applySectionMinHeight(sectionNode,latestH);
+            fitFlowImagesWithinSection(sectionNode,latestH);
         }
         document.addEventListener("mousemove",onMove);
         document.addEventListener("mouseup",onUp);
     });
     sectionNode.appendChild(hHandle);
+}
+
+function getSectionContentMinHeight(sectionNode){
+    if(!sectionNode)return 80;
+    var inner=sectionNode.querySelector(".sec-inner")||sectionNode;
+    return Math.max(80,getNodeContentMinHeight(inner));
 }
 
 function applyColumnImageFit(colNode,colInner,colObj){
@@ -8970,6 +10691,62 @@ function applyColumnImageFit(colNode,colInner,colObj){
     img.style.maxHeight="";
     img.style.objectFit="contain";
     img.style.objectPosition="top center";
+}
+
+function fitFlowImagesWithinSection(sectionNode,targetHeight){
+    if(!sectionNode)return;
+    var inner=sectionNode.querySelector(".sec-inner")||sectionNode;
+    var innerRect=inner.getBoundingClientRect();
+    if(!innerRect||!(innerRect.width>0)||!(innerRect.height>0))return;
+    var requestedHeight=Number(targetHeight)||0;
+    if(requestedHeight<=0){
+        var cssH=String(sectionNode.style.minHeight||"").trim();
+        if(cssH.endsWith("px")){
+            var parsed=Number(cssH.replace("px","").trim());
+            if(!isNaN(parsed))requestedHeight=parsed;
+        }
+    }
+    if(requestedHeight<=0)requestedHeight=Math.round(innerRect.height||0);
+    var innerTop=innerRect.top;
+    Array.from(inner.querySelectorAll('.el[data-el-type="image"]')).forEach(function(node){
+        if(!node||node.classList.contains("el--abs"))return;
+        var item=findElementById(node.getAttribute("data-el-id"));
+        if(!item||item.type!=="image")return;
+        var nodeRect=node.getBoundingClientRect();
+        var currentW=Math.max(1,Math.round(nodeRect.width||0));
+        var currentH=Math.max(1,Math.round(nodeRect.height||0));
+        if(currentW<=1||currentH<=1)return;
+        var host=node.parentElement||inner;
+        var hostRect=host.getBoundingClientRect();
+        var offsetTop=Math.max(0,Math.round(nodeRect.top-innerTop));
+        var availableW=Math.max(40,Math.min(
+            Math.round(hostRect.width||currentW),
+            Math.round(innerRect.right-nodeRect.left)
+        ));
+        var availableH=Math.max(40,requestedHeight-offsetTop);
+        var shrink=Math.min(1,availableW/currentW,availableH/currentH);
+        if(!(shrink<0.999))return;
+        var nextW=Math.max(30,Math.round(currentW*shrink));
+        var nextH=Math.max(20,Math.round(currentH*shrink));
+        item.style=item.style||{};
+        item.style.width=nextW+"px";
+        item.style.height=nextH+"px";
+        node.style.width=item.style.width;
+        node.style.height=item.style.height;
+        var imgWrap=node.firstElementChild;
+        if(imgWrap){
+            imgWrap.style.width="100%";
+            imgWrap.style.height="100%";
+        }
+        var img=node.querySelector("img");
+        if(img){
+            img.style.width="100%";
+            img.style.height="100%";
+            img.style.maxWidth="100%";
+            img.style.objectFit="contain";
+            img.style.objectPosition="top center";
+        }
+    });
 }
 
 function renderCanvas(){
@@ -9014,7 +10791,7 @@ function renderCanvas(){
         inner.style.boxSizing="border-box";
         inner.style.position="relative";
         if(s.__freeformCanvas){
-            inner.style.minHeight="300px";
+            inner.style.minHeight="56px";
         }else{
             inner.style.minHeight=(sn.style.minHeight&&String(sn.style.minHeight).trim()!=="")?String(sn.style.minHeight):"30vh";
         }
@@ -9071,11 +10848,20 @@ function renderCanvas(){
             if(ok)render();
         };
         s.elements=Array.isArray(s.elements)?s.elements:[];
-        (s.elements||[]).forEach(function(it){
-            var elNode=renderElement(it,{s:s.id,scope:"section"});
-            inner.appendChild(elNode);
-            if(isAdvancedScaleComponent(it.type))syncAdvancedElementHeight(elNode,it);
-        });
+        var freeformRenderedBottom=0;
+        {
+            (s.elements||[]).forEach(function(it){
+                var elNode=renderElement(it,{s:s.id,scope:"section"});
+                inner.appendChild(elNode);
+                if(isAdvancedScaleComponent(it.type))syncAdvancedElementHeight(elNode,it);
+                if(s.__freeformCanvas && it.settings && it.settings.positionMode==="absolute"){
+                    var eyRendered=Number(it.settings.freeY)||0;
+                    var renderedHeight=Math.round(elNode.getBoundingClientRect().height)||Number(elNode.offsetHeight)||0;
+                    var renderedBottom=eyRendered+Math.max(24,renderedHeight)+8;
+                    if(renderedBottom>freeformRenderedBottom)freeformRenderedBottom=renderedBottom;
+                }
+            });
+        }
         if(s.__freeformCanvas){
             var secMaxBot=0;
             (s.elements||[]).forEach(function(it){
@@ -9086,7 +10872,7 @@ function renderCanvas(){
                     if(bot>secMaxBot)secMaxBot=bot;
                 }
             });
-            var freeformH=Math.max(300,secMaxBot);
+            var freeformH=Math.max(40,freeformRenderedBottom,secMaxBot>0?Math.min(secMaxBot,freeformRenderedBottom||secMaxBot):0);
             sn.style.minHeight=freeformH+"px";
             inner.style.minHeight=freeformH+"px";
         }
@@ -9367,7 +11153,7 @@ function initContextMenu(){
 function bind(id,val,cb,opts){
     const n=document.getElementById(id);if(!n)return;
     n.value=val||"";
-    const fire=()=>{if(opts&&opts.undo)saveToHistory();let v=n.value;if(opts&&opts.px)v=pxIfNumber(v);cb(v);refreshAfterSetting();};
+    const fire=()=>{if(opts&&opts.undo)saveToHistory();let v=n.value;if(opts&&opts.px)v=pxIfNumber(v);cb(v);queueAutoSave();refreshAfterSetting();};
     n.addEventListener("input",fire);
     n.addEventListener("change",fire);
     n.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();fire();}});
@@ -9400,6 +11186,7 @@ function bindCurrency(id,val,cb,opts){
             n.setSelectionRange(Math.min(nextStart,normalized.length),Math.min(nextEnd,normalized.length));
         }
         cb(normalized);
+        queueAutoSave();
         refreshAfterSetting();
     };
     n.addEventListener("input",fire);
@@ -9456,7 +11243,7 @@ function bindRichEditor(id,val,cb){
 function bindPx(id,val,cb,opts){
     const n=document.getElementById(id);if(!n)return;
     n.value=pxToNumber(val);
-    const fire=()=>{if(opts&&opts.undo)saveToHistory();const raw=(n.value||"").trim();cb(raw===""?"":raw+"px");refreshAfterSetting();};
+    const fire=()=>{if(opts&&opts.undo)saveToHistory();const raw=(n.value||"").trim();cb(raw===""?"":raw+"px");queueAutoSave();refreshAfterSetting();};
     n.addEventListener("input",fire);
     n.addEventListener("change",fire);
     n.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();fire();}});
@@ -9481,6 +11268,122 @@ function uploadImage(file,done,label,onFail,elId){
             if(typeof onFail==="function")onFail("Check your connection and try again.");
             alert(msg+" failed. Check your connection and try again.");
         });
+}
+
+function applyUploadedImageToElement(item,hostEl,url){
+    item.settings=item.settings||{};
+    item.settings.imageSourceType="upload";
+    item.settings.src=url;
+    item.style=item.style||{};
+    var hostW=hostEl&&hostEl.clientWidth?hostEl.clientWidth:0;
+    var hostH=hostEl&&hostEl.clientHeight?hostEl.clientHeight:0;
+    if(hostW>0 && (!String(item.style.width||"").trim() || String(item.style.width||"").trim()==="100%")){
+        item.style.width=Math.max(120,hostW)+"px";
+        item.settings.width=item.style.width;
+    }
+    if(hostH>0 && (!String(item.style.height||"").trim() || String(item.style.height||"").trim()==="auto")){
+        item.style.height=Math.max(80,hostH)+"px";
+    }
+    render();
+}
+
+function promptImageUploadForElement(item,hostEl){
+    if(!item)return;
+    var input=document.createElement("input");
+    input.type="file";
+    input.accept="image/*";
+    input.style.display="none";
+    document.body.appendChild(input);
+    input.addEventListener("change",function(){
+        var file=input.files&&input.files[0]?input.files[0]:null;
+        if(!file){
+            if(input.parentNode)input.parentNode.removeChild(input);
+            return;
+        }
+        saveToHistory();
+        uploadImage(file,function(url){
+            applyUploadedImageToElement(item,hostEl,url);
+        },"Image upload",null,item.id);
+        if(input.parentNode)input.parentNode.removeChild(input);
+    },{once:true});
+    input.click();
+}
+
+function ensureProductOfferMediaList(item){
+    item.settings=item.settings||{};
+    item.settings.media=normalizeProductOfferMediaList(item.settings.media);
+    return item.settings.media;
+}
+
+function applyUploadedImageToProductOffer(item,url,mediaIndex){
+    if(!item)return;
+    item.settings=item.settings||{};
+    var media=ensureProductOfferMediaList(item);
+    var idx=Number(mediaIndex);
+    if(isNaN(idx)||idx<0)idx=Number(item.settings.activeMedia)||0;
+    if(idx<0)idx=0;
+    if(idx>=media.length){
+        media.push({type:"image",src:"",alt:"Product image",poster:""});
+        idx=media.length-1;
+    }
+    media[idx]=Object.assign({}, media[idx]||{}, {
+        type:"image",
+        src:url,
+        alt:String((media[idx]&&media[idx].alt)||item.settings.plan||"Product image"),
+        poster:""
+    });
+    item.settings.media=media;
+    item.settings.activeMedia=idx;
+    renderCanvas();
+}
+
+function promptImageUploadForProductOffer(item,mediaIndex){
+    if(!item)return;
+    var input=document.createElement("input");
+    input.type="file";
+    input.accept="image/*";
+    input.style.display="none";
+    document.body.appendChild(input);
+    input.addEventListener("change",function(){
+        var file=input.files&&input.files[0]?input.files[0]:null;
+        if(!file){
+            if(input.parentNode)input.parentNode.removeChild(input);
+            return;
+        }
+        saveToHistory();
+        uploadImage(file,function(url){
+            applyUploadedImageToProductOffer(item,url,mediaIndex);
+        },"Product image upload",null,item.id);
+        if(input.parentNode)input.parentNode.removeChild(input);
+    },{once:true});
+    input.click();
+}
+
+function openImagePlaceholderMenu(item,hostEl,menuEl){
+    if(!item||!hostEl||!menuEl)return;
+    var hostRect=hostEl.getBoundingClientRect();
+    var preferredLeft=Math.round(hostRect.left+((hostRect.width||0)/2)-115);
+    var preferredTop=Math.round(hostRect.top+((hostRect.height||0)/2)+18);
+    menuEl.hidden=false;
+    menuEl.style.left="0px";
+    menuEl.style.top="0px";
+    var menuW=menuEl.offsetWidth||230;
+    var menuH=menuEl.offsetHeight||140;
+    var vw=Math.max(document.documentElement.clientWidth||0,window.innerWidth||0);
+    var vh=Math.max(document.documentElement.clientHeight||0,window.innerHeight||0);
+    var nextLeft=Math.max(12,Math.min(preferredLeft,vw-menuW-12));
+    var nextTop=Math.max(12,Math.min(preferredTop,vh-menuH-12));
+    menuEl.style.left=nextLeft+"px";
+    menuEl.style.top=nextTop+"px";
+    function closeOnOutside(ev){
+        if(hostEl.contains(ev.target))return;
+        if(menuEl.contains(ev.target))return;
+        menuEl.hidden=true;
+        document.removeEventListener("mousedown",closeOnOutside,true);
+    }
+    setTimeout(function(){
+        document.addEventListener("mousedown",closeOnOutside,true);
+    },0);
 }
 
 const assetLibraryCtx={modal:null,title:null,sub:null,uploadInput:null,status:null,grid:null,onSelect:null,kind:"image",titleText:"Asset Library",actions:null,selectBtn:null,selectAllBtn:null,deleteBtn:null,cancelBtn:null,assets:[],selectionMode:false,selectedPaths:new Set(),statusBase:"Loading library...",statusOverride:"",busy:false};
@@ -9876,7 +11779,7 @@ function helpContentForKey(key){
         case "textAlignment":
             return {title:"Alignment",text:"Aligns text/content <strong>inside</strong> the element. It does not move the element itself."};
         case "mediaAlignment":
-            return {title:"Alignment",text:"Controls how the image/video aligns inside its container (left, center, right). It doesn’t change the container position."};
+            return {title:"Alignment",text:"Controls how the image/video aligns inside its container (left, center, right). It doesnâ€™t change the container position."};
         case "formAlignment":
             return {title:"Form Alignment",text:"Positions the whole form block within its column/section. Pair with Form width for precise placement."};
         case "buttonAlignment":
@@ -9894,7 +11797,7 @@ function helpContentForKey(key){
         case "carouselBehavior":
             return {title:"Carousel Behavior",text:"<strong>Manual</strong> uses arrows. <strong>Automatic</strong> auto-plays and hides arrows."};
         case "carouselSize":
-            return {title:"Carousel Size",text:"Sets a fixed frame size. Content inside will adapt to the carousel’s width/height."};
+            return {title:"Carousel Size",text:"Sets a fixed frame size. Content inside will adapt to the carouselâ€™s width/height."};
         default:
             return null;
     }
@@ -10867,6 +12770,18 @@ function renderSettings(){
         var bgUpForm=document.getElementById("bgUp");
         if(bgUpForm)bgUpForm.onchange=()=>{if(bgUpForm.files&&bgUpForm.files[0]){saveToHistory();var bgImg=document.getElementById("bgImg");uploadImage(bgUpForm.files[0],url=>{var s=sty();s.backgroundImage='url('+url+')';if(bgImg)bgImg.value=url;renderCanvas();},"Background image upload");}};
         mountBackgroundAssetLibrary("bgUp","bgAssetLibraryBtn","bgImg","Form Background Asset Library");
+    } else if(selKind==="el"&&t.type==="shipping_details"){
+        t.settings=t.settings||{};
+        t.settings.fields=normalizeFormFields(t.settings.fields,false);
+        settings.innerHTML='<div class="menu-section-title">Shipping Details</div><div class="meta" style="margin:0 0 10px;">Dedicated delivery and customer information block for physical-product checkout pages.</div><label>Heading</label><input id="shipHeading"><label>Subtitle</label><input id="shipSubtitle"><label>Width</label><input id="shipWidth" placeholder="420px"><label>Label color</label><input id="shipLabelColor" type="color"><label>Placeholder color</label><input id="shipPlaceholderColor" type="color"><label>Background color</label><input id="shipBg" type="color"><label>Border</label><input id="shipBorder"><label>Shadow</label><input id="shipShadow">'+posControls+moveControls+remove;
+        bind("shipHeading",(t.settings&&t.settings.heading)||"Shipping Details",v=>{t.settings=t.settings||{};t.settings.heading=v||"Shipping Details";renderCanvas();},{undo:true});
+        bind("shipSubtitle",(t.settings&&t.settings.subtitle)||"Enter your delivery and contact information before placing the order.",v=>{t.settings=t.settings||{};t.settings.subtitle=v||"";renderCanvas();},{undo:true});
+        bind("shipWidth",(t.style&&t.style.width)||"420px",v=>{sty().width=v||"420px";sty().height="";},{undo:true});
+        bind("shipLabelColor",(t.settings&&t.settings.labelColor)||"#240E35",v=>{t.settings=t.settings||{};t.settings.labelColor=v||"#240E35";renderCanvas();},{undo:true});
+        bind("shipPlaceholderColor",(t.settings&&t.settings.placeholderColor)||"#94a3b8",v=>{t.settings=t.settings||{};t.settings.placeholderColor=v||"#94a3b8";renderCanvas();},{undo:true});
+        bind("shipBg",(t.style&&t.style.backgroundColor)||"#ffffff",v=>sty().backgroundColor=v,{undo:true});
+        bind("shipBorder",(t.style&&t.style.border)||"1px solid #E6E1EF",v=>sty().border=v,{undo:true});
+        bind("shipShadow",(t.style&&t.style.boxShadow)||"0 12px 24px rgba(15,23,42,.08)",v=>sty().boxShadow=v,{undo:true});
     } else if(selKind==="el"&&t.type==="icon"){
         t.settings=t.settings||{};
         t.settings.iconName=sanitizeIconName(t.settings.iconName||"star");
@@ -10931,6 +12846,51 @@ function renderSettings(){
             });
         };
         renderIconPreview();
+    } else if(selKind==="el"&&t.type==="review_form"){
+        t.settings=t.settings||{};
+        var padDef=[18,18,18,18],marDef=[0,0,0,0];
+        var pad=parseSpacing(t.style&&t.style.padding,padDef),mar=parseSpacing(t.style&&t.style.margin,marDef);
+        settings.innerHTML='<div class="menu-section-title">Content</div><label>Heading</label><input id="rfHeading"><label>Subtitle</label><textarea id="rfSubtitle" rows="4"></textarea><div class="menu-split"></div><div class="menu-section-title">Physical Product Copy</div><label>Physical heading</label><input id="rfPhysicalHeading"><label>Physical subtitle</label><textarea id="rfPhysicalSubtitle" rows="3"></textarea><div class="meta">Use this wording when the funnel purpose is physical product, so the thank-you page asks about the order experience instead of the item itself.</div><div class="menu-split"></div><label>Button label</label><input id="rfButton"><label>Success message</label><textarea id="rfSuccess" rows="3"></textarea><label>Public consent label</label><input id="rfPublicLabel">'+spacingControlsHtml(pad,mar)+'<div class="menu-split"></div><div class="menu-section-title">Style</div><label>Text color</label><input id="rfColor" type="color"><label>Background color</label><input id="rfBg" type="color"><label>Border</label><input id="rfBorder">'+radiusHelpLabelHtml("rfRadiusHelp","Border radius")+'<div class="px-wrap"><input id="rfRadius" type="number" min="0" step="1"><span class="px-unit">px</span></div><label>Shadow</label><input id="rfShadow"><label>Button color</label><input id="rfBtnBg" type="color"><label>Button text color</label><input id="rfBtnText" type="color">'+posControls+moveControls+remove;
+        bind("rfHeading",(t.settings&&t.settings.heading)||"How was your experience?",v=>{t.settings.heading=v;renderCanvas();},{undo:true});
+        bind("rfSubtitle",(t.settings&&t.settings.subtitle)||"Share a quick review after your order or service experience.",v=>{t.settings.subtitle=v;renderCanvas();},{undo:true});
+        bind("rfPhysicalHeading",(t.settings&&t.settings.physicalHeading)||"How was your order experience?",v=>{t.settings.physicalHeading=v;renderCanvas();},{undo:true});
+        bind("rfPhysicalSubtitle",(t.settings&&t.settings.physicalSubtitle)||"Tell us how the ordering and checkout experience felt while your item is on the way.",v=>{t.settings.physicalSubtitle=v;renderCanvas();},{undo:true});
+        bind("rfButton",(t.settings&&t.settings.buttonLabel)||"Submit Review",v=>{t.settings.buttonLabel=v;renderCanvas();},{undo:true});
+        bind("rfSuccess",(t.settings&&t.settings.successMessage)||"Thanks for the review. It is now waiting for approval.",v=>{t.settings.successMessage=v;renderCanvas();},{undo:true});
+        bind("rfPublicLabel",(t.settings&&t.settings.publicLabel)||"I am okay with showing this review publicly.",v=>{t.settings.publicLabel=v;renderCanvas();},{undo:true});
+        bind("rfColor",(t.style&&t.style.color)||"#240E35",v=>sty().color=v,{undo:true});
+        bind("rfBg",(t.style&&t.style.backgroundColor)||"#ffffff",v=>sty().backgroundColor=v,{undo:true});
+        bind("rfBorder",(t.style&&t.style.border)||"1px solid #E6E1EF",v=>sty().border=v,{undo:true});
+        bindPx("rfRadius",(t.style&&t.style.borderRadius)||"18px",v=>sty().borderRadius=v,{undo:true});
+        bind("rfShadow",(t.style&&t.style.boxShadow)||"0 12px 24px rgba(15,23,42,.08)",v=>sty().boxShadow=v,{undo:true});
+        bind("rfBtnBg",(t.settings&&t.settings.ctaBgColor)||"#240E35",v=>{t.settings.ctaBgColor=v;renderCanvas();},{undo:true});
+        bind("rfBtnText",(t.settings&&t.settings.ctaTextColor)||"#ffffff",v=>{t.settings.ctaTextColor=v;renderCanvas();},{undo:true});
+        mountSpacingControls();
+        bindRadiusHelpButton("rfRadiusHelp");
+    } else if(selKind==="el"&&t.type==="reviews"){
+        t.settings=t.settings||{};
+        var padDef=[18,18,18,18],marDef=[0,0,0,0];
+        var pad=parseSpacing(t.style&&t.style.padding,padDef),mar=parseSpacing(t.style&&t.style.margin,marDef);
+        settings.innerHTML='<div class="menu-section-title">Content</div><label>Heading</label><input id="rvHeading"><label>Subtitle</label><textarea id="rvSubtitle" rows="4"></textarea><label>Empty state</label><textarea id="rvEmpty" rows="3"></textarea><label>Maximum reviews</label><div class="px-wrap"><input id="rvMax" type="number" min="1" step="1"><span class="px-unit">items</span></div><label>Star filter</label><select id="rvFilter"><option value="0">Show all ratings</option><option value="5">5 stars</option><option value="4">4 stars</option><option value="3">3 stars</option><option value="2">2 stars</option><option value="1">1 star</option></select><label>Layout</label><select id="rvLayout"><option value="list">List</option><option value="grid">Grid</option></select><div class="menu-split"></div><div class="menu-section-title">Space Control</div><label style="display:flex;align-items:center;gap:8px;font-weight:600;"><input id="rvCollapsible" type="checkbox" style="width:auto;margin:0;"> Collapse long review lists</label><label>Visible reviews before collapse</label><div class="px-wrap"><input id="rvCollapsedCount" type="number" min="1" step="1"><span class="px-unit">items</span></div><label>Expand label</label><input id="rvExpandLabel"><label>Collapse label</label><input id="rvCollapseLabel"><label style="display:flex;align-items:center;gap:8px;font-weight:600;"><input id="rvShowRating" type="checkbox" style="width:auto;margin:0;"> Show rating stars</label><label style="display:flex;align-items:center;gap:8px;font-weight:600;"><input id="rvShowDate" type="checkbox" style="width:auto;margin:0;"> Show approval date</label>'+spacingControlsHtml(pad,mar)+'<div class="menu-split"></div><div class="menu-section-title">Style</div><label>Text color</label><input id="rvColor" type="color"><label>Background color</label><input id="rvBg" type="color"><label>Border</label><input id="rvBorder">'+radiusHelpLabelHtml("rvRadiusHelp","Border radius")+'<div class="px-wrap"><input id="rvRadius" type="number" min="0" step="1"><span class="px-unit">px</span></div><label>Shadow</label><input id="rvShadow">'+posControls+moveControls+remove;
+        bind("rvHeading",(t.settings&&t.settings.heading)||"What customers are saying",v=>{t.settings.heading=v;renderCanvas();},{undo:true});
+        bind("rvSubtitle",(t.settings&&t.settings.subtitle)||"Approved reviews from this funnel appear here automatically.",v=>{t.settings.subtitle=v;renderCanvas();},{undo:true});
+        bind("rvEmpty",(t.settings&&t.settings.emptyText)||"Approved reviews will appear here after customers submit them.",v=>{t.settings.emptyText=v;renderCanvas();},{undo:true});
+        bind("rvMax",String((t.settings&&t.settings.maxItems)||6),v=>{var n=Number(v);t.settings.maxItems=isNaN(n)?6:Math.max(1,Math.min(24,Math.round(n)));renderCanvas();},{undo:true});
+        bind("rvFilter",String((t.settings&&t.settings.filterRating)||0),v=>{var n=Number(v);t.settings.filterRating=isNaN(n)?0:Math.max(0,Math.min(5,Math.round(n)));renderCanvas();},{undo:true});
+        bind("rvLayout",(t.settings&&t.settings.layout)||"list",v=>{t.settings.layout=(String(v||"list")==="grid"?"grid":"list");renderCanvas();},{undo:true});
+        var rvCollapsible=document.getElementById("rvCollapsible"); if(rvCollapsible){rvCollapsible.checked=t.settings.collapsible!==false;rvCollapsible.addEventListener("change",function(){saveToHistory();t.settings.collapsible=!!rvCollapsible.checked;renderCanvas();});}
+        bind("rvCollapsedCount",String((t.settings&&t.settings.collapsedCount)||3),v=>{var n=Number(v);t.settings.collapsedCount=isNaN(n)?3:Math.max(1,Math.min(24,Math.round(n)));renderCanvas();},{undo:true});
+        bind("rvExpandLabel",(t.settings&&t.settings.expandLabel)||"Show all reviews",v=>{t.settings.expandLabel=v;renderCanvas();},{undo:true});
+        bind("rvCollapseLabel",(t.settings&&t.settings.collapseLabel)||"Show fewer reviews",v=>{t.settings.collapseLabel=v;renderCanvas();},{undo:true});
+        var rvShowRating=document.getElementById("rvShowRating"); if(rvShowRating){rvShowRating.checked=t.settings.showRating!==false;rvShowRating.addEventListener("change",function(){saveToHistory();t.settings.showRating=!!rvShowRating.checked;renderCanvas();});}
+        var rvShowDate=document.getElementById("rvShowDate"); if(rvShowDate){rvShowDate.checked=t.settings.showDate===true;rvShowDate.addEventListener("change",function(){saveToHistory();t.settings.showDate=!!rvShowDate.checked;renderCanvas();});}
+        bind("rvColor",(t.style&&t.style.color)||"#240E35",v=>sty().color=v,{undo:true});
+        bind("rvBg",(t.style&&t.style.backgroundColor)||"#ffffff",v=>sty().backgroundColor=v,{undo:true});
+        bind("rvBorder",(t.style&&t.style.border)||"1px solid #E6E1EF",v=>sty().border=v,{undo:true});
+        bindPx("rvRadius",(t.style&&t.style.borderRadius)||"18px",v=>sty().borderRadius=v,{undo:true});
+        bind("rvShadow",(t.style&&t.style.boxShadow)||"0 12px 24px rgba(15,23,42,.08)",v=>sty().boxShadow=v,{undo:true});
+        mountSpacingControls();
+        bindRadiusHelpButton("rvRadiusHelp");
     } else if(selKind==="el"&&t.type==="testimonial"){
         t.settings=t.settings||{};
         var padDef=[16,16,16,16],marDef=[0,0,0,0];
@@ -11036,6 +12996,141 @@ function renderSettings(){
             bindRadiusHelpButton("faqRadiusHelp");
         }
         renderFaqEditor();
+    } else if(selKind==="el"&&t.type==="product_offer"){
+        t.settings=t.settings||{};
+        t.settings.features=normalizeFeatureList(t.settings.features);
+        t.settings.media=normalizeProductOfferMediaList(t.settings.media);
+        var popadDef=[18,18,18,18],pomarDef=[0,0,0,0];
+        function renderProductOfferEditor(){
+            var pad=parseSpacing(t.style&&t.style.padding,popadDef),mar=parseSpacing(t.style&&t.style.margin,pomarDef);
+            var currentProductStepType=templateStepType(cur());
+            var isCheckoutProductEditor=currentProductStepType==="checkout";
+            var isOfferProductEditor=currentProductStepType==="upsell"||currentProductStepType==="downsell";
+            var mediaList=t.settings.media||[];
+            var features=t.settings.features||[];
+            var mediaCards=mediaList.map(function(m,idx){
+                m=(m&&typeof m==="object")?m:{};
+                var mediaType=String(m.type||"image")==="video"?"video":"image";
+                var mediaSrc=escapeSidebarHtml(String(m.src||""));
+                var mediaAlt=escapeSidebarHtml(String(m.alt||""));
+                var mediaPoster=escapeSidebarHtml(String(m.poster||""));
+                return '<div class="menu-item-card" data-idx="'+idx+'"><div class="menu-item-head"><strong>Media '+(idx+1)+'</strong><div class="menu-item-actions"><button type="button" class="poMediaMoveUp" data-idx="'+idx+'" title="Move up"><i class="fas fa-arrow-up"></i></button><button type="button" class="poMediaMoveDown" data-idx="'+idx+'" title="Move down"><i class="fas fa-arrow-down"></i></button><button type="button" class="poMediaDelete menu-del" data-idx="'+idx+'" title="Delete"><i class="fas fa-trash"></i></button></div></div><label>Type</label><select class="poMediaType" data-idx="'+idx+'"><option value="image"'+(mediaType==="image"?' selected':'')+'>Image</option><option value="video"'+(mediaType==="video"?' selected':'')+'>Video</option></select><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;"><button type="button" class="fb-btn poMediaUploadBtn" data-idx="'+idx+'" style="font-size:12px;padding:8px 10px;">Upload from PC</button><button type="button" class="fb-btn poMediaLibraryBtn" data-idx="'+idx+'" style="font-size:12px;padding:8px 10px;">Choose from Library</button></div><label>Media URL</label><input class="poMediaSrc" data-idx="'+idx+'" value="'+mediaSrc+'" placeholder="https://..."><label>Label / Alt text</label><input class="poMediaAlt" data-idx="'+idx+'" value="'+mediaAlt+'" placeholder="Main product image"><label>Poster image URL (video optional)</label><input class="poMediaPoster" data-idx="'+idx+'" value="'+mediaPoster+'" placeholder="https://..."></div>';
+            }).join("");
+            var featureCards=features.map(function(f,idx){
+                var val=escapeSidebarHtml(String(f||""));
+                return '<div class="menu-item-card" data-idx="'+idx+'"><div class="menu-item-head"><strong>Feature '+(idx+1)+'</strong><div class="menu-item-actions"><button type="button" class="poMoveUp" data-idx="'+idx+'" title="Move up"><i class="fas fa-arrow-up"></i></button><button type="button" class="poMoveDown" data-idx="'+idx+'" title="Move down"><i class="fas fa-arrow-down"></i></button><button type="button" class="poDelete menu-del" data-idx="'+idx+'" title="Delete"><i class="fas fa-trash"></i></button></div></div><label>Text</label><input class="poFeature" data-idx="'+idx+'" value="'+val+'"></div>';
+            }).join("");
+            var productContentMeta=isCheckoutProductEditor?'<div class="meta" style="margin:0 0 10px;">These values act as fallback product details on checkout. If the buyer selected a product earlier, checkout can replace them with the selected offer details.</div>':'<div class="meta" style="margin:0 0 10px;">Best for physical products, bundles, and marketplace-style offers with multiple photos or a demo video.</div>';
+            var productActionSection=isCheckoutProductEditor
+                ? '<div class="menu-split"></div><div class="menu-section-title">Payment Action</div><div class="meta" style="margin:0 0 10px;">Checkout-step product buttons automatically submit payment.</div><label>Payment button label</label><input id="poCtaLabel"><label>Button color</label><input id="poCtaBg" type="color"><label>Button text color</label><input id="poCtaText" type="color">'
+                : '<div class="menu-split"></div><div class="menu-section-title">Call to Actions</div><label>Button label</label><input id="poCtaLabel"><label>Button link</label><input id="poCtaLink" placeholder="https://..."><label>Button color</label><input id="poCtaBg" type="color"><label>Button text color</label><input id="poCtaText" type="color">';
+            settings.innerHTML='<div class="menu-section-title">Product Offer</div>'+productContentMeta+'<label>Product name</label><input id="poPlan"><label>'+(isCheckoutProductEditor?'Fallback sale price':'Sale price')+'</label><input id="poPrice" placeholder="â‚±299"><label>'+(isCheckoutProductEditor?'Fallback regular price':'Regular price')+'</label><input id="poRegular" placeholder="â‚±499"><label>Period / suffix</label><input id="poPeriod" placeholder="/bundle"><label>Subtitle</label><input id="poSubtitle"><label>Badge</label><input id="poBadge" placeholder="Best Seller"><label>Quick details description</label><textarea id="poDescription" rows="5" placeholder="Write the fuller product story, specs, sizing, inclusions, delivery notes, or care instructions."></textarea><div class="menu-split"></div><div class="menu-section-title">Media Gallery</div>'+mediaCards+'<button type="button" id="addPoMedia" class="fb-btn primary" style="width:100%;margin:6px 0 10px;">Add media</button><div class="menu-split"></div><div class="menu-section-title">Features</div>'+featureCards+'<button type="button" id="addPoFeature" class="fb-btn primary" style="width:100%;margin:6px 0 10px;">Add feature</button>'+spacingControlsHtml(pad,mar)+productActionSection+'<div class="menu-split"></div><div class="menu-section-title">Quick View Modal</div><label style="display:flex;align-items:center;gap:8px;font-weight:600;"><input id="poQuickViewEnabled" type="checkbox" style="width:auto;margin:0;"> Enable quick details modal</label><label>Quick view button label</label><input id="poQuickViewLabel" placeholder="Details"><div class="menu-split"></div><div class="menu-section-title">Cart</div><label style="display:flex;align-items:center;gap:8px;font-weight:600;"><input id="poCartEnabled" type="checkbox" style="width:auto;margin:0;"> Show add-to-cart icon</label><div class="meta" style="margin:6px 0 0;">Buy can stay as the main action, while the cart icon lets shoppers save the item and open the cart drawer in live mode.</div><div class="menu-split"></div><div class="menu-section-title">Style</div><label>Text color</label><input id="poTextColor" type="color"><label>Background color</label><input id="poBg" type="color"><label>Border</label><input id="poBorder"><div class="px-wrap"><input id="poRadius" type="number" min="0" step="1"><span class="px-unit">px</span></div><label>Shadow</label><input id="poShadow">'+posControls+moveControls+remove;
+            var poDescriptionField=document.getElementById("poDescription");
+            if(poDescriptionField){
+                poDescriptionField.insertAdjacentHTML("afterend",'<div class="menu-split"></div><div class="menu-section-title">Inventory</div><label>Available stock</label><input id="poStock" type="number" min="0" step="1" placeholder="Leave blank for unlimited"><div class="meta" style="margin:6px 0 0;">Set a stock count to cap cart quantity and stop checkout once paid orders consume the remaining inventory.</div>');
+            }
+            bind("poPlan",(t.settings&&t.settings.plan)||"",v=>{t.settings.plan=v;renderCanvas();},{undo:true});
+            bindCurrency("poPrice",(t.settings&&t.settings.price)||"",v=>{t.settings.price=v;renderCanvas();},{undo:true});
+            bindCurrency("poRegular",(t.settings&&t.settings.regularPrice)||"",v=>{t.settings.regularPrice=v;renderCanvas();},{undo:true});
+            bind("poPeriod",(t.settings&&t.settings.period)||"",v=>{t.settings.period=v;renderCanvas();},{undo:true});
+            bind("poSubtitle",(t.settings&&t.settings.subtitle)||"",v=>{t.settings.subtitle=v;renderCanvas();},{undo:true});
+            bind("poBadge",(t.settings&&t.settings.badge)||"",v=>{t.settings.badge=v;renderCanvas();},{undo:true});
+            bind("poDescription",(t.settings&&t.settings.description)||"",v=>{t.settings.description=v;renderCanvas();},{undo:true});
+            bind("poStock",(t.settings&&t.settings.stockQuantity)!==undefined?(t.settings.stockQuantity):"",v=>{var raw=String(v||"").trim();if(raw===""){t.settings.stockQuantity="";}else{t.settings.stockQuantity=String(Math.max(0,parseInt(raw,10)||0));}renderCanvas();},{undo:true});
+            bind("poCtaLabel",(t.settings&&t.settings.ctaLabel)||"Buy Now",v=>{t.settings.ctaLabel=v;renderCanvas();},{undo:true});
+            bind("poCtaBg",(t.settings&&t.settings.ctaBgColor)||"#240E35",v=>{t.settings.ctaBgColor=v;renderCanvas();},{undo:true});
+            bind("poCtaText",(t.settings&&t.settings.ctaTextColor)||"#ffffff",v=>{t.settings.ctaTextColor=v;renderCanvas();},{undo:true});
+            var poQuickViewEnabled=document.getElementById("poQuickViewEnabled");
+            var poQuickViewLabel=document.getElementById("poQuickViewLabel");
+            var poCartEnabled=document.getElementById("poCartEnabled");
+            if(poQuickViewEnabled){
+                poQuickViewEnabled.checked=t.settings.quickViewEnabled!==false;
+                poQuickViewEnabled.addEventListener("change",function(){
+                    saveToHistory();
+                    t.settings.quickViewEnabled=!!poQuickViewEnabled.checked;
+                    renderCanvas();
+                });
+            }
+            if(poCartEnabled){
+                poCartEnabled.checked=t.settings.cartEnabled!==false;
+                poCartEnabled.addEventListener("change",function(){
+                    saveToHistory();
+                    t.settings.cartEnabled=!!poCartEnabled.checked;
+                    renderCanvas();
+                });
+            }
+            bind("poQuickViewLabel",(t.settings&&t.settings.quickViewLabel)||"Details",v=>{t.settings.quickViewLabel=v;renderCanvas();},{undo:true});
+            bind("poTextColor",(t.style&&t.style.color)||"#240E35",v=>sty().color=v,{undo:true});
+            bind("poBg",(t.style&&t.style.backgroundColor)||"#ffffff",v=>sty().backgroundColor=v,{undo:true});
+            bind("poBorder",(t.style&&t.style.border)||"1px solid #E6E1EF",v=>sty().border=v,{undo:true});
+            bindPx("poRadius",(t.style&&t.style.borderRadius)||"18px",v=>sty().borderRadius=v,{undo:true});
+            bind("poShadow",(t.style&&t.style.boxShadow)||"0 12px 24px rgba(15,23,42,.08)",v=>sty().boxShadow=v,{undo:true});
+            settings.querySelectorAll(".poMediaType").forEach(function(inp){inp.addEventListener("change",function(){var idx=Number(inp.getAttribute("data-idx"));if(isNaN(idx)||!t.settings.media[idx])return;saveToHistory();t.settings.media[idx].type=String(inp.value||"image")==="video"?"video":"image";renderCanvas();});});
+            settings.querySelectorAll(".poMediaUploadBtn").forEach(function(btn){
+                btn.addEventListener("click",function(){
+                    var idx=Number(btn.getAttribute("data-idx"));
+                    if(isNaN(idx)||!t.settings.media[idx])return;
+                    promptImageUploadForProductOffer(t,idx);
+                });
+            });
+            settings.querySelectorAll(".poMediaLibraryBtn").forEach(function(btn){
+                btn.addEventListener("click",function(){
+                    var idx=Number(btn.getAttribute("data-idx"));
+                    if(isNaN(idx)||!t.settings.media[idx])return;
+                    openAssetLibraryModal({
+                        kind:"image",
+                        title:"Product Image Asset Library",
+                        subtitle:"Reuse stored images or upload a new one.",
+                        onSelect:function(url){
+                            saveToHistory();
+                            applyUploadedImageToProductOffer(t,url,idx);
+                        }
+                    });
+                });
+            });
+            settings.querySelectorAll(".poMediaSrc").forEach(function(inp){inp.addEventListener("input",function(){var idx=Number(inp.getAttribute("data-idx"));if(isNaN(idx)||!t.settings.media[idx])return;saveToHistory();t.settings.media[idx].src=String(inp.value||"").trim();renderCanvas();});});
+            settings.querySelectorAll(".poMediaAlt").forEach(function(inp){inp.addEventListener("input",function(){var idx=Number(inp.getAttribute("data-idx"));if(isNaN(idx)||!t.settings.media[idx])return;saveToHistory();t.settings.media[idx].alt=String(inp.value||"").trim();renderCanvas();});});
+            settings.querySelectorAll(".poMediaPoster").forEach(function(inp){inp.addEventListener("input",function(){var idx=Number(inp.getAttribute("data-idx"));if(isNaN(idx)||!t.settings.media[idx])return;saveToHistory();t.settings.media[idx].poster=String(inp.value||"").trim();renderCanvas();});});
+            settings.querySelectorAll(".poMediaDelete").forEach(function(btn){btn.addEventListener("click",function(){var idx=Number(btn.getAttribute("data-idx"));if(isNaN(idx)||t.settings.media.length<=1)return;saveToHistory();t.settings.media.splice(idx,1);t.settings.media=normalizeProductOfferMediaList(t.settings.media);renderProductOfferEditor();renderCanvas();});});
+            settings.querySelectorAll(".poMediaMoveUp").forEach(function(btn){btn.addEventListener("click",function(){var idx=Number(btn.getAttribute("data-idx"));if(isNaN(idx)||idx<=0)return;saveToHistory();var tmp=t.settings.media[idx-1];t.settings.media[idx-1]=t.settings.media[idx];t.settings.media[idx]=tmp;renderProductOfferEditor();renderCanvas();});});
+            settings.querySelectorAll(".poMediaMoveDown").forEach(function(btn){btn.addEventListener("click",function(){var idx=Number(btn.getAttribute("data-idx"));if(isNaN(idx)||idx>=t.settings.media.length-1)return;saveToHistory();var tmp=t.settings.media[idx+1];t.settings.media[idx+1]=t.settings.media[idx];t.settings.media[idx]=tmp;renderProductOfferEditor();renderCanvas();});});
+            var addPoMedia=document.getElementById("addPoMedia"); if(addPoMedia)addPoMedia.onclick=function(){saveToHistory();t.settings.media.push({type:"image",src:"",alt:"Media "+(t.settings.media.length+1),poster:""});renderProductOfferEditor();renderCanvas();};
+            settings.querySelectorAll(".poFeature").forEach(function(inp){inp.addEventListener("input",function(){var idx=Number(inp.getAttribute("data-idx"));if(isNaN(idx)||!t.settings.features[idx])return;saveToHistory();t.settings.features[idx]=String(inp.value||"").trim()||("Feature "+(idx+1));renderCanvas();});});
+            settings.querySelectorAll(".poDelete").forEach(function(btn){btn.addEventListener("click",function(){var idx=Number(btn.getAttribute("data-idx"));if(isNaN(idx)||t.settings.features.length<=1)return;saveToHistory();t.settings.features.splice(idx,1);t.settings.features=normalizeFeatureList(t.settings.features);renderProductOfferEditor();renderCanvas();});});
+            settings.querySelectorAll(".poMoveUp").forEach(function(btn){btn.addEventListener("click",function(){var idx=Number(btn.getAttribute("data-idx"));if(isNaN(idx)||idx<=0)return;saveToHistory();var tmp=t.settings.features[idx-1];t.settings.features[idx-1]=t.settings.features[idx];t.settings.features[idx]=tmp;renderProductOfferEditor();renderCanvas();});});
+            settings.querySelectorAll(".poMoveDown").forEach(function(btn){btn.addEventListener("click",function(){var idx=Number(btn.getAttribute("data-idx"));if(isNaN(idx)||idx>=t.settings.features.length-1)return;saveToHistory();var tmp=t.settings.features[idx+1];t.settings.features[idx+1]=t.settings.features[idx];t.settings.features[idx]=tmp;renderProductOfferEditor();renderCanvas();});});
+            var addPoFeature=document.getElementById("addPoFeature"); if(addPoFeature)addPoFeature.onclick=function(){saveToHistory();t.settings.features.push("Feature "+(t.settings.features.length+1));renderProductOfferEditor();renderCanvas();};
+            var allowedActions=isCheckoutProductEditor?["checkout"]:(isOfferProductEditor?["offer_accept","offer_decline","link"]:["next_step","step","link"]);
+            var productAction=String(t.settings.ctaActionType||"").trim().toLowerCase();
+            if(allowedActions.indexOf(productAction)<0)productAction=isOfferProductEditor?"offer_accept":"next_step";
+            if(isCheckoutProductEditor){productAction="checkout";t.settings.ctaLink="#";t.settings.ctaActionStepSlug="";}
+            else if(isOfferProductEditor&&productAction!=="link"){productAction="offer_accept";t.settings.ctaLink="#";t.settings.ctaActionStepSlug="";}
+            t.settings.ctaActionType=productAction;
+            var poCtaLabelField=document.getElementById("poCtaLabel"),poCtaLinkField=document.getElementById("poCtaLink");
+            if(poCtaLabelField&&poCtaLinkField){
+                var productStepOptions=steps.filter(function(s){return String(s.id)!==String(state.sid);}).map(function(s){
+                    var optionLabel=escapeSidebarHtml(pageDisplayLabel(s));
+                    return '<option value="'+String(s.slug||"").replace(/"/g,'&quot;')+'">'+optionLabel+'</option>';
+                }).join("")||'<option value="">No other pages found</option>';
+                var productActionOptions=isCheckoutProductEditor?'<option value="checkout">Checkout submit</option>':(isOfferProductEditor?'<option value="offer_accept">Accept offer</option><option value="offer_decline">Decline offer</option><option value="link">Custom URL</option>':'<option value="next_step">Smart next page</option><option value="step">Specific step</option><option value="link">Custom URL</option>');
+                poCtaLabelField.insertAdjacentHTML("afterend",'<label>Button action</label><select id="poCtaAction">'+productActionOptions+'</select><div id="poCtaStepWrap" style="display:none;"><label>Target page</label><select id="poCtaStep">'+productStepOptions+'</select></div><div class="meta" id="poCtaMeta" style="margin:6px 0 0;"></div>');
+                var poCtaAction=document.getElementById("poCtaAction"),poCtaStep=document.getElementById("poCtaStep"),poCtaStepWrap=document.getElementById("poCtaStepWrap"),poCtaMeta=document.getElementById("poCtaMeta"),poCtaLinkLabel=poCtaLinkField.previousElementSibling;
+                function syncPo(){
+                    var action=String(t.settings.ctaActionType||"next_step");
+                    poCtaAction.value=action;
+                    poCtaStepWrap.style.display=action==="step"?"block":"none";
+                    poCtaLinkField.style.display=action==="link"?"block":"none";
+                    if(poCtaLinkLabel)poCtaLinkLabel.style.display=action==="link"?"block":"none";
+                    poCtaMeta.textContent=isCheckoutProductEditor?'Checkout product buttons submit payment directly.':(isOfferProductEditor?(action==="offer_decline"?'This button submits the decline path for the current offer page.':(action==="link"?'Use a custom URL only if you want to leave the offer flow.':'This button submits the accept path for the current offer page.')):(action==="step"?'This button opens the selected next page and carries the product price.':(action==="link"?'Use a custom URL only if you want to leave the normal funnel flow.':'Smart next page usually carries buyers to checkout with this product price.')));
+                }
+                poCtaAction.addEventListener("change",function(){saveToHistory();t.settings.ctaActionType=String(poCtaAction.value||"next_step");if(t.settings.ctaActionType!=="step")t.settings.ctaActionStepSlug="";if(t.settings.ctaActionType!=="link")t.settings.ctaLink="#";syncPo();renderCanvas();});
+                poCtaStep.addEventListener("change",function(){saveToHistory();t.settings.ctaActionStepSlug=String(poCtaStep.value||"");var targetStep=steps.find(function(s){return String(s.slug||"")===String(poCtaStep.value||"");});t.settings.ctaLink=targetStep?buildFunnelStepHref(targetStep):"#";renderCanvas();});
+                bind("poCtaLink",(t.settings&&t.settings.ctaLink)||"#",v=>{t.settings.ctaLink=v;renderCanvas();},{undo:true});
+                syncPo();
+            }
+            mountSpacingControls();
+        }
+        renderProductOfferEditor();
     } else if(selKind==="el"&&t.type==="pricing"){
         t.settings=t.settings||{};
         t.settings.features=normalizeFeatureList(t.settings.features);
@@ -11056,7 +13151,7 @@ function renderSettings(){
             var pricingActionSection=isCheckoutPricingEditor
                 ? '<div class="menu-split"></div><div class="menu-section-title">Payment Action</div><div class="meta" style="margin:0 0 10px;">This checkout pricing card is automatically the Pay Now button. Buyers do not need any extra action setup here.</div><label>Payment button label</label><input id="priceCtaLabel"><label>Button color</label><input id="priceCtaBg" type="color"><label>Button text color</label><input id="priceCtaText" type="color">'
                 : '<div class="menu-split"></div><div class="menu-section-title">Call to Actions</div><label>Button label</label><input id="priceCtaLabel"><label>Button link</label><input id="priceCtaLink" placeholder="https://..."><label>Button color</label><input id="priceCtaBg" type="color"><label>Button text color</label><input id="priceCtaText" type="color">';
-            settings.innerHTML='<div class="menu-section-title">Content</div>'+pricingContentMeta+'<label>Plan name</label><input id="pricePlan"><label>'+(isCheckoutPricingEditor?'Fallback sale price':'Sale price')+'</label><input id="priceValue" placeholder="₱49"><label>'+(isCheckoutPricingEditor?'Fallback regular price (after countdown)':'Regular price (after countdown)')+'</label><input id="priceRegular" placeholder="₱79"><label>Period</label><input id="pricePeriod" placeholder="/month"><label>Subtitle</label><input id="priceSubtitle"><label>Badge</label><input id="priceBadge" placeholder="Popular"><label>Promo key (legacy)</label><input id="pricePromo" placeholder="spring-sale"><div class="menu-split"></div><div class="menu-section-title">Features</div>'+featCards+'<button type="button" id="addPriceFeature" class="fb-btn primary" style="width:100%;margin:6px 0 10px;">Add feature</button>'+spacingControlsHtml(pad,mar)+pricingActionSection+'<div class="menu-split"></div><div class="menu-section-title">Style</div><label>Text color</label><input id="priceTextColor" type="color"><label>Background color</label><input id="priceBg" type="color"><label>Border</label><input id="priceBorder">'+radiusHelpLabelHtml("priceRadiusHelp","Border radius")+'<div class="px-wrap"><input id="priceRadius" type="number" min="0" step="1"><span class="px-unit">px</span></div><label>Shadow</label><input id="priceShadow">'+posControls+moveControls+remove;
+            settings.innerHTML='<div class="menu-section-title">Content</div>'+pricingContentMeta+'<label>Plan name</label><input id="pricePlan"><label>'+(isCheckoutPricingEditor?'Fallback sale price':'Sale price')+'</label><input id="priceValue" placeholder="â‚±49"><label>'+(isCheckoutPricingEditor?'Fallback regular price (after countdown)':'Regular price (after countdown)')+'</label><input id="priceRegular" placeholder="â‚±79"><label>Period</label><input id="pricePeriod" placeholder="/month"><label>Subtitle</label><input id="priceSubtitle"><label>Badge</label><input id="priceBadge" placeholder="Popular"><label>Promo key (legacy)</label><input id="pricePromo" placeholder="spring-sale"><div class="menu-split"></div><div class="menu-section-title">Features</div>'+featCards+'<button type="button" id="addPriceFeature" class="fb-btn primary" style="width:100%;margin:6px 0 10px;">Add feature</button>'+spacingControlsHtml(pad,mar)+pricingActionSection+'<div class="menu-split"></div><div class="menu-section-title">Style</div><label>Text color</label><input id="priceTextColor" type="color"><label>Background color</label><input id="priceBg" type="color"><label>Border</label><input id="priceBorder">'+radiusHelpLabelHtml("priceRadiusHelp","Border radius")+'<div class="px-wrap"><input id="priceRadius" type="number" min="0" step="1"><span class="px-unit">px</span></div><label>Shadow</label><input id="priceShadow">'+posControls+moveControls+remove;
             var priceCtaLabelField=document.getElementById("priceCtaLabel");
             var priceCtaLinkField=document.getElementById("priceCtaLink");
             if(priceCtaLabelField&&priceCtaLinkField){
@@ -11064,10 +13159,8 @@ function renderSettings(){
                 var isCheckoutPricingStep=pricingStepType==="checkout";
                 var isOfferPricingStep=pricingStepType==="upsell"||pricingStepType==="downsell";
                 var pricingStepOptions=steps.filter(function(s){return String(s.id)!==String(state.sid);}).map(function(s){
-                    var label=String(s.title||s.type||"Step").trim();
-                    var safeLabel=label.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-                    var safeType=String(s.type||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-                    return '<option value="'+String(s.slug||"").replace(/"/g,'&quot;')+'">'+safeLabel+' ('+safeType+')</option>';
+                    var optionLabel=escapeSidebarHtml(pageDisplayLabel(s));
+                    return '<option value="'+String(s.slug||"").replace(/"/g,'&quot;')+'">'+optionLabel+'</option>';
                 }).join("");
                 var pricingStepDisabled=pricingStepOptions==="";
                 if(pricingStepOptions==="")pricingStepOptions='<option value="">No other pages found</option>';
@@ -11247,6 +13340,89 @@ function renderSettings(){
             bindRadiusHelpButton("priceRadiusHelp");
         }
         renderPricingEditor();
+    } else if(selKind==="el"&&(t.type==="checkout_summary"||t.type==="physical_checkout_summary")){
+        t.settings=t.settings||{};
+        t.settings.features=normalizeFeatureList(t.settings.features);
+        var cspadDef=[22,22,22,22],csmarDef=[0,0,0,0];
+        var isPhysicalSummary=t.type==="physical_checkout_summary";
+        function renderCheckoutSummaryEditor(){
+            var pad=parseSpacing(t.style&&t.style.padding,cspadDef),mar=parseSpacing(t.style&&t.style.margin,csmarDef);
+            var feats=(t.settings.features||[]).map(function(f,idx){
+                var val=String(f||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+                return '<div class="menu-item-card" data-idx="'+idx+'"><div class="menu-item-head"><strong>Summary item '+(idx+1)+'</strong><div class="menu-item-actions"><button type="button" class="csMoveUp" data-idx="'+idx+'" title="Move up"><i class="fas fa-arrow-up"></i></button><button type="button" class="csMoveDown" data-idx="'+idx+'" title="Move down"><i class="fas fa-arrow-down"></i></button><button type="button" class="csDelete menu-del" data-idx="'+idx+'" title="Delete"><i class="fas fa-trash"></i></button></div></div><label>Text</label><input class="csFeature" data-idx="'+idx+'" value="'+val+'"></div>';
+            }).join("");
+            settings.innerHTML='<div class="menu-section-title">'+(isPhysicalSummary?'Physical Checkout Summary':'Checkout Summary')+'</div><div class="meta" style="margin:0 0 10px;">'+(isPhysicalSummary?'Best used on physical-product checkout pages. Selected product images, cart items, and totals will replace these fallback values on the live page.':'Best used on checkout pages. The selected plan from the sales page will automatically replace these fallback values on the live page.')+'</div><label>Eyebrow</label><input id="csHeading"><label>'+(isPhysicalSummary?'Fallback product name':'Fallback plan name')+'</label><input id="csPlan"><label>'+(isPhysicalSummary?'Fallback total':'Fallback price')+'</label><input id="csPrice" placeholder="â‚±29"><label>Fallback regular price</label><input id="csRegular" placeholder="â‚±49"><label>Period</label><input id="csPeriod" placeholder="'+(isPhysicalSummary?'':'/month')+'"><label>Subtitle</label><input id="csSubtitle"><label>Badge</label><input id="csBadge" placeholder="'+(isPhysicalSummary?'Order Summary':'Selected Plan')+'"><div class="menu-split"></div><div class="menu-section-title">Summary Items</div>'+feats+'<button type="button" id="addCsFeature" class="fb-btn primary" style="width:100%;margin:6px 0 10px;">Add item</button>'+spacingControlsHtml(pad,mar)+'<div class="menu-split"></div><div class="menu-section-title">Payment Button</div><label>Button label</label><input id="csCtaLabel"><label>Button color</label><input id="csCtaBg" type="color"><label>Button text color</label><input id="csCtaText" type="color"><div class="menu-split"></div><div class="menu-section-title">Style</div><label>Text color</label><input id="csTextColor" type="color"><label>Background color</label><input id="csBg" type="color"><label>Border</label><input id="csBorder">'+radiusHelpLabelHtml("csRadiusHelp","Border radius")+'<div class="px-wrap"><input id="csRadius" type="number" min="0" step="1"><span class="px-unit">px</span></div><label>Shadow</label><input id="csShadow">'+posControls+moveControls+remove;
+            bind("csHeading",(t.settings&&t.settings.heading)||(isPhysicalSummary?"Review Your Order":"Order Summary"),v=>{t.settings=t.settings||{};t.settings.heading=v;renderCanvas();},{undo:true});
+            bind("csPlan",(t.settings&&t.settings.plan)||"",v=>{t.settings=t.settings||{};t.settings.plan=v;renderCanvas();},{undo:true});
+            bindCurrency("csPrice",(t.settings&&t.settings.price)||"",v=>{t.settings=t.settings||{};t.settings.price=v;renderCanvas();},{undo:true});
+            bindCurrency("csRegular",(t.settings&&t.settings.regularPrice)||"",v=>{t.settings=t.settings||{};t.settings.regularPrice=v;renderCanvas();},{undo:true});
+            bind("csPeriod",(t.settings&&t.settings.period)||"",v=>{t.settings=t.settings||{};t.settings.period=v;renderCanvas();},{undo:true});
+            bind("csSubtitle",(t.settings&&t.settings.subtitle)||"",v=>{t.settings=t.settings||{};t.settings.subtitle=v;renderCanvas();},{undo:true});
+            bind("csBadge",(t.settings&&t.settings.badge)||"",v=>{t.settings=t.settings||{};t.settings.badge=v;renderCanvas();},{undo:true});
+            bind("csCtaLabel",(t.settings&&t.settings.ctaLabel)||(isPhysicalSummary?"Place Order":"Pay Now"),v=>{t.settings=t.settings||{};t.settings.ctaLabel=v;renderCanvas();},{undo:true});
+            bind("csCtaBg",(t.settings&&t.settings.ctaBgColor)||"#240E35",v=>{t.settings=t.settings||{};t.settings.ctaBgColor=v;renderCanvas();},{undo:true});
+            bind("csCtaText",(t.settings&&t.settings.ctaTextColor)||"#ffffff",v=>{t.settings=t.settings||{};t.settings.ctaTextColor=v;renderCanvas();},{undo:true});
+            bind("csTextColor",(t.style&&t.style.color)||"#240E35",v=>sty().color=v,{undo:true});
+            bind("csBg",(t.style&&t.style.backgroundColor)||"#ffffff",v=>sty().backgroundColor=v,{undo:true});
+            bind("csBorder",(t.style&&t.style.border)||"1px solid #E6E1EF",v=>sty().border=v,{undo:true});
+            bindPx("csRadius",(t.style&&t.style.borderRadius)||"20px",v=>sty().borderRadius=v,{undo:true});
+            bind("csShadow",(t.style&&t.style.boxShadow)||"0 12px 24px rgba(15,23,42,.08)",v=>sty().boxShadow=v,{undo:true});
+            settings.querySelectorAll(".csFeature").forEach(function(inp){
+                inp.addEventListener("input",function(){
+                    var idx=Number(inp.getAttribute("data-idx"));
+                    if(isNaN(idx)||!Array.isArray(t.settings.features)||!t.settings.features[idx])return;
+                    saveToHistory();
+                    t.settings.features[idx]=String(inp.value||"").trim()||("Summary item "+(idx+1));
+                    renderCanvas();
+                });
+            });
+            settings.querySelectorAll(".csDelete").forEach(function(btn){
+                btn.addEventListener("click",function(){
+                    var idx=Number(btn.getAttribute("data-idx"));
+                    if(isNaN(idx)||!Array.isArray(t.settings.features)||t.settings.features.length<=1)return;
+                    saveToHistory();
+                    t.settings.features.splice(idx,1);
+                    t.settings.features=normalizeFeatureList(t.settings.features);
+                    renderCheckoutSummaryEditor();
+                    renderCanvas();
+                });
+            });
+            settings.querySelectorAll(".csMoveUp").forEach(function(btn){
+                btn.addEventListener("click",function(){
+                    var idx=Number(btn.getAttribute("data-idx"));
+                    if(isNaN(idx)||idx<=0||!Array.isArray(t.settings.features))return;
+                    saveToHistory();
+                    var tmp=t.settings.features[idx-1];
+                    t.settings.features[idx-1]=t.settings.features[idx];
+                    t.settings.features[idx]=tmp;
+                    renderCheckoutSummaryEditor();
+                    renderCanvas();
+                });
+            });
+            settings.querySelectorAll(".csMoveDown").forEach(function(btn){
+                btn.addEventListener("click",function(){
+                    var idx=Number(btn.getAttribute("data-idx"));
+                    if(isNaN(idx)||!Array.isArray(t.settings.features)||idx>=t.settings.features.length-1)return;
+                    saveToHistory();
+                    var tmp=t.settings.features[idx+1];
+                    t.settings.features[idx+1]=t.settings.features[idx];
+                    t.settings.features[idx]=tmp;
+                    renderCheckoutSummaryEditor();
+                    renderCanvas();
+                });
+            });
+            var addCsFeature=document.getElementById("addCsFeature");
+            if(addCsFeature)addCsFeature.onclick=function(){
+                saveToHistory();
+                t.settings.features=t.settings.features||[];
+                t.settings.features.push("Summary item "+(t.settings.features.length+1));
+                renderCheckoutSummaryEditor();
+                renderCanvas();
+            };
+            mountSpacingControls();
+            bindRadiusHelpButton("csRadiusHelp");
+        }
+        renderCheckoutSummaryEditor();
     } else if(selKind==="el"&&t.type==="countdown"){
         t.settings=t.settings||{};
         var padDef=[16,16,16,16],marDef=[0,0,0,0];
@@ -11375,15 +13551,19 @@ function renderSettings(){
         var textTypographyControls=(t.type==="text"||t.type==="heading")
             ? '<label>Line height</label><input id="lh" placeholder="1.5"><label>Letter spacing</label><div class="px-wrap"><input id="ls" type="number" step="0.1"><span class="px-unit">px</span></div>'
             : '';
-        var sizeBlock='<div class="size-position"><div class="size-label">Size and position</div><label class="size-label">Padding</label><div class="size-grid"><div class="fld"><label>T</label><input id="pTop" type="number" value="'+pad[0]+'"></div><div class="fld"><label>R</label><input id="pRight" type="number" value="'+pad[1]+'"></div><div class="fld"><label>B</label><input id="pBottom" type="number" value="'+pad[2]+'"></div><div class="fld"><label>L</label><input id="pLeft" type="number" value="'+pad[3]+'"></div><div class="size-link"><button type="button" id="linkPad" title="Link padding"><span>↔</span></button><span>Link</span></div></div><label class="size-label">Margin</label><div class="size-grid"><div class="fld"><label>T</label><input id="mTop" type="number" value="'+mar[0]+'"></div><div class="fld"><label>R</label><input id="mRight" type="number" value="'+mar[1]+'"></div><div class="fld"><label>B</label><input id="mBottom" type="number" value="'+mar[2]+'"></div><div class="fld"><label>L</label><input id="mLeft" type="number" value="'+mar[3]+'"></div><div class="size-link"><button type="button" id="linkMar" title="Link margin"><span>↔</span></button><span>Link</span></div></div></div>';
+        var sizeBlock='<div class="size-position"><div class="size-label">Size and position</div><label class="size-label">Padding</label><div class="size-grid"><div class="fld"><label>T</label><input id="pTop" type="number" value="'+pad[0]+'"></div><div class="fld"><label>R</label><input id="pRight" type="number" value="'+pad[1]+'"></div><div class="fld"><label>B</label><input id="pBottom" type="number" value="'+pad[2]+'"></div><div class="fld"><label>L</label><input id="pLeft" type="number" value="'+pad[3]+'"></div><div class="size-link"><button type="button" id="linkPad" title="Link padding"><span>â†”</span></button><span>Link</span></div></div><label class="size-label">Margin</label><div class="size-grid"><div class="fld"><label>T</label><input id="mTop" type="number" value="'+mar[0]+'"></div><div class="fld"><label>R</label><input id="mRight" type="number" value="'+mar[1]+'"></div><div class="fld"><label>B</label><input id="mBottom" type="number" value="'+mar[2]+'"></div><div class="fld"><label>L</label><input id="mLeft" type="number" value="'+mar[3]+'"></div><div class="size-link"><button type="button" id="linkMar" title="Link margin"><span>â†”</span></button><span>Link</span></div></div></div>';
         var buttonBgControl=(t.type==="button")?'<label>Button color</label><input id="btnBg" type="color">':'';
         var buttonWrapBgControl=(t.type==="button")?'<label>Background color</label><input id="btnWrapBg" type="color">':'';
         var buttonTextStyleControl=(t.type==="button")?'<label>Text style</label><div class="menu-style-row"><button type="button" id="btnBold" class="menu-align-btn" title="Bold (Ctrl+B)"><i class="fas fa-bold"></i></button><button type="button" id="btnItalic" class="menu-align-btn" title="Italic (Ctrl+I)"><i class="fas fa-italic"></i></button></div>':'';
-        var buttonRadiusControl=(t.type==="button")?(radiusHelpLabelHtml("btnRadiusHelp","Border radius")+'<div class="px-wrap"><input id="btnRadius" type="number" min="0" step="1"><span class="px-unit">px</span></div>'):'';
+        var buttonRadiusControl=(t.type==="button")
+            ? ('<label>Button shape</label><select id="btnShape"><option value="square">Square</option><option value="rounded">Rounded</option><option value="pill">Pill</option><option value="custom">Custom</option></select>'
+                + radiusHelpLabelHtml("btnRadiusHelp","Border radius")
+                + '<div class="px-wrap"><input id="btnRadius" type="number" min="0" step="1"><span class="px-unit">px</span></div>')
+            : '';
         var buttonStepOptions=(t.type==="button")?steps.filter(function(s){return String(s.id)!==String(state.sid);}).map(function(s){
             var sl=String(s.slug||"").replace(/"/g,'&quot;');
-            var tt=String(s.title||s.slug||"Untitled").replace(/"/g,'&quot;');
-            return '<option value="'+sl+'">'+tt+' ('+sl+')</option>';
+            var optionLabel=escapeSidebarHtml(pageDisplayLabel(s));
+            return '<option value="'+sl+'">'+optionLabel+'</option>';
         }).join(''):'';
         var buttonStepDisabled=false;
         if(t.type==="button" && buttonStepOptions===""){
@@ -11516,6 +13696,43 @@ function renderSettings(){
             bind("btnLink",(t.settings&&t.settings.link)||"#",v=>{t.settings=t.settings||{};var u=String(v||"").trim();t.settings.link=(u==="")?"#":u;},{undo:true});
             bindPx("btnRadius",(t.style&&t.style.borderRadius)||"",v=>sty().borderRadius=v,{undo:true});
             bindRadiusHelpButton("btnRadiusHelp");
+            var btnShape=document.getElementById("btnShape");
+            var btnRadiusInput=document.getElementById("btnRadius");
+            function getButtonShape(){
+                var raw=String((t.style&&t.style.borderRadius)||"").trim().toLowerCase();
+                if(raw===""||raw==="0"||raw==="0px")return "square";
+                if(raw==="999px"||raw==="9999px")return "pill";
+                var n=parseFloat(raw);
+                if(!isNaN(n) && n>0 && n<=40)return "rounded";
+                return "custom";
+            }
+            function syncButtonShapeUi(){
+                if(btnShape)btnShape.value=getButtonShape();
+                if(btnRadiusInput){
+                    btnRadiusInput.disabled=!!btnShape && btnShape.value!=="custom";
+                }
+            }
+            if(btnShape){
+                syncButtonShapeUi();
+                btnShape.addEventListener("change",function(){
+                    saveToHistory();
+                    var selected=String(btnShape.value||"rounded");
+                    if(selected==="square")sty().borderRadius="0px";
+                    else if(selected==="rounded")sty().borderRadius="16px";
+                    else if(selected==="pill")sty().borderRadius="999px";
+                    else if(!String((t.style&&t.style.borderRadius)||"").trim())sty().borderRadius="16px";
+                    syncButtonShapeUi();
+                    renderCanvas();
+                });
+            }
+            if(btnRadiusInput){
+                btnRadiusInput.addEventListener("input",function(){
+                    if(btnShape && btnShape.value==="custom"){
+                        btnShape.value=getButtonShape();
+                        if(btnShape.value!=="custom")btnShape.value="custom";
+                    }
+                });
+            }
             var btnBg=document.getElementById("btnBg");
             if(btnBg){
                 btnBg.value=(t.style&&t.style.backgroundColor)||"#240E35";
@@ -11556,7 +13773,7 @@ function renderSettings(){
     } else {
         var padDef=[0,0,0,0],marDef=[0,0,0,0];
         var pad=parseSpacing(t.style&&t.style.padding,padDef),mar=parseSpacing(t.style&&t.style.margin,marDef);
-        settings.innerHTML='<label>Background color</label><input id="bg" type="color"><div class="size-position"><div class="size-label">Size and position</div><label class="size-label">Padding</label><div class="size-grid"><div class="fld"><label>T</label><input id="pTop" type="number" value="'+pad[0]+'"></div><div class="fld"><label>R</label><input id="pRight" type="number" value="'+pad[1]+'"></div><div class="fld"><label>B</label><input id="pBottom" type="number" value="'+pad[2]+'"></div><div class="fld"><label>L</label><input id="pLeft" type="number" value="'+pad[3]+'"></div><div class="size-link"><button type="button" id="linkPad" title="Link padding"><span>↔</span></button><span>Link</span></div></div><label class="size-label">Margin</label><div class="size-grid"><div class="fld"><label>T</label><input id="mTop" type="number" value="'+mar[0]+'"></div><div class="fld"><label>R</label><input id="mRight" type="number" value="'+mar[1]+'"></div><div class="fld"><label>B</label><input id="mBottom" type="number" value="'+mar[2]+'"></div><div class="fld"><label>L</label><input id="mLeft" type="number" value="'+mar[3]+'"></div><div class="size-link"><button type="button" id="linkMar" title="Link margin"><span>↔</span></button><span>Link</span></div></div></div><label>Gap</label><div class="px-wrap"><input id="g" type="number" step="1"><span class="px-unit">px</span></div>'+remove;
+        settings.innerHTML='<label>Background color</label><input id="bg" type="color"><div class="size-position"><div class="size-label">Size and position</div><label class="size-label">Padding</label><div class="size-grid"><div class="fld"><label>T</label><input id="pTop" type="number" value="'+pad[0]+'"></div><div class="fld"><label>R</label><input id="pRight" type="number" value="'+pad[1]+'"></div><div class="fld"><label>B</label><input id="pBottom" type="number" value="'+pad[2]+'"></div><div class="fld"><label>L</label><input id="pLeft" type="number" value="'+pad[3]+'"></div><div class="size-link"><button type="button" id="linkPad" title="Link padding"><span>â†”</span></button><span>Link</span></div></div><label class="size-label">Margin</label><div class="size-grid"><div class="fld"><label>T</label><input id="mTop" type="number" value="'+mar[0]+'"></div><div class="fld"><label>R</label><input id="mRight" type="number" value="'+mar[1]+'"></div><div class="fld"><label>B</label><input id="mBottom" type="number" value="'+mar[2]+'"></div><div class="fld"><label>L</label><input id="mLeft" type="number" value="'+mar[3]+'"></div><div class="size-link"><button type="button" id="linkMar" title="Link margin"><span>â†”</span></button><span>Link</span></div></div></div><label>Gap</label><div class="px-wrap"><input id="g" type="number" step="1"><span class="px-unit">px</span></div>'+remove;
         bind("bg",(t.style&&t.style.backgroundColor)||"#ffffff",v=>sty().backgroundColor=v,{undo:true});
         var paddingLinked=false,marginLinked=false;
         function syncPadding(){saveToHistory();var pt=Number(document.getElementById("pTop").value)||0,pr=Number(document.getElementById("pRight").value)||0,pb=Number(document.getElementById("pBottom").value)||0,pl=Number(document.getElementById("pLeft").value)||0;if(paddingLinked){document.getElementById("pRight").value=pt;document.getElementById("pBottom").value=pt;document.getElementById("pLeft").value=pt;sty().padding=spacingToCss([pt,pt,pt,pt]);}else sty().padding=spacingToCss([pt,pr,pb,pl]);renderCanvas();}
@@ -11613,8 +13830,14 @@ const sidebarComponentMeta={
     menu:{desc:"Navigation links for headers and simple site menus."},
     form:{desc:"Lead capture form for opt-ins, bookings, or checkout."},
     testimonial:{desc:"Social proof card with quote and author details."},
+    review_form:{desc:"Thank-you form that captures customer reviews for approval."},
+    reviews:{desc:"Display block for approved funnel reviews."},
     faq:{desc:"Question-and-answer block for objections and clarity."},
     pricing:{desc:"Offer card with plan, price, features, and button."},
+    product_offer:{desc:"Marketplace-style product card with mixed media, price, and buy button."},
+    checkout_summary:{desc:"Compact checkout confirmation with selected plan and pay button."},
+    shipping_details:{desc:"Dedicated shipping and customer details form for physical-product checkout."},
+    physical_checkout_summary:{desc:"Physical-product order summary with cart-aware details and a shipping modal before payment."},
     countdown:{desc:"Urgency timer for expiring offers or launches."}
 };
 function sidebarPreviewMarkup(type){
@@ -11645,12 +13868,22 @@ function sidebarPreviewMarkup(type){
             return "<span class='fb-comp-drag-ghost__preview' aria-hidden='true'><span class='fb-comp-preview-button-wrap'><span class='fb-comp-preview-nav'><span class='fb-comp-preview-nav-item is-wide'></span><span class='fb-comp-preview-nav-item is-mid'></span><span class='fb-comp-preview-nav-item is-cta'></span></span></span></span>";
         case "form":
             return "<span class='fb-comp-drag-ghost__preview' aria-hidden='true'><span class='fb-comp-preview-card'><span class='fb-comp-preview-form'><span class='fb-comp-preview-input'></span><span class='fb-comp-preview-input'></span><span class='fb-comp-preview-btn'>Submit</span></span></span></span>";
+        case "shipping_details":
+            return "<span class='fb-comp-drag-ghost__preview' aria-hidden='true'><span class='fb-comp-preview-card'><span class='fb-comp-preview-stack'><span class='fb-comp-preview-line sm is-dark'></span><span class='fb-comp-preview-line md'></span></span><span class='fb-comp-preview-form'><span class='fb-comp-preview-input'></span><span class='fb-comp-preview-input'></span><span class='fb-comp-preview-input'></span></span></span></span>";
         case "testimonial":
             return "<span class='fb-comp-drag-ghost__preview' aria-hidden='true'><span class='fb-comp-preview-card'><span class='fb-comp-preview-stack'><span class='fb-comp-preview-line full'></span><span class='fb-comp-preview-line md'></span></span><span class='fb-comp-preview-avatar-row'><span class='fb-comp-preview-avatar'></span><span class='fb-comp-preview-line sm'></span></span></span></span>";
+        case "review_form":
+            return "<span class='fb-comp-drag-ghost__preview' aria-hidden='true'><span class='fb-comp-preview-card'><span class='fb-comp-preview-line sm is-dark'></span><span class='fb-comp-preview-line md'></span><span class='fb-comp-preview-input'></span><span class='fb-comp-preview-input'></span><span class='fb-comp-preview-input'></span><span class='fb-comp-preview-btn'>Review</span></span></span>";
+        case "reviews":
+            return "<span class='fb-comp-drag-ghost__preview' aria-hidden='true'><span class='fb-comp-preview-card'><span class='fb-comp-preview-line md is-dark'></span><span class='fb-comp-preview-avatar-row'><span class='fb-comp-preview-avatar'></span><span class='fb-comp-preview-line sm'></span></span><span class='fb-comp-preview-line full'></span><span class='fb-comp-preview-line md'></span></span></span>";
         case "faq":
             return "<span class='fb-comp-drag-ghost__preview' aria-hidden='true'><span class='fb-comp-preview-card'><span class='fb-comp-preview-faq-item'><span class='fb-comp-preview-faq-badge'>?</span><span class='fb-comp-preview-line md'></span></span><span class='fb-comp-preview-faq-item'><span class='fb-comp-preview-faq-badge'>?</span><span class='fb-comp-preview-line lg'></span></span></span></span>";
         case "pricing":
-            return "<span class='fb-comp-drag-ghost__preview' aria-hidden='true'><span class='fb-comp-preview-card fb-comp-preview-card--pricing'><span class='fb-comp-preview-pill'>Popular</span><span class='fb-comp-preview-line sm is-dark'></span><span class='fb-comp-preview-price-row'><span class='fb-comp-preview-price'>₱49</span><span class='fb-comp-preview-period'>/mo</span></span><span class='fb-comp-preview-line md'></span><span class='fb-comp-preview-line sm'></span><span class='fb-comp-preview-btn'>Buy Now</span></span></span>";
+            return "<span class='fb-comp-drag-ghost__preview' aria-hidden='true'><span class='fb-comp-preview-card fb-comp-preview-card--pricing'><span class='fb-comp-preview-pill'>Popular</span><span class='fb-comp-preview-line sm is-dark'></span><span class='fb-comp-preview-price-row'><span class='fb-comp-preview-price'>â‚±49</span><span class='fb-comp-preview-period'>/mo</span></span><span class='fb-comp-preview-line md'></span><span class='fb-comp-preview-line sm'></span><span class='fb-comp-preview-btn'>Buy Now</span></span></span>";
+        case "product_offer":
+            return "<span class='fb-comp-drag-ghost__preview' aria-hidden='true'><span class='fb-comp-preview-card fb-comp-preview-card--pricing'><span class='fb-comp-preview-media'></span><span class='fb-comp-preview-pill'>Best Seller</span><span class='fb-comp-preview-line sm is-dark'></span><span class='fb-comp-preview-price-row'><span class='fb-comp-preview-price'>â‚±299</span></span><span class='fb-comp-preview-line md'></span><span class='fb-comp-preview-btn'>Buy Now</span></span></span>";
+        case "checkout_summary":
+            return "<span class='fb-comp-drag-ghost__preview' aria-hidden='true'><span class='fb-comp-preview-card fb-comp-preview-card--pricing'><span class='fb-comp-preview-pill'>Selected</span><span class='fb-comp-preview-line sm is-dark'></span><span class='fb-comp-preview-price-row'><span class='fb-comp-preview-price'>Ã¢â€šÂ±29</span><span class='fb-comp-preview-period'>/mo</span></span><span class='fb-comp-preview-line md'></span><span class='fb-comp-preview-line sm'></span><span class='fb-comp-preview-btn'>Pay Now</span></span></span>";
         case "countdown":
             return "<span class='fb-comp-drag-ghost__preview' aria-hidden='true'><span class='fb-comp-preview-timer'><span class='fb-comp-preview-timer-box'><span><span class='fb-comp-preview-timer-num'>12</span><br><span class='fb-comp-preview-timer-unit'>Hr</span></span></span><span class='fb-comp-preview-timer-box'><span><span class='fb-comp-preview-timer-num'>08</span><br><span class='fb-comp-preview-timer-unit'>Min</span></span></span><span class='fb-comp-preview-timer-box'><span><span class='fb-comp-preview-timer-num'>43</span><br><span class='fb-comp-preview-timer-unit'>Sec</span></span></span><span class='fb-comp-preview-timer-box'><span><span class='fb-comp-preview-timer-num'>05</span><br><span class='fb-comp-preview-timer-unit'>Day</span></span></span></span></span>";
         default:
@@ -11751,6 +13984,7 @@ if(fbTabTemplates)fbTabTemplates.onclick=()=>showLeftPanel("templates");
 if(fbTabHistory)fbTabHistory.onclick=()=>showLeftPanel("history");
 var _canvasLockedWidth=0;
 var _canvasInnerWidth=0;
+var _canvasContentWidth=0;
 function lockCanvasWidth(){
     if(!canvas)return;
     if(fbGrid&&fbGrid.classList.contains("components-hidden"))return;
@@ -11759,6 +13993,12 @@ function lockCanvasWidth(){
         _canvasLockedWidth=w;
         var innerW=canvas.clientWidth||0; // includes padding, excludes scrollbar
         if(innerW>0)_canvasInnerWidth=innerW;
+        var canvasStyle=window.getComputedStyle?window.getComputedStyle(canvas):null;
+        var padX=canvasStyle?((parseFloat(canvasStyle.paddingLeft)||0)+(parseFloat(canvasStyle.paddingRight)||0)):0;
+        var borderX=canvasStyle?((parseFloat(canvasStyle.borderLeftWidth)||0)+(parseFloat(canvasStyle.borderRightWidth)||0)):0;
+        var contentW=Math.round(w-padX-borderX);
+        if(contentW<=0 && innerW>0)contentW=Math.round(innerW-padX);
+        if(contentW>0)_canvasContentWidth=contentW;
         canvas.style.width=w+"px";canvas.style.maxWidth=w+"px";
     }
 }
@@ -11823,6 +14063,8 @@ function persistCurrentStep(){
     var prefs=editorPrefs();
     if(_canvasLockedWidth>0)prefs.canvasWidth=_canvasLockedWidth;
     if(_canvasInnerWidth>0)prefs.canvasInnerWidth=_canvasInnerWidth;
+    if(_canvasContentWidth>0)prefs.canvasContentWidth=_canvasContentWidth;
+    var layoutToSave=withMeasuredSectionStageWidths(state.layout);
     var canvasBg=normalizeCanvasBgValue(prefs.canvasBg||"");
     var requestHeaders={"Content-Type":"application/json","X-CSRF-TOKEN":csrf,"Accept":"application/json"};
     function saveStepLayout(stepId,layout,bg,skipRevision){
@@ -11836,9 +14078,9 @@ function persistCurrentStep(){
         });
     }
     saveMsg.textContent=_autoSaveMode?"Autosaving...":"Saving...";
-    return saveStepLayout(s.id,state.layout,canvasBg,false)
+    return saveStepLayout(s.id,layoutToSave,canvasBg,false)
         .then(function(p){
-            s.layout_json=p.layout_json||clone(state.layout);
+            s.layout_json=p.layout_json||clone(layoutToSave);
             s.background_color=(p&&typeof p.background_color==="string"&&p.background_color.trim()!=="")?p.background_color.trim():null;
             s.revision_history=normalizeRevisionHistory(p&&p.revision_history);
             var others=steps.filter(function(step){return +step.id!==+s.id;});
@@ -11862,6 +14104,30 @@ function persistCurrentStep(){
 document.getElementById("saveBtn").onclick=()=>{
     persistCurrentStep().catch(()=>{saveMsg.textContent="Save failed";alert("Save failed.");});
 };
+function bindPublishForm(){
+    var form=document.getElementById("builderPublishForm");
+    var btn=document.getElementById("builderPublishBtn");
+    if(!form||!btn)return;
+    var submitting=false;
+    form.addEventListener("submit",function(e){
+        if(submitting)return;
+        e.preventDefault();
+        submitting=true;
+        btn.disabled=true;
+        var originalLabel=btn.innerHTML;
+        btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Saving...';
+        flushAutoSave()
+            .then(function(){ return persistCurrentStep(); })
+            .then(function(){ form.submit(); })
+            .catch(function(){
+                submitting=false;
+                btn.disabled=false;
+                btn.innerHTML=originalLabel;
+                saveMsg.textContent="Save failed";
+                showBuilderToast("Save failed before publish. Please try again.","error");
+            });
+    });
+}
 document.getElementById("previewBtn").onclick=()=>{
     const s=cur();if(!s)return;
     flushAutoSave()
@@ -11869,6 +14135,16 @@ document.getElementById("previewBtn").onclick=()=>{
         .then(()=>{window.open(previewTpl.replace("__STEP__",String(s.id)),"_blank");})
         .catch(()=>{saveMsg.textContent="Save failed";alert("Save failed.");});
 };
+var testFlowBtn=document.getElementById("testFlowBtn");
+if(testFlowBtn){
+    testFlowBtn.onclick=()=>{
+        const s=cur();if(!s||!testFlowTpl)return;
+        flushAutoSave()
+            .then(()=>persistCurrentStep())
+            .then(()=>{window.open(testFlowTpl.replace("__STEP__",String(s.id)),"_blank");})
+            .catch(()=>{saveMsg.textContent="Save failed";alert("Save failed.");});
+    };
+}
 document.addEventListener("keydown",e=>{
     const key=String(e.key||"").toLowerCase();
     const ae=document.activeElement;
@@ -11958,6 +14234,8 @@ document.addEventListener("drop",function(){clearSidebarDragGhost();clearFreeDro
 
 initDimTipHover();
 initContextMenu();
+bindSharedTemplateEditModal();
+bindPublishForm();
 loadStep(state.sid);
 })();
 </script>

@@ -59,6 +59,8 @@ class AutomationController extends Controller
 
     public function index(N8nWorkflowControlService $workflowControlService)
     {
+        $this->authorizeAutomationAccess();
+
         if (! $this->canBypassPlanEnforcement()) {
             app(TenantPlanEnforcer::class)->ensureAutomationEnabled(auth()->user()->tenant);
         }
@@ -106,6 +108,8 @@ class AutomationController extends Controller
 
     public function toggle(Request $request, N8nWorkflowControlService $workflowControlService)
     {
+        $this->authorizeAutomationAccess();
+
         if (! $this->canBypassPlanEnforcement()) {
             app(TenantPlanEnforcer::class)->ensureAutomationEnabled(auth()->user()->tenant);
         }
@@ -667,5 +671,14 @@ class AutomationController extends Controller
     private function canBypassPlanEnforcement(): bool
     {
         return auth()->check() && auth()->user()->hasRole('super-admin');
+    }
+
+    private function authorizeAutomationAccess(): void
+    {
+        abort_unless(
+            auth()->check() && auth()->user()->hasAnyRole(['super-admin', 'account-owner']),
+            403,
+            'You are not authorized to access automation.'
+        );
     }
 }

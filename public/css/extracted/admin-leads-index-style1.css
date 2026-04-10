@@ -1,0 +1,10 @@
+﻿        .sa-table-scroll {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .sa-table {
+            min-width: 900px;
+        }
+    

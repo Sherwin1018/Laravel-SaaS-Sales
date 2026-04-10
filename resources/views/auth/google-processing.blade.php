@@ -18,10 +18,11 @@
         (function () {
             const redirectTo = @json($redirectTo);
             const fallback = @json(route('landing'));
+            const delayMs = 900;
 
             window.setTimeout(function () {
                 window.location.replace(redirectTo || fallback);
-            }, 900);
+            }, delayMs);
         })();
     </script>
 </body>

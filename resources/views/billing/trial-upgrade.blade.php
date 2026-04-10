@@ -1,4 +1,4 @@
-@extends('layouts.admin')
+﻿@extends('layouts.admin')
 
 @section('title', 'Trial Billing')
 
@@ -7,52 +7,7 @@
         <h1>{{ $tenant && $tenant->isTrialExpired() ? 'Trial Expired' : 'Complete Your Upgrade' }}</h1>
     </div>
 
-    <style>
-        .trial-plan-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            gap: 20px;
-            align-items: stretch;
-        }
-
-        .trial-plan-card {
-            position: relative;
-            padding: 28px;
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-            min-height: 100%;
-        }
-
-        .trial-plan-summary {
-            min-height: 168px;
-            margin: 0;
-            color: var(--theme-muted, #6B7280);
-            line-height: 1.7;
-        }
-
-        .trial-plan-features {
-            list-style: none;
-            padding: 0;
-            margin: 0 0 24px;
-            display: grid;
-            gap: 10px;
-            flex: 1;
-            align-content: start;
-        }
-
-        .trial-plan-button {
-            width: 100%;
-            margin-top: auto;
-            padding: 12px 16px;
-            border: none;
-            border-radius: 12px;
-            background: var(--theme-primary, #240E35);
-            color: #fff;
-            font-weight: 700;
-            cursor: pointer;
-        }
-    </style>
+        <link rel="stylesheet" href="{{ asset('css/extracted/billing-trial-upgrade-style1.css') }}">
 
     <div class="card" style="margin-bottom: 20px;">
         <h3 style="margin-top: 0;">{{ $tenant?->company_name ?? 'Your Workspace' }}</h3>
@@ -106,3 +61,4 @@
         @endforeach
     </div>
 @endsection
+

@@ -1,6 +1,10 @@
-@extends('layouts.admin')
+﻿@extends('layouts.admin')
 
 @section('title', 'Marketing Dashboard')
+
+@section('styles')
+        <link rel="stylesheet" href="{{ asset('css/extracted/dashboard-marketing-style1.css') }}">
+@endsection
 
 @php
     $companyName = optional(auth()->user()->tenant)->company_name ?? 'No Company';
@@ -53,11 +57,23 @@
 
     <div class="charts">
         <div class="chart">
-            <h3>MQL Trend (Score >= {{ $mqlThreshold }})</h3>
+            <div class="chart-heading">
+                <h3>MQL Trend (Score >= {{ $mqlThreshold }})</h3>
+                <span class="chart-help-wrap">
+                    <span class="chart-help-dot" tabindex="0" aria-label="MQL trend help">?</span>
+                    <span class="chart-help-tip">Shows how many marketing-qualified leads you got each month.</span>
+                </span>
+            </div>
             <canvas id="mqlTrendChart"></canvas>
         </div>
         <div class="chart">
-            <h3>Leads by Source/Campaign</h3>
+            <div class="chart-heading">
+                <h3>Leads by Source/Campaign</h3>
+                <span class="chart-help-wrap">
+                    <span class="chart-help-dot" tabindex="0" aria-label="Source chart help">?</span>
+                    <span class="chart-help-tip">Compares lead volume by source or campaign.</span>
+                </span>
+            </div>
             <canvas id="sourceChart"></canvas>
         </div>
     </div>
@@ -128,3 +144,4 @@
         });
     </script>
 @endsection
+

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Funnel;
 use App\Models\Lead;
 use App\Models\Payment;
 use App\Models\Tenant;
@@ -99,6 +100,7 @@ class AnalyticsDashboardService
             'usage' => $usage,
             'revenue_trend_labels' => $labels,
             'revenue_trend_values' => $values,
+            'physical_sales' => $this->tenantPhysicalSalesSummary($tenant),
         ];
     }
 
@@ -137,5 +139,141 @@ class AnalyticsDashboardService
             'labels' => $labels,
             'values' => $values,
         ];
+    }
+
+    private function tenantPhysicalSalesSummary(Tenant $tenant): array
+    {
+        $funnels = Funnel::query()
+            ->where('tenant_id', $tenant->id)
+            ->whereIn('purpose', ['physical_product', 'hybrid'])
+            ->get(['id', 'name', 'slug', 'purpose']);
+
+        if ($funnels->isEmpty()) {
+            return [
+                'funnel_count' => 0,
+                'total_orders' => 0,
+                'paid_orders' => 0,
+                'pending_orders' => 0,
+                'abandoned_orders' => 0,
+                'units_ordered' => 0,
+                'paid_revenue' => 0.0,
+                'pending_revenue' => 0.0,
+                'average_paid_order_value' => 0.0,
+                'top_products' => [],
+                'top_funnels' => [],
+                'delivery_statuses' => [],
+            ];
+        }
+
+        /** @var FunnelTrackingService $tracking */
+        $tracking = app(FunnelTrackingService::class);
+
+        $summary = [
+            'funnel_count' => $funnels->count(),
+            'total_orders' => 0,
+            'paid_orders' => 0,
+            'pending_orders' => 0,
+            'abandoned_orders' => 0,
+            'units_ordered' => 0,
+            'paid_revenue' => 0.0,
+            'pending_revenue' => 0.0,
+            'average_paid_order_value' => 0.0,
+            'top_products' => [],
+            'top_funnels' => [],
+            'delivery_statuses' => [],
+        ];
+
+        $products = [];
+        $deliveryStatuses = [];
+        $funnelRows = [];
+
+        foreach ($funnels as $funnel) {
+            $analytics = $tracking->analyticsForFunnel($funnel);
+            $totals = $analytics['physical_order_totals'] ?? [];
+            $orders = collect($analytics['physical_orders'] ?? []);
+
+            $summary['total_orders'] += (int) ($totals['total_orders'] ?? 0);
+            $summary['paid_orders'] += (int) ($totals['paid_orders'] ?? 0);
+            $summary['pending_orders'] += (int) ($totals['pending_orders'] ?? 0);
+            $summary['abandoned_orders'] += (int) ($totals['abandoned_orders'] ?? 0);
+            $summary['units_ordered'] += (int) ($totals['units_ordered'] ?? 0);
+            $summary['paid_revenue'] += (float) ($totals['paid_revenue'] ?? 0);
+
+            $pendingRevenue = (float) $orders
+                ->where('order_status', 'pending')
+                ->sum(fn (array $row) => (float) ($row['checkout_amount'] ?? 0));
+            $summary['pending_revenue'] += $pendingRevenue;
+
+            $funnelRows[] = [
+                'id' => $funnel->id,
+                'name' => $funnel->name,
+                'slug' => $funnel->slug,
+                'purpose' => $funnel->purposeLabel(),
+                'total_orders' => (int) ($totals['total_orders'] ?? 0),
+                'paid_orders' => (int) ($totals['paid_orders'] ?? 0),
+                'pending_orders' => (int) ($totals['pending_orders'] ?? 0),
+                'units_ordered' => (int) ($totals['units_ordered'] ?? 0),
+                'paid_revenue' => round((float) ($totals['paid_revenue'] ?? 0), 2),
+            ];
+
+            foreach ($orders as $row) {
+                $deliveryStatus = trim((string) ($row['delivery_status'] ?? ''));
+                if ($deliveryStatus !== '') {
+                    $deliveryStatuses[$deliveryStatus] = ($deliveryStatuses[$deliveryStatus] ?? 0) + 1;
+                }
+
+                foreach ((is_array($row['order_items'] ?? null) ? $row['order_items'] : []) as $item) {
+                    if (! is_array($item)) {
+                        continue;
+                    }
+
+                    $name = trim((string) ($item['name'] ?? ''));
+                    if ($name === '') {
+                        continue;
+                    }
+
+                    $key = mb_strtolower($name);
+                    $quantity = max(1, (int) ($item['quantity'] ?? 1));
+
+                    if (! isset($products[$key])) {
+                        $products[$key] = [
+                            'name' => $name,
+                            'units' => 0,
+                            'paid_units' => 0,
+                            'orders' => 0,
+                        ];
+                    }
+
+                    $products[$key]['units'] += $quantity;
+                    $products[$key]['orders'] += 1;
+
+                    if (($row['order_status'] ?? '') === 'paid') {
+                        $products[$key]['paid_units'] += $quantity;
+                    }
+                }
+            }
+        }
+
+        $summary['paid_revenue'] = round($summary['paid_revenue'], 2);
+        $summary['pending_revenue'] = round($summary['pending_revenue'], 2);
+        $summary['average_paid_order_value'] = $summary['paid_orders'] > 0
+            ? round($summary['paid_revenue'] / $summary['paid_orders'], 2)
+            : 0.0;
+        $summary['top_products'] = collect($products)
+            ->sortByDesc(fn (array $row) => [$row['paid_units'], $row['units'], $row['orders']])
+            ->take(5)
+            ->values()
+            ->all();
+        $summary['top_funnels'] = collect($funnelRows)
+            ->sortByDesc(fn (array $row) => [$row['paid_revenue'], $row['paid_orders'], $row['total_orders']])
+            ->take(5)
+            ->values()
+            ->all();
+        $summary['delivery_statuses'] = collect($deliveryStatuses)
+            ->sortByDesc(fn (int $count) => $count)
+            ->mapWithKeys(fn (int $count, string $status) => [str_replace('_', ' ', $status) => $count])
+            ->all();
+
+        return $summary;
     }
 }

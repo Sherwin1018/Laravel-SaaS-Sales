@@ -53,6 +53,8 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * Check if user has at least one role from a list of slugs.
+     *
      * @param  array<int, string>  $roleSlugs
      */
     public function hasAnyRole(array $roleSlugs): bool

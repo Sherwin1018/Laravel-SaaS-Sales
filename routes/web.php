@@ -2,17 +2,20 @@
 
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AutomationController;
+use App\Http\Controllers\AdminFunnelTemplateController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Auth\EmailVerificationController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FunnelController;
 use App\Http\Controllers\FunnelPortalController;
+use App\Http\Controllers\FunnelReviewController;
 use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\LeadVerificationController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\LeadCustomFieldController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\N8nWebhookController;
+use App\Http\Controllers\N8nAutomationController;
 use App\Http\Controllers\PayMongoWebhookController;
 use App\Http\Controllers\PlanController;
 use App\Http\Controllers\ProfileController;
@@ -90,6 +93,29 @@ Route::middleware(['auth', 'verified', 'role:super-admin'])->group(function () {
     Route::get('/admin/dashboard', [AdminController::class, 'index'])->name('admin.dashboard');
     Route::post('/admin/landing-hero-video', [AdminController::class, 'updateLandingHeroVideo'])->name('admin.landing-video.update');
     Route::delete('/admin/landing-hero-video', [AdminController::class, 'deleteLandingHeroVideo'])->name('admin.landing-video.delete');
+    Route::get('/admin/funnel-templates', [AdminFunnelTemplateController::class, 'index'])->name('admin.funnel-templates.index');
+    Route::get('/admin/funnel-templates/create', [AdminFunnelTemplateController::class, 'create'])->name('admin.funnel-templates.create');
+    Route::get('/admin/funnel-templates/import', [AdminFunnelTemplateController::class, 'import'])->name('admin.funnel-templates.import');
+    Route::post('/admin/funnel-templates', [AdminFunnelTemplateController::class, 'store'])->name('admin.funnel-templates.store');
+    Route::post('/admin/funnel-templates/import', [AdminFunnelTemplateController::class, 'importStore'])->name('admin.funnel-templates.import.store');
+    Route::get('/admin/funnel-templates/{funnel_template}/edit', [AdminFunnelTemplateController::class, 'edit'])->name('admin.funnel-templates.edit');
+    Route::put('/admin/funnel-templates/{funnel_template}', [AdminFunnelTemplateController::class, 'update'])->name('admin.funnel-templates.update');
+    Route::post('/admin/funnel-templates/{funnel_template}/publish', [AdminFunnelTemplateController::class, 'publish'])->name('admin.funnel-templates.publish');
+    Route::post('/admin/funnel-templates/{funnel_template}/unpublish', [AdminFunnelTemplateController::class, 'unpublish'])->name('admin.funnel-templates.unpublish');
+    Route::get('/admin/funnel-templates/{funnel_template}/preview/{step?}', [AdminFunnelTemplateController::class, 'preview'])->name('admin.funnel-templates.preview');
+    Route::get('/admin/funnel-templates/{funnel_template}/test/{step?}', [AdminFunnelTemplateController::class, 'test'])->name('admin.funnel-templates.test');
+    Route::post('/admin/funnel-templates/{funnel_template}/test/{step}/opt-in', [AdminFunnelTemplateController::class, 'testOptIn'])->name('admin.funnel-templates.test.optin');
+    Route::post('/admin/funnel-templates/{funnel_template}/test/{step}/checkout', [AdminFunnelTemplateController::class, 'testCheckout'])->name('admin.funnel-templates.test.checkout');
+    Route::post('/admin/funnel-templates/{funnel_template}/test/{step}/offer', [AdminFunnelTemplateController::class, 'testOffer'])->name('admin.funnel-templates.test.offer');
+    Route::post('/admin/funnel-templates/{funnel_template}/builder/layout', [AdminFunnelTemplateController::class, 'saveLayout'])->name('admin.funnel-templates.builder.layout.save');
+    Route::get('/admin/funnel-templates/{funnel_template}/builder/assets', [AdminFunnelTemplateController::class, 'builderAssets'])->name('admin.funnel-templates.builder.assets.index');
+    Route::post('/admin/funnel-templates/{funnel_template}/builder/assets/delete', [AdminFunnelTemplateController::class, 'destroyBuilderAssets'])->name('admin.funnel-templates.builder.assets.destroy');
+    Route::post('/admin/funnel-templates/{funnel_template}/builder/upload-image', [AdminFunnelTemplateController::class, 'uploadBuilderImage'])->name('admin.funnel-templates.builder.image.upload');
+    Route::post('/admin/funnel-templates/{funnel_template}/steps', [AdminFunnelTemplateController::class, 'storeStep'])->name('admin.funnel-templates.steps.store');
+    Route::put('/admin/funnel-templates/{funnel_template}/steps/{step}', [AdminFunnelTemplateController::class, 'updateStep'])->name('admin.funnel-templates.steps.update');
+    Route::delete('/admin/funnel-templates/{funnel_template}/steps/{step}', [AdminFunnelTemplateController::class, 'destroyStep'])->name('admin.funnel-templates.steps.destroy');
+    Route::post('/admin/funnel-templates/{funnel_template}/steps/{step}/versions', [AdminFunnelTemplateController::class, 'storeVersion'])->name('admin.funnel-templates.steps.versions.store');
+    Route::post('/admin/funnel-templates/{funnel_template}/steps/reorder', [AdminFunnelTemplateController::class, 'reorderSteps'])->name('admin.funnel-templates.steps.reorder');
 
     Route::get('/admin/tenants', [TenantController::class, 'index'])->name('admin.tenants.index');
     Route::get('/admin/tenants/create', [TenantController::class, 'create'])->name('admin.tenants.create');
@@ -178,6 +204,7 @@ Route::middleware(['auth', 'tenant.subscription', 'role:sales-agent,marketing-ma
         Route::get('/automation/logs/{id}', [AutomationController::class, 'showLog'])->name('automation.logs.show');
 
         Route::get('/funnels/create', [FunnelController::class, 'create'])->name('funnels.create');
+        Route::get('/funnels/shared-templates', [FunnelController::class, 'sharedTemplates'])->name('funnels.shared-templates');
         Route::post('/funnels', [FunnelController::class, 'store'])->name('funnels.store');
         Route::get('/funnels/{funnel}/edit', [FunnelController::class, 'edit'])->name('funnels.edit');
         Route::get('/funnels/{funnel}/preview/{step?}', [FunnelController::class, 'preview'])->name('funnels.preview');
@@ -190,6 +217,9 @@ Route::middleware(['auth', 'tenant.subscription', 'role:sales-agent,marketing-ma
         Route::post('/funnels/{funnel}/unpublish', [FunnelController::class, 'unpublish'])->name('funnels.unpublish');
         Route::get('/funnels/{funnel}/analytics', [FunnelController::class, 'analytics'])->name('funnels.analytics');
         Route::get('/funnels/{funnel}/analytics/export', [FunnelController::class, 'exportAnalytics'])->name('funnels.analytics.export');
+        Route::post('/funnels/{funnel}/analytics/delivery-update', [FunnelController::class, 'sendDeliveryUpdate'])->name('funnels.analytics.delivery-update');
+        Route::get('/funnels/{funnel}/reviews', [FunnelReviewController::class, 'index'])->name('funnels.reviews.index');
+        Route::patch('/funnels/{funnel}/reviews/{review}', [FunnelReviewController::class, 'updateStatus'])->name('funnels.reviews.update');
         Route::get('/funnels/{funnel}/events', [FunnelController::class, 'events'])->name('funnels.events');
         Route::delete('/funnels/{funnel}', [FunnelController::class, 'destroy'])->name('funnels.destroy');
         Route::post('/funnels/{funnel}/steps', [FunnelController::class, 'storeStep'])->name('funnels.steps.store');
@@ -220,6 +250,7 @@ Route::get('/f/{funnelSlug}/{stepSlug?}', [FunnelPortalController::class, 'show'
 Route::get('/funnel/{funnelSlug}/{stepSlug?}', [FunnelPortalController::class, 'show'])->middleware('throttle:funnel-public-view')->name('funnels.portal.step.alias');
 Route::post('/f/{funnelSlug}/{stepSlug}/opt-in', [FunnelPortalController::class, 'optIn'])->middleware('throttle:funnel-public-submit')->name('funnels.portal.optin');
 Route::post('/f/{funnelSlug}/{stepSlug}/checkout', [FunnelPortalController::class, 'checkout'])->middleware('throttle:funnel-public-submit')->name('funnels.portal.checkout');
+Route::post('/f/{funnelSlug}/{stepSlug}/review', [FunnelPortalController::class, 'submitReview'])->middleware('throttle:funnel-public-submit')->name('funnels.portal.review');
 Route::get('/f/{funnelSlug}/{stepSlug}/paymongo/return/{payment}', [FunnelPortalController::class, 'paymongoReturn'])
     ->middleware('signed')
     ->name('funnels.portal.paymongo.return');
@@ -230,3 +261,17 @@ Route::get('/register/paymongo/return/{signupIntent}', [PublicOnboardingControll
 
 Route::post('/webhooks/paymongo', PayMongoWebhookController::class)->name('webhooks.paymongo');
 Route::post('/api/n8n/email-status', [N8nWebhookController::class, 'emailStatus'])->name('api.n8n.email-status');
+Route::post('/api/n8n/lead-activity', [N8nAutomationController::class, 'leadActivity'])->name('api.n8n.lead-activity');
+Route::post('/api/n8n/lead-score', [N8nAutomationController::class, 'leadScore'])->name('api.n8n.lead-score');
+Route::post('/api/n8n/send-email', [N8nAutomationController::class, 'sendEmail'])->name('api.n8n.send-email');
+Route::post('/api/n8n/send-sms', [N8nAutomationController::class, 'sendSms'])->name('api.n8n.send-sms');
+Route::post('/api/n8n/agent-task', [N8nAutomationController::class, 'agentTask'])->name('api.n8n.agent-task');
+Route::get('/api/n8n/invoice-status', [N8nAutomationController::class, 'invoiceStatus'])->name('api.n8n.invoice-status');
+Route::post('/api/n8n/suspend-subscription', [N8nAutomationController::class, 'suspendSubscription'])->name('api.n8n.suspend-subscription');
+Route::post('/api/n8n/payment-recovered', [N8nAutomationController::class, 'paymentRecovered'])->name('api.n8n.payment-recovered');
+Route::post('/api/n8n/automation-log', [N8nAutomationController::class, 'automationLog'])->name('api.n8n.automation-log');
+Route::get('/api/n8n/analytics-daily', [N8nAutomationController::class, 'analyticsDaily'])->name('api.n8n.analytics-daily');
+Route::post('/api/n8n/analytics-store', [N8nAutomationController::class, 'analyticsStore'])->name('api.n8n.analytics-store');
+Route::post('/api/n8n/send-owner-digest', [N8nAutomationController::class, 'sendOwnerDigest'])->name('api.n8n.send-owner-digest');
+Route::post('/api/n8n/trial-inactive-recovery', [N8nAutomationController::class, 'trialInactiveRecovery'])->name('api.n8n.trial-inactive-recovery');
+Route::post('/api/n8n/run-inactive-trial-recovery', [N8nAutomationController::class, 'runInactiveTrialRecovery'])->name('api.n8n.run-inactive-trial-recovery');
