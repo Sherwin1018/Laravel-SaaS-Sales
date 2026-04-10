@@ -348,6 +348,14 @@ class AdminFunnelTemplateController extends Controller
             'isPreview' => false,
             'isTemplateTest' => true,
             'selectedPricing' => $selectedPricing,
+            'productInventory' => [],
+            'approvedReviews' => collect(),
+            'reviewPrefill' => [
+                'name' => '',
+                'email' => '',
+            ],
+            'reviewAlreadySubmitted' => false,
+            'currentJourneyReview' => null,
         ]);
     }
 

@@ -679,6 +679,10 @@
         $activeSteps = collect($allSteps ?? [])->values()->filter(fn ($s) => isset($s->id, $s->slug));
         $activeStepsBySlug = $activeSteps->keyBy(fn ($s) => strtolower(trim((string) $s->slug)));
         $isTemplateTest = (bool) ($isTemplateTest ?? false);
+        $reviewPrefill = is_array($reviewPrefill ?? null) ? $reviewPrefill : ['name' => '', 'email' => ''];
+        $reviewAlreadySubmitted = (bool) ($reviewAlreadySubmitted ?? false);
+        $approvedReviews = collect($approvedReviews ?? []);
+        $productInventory = is_array($productInventory ?? null) ? $productInventory : [];
         $normalizeStepType = function (?string $type): string {
             $type = strtolower(trim((string) $type));
             if (in_array($type, ['upsell', 'downsell'], true)) {
@@ -1886,7 +1890,7 @@
                                                         @if($reviewSubtitle !== '')
                                                             <div class="builder-review-subtitle" @if($reviewColor !== '') style="color: {{ $reviewColor }}; opacity: .78;" @endif>{{ $reviewSubtitle }}</div>
                                                         @endif
-                                                        @if($isPreview)
+                                                        @if($isPreview || $isTemplateTest)
                                                             <div class="builder-review-stars" aria-hidden="true"><span>★</span><span>★</span><span>★</span><span>★</span><span>★</span></div>
                                                             <input class="builder-review-input" type="text" value="{{ $prefillName !== '' ? $prefillName : 'Your name' }}" disabled>
                                                             <input class="builder-review-input" type="email" value="{{ $prefillEmail !== '' ? $prefillEmail : 'Email address' }}" disabled>

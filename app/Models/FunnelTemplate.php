@@ -25,9 +25,10 @@ class FunnelTemplate extends Model
 
     public static function selectableTemplateTypes(): array
     {
-        return collect(self::TEMPLATE_TYPES)
-            ->except(self::TEMPLATE_TYPE_UNCATEGORIZED)
-            ->all();
+        return [
+            'service' => self::TEMPLATE_TYPES['service'],
+            'physical_product' => self::TEMPLATE_TYPES['physical_product'],
+        ];
     }
 
     protected $fillable = [
@@ -91,3 +92,4 @@ class FunnelTemplate extends Model
         return $this->hasMany(FunnelTemplateAsset::class)->orderByDesc('created_at');
     }
 }
+
