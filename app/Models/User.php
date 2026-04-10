@@ -52,6 +52,20 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->roles->contains('slug', $roleSlug);
     }
 
+    /**
+     * @param  array<int, string>  $roleSlugs
+     */
+    public function hasAnyRole(array $roleSlugs): bool
+    {
+        foreach ($roleSlugs as $roleSlug) {
+            if ($this->hasRole($roleSlug)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     protected $fillable = [
         'name',
         'email',

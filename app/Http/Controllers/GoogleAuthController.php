@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
+use App\Services\SignupOnboardingService;
 use App\Services\SubscriptionLifecycleService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -17,6 +19,7 @@ class GoogleAuthController extends Controller
 
         return Socialite::driver('google')
             ->scopes(['openid', 'profile', 'email'])
+            ->with(['prompt' => 'select_account'])
             ->redirect();
     }
 
@@ -37,7 +40,7 @@ class GoogleAuthController extends Controller
             return redirect()->route('login')->with('error', 'Google account did not provide a valid email.');
         }
 
-        $user = \App\Models\User::query()->whereRaw('LOWER(email) = ?', [$email])->first();
+        $user = User::query()->whereRaw('LOWER(email) = ?', [$email])->first();
         if (! $user) {
             return redirect()->route('login')->with('error', 'No existing account found for this Google email. Please use your registered account.');
         }
@@ -74,7 +77,127 @@ class GoogleAuthController extends Controller
         Auth::login($user, true);
         $request->session()->regenerate();
 
-        return $this->redirectByRole($user);
+        return $this->redirectByRole($user, true);
+    }
+
+    public function redirectSignup(Request $request, SignupOnboardingService $onboarding)
+    {
+        if ($this->isGoogleConfigMissing()) {
+            return redirect()->route('landing')->with('error', 'Google sign-in is not configured yet.');
+        }
+
+        $validated = $request->validate([
+            'full_name' => 'nullable|string|max:255',
+            'company_name' => 'nullable|string|max:255',
+            'email' => 'nullable|email|max:255',
+            'mobile' => 'nullable|string|max:32',
+            'plan' => 'nullable|string',
+        ]);
+
+        $planCode = (string) ($validated['plan'] ?? 'growth');
+
+        try {
+            $onboarding->findPlan($planCode);
+        } catch (\Throwable) {
+            return redirect()
+                ->route('landing', ['plan' => 'growth'])
+                ->with('open_onboarding_modal', true)
+                ->with('error', 'Selected plan is invalid.');
+        }
+
+        $request->session()->put('google_signup_context', [
+            'full_name' => (string) ($validated['full_name'] ?? ''),
+            'company_name' => (string) ($validated['company_name'] ?? ''),
+            'email' => mb_strtolower(trim((string) ($validated['email'] ?? ''))),
+            'mobile' => (string) ($validated['mobile'] ?? ''),
+            'plan' => $planCode,
+        ]);
+
+        return Socialite::driver('google')
+            ->redirectUrl(route('auth.google.signup.callback'))
+            ->scopes(['openid', 'profile', 'email'])
+            ->with(['prompt' => 'select_account'])
+            ->redirect();
+    }
+
+    public function callbackSignup(
+        Request $request,
+        SignupOnboardingService $onboarding,
+    ) {
+        if ($this->isGoogleConfigMissing()) {
+            return redirect()->route('landing')->with('error', 'Google sign-in is not configured yet.');
+        }
+
+        $context = $request->session()->get('google_signup_context');
+        $context = is_array($context) ? $context : [];
+
+        try {
+            $googleUser = Socialite::driver('google')
+                ->redirectUrl(route('auth.google.signup.callback'))
+                ->user();
+        } catch (\Throwable) {
+            return redirect()
+                ->route('landing', ['plan' => (string) ($context['plan'] ?? 'growth')])
+                ->with('open_onboarding_modal', true)
+                ->with('error', 'Google sign-in failed. Please try again.');
+        }
+
+        $googleEmail = mb_strtolower(trim((string) $googleUser->getEmail()));
+        if ($googleEmail === '') {
+            return redirect()
+                ->route('landing', ['plan' => (string) ($context['plan'] ?? 'growth')])
+                ->with('open_onboarding_modal', true)
+                ->with('error', 'Google account did not provide a valid email.');
+        }
+
+        $googleId = trim((string) $googleUser->getId());
+        if ($googleId === '') {
+            return redirect()
+                ->route('landing', ['plan' => (string) ($context['plan'] ?? 'growth')])
+                ->with('open_onboarding_modal', true)
+                ->with('error', 'Google sign-in failed. Missing Google account ID.');
+        }
+
+        $existingUser = User::query()->whereRaw('LOWER(email) = ?', [$googleEmail])->first();
+        if ($existingUser) {
+            return redirect()->route('login')->with('error', 'This email is already registered. Please use another email or log in.');
+        }
+
+        $resolvedName = trim((string) ($context['full_name'] ?? ''));
+        if ($resolvedName === '') {
+            $resolvedName = trim((string) $googleUser->getName());
+        }
+        if ($resolvedName === '') {
+            return redirect()
+                ->route('landing', ['plan' => (string) ($context['plan'] ?? 'growth')])
+                ->with('open_onboarding_modal', true)
+                ->with('error', 'Google account did not provide a display name. Please enter your full name and try again.');
+        }
+
+        try {
+            $onboarding->findPlan((string) ($context['plan'] ?? 'growth'));
+        } catch (\Throwable) {
+            $context['plan'] = 'growth';
+        }
+
+        $request->session()->put('google_signup_verified', [
+            'google_id' => $googleId,
+            'full_name' => $resolvedName,
+            'email' => $googleEmail,
+        ]);
+
+        $request->session()->put('google_signup_context', [
+            'full_name' => $resolvedName,
+            'company_name' => (string) ($context['company_name'] ?? ''),
+            'email' => $googleEmail,
+            'mobile' => (string) ($context['mobile'] ?? ''),
+            'plan' => (string) ($context['plan'] ?? 'growth'),
+        ]);
+
+        return redirect()
+            ->route('landing', ['plan' => (string) ($context['plan'] ?? 'growth')])
+            ->with('open_onboarding_modal', true)
+            ->with('success', 'Google account confirmed. Complete mobile and company details to continue payment.');
     }
 
     private function isGoogleConfigMissing(): bool
@@ -84,7 +207,23 @@ class GoogleAuthController extends Controller
             || ! config('services.google.redirect');
     }
 
-    private function redirectByRole($user)
+    public function processing(Request $request)
+    {
+        if (! Auth::check()) {
+            return redirect()->route('login');
+        }
+
+        $redirectTo = $request->session()->pull('google_login_redirect_to');
+        if (! is_string($redirectTo) || $redirectTo === '') {
+            $redirectTo = $this->dashboardRouteForUser(Auth::user()) ?? route('landing');
+        }
+
+        return view('auth.google-processing', [
+            'redirectTo' => $redirectTo,
+        ]);
+    }
+
+    private function redirectByRole($user, bool $useGoogleSplash = false)
     {
         if ($user->hasRole('super-admin')) {
             return redirect()->intended('/admin/dashboard')->with('success', 'Login Successfully');
@@ -94,24 +233,15 @@ class GoogleAuthController extends Controller
             return $response;
         }
 
-        if ($user->hasRole('account-owner')) {
-            return redirect()->intended(route('dashboard.owner'))->with('success', 'Login Successfully');
-        }
+        $destination = $this->dashboardRouteForUser($user);
+        if ($destination) {
+            if ($useGoogleSplash) {
+                session(['google_login_redirect_to' => $destination]);
 
-        if ($user->hasRole('marketing-manager')) {
-            return redirect()->intended(route('dashboard.marketing'))->with('success', 'Login Successfully');
-        }
+                return redirect()->route('auth.google.processing');
+            }
 
-        if ($user->hasRole('sales-agent')) {
-            return redirect()->intended(route('dashboard.sales'))->with('success', 'Login Successfully');
-        }
-
-        if ($user->hasRole('finance')) {
-            return redirect()->intended(route('dashboard.finance'))->with('success', 'Login Successfully');
-        }
-
-        if ($user->hasRole('customer')) {
-            return redirect()->intended(route('dashboard.customer'))->with('success', 'Login Successfully');
+            return redirect()->intended($destination)->with('success', 'Login Successfully');
         }
 
         Auth::logout();
@@ -119,6 +249,31 @@ class GoogleAuthController extends Controller
         request()->session()->regenerateToken();
 
         return redirect()->route('login')->with('error', 'Login Failed. Your role does not have access.');
+    }
+
+    private function dashboardRouteForUser($user): ?string
+    {
+        if ($user->hasRole('account-owner')) {
+            return route('dashboard.owner');
+        }
+
+        if ($user->hasRole('marketing-manager')) {
+            return route('dashboard.marketing');
+        }
+
+        if ($user->hasRole('sales-agent')) {
+            return route('dashboard.sales');
+        }
+
+        if ($user->hasRole('finance')) {
+            return route('dashboard.finance');
+        }
+
+        if ($user->hasRole('customer')) {
+            return route('dashboard.customer');
+        }
+
+        return null;
     }
 
     private function tenantAccessRedirect($user)

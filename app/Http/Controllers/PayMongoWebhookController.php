@@ -80,7 +80,12 @@ class PayMongoWebhookController extends Controller
 
         $signupIntent = SignupIntent::query()->where('provider', 'paymongo')->where('provider_reference', $id)->first();
         if ($signupIntent) {
-            $this->completeSignupIntent($signupIntent, $method);
+            $this->completeSignupIntent(
+                $signupIntent,
+                $method,
+                is_array($metadata) ? (string) ($metadata['flow'] ?? '') : '',
+                is_array($metadata) ? (string) ($metadata['google_id'] ?? '') : '',
+            );
         }
     }
 
@@ -117,7 +122,12 @@ class PayMongoWebhookController extends Controller
         if ($signupIntentId > 0) {
             $signupIntent = SignupIntent::query()->find($signupIntentId);
             if ($signupIntent) {
-                $this->completeSignupIntent($signupIntent, is_string($method) ? $method : null);
+                $this->completeSignupIntent(
+                    $signupIntent,
+                    is_string($method) ? $method : null,
+                    (string) ($meta['flow'] ?? ''),
+                    (string) ($meta['google_id'] ?? ''),
+                );
             }
         }
     }
@@ -159,7 +169,12 @@ class PayMongoWebhookController extends Controller
         ]);
     }
 
-    private function completeSignupIntent(SignupIntent $signupIntent, ?string $method = null): void
+    private function completeSignupIntent(
+        SignupIntent $signupIntent,
+        ?string $method = null,
+        string $flow = '',
+        string $googleId = '',
+    ): void
     {
         if ($signupIntent->status === 'completed') {
             return;
@@ -168,7 +183,10 @@ class PayMongoWebhookController extends Controller
         try {
             $service = app(SignupOnboardingService::class);
             $signupIntent = $service->markPaid($signupIntent, $method);
-            $service->finalize($signupIntent);
+            $service->finalize($signupIntent, [
+                'auto_activate' => $flow === 'signup_google',
+                'google_id' => $flow === 'signup_google' ? $googleId : null,
+            ]);
         } catch (\Throwable $e) {
             Log::warning('Signup intent finalization failed', [
                 'signup_intent_id' => $signupIntent->id,

@@ -33,6 +33,8 @@ Route::middleware('guest')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])->name('login.post');
     Route::get('/auth/google/redirect', [GoogleAuthController::class, 'redirect'])->name('auth.google.redirect');
     Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback'])->name('auth.google.callback');
+    Route::post('/auth/google/signup/redirect', [GoogleAuthController::class, 'redirectSignup'])->name('auth.google.signup.redirect');
+    Route::get('/auth/google/signup/callback', [GoogleAuthController::class, 'callbackSignup'])->name('auth.google.signup.callback');
     Route::post('/setup/resend', [SetupAccessController::class, 'resend'])->middleware('throttle:setup-resend')->name('setup.resend');
     Route::get('/setup/{token}', [SetupAccessController::class, 'show'])->middleware('throttle:setup-link-show')->name('setup.show');
     Route::post('/setup/{token}', [SetupAccessController::class, 'complete'])->middleware('throttle:setup-link-complete')->name('setup.complete');
@@ -63,6 +65,7 @@ HTML;
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
 
 Route::middleware(['auth'])->group(function () {
+    Route::get('/auth/google/processing', [GoogleAuthController::class, 'processing'])->name('auth.google.processing');
     Route::get('/email/verify', [EmailVerificationController::class, 'notice'])->name('verification.notice');
     Route::get('/email/verify/{id}/{hash}', [EmailVerificationController::class, 'verify'])
         ->middleware('signed')
