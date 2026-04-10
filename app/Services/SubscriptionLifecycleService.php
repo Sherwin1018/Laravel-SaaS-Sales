@@ -20,6 +20,10 @@ class SubscriptionLifecycleService
             $payment = Payment::query()->lockForUpdate()->findOrFail($payment->id);
             $tenant = Tenant::query()->lockForUpdate()->findOrFail($payment->tenant_id);
 
+            if (! $payment->isPlatformSubscription()) {
+                throw new \RuntimeException('Only platform subscription payments can activate tenant subscriptions.');
+            }
+
             if ($payment->status !== 'paid') {
                 $payment->update([
                     'status' => 'paid',
@@ -57,6 +61,10 @@ class SubscriptionLifecycleService
 
             if (! $tenant) {
                 return null;
+            }
+
+            if (! $payment->isPlatformSubscription()) {
+                return $tenant->fresh();
             }
 
             if ($tenant->status === 'active') {

@@ -5,72 +5,83 @@ namespace App\Http\Controllers;
 use App\Services\SubscriptionLifecycleService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Laravel\Socialite\Facades\Socialite;
 
-class AuthController extends Controller
+class GoogleAuthController extends Controller
 {
-    // Show the login form
-    public function showLoginForm()
+    public function redirect()
     {
-        if (Auth::check()) {
-            return $this->redirectByRole(auth()->user());
+        if ($this->isGoogleConfigMissing()) {
+            return redirect()->route('login')->with('error', 'Google sign-in is not configured yet.');
         }
 
-        return view('auth.login');
+        return Socialite::driver('google')
+            ->scopes(['openid', 'profile', 'email'])
+            ->redirect();
     }
 
-    // Handle login
-    public function login(Request $request)
+    public function callback(Request $request)
     {
-        // Validate input
-        $request->validate([
-            'email' => 'required|email',
-            'password' => 'required|string',
-        ]);
-
-        $credentials = $request->only('email', 'password');
-
-        if (Auth::attempt($credentials, true)) {
-            $request->session()->regenerate();
-
-            $user = auth()->user();
-            if ($user->status !== 'active') {
-                Auth::logout();
-                $request->session()->invalidate();
-                $request->session()->regenerateToken();
-
-                $reason = $user->suspension_reason ?: 'No reason provided.';
-                $message = "Login Failed. Your account has been temporarily suspended. Please contact support or your system administrator for assistance. Reason: {$reason} Support: nehemiah.solutions.corp@gmail.com";
-
-                return redirect()->route('login')->with('error', $message);
-            }
-
-            if (
-                ! $user->hasRole('super-admin')
-                && $this->requiresActivationSetup($user)
-            ) {
-                Auth::logout();
-                $request->session()->invalidate();
-                $request->session()->regenerateToken();
-
-                return redirect()->route('login')->with('error', 'Please verify your email and complete password setup before continuing.');
-            }
-
-            $user->last_login_at = now();
-            $user->save();
-
-            return $this->redirectByRole($user);
+        if ($this->isGoogleConfigMissing()) {
+            return redirect()->route('login')->with('error', 'Google sign-in is not configured yet.');
         }
 
-        return back()->with('error', 'Login Failed. Invalid email or password.');
+        try {
+            $googleUser = Socialite::driver('google')->user();
+        } catch (\Throwable) {
+            return redirect()->route('login')->with('error', 'Google sign-in failed. Please try again.');
+        }
+
+        $email = mb_strtolower(trim((string) $googleUser->getEmail()));
+        if ($email === '') {
+            return redirect()->route('login')->with('error', 'Google account did not provide a valid email.');
+        }
+
+        $user = \App\Models\User::query()->whereRaw('LOWER(email) = ?', [$email])->first();
+        if (! $user) {
+            return redirect()->route('login')->with('error', 'No existing account found for this Google email. Please use your registered account.');
+        }
+
+        if ($user->hasRole('super-admin')) {
+            return redirect()->route('login')->with('error', 'Super Admin accounts cannot use Google sign-in.');
+        }
+
+        if ($user->status !== 'active') {
+            $reason = $user->suspension_reason ?: 'No reason provided.';
+
+            return redirect()->route('login')->with('error', "Login Failed. Your account is inactive. Reason: {$reason}");
+        }
+
+        if ($this->requiresActivationSetup($user)) {
+            return redirect()->route('login')->with('error', 'Please complete email verification and setup-password first.');
+        }
+
+        $googleId = (string) $googleUser->getId();
+        if ($googleId === '') {
+            return redirect()->route('login')->with('error', 'Google sign-in failed. Missing Google account ID.');
+        }
+
+        if ($user->google_id && $user->google_id !== $googleId) {
+            return redirect()->route('login')->with('error', 'This account is already linked to another Google identity.');
+        }
+
+        if (! $user->google_id) {
+            $user->google_id = $googleId;
+        }
+        $user->last_login_at = now();
+        $user->save();
+
+        Auth::login($user, true);
+        $request->session()->regenerate();
+
+        return $this->redirectByRole($user);
     }
 
-    // Logout
-    public function logout(Request $request)
+    private function isGoogleConfigMissing(): bool
     {
-        Auth::logout();
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
-        return redirect('/login')->with('success', 'Logout Successfully');
+        return ! config('services.google.client_id')
+            || ! config('services.google.client_secret')
+            || ! config('services.google.redirect');
     }
 
     private function redirectByRole($user)
@@ -106,16 +117,17 @@ class AuthController extends Controller
         Auth::logout();
         request()->session()->invalidate();
         request()->session()->regenerateToken();
+
         return redirect()->route('login')->with('error', 'Login Failed. Your role does not have access.');
     }
 
     private function tenantAccessRedirect($user)
     {
         $tenant = $user->tenant;
-
         if (! $tenant) {
             return null;
         }
+
         $tenant = app(SubscriptionLifecycleService::class)->expireGracePeriodIfNeeded($tenant);
 
         if ($tenant->isTrialExpired()) {

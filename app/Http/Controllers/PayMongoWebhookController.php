@@ -147,7 +147,16 @@ class PayMongoWebhookController extends Controller
             return;
         }
 
-        app(SubscriptionLifecycleService::class)->markPaymentFailed($payment);
+        if ($payment->isPlatformSubscription()) {
+            app(SubscriptionLifecycleService::class)->markPaymentFailed($payment);
+
+            return;
+        }
+
+        $payment->update([
+            'status' => 'failed',
+            'payment_date' => $payment->payment_date ?: now()->toDateString(),
+        ]);
     }
 
     private function completeSignupIntent(SignupIntent $signupIntent, ?string $method = null): void

@@ -32,6 +32,16 @@
             </div>
 
             <div style="margin-bottom: 20px;">
+                <label for="phone" style="display: block; margin-bottom: 8px; font-weight: bold;">Phone (optional)</label>
+                <input type="text" name="phone" id="phone"
+                    style="width: 100%; padding: 10px; border: 1px solid var(--theme-border, #E6E1EF); border-radius: 6px;"
+                    value="{{ old('phone') }}">
+                @error('phone')
+                    <span style="color: red; font-size: 12px;">{{ $message }}</span>
+                @enderror
+            </div>
+
+            <div style="margin-bottom: 20px;">
                 <label for="role" style="display: block; margin-bottom: 8px; font-weight: bold;">Role</label>
                 <select name="role" id="role" required
                     style="width: 100%; padding: 10px; border: 1px solid var(--theme-border, #E6E1EF); border-radius: 6px;">
@@ -45,66 +55,9 @@
             </div>
 
             <div style="margin-bottom: 20px;">
-                <label for="password" style="display: block; margin-bottom: 8px; font-weight: bold;">Password</label>
-                <div style="position: relative;">
-                    <input type="password" name="password" id="password" required 
-                        style="width: 100%; padding: 10px; padding-right: 40px; border: 1px solid var(--theme-border, #E6E1EF); border-radius: 6px;">
-                    <i class="fas fa-eye toggle-password" id="togglePassword" 
-                        style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #6B7280;"></i>
-                </div>
-                @error('password')
-                    <span style="color: red; font-size: 12px;">{{ $message }}</span>
-                @enderror
-                <p style="margin-top: 6px; color: #475569; font-size: 12px; font-weight: 600;">
-                    12-64 characters with uppercase, lowercase, number, and special character.
+                <p style="margin: 0; color: #475569; font-size: 13px; line-height: 1.5;">
+                    A one-time setup link will be sent automatically. The invited user will verify email and set their own password.
                 </p>
-
-                <script>
-                    document.addEventListener('DOMContentLoaded', function () {
-                        const togglePassword = document.querySelector('#togglePassword');
-                        const password = document.querySelector('#password');
-                        const toggleConfirmPassword = document.querySelector('#toggleConfirmPassword');
-                        const confirmPassword = document.querySelector('#password_confirmation');
-
-                        if (togglePassword && password) {
-                            togglePassword.addEventListener('click', function () {
-                                const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
-                                password.setAttribute('type', type);
-                                if (type === 'text') {
-                                    this.classList.remove('fa-eye');
-                                    this.classList.add('fa-eye-slash');
-                                } else {
-                                    this.classList.remove('fa-eye-slash');
-                                    this.classList.add('fa-eye');
-                                }
-                            });
-                        }
-
-                        if (toggleConfirmPassword && confirmPassword) {
-                            toggleConfirmPassword.addEventListener('click', function () {
-                                const type = confirmPassword.getAttribute('type') === 'password' ? 'text' : 'password';
-                                confirmPassword.setAttribute('type', type);
-                                if (type === 'text') {
-                                    this.classList.remove('fa-eye');
-                                    this.classList.add('fa-eye-slash');
-                                } else {
-                                    this.classList.remove('fa-eye-slash');
-                                    this.classList.add('fa-eye');
-                                }
-                            });
-                        }
-                    });
-                </script>
-            </div>
-
-            <div style="margin-bottom: 20px;">
-                <label for="password_confirmation" style="display: block; margin-bottom: 8px; font-weight: bold;">Confirm Password</label>
-                <div style="position: relative;">
-                    <input type="password" name="password_confirmation" id="password_confirmation" required 
-                        style="width: 100%; padding: 10px; padding-right: 40px; border: 1px solid var(--theme-border, #E6E1EF); border-radius: 6px;">
-                    <i class="fas fa-eye toggle-password" id="toggleConfirmPassword" 
-                        style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #6B7280;"></i>
-                </div>
             </div>
 
             <div style="display: flex; gap: 10px;">

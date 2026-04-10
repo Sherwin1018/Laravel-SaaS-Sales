@@ -17,7 +17,7 @@
             <a href="{{ route('admin.tenants.edit', $tenant->id) }}" style="color: var(--theme-primary, #240E35); text-decoration: none;">
                 <i class="fas fa-edit"></i> Edit
             </a>
-            <form action="{{ route('admin.tenants.destroy', $tenant->id) }}" method="POST" onsubmit="return confirm('Are you sure?');">
+            <form action="{{ route('admin.tenants.destroy', $tenant->id) }}" method="POST" data-delete-tenant-form data-tenant-name="{{ $tenant->company_name }}">
                 @csrf
                 @method('DELETE')
                 <button type="submit" style="background: none; border: none; color: #DC2626; cursor: pointer; padding: 0; font-weight: 600;">

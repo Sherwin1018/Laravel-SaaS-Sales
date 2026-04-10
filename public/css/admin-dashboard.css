@@ -456,16 +456,19 @@ table tr:hover {
 }
 
 .actions button {
-    padding: 10px 15px;
+    min-height: 40px;
+    padding: 10px 16px;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
     background-color: #240E35;
     color: white;
     cursor: pointer;
     display: flex;
     align-items: center;
     gap: 8px;
-    font-weight: 500;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.2;
     transition: background 0.2s;
 }
 
@@ -477,13 +480,16 @@ table tr:hover {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 10px 15px;
+    min-height: 40px;
+    padding: 10px 16px;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
     background-color: #240E35 !important;
     color: #F8F4FB !important;
     cursor: pointer;
+    font-size: 14px;
     font-weight: 600;
+    line-height: 1.2;
     text-decoration: none;
 }
 

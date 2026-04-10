@@ -17,11 +17,19 @@ class SendN8nWebhookJob implements ShouldQueue
 
     /** @var array<string, string> */
     protected static array $eventToPathKey = [
+        // Business events
         'lead.created' => 'lead_created',
         'funnel.opt_in' => 'funnel_opt_in',
         'lead.status_changed' => 'lead_status_changed',
         'payment.paid' => 'payment_paid',
         'payment.failed' => 'payment_failed',
+        
+        // Account events (all use the unified saas-events router)
+        'account_owner_paid_signup_created' => 'saas_events',
+        'team_member_invited' => 'saas_events',
+        'customer_portal_invited' => 'saas_events',
+        'setup_link_expiring' => 'saas_events',
+        'setup_link_expired' => 'saas_events',
     ];
 
     public function __construct(

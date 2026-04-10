@@ -153,12 +153,15 @@ body {
 }
 
 .login-card button[type="submit"] {
-    padding: 14px;
+    min-height: 40px;
+    padding: 10px 16px;
     background-color: #6B4A7A;
     border: none;
     border-radius: 8px;
     color: #000;
+    font-size: 14px;
     font-weight: 600;
+    line-height: 1.2;
     cursor: pointer;
     transition: all 0.2s;
 }
