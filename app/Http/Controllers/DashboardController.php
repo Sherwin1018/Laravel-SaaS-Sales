@@ -57,6 +57,7 @@ class DashboardController extends Controller
 
         $paymentStatusTotals = Payment::select('status', DB::raw('SUM(amount) as total'))
             ->where('tenant_id', $tenantId)
+            ->where('payment_type', Payment::TYPE_FUNNEL_CHECKOUT)
             ->groupBy('status')
             ->pluck('total', 'status');
 

@@ -7,6 +7,8 @@ The platform combines funnel creation, CRM, automation, payments, and analytics 
 
 Primary goal: deliver a scalable, secure, and commercially viable SaaS product with clear monetization and role-based operations.
 
+For the current architecture baseline, see [docs/project-overview.md](docs/project-overview.md).
+
 ## Project Objective
 Deliver a platform that:
 

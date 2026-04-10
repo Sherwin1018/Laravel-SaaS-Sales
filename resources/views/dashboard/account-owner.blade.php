@@ -93,7 +93,7 @@
             <p>{{ $conversionRate }}%</p>
         </div>
         <div class="card">
-            <h3>Paid Revenue</h3>
+            <h3>Funnel Paid Revenue</h3>
             <p>{{ number_format($revenueTotal, 2) }}</p>
         </div>
         <div class="card">
@@ -156,7 +156,7 @@
     </div>
 
     <div class="card" style="margin-bottom: 20px;">
-        <h3>Revenue and Payment Status</h3>
+        <h3>Funnel Revenue and Payment Status</h3>
         <table>
             <thead>
                 <tr>

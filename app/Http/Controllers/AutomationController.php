@@ -7,13 +7,13 @@ use App\Models\AutomationSequence;
 use App\Models\AutomationSequenceStep;
 use App\Models\AutomationWorkflow;
 use App\Models\Funnel;
+use App\Models\OnboardingAuditLog;
+use App\Services\N8nWorkflowControlService;
+use App\Support\TenantPlanEnforcer;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use RuntimeException;
 
-/**
- * Tenant-side Automation UI: Overview, Sequences, Workflows, Logs.
- * Workflows are tenant-scoped; only type=tenant workflows can be created/edited. System workflows are read-only.
- */
 class AutomationController extends Controller
 {
     private function tenantId(): int
@@ -50,11 +50,87 @@ class AutomationController extends Controller
                 'active_automations' => $activeCount,
                 'emails_sent_today' => $emailsSentToday,
                 'emails_sent_7_days' => $emailsSent7Days,
-                'leads_triggered' => $emailsSent7Days, // placeholder; can be refined when events are detailed
+                'leads_triggered' => $emailsSent7Days,
                 'failed_runs' => $failedRuns,
             ],
             'recentActivity' => $recentActivity,
         ]);
+    }
+
+    public function index(N8nWorkflowControlService $workflowControlService)
+    {
+        if (! $this->canBypassPlanEnforcement()) {
+            app(TenantPlanEnforcer::class)->ensureAutomationEnabled(auth()->user()->tenant);
+        }
+
+        $statusError = null;
+        try {
+            $status = $workflowControlService->status();
+        } catch (\Throwable $e) {
+            $status = [
+                'configured' => $workflowControlService->isConfigured(),
+                'active' => null,
+                'name' => null,
+                'raw' => null,
+            ];
+            $statusError = $e->getMessage();
+        }
+
+        $recentFailures = OnboardingAuditLog::query()
+            ->whereIn('event_type', ['onboarding_email_failed', 'onboarding_email_callback'])
+            ->where('status', 'failed')
+            ->latest('occurred_at')
+            ->take(8)
+            ->get();
+
+        $deliverySummary = [
+            'failed_last_24h' => OnboardingAuditLog::query()
+                ->whereIn('event_type', ['onboarding_email_failed', 'onboarding_email_callback'])
+                ->where('status', 'failed')
+                ->where('occurred_at', '>=', now()->subDay())
+                ->count(),
+            'sent_last_24h' => OnboardingAuditLog::query()
+                ->whereIn('event_type', ['onboarding_email_sent', 'onboarding_email_callback'])
+                ->where('status', 'success')
+                ->where('occurred_at', '>=', now()->subDay())
+                ->count(),
+        ];
+
+        return view('automation.index', [
+            'status' => $status,
+            'statusError' => $statusError,
+            'recentFailures' => $recentFailures,
+            'deliverySummary' => $deliverySummary,
+        ]);
+    }
+
+    public function toggle(Request $request, N8nWorkflowControlService $workflowControlService)
+    {
+        if (! $this->canBypassPlanEnforcement()) {
+            app(TenantPlanEnforcer::class)->ensureAutomationEnabled(auth()->user()->tenant);
+        }
+
+        $validated = $request->validate([
+            'active' => 'required|boolean',
+        ]);
+
+        try {
+            $updated = $validated['active']
+                ? $workflowControlService->activate()
+                : $workflowControlService->deactivate();
+
+            if (! $updated) {
+                return back()->with('error', 'Could not update n8n workflow state.');
+            }
+
+            return back()->with('success', $validated['active']
+                ? 'Automation workflow has been turned on.'
+                : 'Automation workflow has been turned off.');
+        } catch (RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        } catch (\Throwable) {
+            return back()->with('error', 'Unable to reach n8n right now. Please try again.');
+        }
     }
 
     public function sequences(Request $request)
@@ -72,14 +148,14 @@ class AutomationController extends Controller
         if ($search !== '') {
             $query->where('name', 'like', '%' . $search . '%');
         }
-        $sequences = $query->get();
 
-        $sequencesForView = $sequences->map(fn (AutomationSequence $s) => [
-            'id' => $s->id,
-            'name' => $s->name,
-            'steps_count' => $s->steps_count ?? $s->steps()->count(),
-            'status' => $s->is_active ? 'active' : 'paused',
-            'updated' => $s->updated_at->toIso8601String(),
+        $sequences = $query->get();
+        $sequencesForView = $sequences->map(fn (AutomationSequence $sequence) => [
+            'id' => $sequence->id,
+            'name' => $sequence->name,
+            'steps_count' => $sequence->steps_count ?? $sequence->steps()->count(),
+            'status' => $sequence->is_active ? 'active' : 'paused',
+            'updated' => $sequence->updated_at->toIso8601String(),
         ])->all();
 
         return view('automation.sequences.index', [
@@ -88,9 +164,6 @@ class AutomationController extends Controller
         ]);
     }
 
-    /**
-     * Show the full-page Sequence Builder (create new sequence).
-     */
     public function createSequenceBuilder()
     {
         return view('automation.sequences.builder', [
@@ -99,9 +172,6 @@ class AutomationController extends Controller
         ]);
     }
 
-    /**
-     * Store sequence and steps to database.
-     */
     public function storeSequence(Request $request)
     {
         $validated = $request->validate([
@@ -111,35 +181,30 @@ class AutomationController extends Controller
         ]);
 
         $stepsData = json_decode($validated['steps'], true);
-        if (!is_array($stepsData) || count($stepsData) < 1) {
+        if (! is_array($stepsData) || count($stepsData) < 1) {
             return redirect()->back()->withInput()->withErrors(['steps' => 'At least one step is required.']);
         }
         $this->validateSequenceSteps($stepsData);
 
-        $tenantId = $this->tenantId();
         $sequence = AutomationSequence::create([
-            'tenant_id' => $tenantId,
+            'tenant_id' => $this->tenantId(),
             'name' => $validated['name'],
             'is_active' => $request->boolean('is_active', true),
             'created_by' => auth()->id(),
         ]);
 
         foreach ($stepsData as $i => $step) {
-            $config = $step['config'] ?? [];
             AutomationSequenceStep::create([
                 'sequence_id' => $sequence->id,
                 'step_order' => $i + 1,
                 'type' => $step['type'] ?? 'email',
-                'config' => $config,
+                'config' => $step['config'] ?? [],
             ]);
         }
 
         return redirect()->route('automation.sequences.index')->with('success', 'Sequence saved.');
     }
 
-    /**
-     * Show the Sequence Builder in edit mode.
-     */
     public function editSequenceBuilder(AutomationSequence $sequence)
     {
         $this->ensureTenantSequence($sequence);
@@ -150,8 +215,7 @@ class AutomationController extends Controller
             'description' => $this->stepDescriptionForView($step),
         ])->all();
 
-        $tenantId = $this->tenantId();
-        $workflowsUsing = AutomationWorkflow::where('tenant_id', $tenantId)
+        $workflowsUsing = AutomationWorkflow::where('tenant_id', $this->tenantId())
             ->where('type', AutomationWorkflow::TYPE_TENANT)
             ->where('action_type', 'start_sequence')
             ->where('action_config->sequence_id', $sequence->id)
@@ -165,9 +229,6 @@ class AutomationController extends Controller
         ]);
     }
 
-    /**
-     * Update sequence and steps.
-     */
     public function updateSequence(Request $request, AutomationSequence $sequence)
     {
         $this->ensureTenantSequence($sequence);
@@ -179,7 +240,7 @@ class AutomationController extends Controller
         ]);
 
         $stepsData = json_decode($validated['steps'], true);
-        if (!is_array($stepsData) || count($stepsData) < 1) {
+        if (! is_array($stepsData) || count($stepsData) < 1) {
             return redirect()->back()->withInput()->withErrors(['steps' => 'At least one step is required.']);
         }
         $this->validateSequenceSteps($stepsData);
@@ -191,85 +252,40 @@ class AutomationController extends Controller
 
         $sequence->steps()->delete();
         foreach ($stepsData as $i => $step) {
-            $config = $step['config'] ?? [];
             AutomationSequenceStep::create([
                 'sequence_id' => $sequence->id,
                 'step_order' => $i + 1,
                 'type' => $step['type'] ?? 'email',
-                'config' => $config,
+                'config' => $step['config'] ?? [],
             ]);
         }
 
         return redirect()->route('automation.sequences.index')->with('success', 'Sequence updated.');
     }
 
-    /**
-     * Toggle sequence active/paused.
-     */
     public function toggleSequence(AutomationSequence $sequence)
     {
         $this->ensureTenantSequence($sequence);
-        $sequence->update(['is_active' => !$sequence->is_active]);
+        $sequence->update(['is_active' => ! $sequence->is_active]);
+
         return redirect()->route('automation.sequences.index')
             ->with('success', $sequence->is_active ? 'Sequence activated.' : 'Sequence paused.');
     }
 
-    /**
-     * Delete sequence.
-     */
     public function destroySequence(AutomationSequence $sequence)
     {
         $this->ensureTenantSequence($sequence);
         $sequence->delete();
+
         return redirect()->route('automation.sequences.index')->with('success', 'Sequence deleted.');
-    }
-
-    private function ensureTenantSequence(AutomationSequence $sequence): void
-    {
-        if ($sequence->tenant_id !== $this->tenantId()) {
-            abort(403, 'Unauthorized.');
-        }
-    }
-
-    private function validateSequenceSteps(array $stepsData): void
-    {
-        $allowedTypes = ['email', 'delay'];
-        foreach ($stepsData as $i => $step) {
-            $type = $step['type'] ?? 'email';
-            if (!in_array($type, $allowedTypes, true)) {
-                throw \Illuminate\Validation\ValidationException::withMessages([
-                    'steps' => 'Step ' . ($i + 1) . ': only email and delay steps are allowed.',
-                ]);
-            }
-            if ($i === 0 && $type === 'delay') {
-                throw \Illuminate\Validation\ValidationException::withMessages([
-                    'steps' => 'The first step cannot be a delay.',
-                ]);
-            }
-        }
-    }
-
-    private function stepDescriptionForView(AutomationSequenceStep $step): string
-    {
-        $config = $step->config ?? [];
-        if ($step->type === 'email') {
-            return $config['subject'] ?? 'Send email';
-        }
-        if ($step->type === 'delay') {
-            $d = $config['duration'] ?? 1;
-            $u = $config['unit'] ?? 'days';
-            return 'Wait ' . $d . ' ' . $u;
-        }
-        return 'Step';
     }
 
     public function workflows(Request $request)
     {
-        $tenantId = $this->tenantId();
         $search = trim((string) $request->get('search', ''));
         $status = $request->get('status', '');
 
-        $query = AutomationWorkflow::where('tenant_id', $tenantId)
+        $query = AutomationWorkflow::where('tenant_id', $this->tenantId())
             ->where('type', AutomationWorkflow::TYPE_TENANT)
             ->orderByDesc('updated_at');
         if ($status === 'active') {
@@ -280,20 +296,20 @@ class AutomationController extends Controller
         if ($search !== '') {
             $query->where('name', 'like', '%' . $search . '%');
         }
-        $workflows = $query->get();
-        $sequences = AutomationSequence::where('tenant_id', $tenantId)->get(['id', 'name']);
 
-        $workflowsForView = $workflows->map(fn (AutomationWorkflow $w) => [
-            'id' => $w->id,
-            'name' => $w->name,
-            'trigger' => $w->trigger_event,
-            'trigger_label' => $this->triggerEventLabel($w->trigger_event),
-            'recipient' => $w->action_config['recipient'] ?? 'lead.email',
-            'recipient_label' => $this->recipientLabel($w->action_config['recipient'] ?? null),
-            'action_label' => $this->workflowActionDisplayLabel($w, $sequences),
-            'status' => $w->is_active ? 'active' : 'paused',
-            'updated' => $w->updated_at->toIso8601String(),
-            'type' => $w->type,
+        $workflows = $query->get();
+        $sequences = AutomationSequence::where('tenant_id', $this->tenantId())->get(['id', 'name']);
+        $workflowsForView = $workflows->map(fn (AutomationWorkflow $workflow) => [
+            'id' => $workflow->id,
+            'name' => $workflow->name,
+            'trigger' => $workflow->trigger_event,
+            'trigger_label' => $this->triggerEventLabel($workflow->trigger_event),
+            'recipient' => $workflow->action_config['recipient'] ?? 'lead.email',
+            'recipient_label' => $this->recipientLabel($workflow->action_config['recipient'] ?? null),
+            'action_label' => $this->workflowActionDisplayLabel($workflow, $sequences),
+            'status' => $workflow->is_active ? 'active' : 'paused',
+            'updated' => $workflow->updated_at->toIso8601String(),
+            'type' => $workflow->type,
         ])->all();
 
         return view('automation.workflows.index', [
@@ -304,13 +320,10 @@ class AutomationController extends Controller
 
     public function createWorkflow()
     {
-        $tenantId = $this->tenantId();
-        $sequences = AutomationSequence::where('tenant_id', $tenantId)->orderBy('name')->get(['id', 'name']);
-        $funnels = Funnel::where('tenant_id', $tenantId)->orderBy('name')->get(['id', 'name']);
         return view('automation.workflows.create', [
             'workflow' => null,
-            'sequences' => $sequences,
-            'funnels' => $funnels,
+            'sequences' => AutomationSequence::where('tenant_id', $this->tenantId())->orderBy('name')->get(['id', 'name']),
+            'funnels' => Funnel::where('tenant_id', $this->tenantId())->orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -329,25 +342,25 @@ class AutomationController extends Controller
             'is_active' => 'nullable|boolean',
         ]);
 
-        $tenantId = $this->tenantId();
         $triggerFilters = [];
-        if (!empty($validated['conditions_note'])) {
+        if (! empty($validated['conditions_note'])) {
             $triggerFilters['note'] = $validated['conditions_note'];
         }
-        if ($validated['trigger'] === 'funnel.opt_in' && !empty($validated['funnel_id'])) {
+        if ($validated['trigger'] === 'funnel.opt_in' && ! empty($validated['funnel_id'])) {
             $triggerFilters['funnel_id'] = (int) $validated['funnel_id'];
         }
+
         $actionConfig = [];
         if ($validated['action_type'] === 'send_email') {
             $actionConfig['recipient'] = $validated['recipient'] ?? 'lead.email';
             $actionConfig['subject'] = $validated['email_subject'] ?? '';
             $actionConfig['body'] = $validated['email_body'] ?? '';
-        } elseif ($validated['action_type'] === 'start_sequence' && !empty($validated['sequence_id'])) {
+        } elseif ($validated['action_type'] === 'start_sequence' && ! empty($validated['sequence_id'])) {
             $actionConfig['sequence_id'] = (int) $validated['sequence_id'];
         }
 
         AutomationWorkflow::create([
-            'tenant_id' => $tenantId,
+            'tenant_id' => $this->tenantId(),
             'name' => $validated['name'],
             'type' => AutomationWorkflow::TYPE_TENANT,
             'trigger_event' => $validated['trigger'],
@@ -364,23 +377,21 @@ class AutomationController extends Controller
     public function editWorkflow(AutomationWorkflow $workflow)
     {
         $this->ensureTenantWorkflow($workflow);
-        if (!$workflow->isTenant()) {
+        if (! $workflow->isTenant()) {
             abort(403, 'System workflows cannot be edited.');
         }
-        $tenantId = $this->tenantId();
-        $sequences = AutomationSequence::where('tenant_id', $tenantId)->orderBy('name')->get(['id', 'name']);
-        $funnels = Funnel::where('tenant_id', $tenantId)->orderBy('name')->get(['id', 'name']);
+
         return view('automation.workflows.edit', [
             'workflow' => $workflow,
-            'sequences' => $sequences,
-            'funnels' => $funnels,
+            'sequences' => AutomationSequence::where('tenant_id', $this->tenantId())->orderBy('name')->get(['id', 'name']),
+            'funnels' => Funnel::where('tenant_id', $this->tenantId())->orderBy('name')->get(['id', 'name']),
         ]);
     }
 
     public function updateWorkflow(Request $request, AutomationWorkflow $workflow)
     {
         $this->ensureTenantWorkflow($workflow);
-        if (!$workflow->isTenant()) {
+        if (! $workflow->isTenant()) {
             abort(403, 'System workflows cannot be updated.');
         }
 
@@ -398,21 +409,20 @@ class AutomationController extends Controller
         ]);
 
         $triggerFilters = [];
-        if (!empty($validated['conditions_note'])) {
+        if (! empty($validated['conditions_note'])) {
             $triggerFilters['note'] = $validated['conditions_note'];
         }
-        if ($validated['trigger'] === 'funnel.opt_in' && !empty($validated['funnel_id'])) {
+        if ($validated['trigger'] === 'funnel.opt_in' && ! empty($validated['funnel_id'])) {
             $triggerFilters['funnel_id'] = (int) $validated['funnel_id'];
         }
+
         $actionConfig = [];
         if ($validated['action_type'] === 'send_email') {
             $actionConfig['recipient'] = $validated['recipient'] ?? 'lead.email';
             $actionConfig['subject'] = $validated['email_subject'] ?? '';
             $actionConfig['body'] = $validated['email_body'] ?? '';
-        } elseif ($validated['action_type'] === 'start_sequence' && !empty($validated['sequence_id'])) {
+        } elseif ($validated['action_type'] === 'start_sequence' && ! empty($validated['sequence_id'])) {
             $actionConfig['sequence_id'] = (int) $validated['sequence_id'];
-        } else {
-            $actionConfig = [];
         }
 
         $workflow->update([
@@ -430,10 +440,12 @@ class AutomationController extends Controller
     public function toggleWorkflow(AutomationWorkflow $workflow)
     {
         $this->ensureTenantWorkflow($workflow);
-        if (!$workflow->isTenant()) {
+        if (! $workflow->isTenant()) {
             abort(403, 'System workflows cannot be toggled.');
         }
-        $workflow->update(['is_active' => !$workflow->is_active]);
+
+        $workflow->update(['is_active' => ! $workflow->is_active]);
+
         return redirect()->route('automation.workflows.index')
             ->with('success', $workflow->is_active ? 'Workflow activated.' : 'Workflow paused.');
     }
@@ -441,12 +453,12 @@ class AutomationController extends Controller
     public function duplicateWorkflow(AutomationWorkflow $workflow)
     {
         $this->ensureTenantWorkflow($workflow);
-        if (!$workflow->isTenant()) {
+        if (! $workflow->isTenant()) {
             abort(403, 'System workflows cannot be duplicated.');
         }
-        $tenantId = $this->tenantId();
+
         AutomationWorkflow::create([
-            'tenant_id' => $tenantId,
+            'tenant_id' => $this->tenantId(),
             'name' => $workflow->name . ' (Copy)',
             'type' => AutomationWorkflow::TYPE_TENANT,
             'trigger_event' => $workflow->trigger_event,
@@ -456,27 +468,29 @@ class AutomationController extends Controller
             'is_active' => false,
             'created_by' => auth()->id(),
         ]);
+
         return redirect()->route('automation.workflows.index')->with('success', 'Workflow duplicated.');
     }
 
     public function destroyWorkflow(AutomationWorkflow $workflow)
     {
         $this->ensureTenantWorkflow($workflow);
-        if (!$workflow->isTenant()) {
+        if (! $workflow->isTenant()) {
             abort(403, 'System workflows cannot be deleted.');
         }
+
         $workflow->delete();
+
         return redirect()->route('automation.workflows.index')->with('success', 'Workflow deleted.');
     }
 
     public function logs(Request $request)
     {
-        $tenantId = $this->tenantId();
         $dateRange = $request->get('date_range', '7');
         $type = $request->get('type', '');
         $resultStatus = $request->get('result', '');
 
-        $query = AutomationLog::where('tenant_id', $tenantId)->with('workflow')->orderByDesc('ran_at');
+        $query = AutomationLog::where('tenant_id', $this->tenantId())->with('workflow')->orderByDesc('ran_at');
         if ($dateRange === 'today') {
             $query->where('ran_at', '>=', now()->startOfDay());
         } elseif ($dateRange === '30') {
@@ -489,13 +503,13 @@ class AutomationController extends Controller
         } elseif ($resultStatus === 'failed') {
             $query->where('status', 'failed');
         }
-        $logs = $query->get();
 
-        $logsForView = $logs->map(function (AutomationLog $log) use ($type) {
+        $logsForView = $query->get()->map(function (AutomationLog $log) use ($type) {
             $logType = $log->workflow_id ? 'workflow' : 'sequence';
             if ($type !== '' && $logType !== $type) {
                 return null;
             }
+
             return [
                 'id' => (string) $log->id,
                 'time' => $log->ran_at->toIso8601String(),
@@ -519,11 +533,11 @@ class AutomationController extends Controller
 
     public function showLog(string $id)
     {
-        $tenantId = $this->tenantId();
-        $log = AutomationLog::where('tenant_id', $tenantId)->where('id', $id)->with('workflow')->first();
-        if (!$log) {
+        $log = AutomationLog::where('tenant_id', $this->tenantId())->where('id', $id)->with('workflow')->first();
+        if (! $log) {
             abort(404);
         }
+
         $logType = $log->workflow_id ? 'workflow' : 'sequence';
         $logForView = [
             'id' => (string) $log->id,
@@ -539,7 +553,46 @@ class AutomationController extends Controller
                 'payload' => $log->payload,
             ]),
         ];
+
         return view('automation.logs.show', ['log' => $logForView]);
+    }
+
+    private function ensureTenantSequence(AutomationSequence $sequence): void
+    {
+        if ($sequence->tenant_id !== $this->tenantId()) {
+            abort(403, 'Unauthorized.');
+        }
+    }
+
+    private function validateSequenceSteps(array $stepsData): void
+    {
+        $allowedTypes = ['email', 'delay'];
+        foreach ($stepsData as $i => $step) {
+            $type = $step['type'] ?? 'email';
+            if (! in_array($type, $allowedTypes, true)) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'steps' => 'Step ' . ($i + 1) . ': only email and delay steps are allowed.',
+                ]);
+            }
+            if ($i === 0 && $type === 'delay') {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'steps' => 'The first step cannot be a delay.',
+                ]);
+            }
+        }
+    }
+
+    private function stepDescriptionForView(AutomationSequenceStep $step): string
+    {
+        $config = $step->config ?? [];
+        if ($step->type === 'email') {
+            return $config['subject'] ?? 'Send email';
+        }
+        if ($step->type === 'delay') {
+            return 'Wait ' . ($config['duration'] ?? 1) . ' ' . ($config['unit'] ?? 'days');
+        }
+
+        return 'Step';
     }
 
     private function ensureTenantWorkflow(AutomationWorkflow $workflow): void
@@ -552,8 +605,9 @@ class AutomationController extends Controller
     private function triggerEventLabel(?string $event): string
     {
         if ($event === null || $event === '') {
-            return '—';
+            return '-';
         }
+
         return match ($event) {
             'lead.created' => 'Lead created',
             'lead.status_changed' => 'Lead status changed',
@@ -567,8 +621,9 @@ class AutomationController extends Controller
     private function actionTypeLabel(?string $action): string
     {
         if ($action === null || $action === '') {
-            return '—';
+            return '-';
         }
+
         return match ($action) {
             'send_email' => 'Send Email',
             'start_sequence' => 'Start Sequence',
@@ -580,8 +635,9 @@ class AutomationController extends Controller
     private function recipientLabel(?string $recipient): string
     {
         if ($recipient === null || $recipient === '') {
-            return '—';
+            return '-';
         }
+
         return match ($recipient) {
             'lead.email' => 'Lead email',
             'assigned_agent.email' => 'Assigned agent email',
@@ -589,16 +645,12 @@ class AutomationController extends Controller
         };
     }
 
-    /**
-     * Human-readable action description for workflow list (e.g. "Send Email (Lead email)", "Start Sequence (Welcome)").
-     */
-    private function workflowActionDisplayLabel(AutomationWorkflow $w, \Illuminate\Support\Collection $sequences): string
+    private function workflowActionDisplayLabel(AutomationWorkflow $workflow, \Illuminate\Support\Collection $sequences): string
     {
-        $action = $w->action_type ?? '';
-        $config = $w->action_config ?? [];
+        $action = $workflow->action_type ?? '';
+        $config = $workflow->action_config ?? [];
         if ($action === 'send_email') {
-            $recip = $this->recipientLabel($config['recipient'] ?? 'lead.email');
-            return 'Send Email (' . $recip . ')';
+            return 'Send Email (' . $this->recipientLabel($config['recipient'] ?? 'lead.email') . ')';
         }
         if ($action === 'start_sequence') {
             $seqId = $config['sequence_id'] ?? null;
@@ -608,11 +660,12 @@ class AutomationController extends Controller
         if ($action === 'notify_sales') {
             return 'Notify Sales Agent';
         }
+
         return $this->actionTypeLabel($action);
     }
 
-    private function placeholderSequences(): array
+    private function canBypassPlanEnforcement(): bool
     {
-        return [];
+        return auth()->check() && auth()->user()->hasRole('super-admin');
     }
 }

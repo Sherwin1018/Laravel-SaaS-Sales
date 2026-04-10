@@ -9,6 +9,7 @@ use App\Models\Payment;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Central service for dispatching automation webhooks to n8n.
@@ -141,11 +142,73 @@ class AutomationWebhookService
     }
 
     /**
+     * Build payload for account events (account_owner_paid_signup_created, team_member_invited, etc.)
+     */
+    public function buildAccountEventPayload(string $event, string $email, string $name, array $additionalData = []): array
+    {
+        $payload = [
+            'event' => $event,
+            'email' => $email,
+            'name' => $name,
+            'tenant_id' => $additionalData['tenant_id'] ?? 0,
+        ];
+
+        // Add account-specific fields
+        if (isset($additionalData['setup_url'])) {
+            $payload['setup_url'] = $additionalData['setup_url'];
+        }
+        if (isset($additionalData['expires_at'])) {
+            $payload['expires_at'] = $additionalData['expires_at'];
+        }
+        if (isset($additionalData['login_url'])) {
+            $payload['login_url'] = $additionalData['login_url'];
+        }
+        if (isset($additionalData['user_id'])) {
+            $payload['user_id'] = $additionalData['user_id'];
+        }
+        if (isset($additionalData['event_name'])) {
+            $payload['event_name'] = $additionalData['event_name'];
+        }
+
+        return $payload;
+    }
+
+    /**
+     * Validate account event payload
+     */
+    private function validateAccountEvent(string $event, array $payload): bool
+    {
+        $requiredFields = [
+            'account_owner_paid_signup_created' => ['email', 'name', 'setup_url', 'expires_at'],
+            'team_member_invited' => ['email', 'name', 'setup_url', 'expires_at'],
+            'customer_portal_invited' => ['email', 'name', 'setup_url', 'expires_at'],
+            'setup_link_expiring' => ['email', 'name', 'setup_url', 'expires_at'],
+            'setup_link_expired' => ['email', 'name']
+        ];
+
+        $required = $requiredFields[$event] ?? [];
+
+        foreach ($required as $field) {
+            if (empty($payload[$field])) {
+                Log::error("Missing required field '{$field}' for event '{$event}'", $payload);
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
      * Generate unique event_id, persist to outbox, and dispatch job. Prevents duplicate send by using unique event_id.
      * One logical occurrence = one event_id = one outbox row = one job.
      */
     public function dispatchEvent(string $event, array $payload): bool
     {
+        // Validate account events
+        if ($this->isAccountEvent($event) && !$this->validateAccountEvent($event, $payload)) {
+            return false;
+        }
+
         $eventId = (string) Str::uuid();
 
         $payload['event_id'] = $eventId;
@@ -166,5 +229,19 @@ class AutomationWebhookService
         SendN8nWebhookJob::dispatch($eventId, $payload);
 
         return true;
+    }
+
+    /**
+     * Check if event is an account event
+     */
+    private function isAccountEvent(string $event): bool
+    {
+        return in_array($event, [
+            'account_owner_paid_signup_created',
+            'team_member_invited',
+            'customer_portal_invited',
+            'setup_link_expiring',
+            'setup_link_expired'
+        ]);
     }
 }

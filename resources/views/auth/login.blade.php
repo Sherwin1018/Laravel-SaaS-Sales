@@ -92,6 +92,10 @@
 
                 <button type="submit">Login</button>
             </form>
+            <a href="{{ route('auth.google.redirect') }}" style="display:flex;align-items:center;justify-content:center;gap:10px;margin-top:12px;padding:12px;border-radius:10px;border:1px solid #E6E1EF;background:#fff;color:#111827;text-decoration:none;font-weight:600;">
+                <i class="fab fa-google" style="color:#ea4335;"></i>
+                Continue with Google
+            </a>
 
             <p class="register-link">
                 Don't have an account? <a href="{{ route('register') }}">Register here</a>

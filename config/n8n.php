@@ -57,6 +57,7 @@ return [
         'lead_status_changed' => env('N8N_WEBHOOK_LEAD_STATUS_CHANGED', 'lead-status-changed'),
         'payment_paid' => env('N8N_WEBHOOK_PAYMENT_PAID', 'payment-paid'),
         'payment_failed' => env('N8N_WEBHOOK_PAYMENT_FAILED', 'payment-failed'),
+        'saas_events' => env('N8N_WEBHOOK_SAAS_EVENTS', 'saas-events'),
     ],
 
 ];

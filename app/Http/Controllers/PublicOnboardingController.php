@@ -28,10 +28,12 @@ class PublicOnboardingController extends Controller
         }
 
         return view('marketing.landing', [
-            'plans' => $onboarding->plans(),
+            'plans' => $onboarding->plans(includeFreeTrial: true),
             'landingHeroVideoUrl' => $landingHeroVideoUrl,
             'landingHeroVideoWidth' => max(1, $landingHeroVideoWidth),
             'landingHeroVideoHeight' => max(1, $landingHeroVideoHeight),
+            'googleSignupVerified' => session('google_signup_verified'),
+            'googleSignupContext' => session('google_signup_context'),
         ]);
     }
 
@@ -42,6 +44,12 @@ class PublicOnboardingController extends Controller
         }
 
         $trialMode = $request->boolean('trial');
+
+        if (! $trialMode) {
+            return redirect()
+                ->route('landing', ['plan' => (string) $request->query('plan', 'growth')])
+                ->with('open_onboarding_modal', true);
+        }
 
         return view('auth.register', [
             'plans' => $onboarding->plans(),
@@ -62,7 +70,8 @@ class PublicOnboardingController extends Controller
             'full_name' => 'required|string|max:255',
             'company_name' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email',
-            'password' => [
+            'mobile' => $trialMode ? 'nullable|string|max:32' : ['required', 'regex:/^09\d{9}$/'],
+            'password' => $trialMode ? [
                 'required',
                 'string',
                 'min:12',
@@ -72,11 +81,13 @@ class PublicOnboardingController extends Controller
                 'regex:/[0-9]/',
                 'regex:/[^A-Za-z0-9]/',
                 'confirmed',
-            ],
+            ] : 'nullable|string',
             'plan' => $trialMode ? 'nullable|string' : 'required|string',
             'trial_mode' => 'nullable|boolean',
         ], [
             'password.regex' => 'Password must contain uppercase, lowercase, number, and a special character.',
+            'mobile.regex' => 'Mobile number must be a valid PH format (09XXXXXXXXX).',
+            'email.unique' => 'This email is already registered. Please use another email or log in.',
         ]);
 
         try {
@@ -91,26 +102,64 @@ class PublicOnboardingController extends Controller
                     ->with('success', 'Your 7-day free trial is now active. Welcome to your Account Owner dashboard.');
             }
 
+            $googleVerified = $request->session()->get('google_signup_verified');
+            if (is_array($googleVerified)) {
+                $verifiedEmail = mb_strtolower(trim((string) ($googleVerified['email'] ?? '')));
+                $verifiedName = trim((string) ($googleVerified['full_name'] ?? ''));
+                $verifiedGoogleId = trim((string) ($googleVerified['google_id'] ?? ''));
+                if ($verifiedEmail === '' || $verifiedName === '' || $verifiedGoogleId === '') {
+                    return back()->withInput()->with('error', 'Google verification is incomplete. Please continue with Google again.');
+                }
+
+                if (mb_strtolower(trim((string) $validated['email'])) !== $verifiedEmail) {
+                    return back()->withInput()->with('error', 'Email does not match the verified Google account. Please use Continue with Google again.');
+                }
+
+                $validated['email'] = $verifiedEmail;
+                $validated['full_name'] = $verifiedName;
+            }
+
             $intent = $onboarding->upsertIntent($validated);
 
             if ($payMongo->isConfigured()) {
-                $session = $onboarding->beginPayMongoCheckout($intent, $payMongo);
+                $checkoutOptions = [];
+                if (is_array($googleVerified)) {
+                    $checkoutOptions = [
+                        'flow' => 'signup_google',
+                        'google_signup' => true,
+                        'google_id' => (string) ($googleVerified['google_id'] ?? ''),
+                    ];
+                }
+
+                $session = $onboarding->beginPayMongoCheckout($intent, $payMongo, $checkoutOptions);
                 if ($session === null) {
                     return back()->withInput()->with('error', 'Unable to start PayMongo checkout. Please verify your payment settings and try again.');
+                }
+
+                if (is_array($googleVerified)) {
+                    $request->session()->forget('google_signup_context');
+                    $request->session()->forget('google_signup_verified');
                 }
 
                 return redirect()->away($session['checkout_url']);
             }
 
             $intent = $onboarding->markPaid($intent, 'manual');
-            $user = $onboarding->finalize($intent);
+            $onboarding->finalize($intent, [
+                'auto_activate' => is_array($googleVerified),
+                'google_id' => is_array($googleVerified) ? (string) ($googleVerified['google_id'] ?? '') : null,
+            ]);
 
-            Auth::login($user, true);
-            $request->session()->regenerate();
+            if (is_array($googleVerified)) {
+                $request->session()->forget('google_signup_context');
+                $request->session()->forget('google_signup_verified');
+            }
 
             return redirect()
-                ->route('dashboard.owner')
-                ->with('success', 'Registration completed successfully. Your Account Owner dashboard is ready.');
+                ->route('login')
+                ->with('success', is_array($googleVerified)
+                    ? 'Payment Successful. Your account is active. Continue with Google to access your dashboard.'
+                    : 'Payment Successful. Please check your email to activate your account.');
         } catch (\Throwable $e) {
             report($e);
 
@@ -125,25 +174,36 @@ class PublicOnboardingController extends Controller
         PayMongoCheckoutService $payMongo,
     ) {
         try {
-            if ($signupIntent->status === 'completed') {
-                $user = User::query()->where('email', $signupIntent->email)->first();
-                if ($user) {
-                    Auth::login($user, true);
-                    $request->session()->regenerate();
+            $isGoogleSignup = $request->boolean('google_signup');
+            $googleId = null;
+            $sessionId = (string) $signupIntent->provider_reference;
+            $data = null;
 
-                    return redirect()
-                        ->route('dashboard.owner')
-                        ->with('success', 'Payment confirmed successfully. Welcome to your Account Owner dashboard.');
+            if ($sessionId !== '' && ($signupIntent->status !== 'paid' || $isGoogleSignup)) {
+                $data = $payMongo->retrieveCheckoutSession($sessionId);
+                $flow = (string) data_get($data, 'attributes.metadata.flow', '');
+                if ($flow === 'signup_google') {
+                    $isGoogleSignup = true;
+                }
+                $metaGoogleId = (string) data_get($data, 'attributes.metadata.google_id', '');
+                if ($metaGoogleId !== '') {
+                    $googleId = $metaGoogleId;
                 }
             }
 
+            if ($signupIntent->status === 'completed' || $signupIntent->lifecycle_state === 'email_sent') {
+                return redirect()
+                    ->route('login')
+                    ->with('success', $isGoogleSignup
+                        ? 'Payment Successful. Your account is active. Continue with Google to access your dashboard.'
+                        : 'Payment Successful. Please check your email to activate your account.');
+            }
+
             if ($signupIntent->status !== 'paid') {
-                $sessionId = (string) $signupIntent->provider_reference;
                 if ($sessionId === '') {
                     return redirect()->route('register')->with('error', 'We could not verify your payment session. Please try again.');
                 }
 
-                $data = $payMongo->retrieveCheckoutSession($sessionId);
                 if ($data === null) {
                     return redirect()->route('register')->with('error', 'We could not verify your payment yet. If you completed checkout, wait a moment and try again.');
                 }
@@ -173,14 +233,16 @@ class PublicOnboardingController extends Controller
                 $signupIntent = $onboarding->markPaid($signupIntent, $method);
             }
 
-            $user = $onboarding->finalize($signupIntent);
-
-            Auth::login($user, true);
-            $request->session()->regenerate();
+            $onboarding->finalize($signupIntent, [
+                'auto_activate' => $isGoogleSignup,
+                'google_id' => $isGoogleSignup ? $googleId : null,
+            ]);
 
             return redirect()
-                ->route('dashboard.owner')
-                ->with('success', 'Registration completed successfully. Welcome to your Account Owner dashboard.');
+                ->route('login')
+                ->with('success', $isGoogleSignup
+                    ? 'Payment Successful. Your account is active. Continue with Google to access your dashboard.'
+                    : 'Payment Successful. Please check your email to activate your account.');
         } catch (\Throwable $e) {
             report($e);
 

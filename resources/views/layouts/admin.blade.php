@@ -40,12 +40,31 @@
             --theme-surface-softer: {{ $themeSurfaceSofter }};
             --theme-border: {{ $themeBorder }};
             --theme-muted: {{ $themeMuted }};
+            --ui-btn-font-size: 14px;
+            --ui-btn-px: 16px;
+            --ui-btn-py: 10px;
+            --ui-btn-radius: 8px;
+            --ui-btn-min-height: 40px;
         }
         body.builder-full-width .main-content {
             margin-left: 0;
             width: 100%;
             max-width: 100%;
             box-sizing: border-box;
+        }
+
+        /* Consistent button sizing across app pages (colors remain unchanged). */
+        .main-content a.btn-create,
+        .main-content button.btn-create,
+        .main-content button[type="submit"]:not(.modal-close-btn):not(.status-toast-close):not(.toggle-btn):not(.dots-btn):not(.toggle-eye):not(.landing-video-close):not([style*="background:none"]):not([style*="background: none"]):not([style*="padding:0"]):not([style*="padding: 0"]),
+        .main-content button[type="button"]:not(.modal-close-btn):not(.status-toast-close):not(.toggle-btn):not(.dots-btn):not(.toggle-eye):not(.landing-video-close):not([style*="background:none"]):not([style*="background: none"]):not([style*="padding:0"]):not([style*="padding: 0"]),
+        .main-content input[type="submit"] {
+            min-height: var(--ui-btn-min-height) !important;
+            padding: var(--ui-btn-py) var(--ui-btn-px) !important;
+            border-radius: var(--ui-btn-radius) !important;
+            font-size: var(--ui-btn-font-size) !important;
+            font-weight: 600 !important;
+            line-height: 1.2 !important;
         }
     </style>
     <!-- FontAwesome for Icons -->
@@ -97,6 +116,9 @@
                 </a>
                 <a href="{{ route('admin.plans.index') }}" class="{{ request()->routeIs('admin.plans.*') ? 'active' : '' }}">
                     <i class="fas fa-tags"></i> <span>Plans</span>
+                </a>
+                <a href="{{ route('admin.automation.index') }}" class="{{ request()->routeIs('admin.automation.*') ? 'active' : '' }}">
+                    <i class="fas fa-clipboard-list"></i> <span>Automation</span>
                 </a>
             @endif
 

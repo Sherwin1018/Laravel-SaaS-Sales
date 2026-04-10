@@ -44,6 +44,17 @@ class AuthController extends Controller
                 return redirect()->route('login')->with('error', $message);
             }
 
+            if (
+                ! $user->hasRole('super-admin')
+                && $this->requiresActivationSetup($user)
+            ) {
+                Auth::logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+
+                return redirect()->route('login')->with('error', 'Please verify your email and complete password setup before continuing.');
+            }
+
             $user->last_login_at = now();
             $user->save();
 
@@ -136,5 +147,16 @@ class AuthController extends Controller
         }
 
         return null;
+    }
+
+    private function requiresActivationSetup($user): bool
+    {
+        return in_array((string) $user->activation_state, [
+            'invited',
+            'pending_activation',
+            'email_sent',
+            'email_verified',
+            'password_set',
+        ], true);
     }
 }

@@ -13,6 +13,42 @@
         .sa-table {
             min-width: 860px;
         }
+
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-box {
+            background: var(--theme-surface, #FFFFFF);
+            border-radius: 8px;
+            padding: 24px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .delete-tenant-modal-box {
+            max-width: 460px;
+            width: 100%;
+        }
+
+        .modal-close-btn {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: var(--theme-muted, #6B7280);
+            line-height: 1;
+            padding: 0 4px;
+        }
+
+        .modal-close-btn:hover {
+            color: var(--theme-body-text, #111827);
+        }
     </style>
 @endsection
 
@@ -63,13 +99,91 @@
         </div>
     </div>
 
+    <div id="deleteTenantModal" class="modal-overlay" style="display: none;">
+        <div class="modal-box delete-tenant-modal-box" role="dialog" aria-modal="true" aria-labelledby="deleteTenantModalTitle">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:8px;">
+                <h3 id="deleteTenantModalTitle" style="margin:0;">Confirm Tenant Deletion</h3>
+                <button type="button" id="closeDeleteTenantModal" class="modal-close-btn">&times;</button>
+            </div>
+            <p style="margin: 0 0 18px; color: var(--theme-muted, #6B7280); line-height: 1.6;">
+                Are you sure you want to delete <strong id="deleteTenantName">this tenant</strong>?
+            </p>
+            <div style="display:flex;justify-content:flex-end;gap:10px;">
+                <button type="button" id="cancelDeleteTenantBtn" class="btn-create" style="background:#64748B;">
+                    Cancel
+                </button>
+                <button type="button" id="confirmDeleteTenantBtn" class="btn-create" style="background:#DC2626;">
+                    Delete
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const searchInput = document.getElementById('searchInput');
             const tableBody = document.getElementById('tableBody');
             const paginationLinks = document.getElementById('paginationLinks');
+            const deleteTenantModal = document.getElementById('deleteTenantModal');
+            const deleteTenantName = document.getElementById('deleteTenantName');
+            const closeDeleteTenantModal = document.getElementById('closeDeleteTenantModal');
+            const cancelDeleteTenantBtn = document.getElementById('cancelDeleteTenantBtn');
+            const confirmDeleteTenantBtn = document.getElementById('confirmDeleteTenantBtn');
 
             let timeout = null;
+            let pendingDeleteForm = null;
+
+            const closeTenantDeleteModal = () => {
+                if (!deleteTenantModal) return;
+                deleteTenantModal.style.display = 'none';
+                pendingDeleteForm = null;
+            };
+
+            const openTenantDeleteModal = (form) => {
+                if (!deleteTenantModal) return;
+                pendingDeleteForm = form;
+                const tenantName = form.getAttribute('data-tenant-name') || 'this tenant';
+                if (deleteTenantName) {
+                    deleteTenantName.textContent = tenantName;
+                }
+                deleteTenantModal.style.display = 'flex';
+            };
+
+            document.addEventListener('submit', function(event) {
+                const form = event.target;
+                if (!(form instanceof HTMLFormElement) || !form.matches('form[data-delete-tenant-form]')) {
+                    return;
+                }
+
+                event.preventDefault();
+                openTenantDeleteModal(form);
+            });
+
+            if (closeDeleteTenantModal) {
+                closeDeleteTenantModal.addEventListener('click', closeTenantDeleteModal);
+            }
+            if (cancelDeleteTenantBtn) {
+                cancelDeleteTenantBtn.addEventListener('click', closeTenantDeleteModal);
+            }
+            if (confirmDeleteTenantBtn) {
+                confirmDeleteTenantBtn.addEventListener('click', function() {
+                    if (pendingDeleteForm) {
+                        pendingDeleteForm.submit();
+                    }
+                });
+            }
+            if (deleteTenantModal) {
+                deleteTenantModal.addEventListener('click', function(event) {
+                    if (event.target === deleteTenantModal) {
+                        closeTenantDeleteModal();
+                    }
+                });
+            }
+            document.addEventListener('keydown', function(event) {
+                if (event.key === 'Escape' && deleteTenantModal && deleteTenantModal.style.display === 'flex') {
+                    closeTenantDeleteModal();
+                }
+            });
 
             searchInput.addEventListener('keyup', function() {
                 clearTimeout(timeout);

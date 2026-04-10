@@ -257,11 +257,13 @@ input:focus {
 button {
     background-color: var(--primary-color);
     color: var(--white);
-    padding: 12px;
+    min-height: 40px;
+    padding: 10px 16px;
     border: none;
     border-radius: 8px;
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 600;
+    line-height: 1.2;
     cursor: pointer;
     transition: background-color 0.2s;
     margin-top: 10px;

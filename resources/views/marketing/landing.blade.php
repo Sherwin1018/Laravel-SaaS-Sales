@@ -11,6 +11,25 @@
     <link rel="stylesheet" href="{{ asset('css/landing-page.css') }}">
 </head>
 <body>
+    @if(session('success') || session('error') || $errors->any())
+        <div id="statusToastContainer" style="position:fixed;top:18px;right:18px;z-index:99999;">
+            <div style="display:flex;gap:12px;align-items:center;background:#fff;border-radius:14px;width:min(90vw,420px);padding:12px 38px 12px 12px;border:1px solid #E6E1EF;box-shadow:0 18px 38px rgba(15,23,42,.2);position:relative;">
+                <i aria-hidden="true" style="font-size:22px;color:{{ session('success') ? '#65A30D' : '#B91C1C' }};">{{ session('success') ? '✓' : '!' }}</i>
+                <div>
+                    <h4 style="margin:0 0 6px 0;font-size:15px;font-weight:800;color:{{ session('success') ? '#65A30D' : '#B91C1C' }};">
+                        {{ session('success') ? 'Success' : 'Attention' }}
+                    </h4>
+                    <p style="margin:0;color:#334155;font-size:14px;font-weight:500;line-height:1.25;">
+                        {{ $errors->any() ? $errors->first() : (session('success') ?? session('error')) }}
+                    </p>
+                </div>
+                <button type="button" onclick="landingCloseStatusToast()" aria-label="Close notification"
+                    style="position:absolute;top:8px;right:8px;border:none;background:transparent;color:#334155;font-size:16px;cursor:pointer;line-height:1;">
+                    x
+                </button>
+            </div>
+        </div>
+    @endif
     <div class="landing-page">
         <header class="landing-header">
             <div class="landing-header__inner">
@@ -31,7 +50,7 @@
                     <a href="#pricing">Pricing</a>
                     <a href="#faq">FAQ</a>
                     <a href="{{ route('login') }}" class="landing-nav__signin">Sign In</a>
-                    <a href="{{ route('register') }}" class="landing-nav__cta">Get Started</a>
+                    <a href="#" class="landing-nav__cta" data-open-onboarding data-plan-code="{{ request('plan', 'growth') }}">Get Started</a>
                 </nav>
             </div>
         </header>
@@ -47,7 +66,7 @@
                     </p>
 
                     <div class="hero__actions">
-                        <a href="{{ route('register') }}" class="button button--primary">Get Started</a>
+                        <a href="#" class="button button--primary" data-open-onboarding data-plan-code="{{ request('plan', 'growth') }}">Get Started</a>
                         <a href="{{ route('register', ['trial' => 1]) }}" class="button button--trial">Free Trial</a>
                         <a href="#services" class="button button--secondary">Explore Services</a>
                     </div>
@@ -113,19 +132,19 @@
                         <div class="service-card__icon">01</div>
                         <h3>Funnel Design</h3>
                         <p>Design opt-in, checkout, upsell, downsell, and thank-you steps that match your conversion path.</p>
-                        <a href="{{ route('register') }}">Learn More</a>
+                        <a href="#" data-open-onboarding data-plan-code="growth">Learn More</a>
                     </article>
                     <article class="service-card" data-aos="fade-up" data-aos-delay="100">
                         <div class="service-card__icon">02</div>
                         <h3>Website and Page Building</h3>
                         <p>Structure branded landing experiences that guide visitors into lead capture and registration.</p>
-                        <a href="{{ route('register') }}">Learn More</a>
+                        <a href="#" data-open-onboarding data-plan-code="growth">Learn More</a>
                     </article>
                     <article class="service-card" data-aos="fade-up" data-aos-delay="200">
                         <div class="service-card__icon">03</div>
                         <h3>Digital Marketing Flow</h3>
                         <p>Connect campaigns, lead qualification, and team actions so marketing and sales work from one system.</p>
-                        <a href="{{ route('register') }}">Learn More</a>
+                        <a href="#" data-open-onboarding data-plan-code="growth">Learn More</a>
                     </article>
                 </div>
             </section>
@@ -171,7 +190,7 @@
                             <h3>Map every stage from traffic source to payment conversion before launch.</h3>
                             <p>Design the route for opt-ins, upsells, downsells, and onboarding touchpoints with clear ownership.</p>
                         </article>
-                        <article class="work-panel work-panel--research" data-work-card data-work-category="research" hidden>
+                        <article class="work-panel work-panel--wide work-panel--research" data-work-card data-work-category="research" hidden>
                             <span>Performance Research</span>
                             <h3>Use funnel visibility to see what converts, what stalls, and what needs optimization.</h3>
                             <p>Review acquisition quality, pipeline movement, and checkout completion so the next campaign is sharper.</p>
@@ -189,13 +208,34 @@
                 <div class="pricing__grid">
                     @foreach($plans as $index => $plan)
                         <article class="pricing-card {{ $plan['spotlight'] ? 'pricing-card--featured' : '' }}" data-aos="fade-up" data-aos-delay="{{ $index * 100 }}">
+                            @php
+                                $isTrialPlan = $plan['code'] === 'free-trial';
+                                $formatLimit = static fn ($value) => is_null($value) ? 'Unlimited' : number_format((int) $value);
+                            @endphp
+
+                            <div class="pricing-card__limits">
+                                <button type="button" class="pricing-card__limits-trigger" aria-label="View {{ $plan['name'] }} plan limits">
+                                    <span aria-hidden="true">i</span>
+                                </button>
+                                <div class="pricing-card__limits-panel">
+                                    <h4>Plan Limits</h4>
+                                    <ul>
+                                        <li><span>Max Users</span><strong>{{ $formatLimit($plan['max_users'] ?? null) }}</strong></li>
+                                        <li><span>Max Leads</span><strong>{{ $formatLimit($plan['max_leads'] ?? null) }}</strong></li>
+                                        <li><span>Max Funnels</span><strong>{{ $formatLimit($plan['max_funnels'] ?? null) }}</strong></li>
+                                        <li><span>Max Workflows</span><strong>{{ $formatLimit($plan['max_workflows'] ?? null) }}</strong></li>
+                                        <li><span>Max Monthly Messages</span><strong>{{ $formatLimit($plan['max_monthly_messages'] ?? null) }}</strong></li>
+                                    </ul>
+                                </div>
+                            </div>
+
                             @if($plan['spotlight'])
                                 <span class="pricing-card__badge">{{ $plan['spotlight'] }}</span>
                             @endif
                             <h3>{{ $plan['name'] }}</h3>
                             <p class="pricing-card__summary">{{ $plan['summary'] }}</p>
                             <div class="pricing-card__price">
-                                <strong>PHP {{ number_format($plan['price'], 0) }}</strong>
+                                <strong>{{ (float) $plan['price'] <= 0 ? 'Free' : 'PHP ' . number_format($plan['price'], 0) }}</strong>
                                 <span>{{ $plan['period'] }}</span>
                             </div>
                             <ul>
@@ -203,9 +243,15 @@
                                     <li>{{ $feature }}</li>
                                 @endforeach
                             </ul>
-                            <a href="{{ route('register', ['plan' => $plan['code']]) }}" class="button {{ $plan['spotlight'] ? 'button--primary' : 'button--secondary' }}">
-                                Get Started
-                            </a>
+                            @if($isTrialPlan)
+                                <a href="{{ route('register', ['trial' => 1]) }}" class="button button--trial-card">
+                                    Start Free Trial
+                                </a>
+                            @else
+                                <a href="#" data-open-onboarding data-plan-code="{{ $plan['code'] }}" class="button {{ $plan['spotlight'] ? 'button--primary' : 'button--secondary' }}">
+                                    Get Started
+                                </a>
+                            @endif
                         </article>
                     @endforeach
                 </div>
@@ -220,7 +266,7 @@
                 <div class="faq__list">
                     <details class="faq__item" open data-aos="fade-up" data-aos-delay="0">
                         <summary>What happens after the user completes payment?</summary>
-                        <p>After successful payment, the system creates the tenant, records the registration, assigns the Account Owner role, and redirects the user to the Account Owner dashboard.</p>
+                        <p>After successful payment, the system creates the tenant and Account Owner in pending activation, then sends a setup email. The user must verify and set password before dashboard access.</p>
                     </details>
                     <details class="faq__item" data-aos="fade-up" data-aos-delay="100">
                         <summary>Will the super admin see the new account?</summary>
@@ -237,6 +283,73 @@
                 </div>
             </section>
         </main>
+
+        <div id="onboardingModal" style="position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); display: none; align-items: center; justify-content: center; padding: 18px; z-index: 9999;">
+            <div role="dialog" aria-modal="true" aria-labelledby="onboardingModalTitle" style="width: min(100%, 620px); max-height: 92vh; overflow: auto; background: #ffffff; border-radius: 18px; box-shadow: 0 25px 80px rgba(15, 23, 42, 0.25); padding: 22px;">
+                <div style="display: flex; justify-content: space-between; align-items: start; gap: 12px; margin-bottom: 16px;">
+                    <div>
+                        <h3 id="onboardingModalTitle" style="margin: 0 0 6px; font-size: 1.3rem;">Start Your Account Owner Onboarding</h3>
+                        <p style="margin: 0; color: #475569;">Complete this short form, then proceed to payment.</p>
+                    </div>
+                    <button type="button" id="onboardingModalClose" aria-label="Close onboarding modal" style="width: 38px; height: 38px; border: none; border-radius: 999px; background: #E2E8F0; color: #0F172A; font-size: 22px; cursor: pointer;">&times;</button>
+                </div>
+
+                @php
+                    $googleVerified = is_array($googleSignupVerified ?? null) ? $googleSignupVerified : [];
+                    $googleContext = is_array($googleSignupContext ?? null) ? $googleSignupContext : [];
+                    $hasGoogleVerified = $googleVerified !== [];
+                @endphp
+                <form id="landingOnboardingForm" method="POST" action="{{ route('register.post') }}">
+                    @csrf
+                    <input type="hidden" name="plan" id="onboardingPlanInput" value="{{ old('plan', (string) ($googleContext['plan'] ?? request('plan', 'growth'))) }}">
+
+                    <div style="display: grid; gap: 12px;">
+                        <div>
+                            <label for="full_name" style="display:block;margin-bottom:6px;font-weight:600;color:#0F172A;">Full Name</label>
+                            <input id="full_name" name="full_name" type="text" maxlength="255" required value="{{ old('full_name', (string) ($googleVerified['full_name'] ?? $googleContext['full_name'] ?? '')) }}" {{ $hasGoogleVerified ? 'readonly' : '' }} style="width:100%;padding:10px 12px;border:1px solid #CBD5E1;border-radius:10px;">
+                        </div>
+
+                        <div>
+                            <label for="email" style="display:block;margin-bottom:6px;font-weight:600;color:#0F172A;">Email Address</label>
+                            <input id="email" name="email" type="email" maxlength="255" required value="{{ old('email', (string) ($googleVerified['email'] ?? $googleContext['email'] ?? '')) }}" {{ $hasGoogleVerified ? 'readonly' : '' }} style="width:100%;padding:10px 12px;border:1px solid #CBD5E1;border-radius:10px;">
+                            <small style="display:block;margin-top:6px;color:#280137;">Please enter a valid email address</small>
+                        </div>
+
+                        <div>
+                            <label for="mobile" style="display:block;margin-bottom:6px;font-weight:600;color:#0F172A;">Mobile Number</label>
+                            <input id="mobile" name="mobile" type="text" pattern="^09\d{9}$" placeholder="09XXXXXXXXX" required value="{{ old('mobile', (string) ($googleContext['mobile'] ?? '')) }}" style="width:100%;padding:10px 12px;border:1px solid #CBD5E1;border-radius:10px;">
+                        </div>
+
+                        <div>
+                            <label for="company_name" style="display:block;margin-bottom:6px;font-weight:600;color:#0F172A;">Company Name</label>
+                            <input id="company_name" name="company_name" type="text" maxlength="255" required value="{{ old('company_name', (string) ($googleContext['company_name'] ?? '')) }}" style="width:100%;padding:10px 12px;border:1px solid #CBD5E1;border-radius:10px;">
+                        </div>
+
+                        <div>
+                            <label for="onboardingPlanPreview" style="display:block;margin-bottom:6px;font-weight:600;color:#0F172A;">Selected Plan</label>
+                            <input id="onboardingPlanPreview" type="text" readonly value="{{ strtoupper((string) old('plan', (string) ($googleContext['plan'] ?? request('plan', 'growth')))) }}" style="width:100%;padding:10px 12px;border:1px solid #CBD5E1;border-radius:10px;background:#F8FAFC;font-weight:700;">
+                        </div>
+                    </div>
+
+                    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px;flex-wrap:wrap;">
+                        <button type="button" id="onboardingModalCancel" style="padding:10px 16px;border:none;border-radius:10px;background:#E2E8F0;color:#0F172A;font-weight:600;cursor:pointer;">Cancel</button>
+                        <button type="button" id="onboardingGoogleButton" style="padding:10px 16px;border:1px solid #CBD5E1;border-radius:10px;background:#FFFFFF;color:#0F172A;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;">
+                            <span aria-hidden="true" style="display:inline-flex;width:18px;height:18px;border-radius:50%;align-items:center;justify-content:center;background:#fff;border:1px solid #CBD5E1;color:#ea4335;font-weight:800;font-size:12px;">G</span>
+                            Continue with Google
+                        </button>
+                        <button type="submit" style="padding:10px 16px;border:none;border-radius:10px;background:#240E35;color:#ffffff;font-weight:700;cursor:pointer;">Continue to Payment</button>
+                    </div>
+                </form>
+                <form id="landingGoogleSignupForm" method="POST" action="{{ route('auth.google.signup.redirect') }}" style="display:none;">
+                    @csrf
+                    <input type="hidden" name="full_name" id="google_signup_full_name">
+                    <input type="hidden" name="email" id="google_signup_email">
+                    <input type="hidden" name="mobile" id="google_signup_mobile">
+                    <input type="hidden" name="company_name" id="google_signup_company_name">
+                    <input type="hidden" name="plan" id="google_signup_plan">
+                </form>
+            </div>
+        </div>
 
         <footer class="landing-footer">
             <div class="landing-footer__top" data-aos="fade-up">
@@ -259,7 +372,7 @@
                     </div>
                     <div class="landing-footer__column">
                         <h4>Company</h4>
-                        <a href="{{ route('register') }}">Register</a>
+                        <a href="#" data-open-onboarding data-plan-code="{{ request('plan', 'growth') }}">Register</a>
                         <a href="{{ route('login') }}">Sign In</a>
                         <a href="{{ route('register', ['trial' => 1]) }}">Free Trial</a>
                     </div>
@@ -267,7 +380,7 @@
                         <h4>Support</h4>
                         <a href="#faq">FAQ</a>
                         <a href="#pricing">Plans</a>
-                        <a href="{{ route('register') }}">Contact Team</a>
+                        <a href="#" data-open-onboarding data-plan-code="{{ request('plan', 'growth') }}">Contact Team</a>
                     </div>
                 </div>
             </div>
@@ -284,11 +397,22 @@
 
     <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
     <script>
+        function landingCloseStatusToast() {
+            const toastContainer = document.getElementById('statusToastContainer');
+            if (toastContainer) {
+                toastContainer.style.display = 'none';
+            }
+        }
+        if (document.getElementById('statusToastContainer')) {
+            setTimeout(landingCloseStatusToast, 3500);
+        }
+
         if (window.AOS) {
             AOS.init({
                 duration: 800,
                 easing: 'ease-out-cubic',
                 once: false,
+                mirror: true,
                 offset: 80,
             });
         }
@@ -298,6 +422,79 @@
         const workFilterButtons = document.querySelectorAll('[data-work-filter]');
         const workCards = document.querySelectorAll('[data-work-card]');
         const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const onboardingModal = document.getElementById('onboardingModal');
+        const onboardingPlanInput = document.getElementById('onboardingPlanInput');
+        const onboardingPlanPreview = document.getElementById('onboardingPlanPreview');
+        const onboardingOpeners = document.querySelectorAll('[data-open-onboarding]');
+        const onboardingModalClose = document.getElementById('onboardingModalClose');
+        const onboardingModalCancel = document.getElementById('onboardingModalCancel');
+        const onboardingForm = document.getElementById('landingOnboardingForm');
+        const onboardingGoogleButton = document.getElementById('onboardingGoogleButton');
+        const landingGoogleSignupForm = document.getElementById('landingGoogleSignupForm');
+
+        const openOnboardingModal = (planCode) => {
+            if (!onboardingModal) return;
+            if (onboardingPlanInput) {
+                onboardingPlanInput.value = planCode || 'growth';
+            }
+            if (onboardingPlanPreview) {
+                onboardingPlanPreview.value = String(planCode || 'growth').toUpperCase();
+            }
+            onboardingModal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        };
+
+        const closeOnboardingModal = () => {
+            if (!onboardingModal) return;
+            onboardingModal.style.display = 'none';
+            document.body.style.overflow = '';
+        };
+
+        onboardingOpeners.forEach((opener) => {
+            opener.addEventListener('click', (event) => {
+                event.preventDefault();
+                openOnboardingModal(opener.dataset.planCode || 'growth');
+            });
+        });
+
+        if (onboardingModalClose) {
+            onboardingModalClose.addEventListener('click', closeOnboardingModal);
+        }
+        if (onboardingModalCancel) {
+            onboardingModalCancel.addEventListener('click', closeOnboardingModal);
+        }
+        if (onboardingModal) {
+            onboardingModal.addEventListener('click', (event) => {
+                if (event.target === onboardingModal) {
+                    closeOnboardingModal();
+                }
+            });
+        }
+        if (onboardingGoogleButton && onboardingForm && landingGoogleSignupForm) {
+            onboardingGoogleButton.addEventListener('click', () => {
+                const fullName = onboardingForm.querySelector('#full_name');
+                const email = onboardingForm.querySelector('#email');
+                const mobile = onboardingForm.querySelector('#mobile');
+                const companyName = onboardingForm.querySelector('#company_name');
+                const plan = onboardingForm.querySelector('#onboardingPlanInput');
+
+                landingGoogleSignupForm.querySelector('#google_signup_full_name').value = fullName ? fullName.value : '';
+                landingGoogleSignupForm.querySelector('#google_signup_email').value = email ? email.value : '';
+                landingGoogleSignupForm.querySelector('#google_signup_mobile').value = mobile ? mobile.value : '';
+                landingGoogleSignupForm.querySelector('#google_signup_company_name').value = companyName ? companyName.value : '';
+                landingGoogleSignupForm.querySelector('#google_signup_plan').value = plan ? plan.value : 'growth';
+                landingGoogleSignupForm.submit();
+            });
+        }
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                closeOnboardingModal();
+            }
+        });
+
+        @if(session('open_onboarding_modal') || $errors->any())
+            openOnboardingModal(@json((string) request('plan', 'growth')));
+        @endif
 
         const setActiveNavHash = (hash) => {
             if (!landingNav) return;
@@ -338,67 +535,39 @@
 
         if (landingNav) {
             const navLinks = Array.from(landingNav.querySelectorAll('a[href^="#"]'));
-            const sectionIds = navLinks.map((link) => link.getAttribute('href')).filter(Boolean);
-            const sections = sectionIds
-                .map((id) => document.querySelector(id))
+            const sections = navLinks
+                .map((link) => {
+                    const href = link.getAttribute('href') || '';
+                    return href.length > 1 ? document.querySelector(href) : null;
+                })
                 .filter((section) => section && section.id);
 
-            // Always start in default state on hero/top.
-            setActiveNavHash('');
-
-            if ('IntersectionObserver' in window && sections.length) {
-                const observer = new IntersectionObserver(
-                    (entries) => {
-                        // Pick the most visible intersecting section (handles fast scroll).
-                        const visible = entries
-                            .filter((entry) => entry.isIntersecting)
-                            .sort((a, b) => (b.intersectionRatio || 0) - (a.intersectionRatio || 0));
-
-                        if (!visible.length) {
-                            setActiveNavHash('');
-                            return;
-                        }
-
-                        const section = visible[0].target;
-                        if (section && section.id) {
-                            setActiveNavHash(`#${section.id}`);
-                        }
-                    },
-                    {
-                        root: null,
-                        // Trigger when a section crosses the middle of the viewport.
-                        rootMargin: '-45% 0px -55% 0px',
-                        threshold: [0, 0.1, 0.25, 0.5, 0.75, 1],
-                    }
-                );
-
-                sections.forEach((section) => observer.observe(section));
-            } else if (sections.length) {
-                // Fallback for older browsers without IntersectionObserver.
-                const onScroll = () => {
-                    const viewportMiddle = window.scrollY + window.innerHeight / 2;
-                    let activeSection = null;
-
-                    sections.forEach((section) => {
-                        const rect = section.getBoundingClientRect();
-                        const top = rect.top + window.scrollY;
-                        const bottom = top + rect.height;
-                        if (viewportMiddle >= top && viewportMiddle < bottom) {
-                            activeSection = section;
-                        }
-                    });
-
-                    if (activeSection && activeSection.id) {
-                        setActiveNavHash(`#${activeSection.id}`);
-                        return;
-                    }
-
+            const updateActiveSection = () => {
+                if (!sections.length) {
                     setActiveNavHash('');
-                };
+                    return;
+                }
 
-                window.addEventListener('scroll', onScroll, { passive: true });
-                onScroll();
-            }
+                const headerHeight = document.querySelector('.landing-header')?.offsetHeight || 0;
+                const viewportProbe = window.scrollY + headerHeight + 140;
+                let activeHash = '';
+
+                sections.forEach((section) => {
+                    const top = section.offsetTop;
+                    const bottom = top + section.offsetHeight;
+                    if (viewportProbe >= top && viewportProbe < bottom) {
+                        activeHash = `#${section.id}`;
+                    }
+                });
+
+                setActiveNavHash(activeHash);
+            };
+
+            setActiveNavHash('');
+            window.addEventListener('scroll', updateActiveSection, { passive: true });
+            window.addEventListener('resize', updateActiveSection);
+            window.addEventListener('hashchange', updateActiveSection);
+            updateActiveSection();
         }
 
         if (workFilterButtons.length && workCards.length) {
@@ -407,13 +576,23 @@
                     button.classList.toggle('work-chip--active', button.dataset.workFilter === filter);
                 });
 
+                let visibleCount = 0;
                 workCards.forEach((card) => {
                     const categories = (card.dataset.workCategory || '').split(' ').filter(Boolean);
                     const shouldShow = filter === 'all' || categories.includes(filter);
 
                     card.hidden = !shouldShow;
                     card.classList.toggle('work-panel--visible', shouldShow);
+                    if (shouldShow) {
+                        visibleCount += 1;
+                    }
                 });
+
+                const worksGallery = document.querySelector('.featured-works__gallery');
+                if (worksGallery) {
+                    worksGallery.dataset.visibleCount = String(visibleCount);
+                    worksGallery.classList.toggle('is-filtered', filter !== 'all');
+                }
 
                 if (window.AOS) {
                     AOS.refresh();
