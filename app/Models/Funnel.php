@@ -15,6 +15,7 @@ class Funnel extends Model
 
     public const PURPOSES = [
         'service' => 'Service / Lead',
+        'single_page' => 'Single Page',
         'digital_product' => 'Digital Product',
         'physical_product' => 'Physical Product',
         'hybrid' => 'Hybrid',

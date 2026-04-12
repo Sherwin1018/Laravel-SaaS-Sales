@@ -77,7 +77,7 @@
                     @endforeach
                 </select>
                 <div style="margin-top:6px; color:#64748b; font-size:12px;">
-                    This sets the starter flow. Physical product funnels start more like order funnels, while service funnels keep the lead-first flow.
+                    This sets the starter flow. Single-page funnels start with one page and are designed to match super-admin shared templates.
                 </div>
                 @error('purpose')
                     <span style="color:red; font-size:12px;">{{ $message }}</span>
@@ -96,8 +96,7 @@
 
             <div style="margin:18px 0; padding:14px 16px; border-radius:12px; background:#fbf9fd; border:1px solid #ece2f5; color:#475569; font-size:13px; line-height:1.55;">
                 Starter flow by purpose:
-                <br><strong>Service / Lead</strong>: Landing -> Opt-in -> Sales -> Checkout -> Thank You
-                <br><strong>Physical Product</strong>: Sales -> Checkout -> Thank You
+                <br><strong>Single Page</strong>: One page with sections for landing/sales/checkout
                 <br><br>Template mode clones the selected published template and keeps full step layout/content.
             </div>
 

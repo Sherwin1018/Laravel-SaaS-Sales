@@ -1,0 +1,141 @@
+{
+  "name": "Single Page - Digital Services Subscription",
+  "slug": "single-page-digital-services-subscription",
+  "description": "Single-page subscription funnel for digital services with built-in hero background, pricing, and checkout summary sections.",
+  "template_type": "single_page",
+  "template_tags": ["Single Page", "Digital Services", "Subscription"],
+  "steps": [
+    {
+      "title": "Digital Services Single Page",
+      "slug": "single-page",
+      "type": "landing",
+      "content": "Single-page digital services subscription journey.",
+      "cta_label": "Subscribe Now",
+      "layout_json": {
+        "root": [
+          {
+            "kind": "el",
+            "id": "el_menu_digital",
+            "type": "menu",
+            "style": {
+              "padding": "14px 22px",
+              "backgroundColor": "#0f172a",
+              "color": "#ffffff",
+              "fontSize": "15px",
+              "fontWeight": "600"
+            },
+            "settings": {
+              "menuAlign": "center",
+              "itemGap": 16,
+              "items": [
+                {"label": "Overview", "url": "#overview", "newWindow": false, "hasSubmenu": false},
+                {"label": "Plans", "url": "#plans", "newWindow": false, "hasSubmenu": false},
+                {"label": "Checkout", "url": "#checkout", "newWindow": false, "hasSubmenu": false}
+              ],
+              "leftButtonLabel": "Subscribe",
+              "leftButtonUrl": "#checkout",
+              "leftButtonBgColor": "#22c55e",
+              "leftButtonTextColor": "#0f172a",
+              "rightLogoUrl": "https://images.unsplash.com/photo-1563986768494-4dee2763ff3f?auto=format&fit=crop&w=320&q=80",
+              "rightLogoAlt": "Digital Services"
+            }
+          },
+          {
+            "kind": "section",
+            "id": "sec_digital_hero",
+            "style": {
+              "padding": "56px 42px",
+              "backgroundColor": "#0b1220",
+              "backgroundImage": "url(https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1400&q=80)",
+              "backgroundSize": "cover",
+              "backgroundPosition": "center",
+              "borderRadius": "20px"
+            },
+            "settings": {
+              "anchorId": "overview",
+              "contentWidth": "full"
+            },
+            "elements": [
+              {
+                "id": "el_digital_heading",
+                "type": "heading",
+                "content": "Scale Your Digital Service Revenue",
+                "style": {"fontSize": "46px", "color": "#ffffff", "fontWeight": "700"},
+                "settings": {}
+              },
+              {
+                "id": "el_digital_text",
+                "type": "text",
+                "content": "Offer one recurring subscription page with a clear value promise, social proof, and checkout conversion blocks.",
+                "style": {"fontSize": "18px", "color": "#dbeafe", "maxWidth": "840px"},
+                "settings": {}
+              },
+              {
+                "id": "el_digital_image",
+                "type": "image",
+                "content": "",
+                "style": {"width": "420px", "borderRadius": "16px", "boxShadow": "0 18px 34px rgba(2, 6, 23, 0.35)"},
+                "settings": {
+                  "src": "https://images.unsplash.com/photo-1551836022-deb4988cc6c0?auto=format&fit=crop&w=900&q=80",
+                  "alt": "Service dashboard preview",
+                  "alignment": "left"
+                }
+              }
+            ],
+            "rows": []
+          },
+          {
+            "kind": "section",
+            "id": "sec_digital_checkout",
+            "style": {
+              "padding": "36px 30px",
+              "backgroundColor": "#ffffff",
+              "border": "1px solid #e2e8f0",
+              "borderRadius": "18px"
+            },
+            "settings": {
+              "anchorId": "plans",
+              "contentWidth": "full"
+            },
+            "elements": [
+              {
+                "id": "el_digital_pricing",
+                "type": "pricing",
+                "content": "",
+                "style": {"width": "360px"},
+                "settings": {
+                  "plan": "Growth Subscription",
+                  "price": "PHP 2,499",
+                  "period": "/month",
+                  "subtitle": "Perfect for teams scaling client acquisition.",
+                  "features": ["Unlimited campaign pages", "Team collaboration", "Analytics dashboard"],
+                  "ctaLabel": "Proceed to Checkout",
+                  "ctaActionType": "checkout",
+                  "ctaActionStepSlug": "",
+                  "badge": "Most Popular"
+                }
+              },
+              {
+                "id": "el_digital_checkout_summary",
+                "type": "checkout_summary",
+                "content": "",
+                "style": {"width": "360px"},
+                "settings": {
+                  "heading": "Checkout",
+                  "plan": "Growth Subscription",
+                  "price": "PHP 2,499",
+                  "period": "/month",
+                  "subtitle": "Pay with GCash or card to activate your subscription.",
+                  "ctaLabel": "Pay and Activate",
+                  "badge": "Secure Checkout"
+                }
+              }
+            ],
+            "rows": []
+          }
+        ],
+        "sections": []
+      }
+    }
+  ]
+}

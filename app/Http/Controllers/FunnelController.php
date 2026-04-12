@@ -22,7 +22,7 @@ class FunnelController extends Controller
 {
     private const MAX_STEP_REVISIONS = 40;
     private const MAX_MANUAL_VERSIONS = 25;
-    private const CREATE_PURPOSE_KEYS = ['service', 'physical_product'];
+    private const CREATE_PURPOSE_KEYS = ['single_page'];
 
     public function index(Request $request)
     {
@@ -184,6 +184,9 @@ class FunnelController extends Controller
     private function starterStepsForPurpose(string $purpose): array
     {
         return match (Funnel::normalizePurpose($purpose)) {
+            'single_page' => [
+                ['title' => 'Single Page Funnel', 'slug' => 'single-page', 'type' => 'landing', 'content' => 'Build the full one-page journey here: hero, offer, proof, and checkout sections.', 'cta_label' => 'Get Started'],
+            ],
             'digital_product' => [
                 ['title' => 'Sales', 'slug' => 'sales', 'type' => 'sales', 'content' => 'Present your digital product offer here.', 'cta_label' => 'Go to Checkout'],
                 ['title' => 'Checkout', 'slug' => 'checkout', 'type' => 'checkout', 'content' => 'Complete your digital order.', 'cta_label' => 'Pay Now', 'price' => 1000],
@@ -357,12 +360,25 @@ class FunnelController extends Controller
             ->latest('published_at')
             ->latest('id');
 
+        if ($this->restrictToSinglePageTemplates($user)) {
+            $query->where('template_type', 'single_page');
+        }
+
         $limit = $this->templateLibraryLimitForUser($user);
         if ($limit !== null) {
             $query->limit($limit);
         }
 
         return $query;
+    }
+
+    private function restrictToSinglePageTemplates($user): bool
+    {
+        if (! $user) {
+            return true;
+        }
+
+        return ! (bool) $user->hasAnyRole(['super-admin']);
     }
 
     private function templateLibraryLimitForUser($user): ?int
@@ -1742,6 +1758,7 @@ class FunnelController extends Controller
         $root = is_array($layout['root'] ?? null) ? $layout['root'] : [];
         $editor = is_array($layout['__editor'] ?? null) ? $layout['__editor'] : null;
         $resultRoot = [];
+        $menuItems = [];
         $pendingElements = [];
         $firstSectionIndex = null;
 
@@ -1763,6 +1780,35 @@ class FunnelController extends Controller
             return $elements;
         };
 
+        $normalizeMenuElement = function (array $item): array {
+            $normalized = array_merge(['kind' => 'el'], $item);
+            $normalized['settings'] = is_array($normalized['settings'] ?? null) ? $normalized['settings'] : [];
+            $style = is_array($normalized['style'] ?? null) ? $normalized['style'] : [];
+            unset($style['position'], $style['top'], $style['left'], $style['right'], $style['bottom'], $style['transform']);
+            $style['width'] = '100%';
+            $normalized['style'] = $style;
+
+            return $normalized;
+        };
+        $splitMenuElements = function (array $elements) use (&$menuItems, $normalizeMenuElement): array {
+            $content = [];
+            foreach ($elements as $element) {
+                if (! is_array($element)) {
+                    continue;
+                }
+
+                $elementType = strtolower((string) ($element['type'] ?? ''));
+                if ($elementType === 'menu') {
+                    $menuItems[] = $normalizeMenuElement($element);
+                    continue;
+                }
+
+                $content[] = $element;
+            }
+
+            return $content;
+        };
+
         foreach ($root as $item) {
             if (! is_array($item)) {
                 continue;
@@ -1780,6 +1826,7 @@ class FunnelController extends Controller
                     }
                     $elements = array_merge($elements, $collectElementsFromRow($row));
                 }
+                $elements = $splitMenuElements($elements);
 
                 $normalizedSection = [
                     'kind' => 'section',
@@ -1797,18 +1844,18 @@ class FunnelController extends Controller
             }
 
             if ($kind === 'row') {
-                $pendingElements = array_merge($pendingElements, $collectElementsFromRow($item));
+                $pendingElements = array_merge($pendingElements, $splitMenuElements($collectElementsFromRow($item)));
                 continue;
             }
 
             if ($kind === 'column' || $kind === 'col') {
-                $pendingElements = array_merge($pendingElements, $collectElementsFromColumn($item));
+                $pendingElements = array_merge($pendingElements, $splitMenuElements($collectElementsFromColumn($item)));
                 continue;
             }
 
             $elementType = strtolower((string) ($item['type'] ?? ''));
             if ($elementType === 'menu') {
-                $resultRoot[] = array_merge(['kind' => 'el'], $item);
+                $menuItems[] = $normalizeMenuElement($item);
                 continue;
             }
 
@@ -1832,6 +1879,8 @@ class FunnelController extends Controller
             $resultRoot[$firstSectionIndex]['elements'] = array_values(array_merge($existing, $pendingElements));
         }
 
+        $resultRoot = array_values(array_merge($menuItems, $resultRoot));
+
         $sections = collect($resultRoot)
             ->filter(fn ($item) => is_array($item) && strtolower((string) ($item['kind'] ?? '')) === 'section')
             ->map(function (array $item) {
@@ -1849,6 +1898,14 @@ class FunnelController extends Controller
 
         if ($editor !== null) {
             $out['__editor'] = $editor;
+        }
+
+        $out['__editor'] = is_array($out['__editor'] ?? null) ? $out['__editor'] : [];
+        if (! isset($out['__editor']['canvasWidth'])) {
+            $out['__editor']['canvasWidth'] = 1366;
+        }
+        if (! isset($out['__editor']['canvasContentWidth'])) {
+            $out['__editor']['canvasContentWidth'] = 1366;
         }
 
         return $out;
@@ -2128,7 +2185,7 @@ class FunnelController extends Controller
             }
         }
 
-        foreach (['autoplay', 'controls', 'showArrows', 'imageRadiusLinked', 'videoRadiusLinked', 'quickViewEnabled', 'cartEnabled', 'showRating', 'showDate', 'collapsible'] as $k) {
+        foreach (['autoplay', 'controls', 'showArrows', 'imageRadiusLinked', 'videoRadiusLinked', 'quickViewEnabled', 'cartEnabled', 'showRating', 'showDate', 'collapsible', 'leftButtonBold', 'leftButtonItalic'] as $k) {
             $v = $readBool($k);
             if ($v !== null) {
                 $safe[$k] = $v;
@@ -2155,6 +2212,10 @@ class FunnelController extends Controller
             'maxItems' => [1, 24],
             'filterRating' => [0, 5],
             'collapsedCount' => [1, 24],
+            'leftButtonTextSize' => [10, 48],
+            'leftButtonBorderRadius' => [0, 80],
+            'leftButtonPaddingY' => [4, 40],
+            'leftButtonPaddingX' => [8, 80],
         ] as $k => $range) {
             $v = $readInt($k, $range[0], $range[1]);
             if ($v !== null) {
@@ -2653,6 +2714,7 @@ class FunnelController extends Controller
     private function requiredStepTypesForPurpose(string $purpose): array
     {
         return match (Funnel::normalizePurpose($purpose)) {
+            'single_page' => [],
             'digital_product', 'physical_product' => ['sales', 'checkout', 'thank_you'],
             'hybrid' => ['landing', 'sales', 'checkout', 'thank_you'],
             default => ['landing', 'opt_in', 'sales', 'checkout', 'thank_you'],
@@ -2663,6 +2725,8 @@ class FunnelController extends Controller
     {
         $ordered = collect($steps)->values();
         $issues = [];
+        $normalizedPurpose = Funnel::normalizePurpose($purpose);
+        $isSinglePagePurpose = $normalizedPurpose === 'single_page';
         $requiredTypes = $this->requiredStepTypesForPurpose($purpose);
         $activeSlugs = $ordered
             ->map(fn ($step) => strtolower(trim((string) ($step->slug ?? ''))))
@@ -2680,7 +2744,11 @@ class FunnelController extends Controller
         if ($firstStep && strtolower(trim((string) ($firstStep->type ?? ''))) === 'thank_you') {
             $issues[] = 'The first active step cannot be a Thank You step.';
         }
-        if ($lastStep && strtolower(trim((string) ($lastStep->type ?? ''))) !== 'thank_you') {
+        if (
+            ! $isSinglePagePurpose
+            && $lastStep
+            && strtolower(trim((string) ($lastStep->type ?? ''))) !== 'thank_you'
+        ) {
             $issues[] = 'The last active step must be a Thank You step so the flow resolves safely.';
         }
 
@@ -2730,11 +2798,11 @@ class FunnelController extends Controller
             if ($type === 'thank_you') {
                 continue;
             }
-            if (!$hasNext) {
+            if (! $hasNext && ! $isSinglePagePurpose) {
                 $issues[] = 'Step "' . $title . '" must route to another active step before the Thank You step.';
                 continue;
             }
-            if (($stats['navigateActionCount'] ?? 0) <= 0) {
+            if (($stats['navigateActionCount'] ?? 0) <= 0 && ! $isSinglePagePurpose) {
                 $issues[] = 'Step "' . $title . '" must include at least one Button with action "Next step", "Specific step", or "Custom URL".';
             }
         }

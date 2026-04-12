@@ -653,7 +653,7 @@
                     title="Template Purpose"
                 >
                     @foreach(\App\Models\FunnelTemplate::TEMPLATE_TYPES as $value => $label)
-                        @if(in_array($value, ['service', 'physical_product'], true))
+                        @if(in_array($value, ['single_page'], true))
                             <option value="{{ $value }}" {{ old('template_type', $funnel->template_type) === $value ? 'selected' : '' }}>
                                 {{ $label }}
                             </option>
@@ -1108,19 +1108,22 @@ function renderStepOptions(){
 function applyPurposeComponentVisibility(){
     var labels={
         service:"Service Funnel",
+        single_page:"Single Page Funnel",
         physical_product:"Physical Product Funnel"
     };
     if(fbPurposeMeta){
         var purposeLabel=labels[builderPurpose]||"Service Funnel";
         if(builderPurpose==="physical_product"){
             fbPurposeMeta.textContent=purposeLabel+" components are focused on product selling and checkout-related blocks.";
+        }else if(builderPurpose==="single_page"){
+            fbPurposeMeta.textContent=purposeLabel+" components are focused on one-page layouts with sections for offer and checkout.";
         }else if(builderPurpose==="service"){
             fbPurposeMeta.textContent=purposeLabel+" components are focused on offers, forms, proof, and service-style selling.";
         }
     }
     document.querySelectorAll("[data-c][data-purpose]").forEach(function(btn){
         var allowed=String(btn.getAttribute("data-purpose")||"all").split(",").map(function(v){return String(v||"").trim().toLowerCase();}).filter(Boolean);
-        var visible=allowed.indexOf("all")>=0||allowed.indexOf(builderPurpose)>=0;
+        var visible=allowed.indexOf("all")>=0||allowed.indexOf(builderPurpose)>=0||(builderPurpose==="single_page"&&allowed.indexOf("service")>=0);
         btn.style.display=visible?"":"none";
     });
     document.querySelectorAll("[data-component-group]").forEach(function(group){
@@ -1133,7 +1136,7 @@ function applyPurposeComponentVisibility(){
 function normalizeBuilderPurpose(value){
     var normalized=String(value||"service").trim().toLowerCase();
     if(normalized==="digital_product"||normalized==="hybrid")return "service";
-    return ["service","physical_product"].indexOf(normalized)>=0?normalized:"service";
+    return ["service","single_page","physical_product"].indexOf(normalized)>=0?normalized:"service";
 }
 function setBuilderPurpose(nextPurpose){
     builderPurpose=normalizeBuilderPurpose(nextPurpose);
@@ -3786,6 +3789,7 @@ function renderTemplateLibrary(){
     });
     var purposeLabels={
         service:"Service Funnel",
+        single_page:"Single Page Funnel",
         physical_product:"Physical Product Funnel"
     };
     var activePurposeLabel=purposeLabels[builderPurpose]||"Service Funnel";
@@ -7384,7 +7388,16 @@ function addComponent(type){
         });
         return node;
     }
-    if(!isStructureComponent(type)&&!isStandaloneRootComponent(type)){
+    var isColumnContextSelection=(
+        p
+        && (
+            p.k==="col"
+            || p.k==="row"
+            || (p.k==="el" && p.scope!=="section")
+            || (p.k==="el" && !!p.c)
+        )
+    );
+    if(!isStructureComponent(type)&&!isStandaloneRootComponent(type)&&!isColumnContextSelection){
         var targetSection=(p&&p.s)?sec(p.s):null;
         if(!targetSection||targetSection.__rootWrap||targetSection.__freeformCanvas){
             targetSection=findLooseRootSection();
@@ -7796,27 +7809,12 @@ function notifyColumnFull(){
 
 function canAddElementToColumn(sid,rid,cid,type){
     var t=String(type||"").toLowerCase();
-    if(t==="section"||t==="row"||t==="column")return true;
-    return true;
-    var colNode=canvas?canvas.querySelector('.col[data-col-id="'+String(cid||"")+'"]'):null;
-    if(!colNode)return true;
-    var colInner=colNode.querySelector(".col-inner");
-    if(!colInner)return true;
-    var capacity=Number(colNode.clientHeight)||0;
-    if(capacity<=0)return true;
-    var used=0;
-    Array.from(colInner.children||[]).forEach(function(ch){
-        var mb=0;
-        try{
-            mb=parseFloat((window.getComputedStyle(ch).marginBottom)||"0")||0;
-        }catch(_e){mb=0;}
-        var bottom=(Number(ch.offsetTop)||0)+(Number(ch.offsetHeight)||0)+mb;
-        if(bottom>used)used=bottom;
-    });
-    if(used<=0)used=Number(colInner.scrollHeight)||0;
-    var needed=estimateNewElementHeight(t,colNode);
-    if((used+needed)>(capacity+2)){
-        notifyColumnFull();
+    if(t==="section"){
+        showBuilderToast("Section cannot be added inside a Column.","error");
+        return false;
+    }
+    if(t==="menu"){
+        showBuilderToast("Menu cannot be added inside a Column. Add it as a top-level component.","error");
         return false;
     }
     return true;
@@ -8390,7 +8388,16 @@ function addComponentAt(type,target,place){
         });
         return node;
     }
-    if(!isStructureComponent(type)&&!isStandaloneRootComponent(type)){
+    var isColumnContextTarget=(
+        t
+        && (
+            t.k==="col"
+            || t.k==="row"
+            || (t.k==="el" && t.scope!=="section")
+            || (t.k==="el" && !!t.c)
+        )
+    );
+    if(!isStructureComponent(type)&&!isStandaloneRootComponent(type)&&!isColumnContextTarget){
         var targetSection=(t&&t.s)?sec(t.s):null;
         if(!targetSection||targetSection.__rootWrap||targetSection.__freeformCanvas){
             targetSection=findLooseRootSection();
@@ -8782,25 +8789,26 @@ function renderElement(item,ctx){
     };
     w.ondragover=e=>{
         e.preventDefault();
-        e.stopPropagation();
         const t=e.dataTransfer&&e.dataTransfer.getData?e.dataTransfer.getData("c"):"";
         if(!t){
             clearFreeDropGuides();
             clearDropPreview();
             return;
         }
-        if(!isStructureComponent(t)){
-            var freeHost=w.parentElement||null;
-            showFreeDropGuides(e,freeHost);
-            showDropPreview(t,freeHost,e);
-        }else{
-            clearFreeDropGuides();
-            var insHost=getStructureInsertHost(t,w);
-            var place=insHost?dropPlacement(e,insHost):null;
-            showDropInsert(insHost,place);
+        if(isStructureComponent(t)){
+            // Let section/row/column handlers manage structure drops to avoid flicker.
+            return;
         }
+        e.stopPropagation();
+        var freeHost=w.parentElement||null;
+        showFreeDropGuides(e,freeHost);
+        showDropPreview(t,freeHost,e);
     };
     w.ondragleave=e=>{
+        const t=e.dataTransfer&&e.dataTransfer.getData?e.dataTransfer.getData("c"):"";
+        if(isStructureComponent(t)){
+            return;
+        }
         e.stopPropagation();
         if(!w.contains(e.relatedTarget)){
             clearFreeDropGuides();
@@ -8809,20 +8817,20 @@ function renderElement(item,ctx){
     };
     w.ondrop=e=>{
         e.preventDefault();
-        e.stopPropagation();
         if(e.target&&e.target.closest&&e.target.closest(".carousel-live-editor"))return;
         const t=e.dataTransfer.getData("c");
         if(!t)return;
+        if(isStructureComponent(t)){
+            // Allow parent handlers to process section/row/column drops.
+            return;
+        }
+        e.stopPropagation();
         state.carouselSel=null;
         var dropTarget=ctx.scope==="section"?{k:"el",scope:"section",s:ctx.s,e:item.id}:{k:"el",s:ctx.s,r:ctx.r,c:ctx.c,e:item.id};
         var place;
-        if(!isStructureComponent(t)){
-            var host=w.parentElement||w;
-            place=buildFreePlacement(t,host,e);
-            dropTarget=ctx.scope==="section"?{k:"sec",s:ctx.s}:{k:"col",s:ctx.s,r:ctx.r,c:ctx.c};
-        }else{
-            place=dropPlacement(e,w);
-        }
+        var host=w.parentElement||w;
+        place=buildFreePlacement(t,host,e);
+        dropTarget=ctx.scope==="section"?{k:"sec",s:ctx.s}:{k:"col",s:ctx.s,r:ctx.r,c:ctx.c};
         clearFreeDropGuides();
         clearDropPreview();
         if(addComponentAt(t,dropTarget,place))render();
@@ -9761,6 +9769,12 @@ function renderElement(item,ctx){
         var rightButtonUrl=String(ms.leftButtonUrl||"#");
         var rightButtonBg=String(ms.leftButtonBgColor||"#240E35");
         var rightButtonText=String(ms.leftButtonTextColor||"#ffffff");
+        var rightButtonFontSize=Number(ms.leftButtonTextSize);if(isNaN(rightButtonFontSize)||rightButtonFontSize<10||rightButtonFontSize>48)rightButtonFontSize=14;
+        var rightButtonBold=!!ms.leftButtonBold;
+        var rightButtonItalic=!!ms.leftButtonItalic;
+        var rightButtonRadius=Number(ms.leftButtonBorderRadius);if(isNaN(rightButtonRadius)||rightButtonRadius<0||rightButtonRadius>80)rightButtonRadius=999;
+        var rightButtonPadY=Number(ms.leftButtonPaddingY);if(isNaN(rightButtonPadY)||rightButtonPadY<4||rightButtonPadY>40)rightButtonPadY=8;
+        var rightButtonPadX=Number(ms.leftButtonPaddingX);if(isNaN(rightButtonPadX)||rightButtonPadX<8||rightButtonPadX>80)rightButtonPadX=14;
         var leftLogoUrl=String(ms.rightLogoUrl||"");
         var leftLogoAlt=String(ms.rightLogoAlt||"Logo");
         var st=item.style||{};
@@ -9832,10 +9846,12 @@ function renderElement(item,ctx){
         rightBtn.href=rightButtonUrl||"#";
         rightBtn.textContent=rightButtonLabel||"Get Started";
         rightBtn.style.display="inline-block";
-        rightBtn.style.padding="8px 14px";
-        rightBtn.style.borderRadius="999px";
+        rightBtn.style.padding=rightButtonPadY+"px "+rightButtonPadX+"px";
+        rightBtn.style.borderRadius=rightButtonRadius+"px";
         rightBtn.style.textDecoration="none";
-        rightBtn.style.fontWeight="600";
+        rightBtn.style.fontWeight=rightButtonBold?"700":"600";
+        rightBtn.style.fontStyle=rightButtonItalic?"italic":"normal";
+        rightBtn.style.fontSize=rightButtonFontSize+"px";
         rightBtn.style.backgroundColor=rightButtonBg;
         rightBtn.style.color=rightButtonText;
         rightBtn.addEventListener("click",e=>e.preventDefault());
@@ -12671,7 +12687,7 @@ function renderSettings(){
                 return '<div class="menu-item-card"><div class="menu-item-head"><strong>Menu item '+(idx+1)+'</strong><div class="menu-item-actions"><button type="button" class="menu-del" data-idx="'+idx+'" title="Delete"><i class="fas fa-trash"></i></button><button type="button" class="menu-toggle" data-idx="'+idx+'" title="Toggle"><i class="fas '+(collapsed?'fa-chevron-down':'fa-chevron-up')+'"></i></button></div></div>'+body+'</div>';
             }).join("");
             settings.innerHTML='<div class="menu-panel-title">Menu</div><div class="menu-section-title">Content</div>'+cards+'<button type="button" id="addMenuItem" class="fb-btn primary" style="width:100%;margin:6px 0 10px;">Add menu item</button><div class="menu-split"></div><div class="menu-section-title">Style</div><label>Font family</label><select id="mFont"><option value="">Same font as the page</option>'+fonts.map(f=>'<option value="'+f.value.replace(/"/g,'&quot;')+'">'+f.label+'</option>').join('')+'</select><div class="menu-typo-grid"><div class="px-wrap"><input id="mFs" type="number" step="1"><span class="px-unit">px</span></div><div class="px-wrap"><input id="mLh" type="number" step="0.1"><span class="px-unit">lh</span></div></div><label>Text style</label><div class="menu-style-row"><button type="button" id="mBold" class="menu-align-btn" title="Bold (Ctrl+B)"><i class="fas fa-bold"></i></button><button type="button" id="mItalic" class="menu-align-btn" title="Italic (Ctrl+I)"><i class="fas fa-italic"></i></button></div><div class="menu-split"></div><div class="menu-section-title">Layout</div><div class="menu-align-row"><button type="button" class="menu-align-btn" data-align="left"><i class="fas fa-align-left"></i></button><button type="button" class="menu-align-btn" data-align="center"><i class="fas fa-align-center"></i></button><button type="button" class="menu-align-btn" data-align="right"><i class="fas fa-align-right"></i></button></div><div class="menu-split"></div><div class="menu-section-title">Style</div><label>Letter spacing</label><div class="menu-slider-row"><input id="mLsRange" type="range" min="0" max="20" step="0.1"><input id="mLsNum" type="number" min="0" max="20" step="0.1"></div><label>Text color</label><input id="mTextColor" type="color"><label>Menu items underline color</label><input id="mUnderlineColor" type="color"><label>Background color</label><input id="mBgColor" type="color"><label>Background image URL</label><input id="mBgImg" placeholder="https://..."><label>Upload background image</label><input id="mBgUp" type="file" accept="image/*"><div class="menu-split"></div><div class="menu-section-title">Spacing</div><label>Spacing between menu items</label><div class="menu-slider-row"><input id="mGapRange" type="range" min="0" max="64" step="1"><input id="mGapNum" type="number" min="0" max="64" step="1"></div><label>Padding</label><div class="size-grid"><div class="fld"><label>T</label><input id="pTop" type="number" value="'+pad[0]+'"></div><div class="fld"><label>R</label><input id="pRight" type="number" value="'+pad[1]+'"></div><div class="fld"><label>B</label><input id="pBottom" type="number" value="'+pad[2]+'"></div><div class="fld"><label>L</label><input id="pLeft" type="number" value="'+pad[3]+'"></div><div class="size-link"><button type="button" id="linkPad" title="Link padding"><span>&harr;</span></button><span>Link</span></div></div><label>Margin</label><div class="size-grid"><div class="fld"><label>T</label><input id="mTop" type="number" value="'+mar[0]+'"></div><div class="fld"><label>R</label><input id="mRight" type="number" value="'+mar[1]+'"></div><div class="fld"><label>B</label><input id="mBottom" type="number" value="'+mar[2]+'"></div><div class="fld"><label>L</label><input id="mLeft" type="number" value="'+mar[3]+'"></div><div class="size-link"><button type="button" id="linkMar" title="Link margin"><span>&harr;</span></button><span>Link</span></div></div>'+posControls+moveControls+remove;
-            settings.insertAdjacentHTML("beforeend",'<div class="menu-split"></div><div class="menu-section-title">Menu Extras</div><label>Right button label</label><input id="mLeftBtnLabel" placeholder="Get Started"><label>Right button URL</label><input id="mLeftBtnUrl" placeholder="#"><label>Right button background color</label><input id="mLeftBtnBg" type="color"><label>Right button text color</label><input id="mLeftBtnText" type="color"><div class="menu-split"></div><label>Left logo image URL</label><input id="mRightLogoUrl" placeholder="https://..."><label>Left logo alt text</label><input id="mRightLogoAlt" placeholder="Logo"><label>Upload left logo image</label><input id="mRightLogoUp" type="file" accept="image/*">');
+            settings.insertAdjacentHTML("beforeend",'<div class="menu-split"></div><div class="menu-section-title">Right CTA Button</div><label>Button label</label><input id="mLeftBtnLabel" placeholder="Get Started"><label>Button URL</label><input id="mLeftBtnUrl" placeholder="#"><label>Button background color</label><input id="mLeftBtnBg" type="color"><label>Button text color</label><input id="mLeftBtnText" type="color"><label>Button text size</label><div class="px-wrap"><input id="mLeftBtnTextSize" type="number" min="10" max="48" step="1"><span class="px-unit">px</span></div><label>Button text style</label><div class="menu-style-row"><button type="button" id="mLeftBtnBold" class="menu-align-btn" title="Bold"><i class="fas fa-bold"></i></button><button type="button" id="mLeftBtnItalic" class="menu-align-btn" title="Italic"><i class="fas fa-italic"></i></button></div><label>Button border radius</label><div class="px-wrap"><input id="mLeftBtnRadius" type="number" min="0" max="80" step="1"><span class="px-unit">px</span></div><label>Button size (vertical padding)</label><div class="px-wrap"><input id="mLeftBtnPadY" type="number" min="4" max="40" step="1"><span class="px-unit">px</span></div><label>Button size (horizontal padding)</label><div class="px-wrap"><input id="mLeftBtnPadX" type="number" min="8" max="80" step="1"><span class="px-unit">px</span></div><div class="menu-split"></div><div class="menu-section-title">Left Logo</div><label>Logo image URL</label><input id="mRightLogoUrl" placeholder="https://..."><label>Logo alt text</label><input id="mRightLogoAlt" placeholder="Logo"><label>Upload logo image</label><input id="mRightLogoUp" type="file" accept="image/*">');
 
             items.forEach((it,idx)=>{
                 var lab=document.getElementById("miLabel_"+idx),url=document.getElementById("miUrl_"+idx),mode=document.getElementById("miMode_"+idx),anchor=document.getElementById("miAnchor_"+idx),sectionWrap=document.getElementById("miSectionWrap_"+idx),customWrap=document.getElementById("miCustomWrap_"+idx),nw=document.getElementById("miNew_"+idx),sm=document.getElementById("miSub_"+idx);
@@ -12736,6 +12752,19 @@ function renderSettings(){
             bind("mLeftBtnUrl",(t.settings&&t.settings.leftButtonUrl)||"#",v=>{t.settings=t.settings||{};t.settings.leftButtonUrl=v;renderCanvas();},{undo:true});
             bind("mLeftBtnBg",(t.settings&&t.settings.leftButtonBgColor)||"#240E35",v=>{t.settings=t.settings||{};t.settings.leftButtonBgColor=v;renderCanvas();},{undo:true});
             bind("mLeftBtnText",(t.settings&&t.settings.leftButtonTextColor)||"#ffffff",v=>{t.settings=t.settings||{};t.settings.leftButtonTextColor=v;renderCanvas();},{undo:true});
+            bind("mLeftBtnTextSize",(t.settings&&t.settings.leftButtonTextSize)||14,v=>{t.settings=t.settings||{};var n=Number(v);t.settings.leftButtonTextSize=(!isNaN(n)&&n>=10&&n<=48)?Math.round(n):14;renderCanvas();},{undo:true});
+            bind("mLeftBtnRadius",(t.settings&&t.settings.leftButtonBorderRadius)||999,v=>{t.settings=t.settings||{};var n=Number(v);t.settings.leftButtonBorderRadius=(!isNaN(n)&&n>=0&&n<=80)?Math.round(n):999;renderCanvas();},{undo:true});
+            bind("mLeftBtnPadY",(t.settings&&t.settings.leftButtonPaddingY)||8,v=>{t.settings=t.settings||{};var n=Number(v);t.settings.leftButtonPaddingY=(!isNaN(n)&&n>=4&&n<=40)?Math.round(n):8;renderCanvas();},{undo:true});
+            bind("mLeftBtnPadX",(t.settings&&t.settings.leftButtonPaddingX)||14,v=>{t.settings=t.settings||{};var n=Number(v);t.settings.leftButtonPaddingX=(!isNaN(n)&&n>=8&&n<=80)?Math.round(n):14;renderCanvas();},{undo:true});
+            var mLeftBtnBold=document.getElementById("mLeftBtnBold"),mLeftBtnItalic=document.getElementById("mLeftBtnItalic");
+            function syncMenuBtnStyleButtons(){
+                var s=t.settings||{};
+                if(mLeftBtnBold)mLeftBtnBold.classList.toggle("active",!!s.leftButtonBold);
+                if(mLeftBtnItalic)mLeftBtnItalic.classList.toggle("active",!!s.leftButtonItalic);
+            }
+            if(mLeftBtnBold)mLeftBtnBold.onclick=()=>{saveToHistory();t.settings=t.settings||{};t.settings.leftButtonBold=!t.settings.leftButtonBold;syncMenuBtnStyleButtons();renderCanvas();};
+            if(mLeftBtnItalic)mLeftBtnItalic.onclick=()=>{saveToHistory();t.settings=t.settings||{};t.settings.leftButtonItalic=!t.settings.leftButtonItalic;syncMenuBtnStyleButtons();renderCanvas();};
+            syncMenuBtnStyleButtons();
             bind("mRightLogoUrl",(t.settings&&t.settings.rightLogoUrl)||"",v=>{t.settings=t.settings||{};t.settings.rightLogoUrl=v;renderCanvas();},{undo:true});
             bind("mRightLogoAlt",(t.settings&&t.settings.rightLogoAlt)||"Logo",v=>{t.settings=t.settings||{};t.settings.rightLogoAlt=v;renderCanvas();},{undo:true});
             var mRightLogoUp=document.getElementById("mRightLogoUp");
@@ -14279,11 +14308,22 @@ function bindPublishForm(){
             });
     });
 }
+function withPreviewDeviceParam(url, device){
+    if(!url)return url;
+    if(url.indexOf("preview_device=")>=0)return url;
+    var sep=url.indexOf("?")>=0?"&":"?";
+    return url+sep+"preview_device="+encodeURIComponent(device||"desktop");
+}
+
 document.getElementById("previewBtn").onclick=()=>{
     const s=cur();if(!s)return;
     flushAutoSave()
         .then(()=>persistCurrentStep())
-        .then(()=>{window.open(previewTpl.replace("__STEP__",String(s.id)),"_blank");})
+        .then(()=>{
+            try{localStorage.setItem("fbPreviewDevice","desktop");}catch(_e){}
+            var url=withPreviewDeviceParam(previewTpl.replace("__STEP__",String(s.id)),"desktop");
+            window.open(url,"_blank");
+        })
         .catch(()=>{saveMsg.textContent="Save failed";alert("Save failed.");});
 };
 var testFlowBtn=document.getElementById("testFlowBtn");
@@ -14292,7 +14332,11 @@ if(testFlowBtn){
         const s=cur();if(!s||!testFlowTpl)return;
         flushAutoSave()
             .then(()=>persistCurrentStep())
-            .then(()=>{window.open(testFlowTpl.replace("__STEP__",String(s.id)),"_blank");})
+            .then(()=>{
+                try{localStorage.setItem("fbPreviewDevice","desktop");}catch(_e){}
+                var url=withPreviewDeviceParam(testFlowTpl.replace("__STEP__",String(s.id)),"desktop");
+                window.open(url,"_blank");
+            })
             .catch(()=>{saveMsg.textContent="Save failed";alert("Save failed.");});
     };
 }

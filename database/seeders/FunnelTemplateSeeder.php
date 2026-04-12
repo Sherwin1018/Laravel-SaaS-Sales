@@ -7,49 +7,30 @@ use App\Models\FunnelTemplateStep;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class FunnelTemplateSeeder extends Seeder
 {
     public function run(): void
     {
         $creatorId = $this->resolveSuperAdminCreatorId();
+        $catalog = array_merge($this->stepByStepPlaceholders(), $this->jsonTemplates());
 
-        foreach (array_merge($this->hardcodedTemplates(), $this->jsonTemplates()) as $templateDefinition) {
+        foreach ($catalog as $templateDefinition) {
             $template = FunnelTemplate::query()->updateOrCreate(
                 ['slug' => $templateDefinition['slug']],
                 [
                     'created_by' => $creatorId,
                     'name' => $templateDefinition['name'],
-                    'description' => $templateDefinition['description'],
-                    'template_type' => $templateDefinition['template_type'],
-                    'template_tags' => $templateDefinition['template_tags'],
-                    'status' => 'published',
-                    'published_at' => now(),
+                    'description' => $templateDefinition['description'] ?? null,
+                    'template_type' => $templateDefinition['template_type'] ?? 'single_page',
+                    'template_tags' => $templateDefinition['template_tags'] ?? [],
+                    'status' => $templateDefinition['status'] ?? 'draft',
+                    'published_at' => ($templateDefinition['status'] ?? 'draft') === 'published' ? now() : null,
                 ]
             );
 
-            foreach ($templateDefinition['steps'] as $index => $stepDefinition) {
-                FunnelTemplateStep::query()->updateOrCreate(
-                    [
-                        'funnel_template_id' => $template->id,
-                        'slug' => $stepDefinition['slug'],
-                    ],
-                    [
-                        'title' => $stepDefinition['title'],
-                        'subtitle' => $stepDefinition['subtitle'] ?? null,
-                        'type' => $stepDefinition['type'],
-                        'content' => $stepDefinition['content'] ?? null,
-                        'cta_label' => $stepDefinition['cta_label'] ?? null,
-                        'price' => $stepDefinition['price'] ?? null,
-                        'position' => $index + 1,
-                        'is_active' => true,
-                        'template' => 'simple',
-                        'template_data' => [],
-                        'step_tags' => $stepDefinition['step_tags'] ?? [],
-                        'layout_json' => $stepDefinition['layout_json'],
-                    ]
-                );
-            }
+            $this->syncTemplateSteps($template, $templateDefinition['steps'] ?? []);
         }
     }
 
@@ -75,7 +56,7 @@ class FunnelTemplateSeeder extends Seeder
     private function jsonTemplates(): array
     {
         $templatesDir = database_path('seeders/templates');
-        if (!is_dir($templatesDir)) {
+        if (! is_dir($templatesDir)) {
             return [];
         }
 
@@ -85,278 +66,101 @@ class FunnelTemplateSeeder extends Seeder
             ->map(function (string $path) {
                 try {
                     $decoded = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
-                    return is_array($decoded) ? $decoded : null;
+                    if (! is_array($decoded)) {
+                        return null;
+                    }
+
+                    return $decoded;
                 } catch (\Throwable) {
                     return null;
                 }
             })
-            ->filter(fn ($template) => is_array($template) && isset($template['slug'], $template['name'], $template['steps']))
+            ->filter(function ($template) {
+                return is_array($template)
+                    && isset($template['slug'], $template['name'], $template['steps'])
+                    && (($template['template_type'] ?? null) === 'single_page');
+            })
+            ->map(function (array $template) {
+                $template['status'] = 'published';
+                $template['template_tags'] = is_array($template['template_tags'] ?? null) ? $template['template_tags'] : [];
+                $template['steps'] = is_array($template['steps'] ?? null) ? $template['steps'] : [];
+
+                return $template;
+            })
             ->values()
             ->all();
     }
 
-    private function hardcodedTemplates(): array
+    private function stepByStepPlaceholders(): array
     {
         return [
             [
-                'name' => 'Service Lead + Offer Funnel',
-                'slug' => 'service-lead-offer-funnel',
-                'description' => 'Lead capture funnel with consultative offer, checkout, and thank-you flow.',
+                'name' => 'Step-by-Step Digital Services (Placeholder)',
+                'slug' => 'step-by-step-digital-services-placeholder',
+                'description' => 'Placeholder only. Step-by-step catalog is visible but not active yet.',
                 'template_type' => 'service',
-                'template_tags' => ['Lead Gen', 'Service', 'Consultation'],
-                'steps' => [
-                    [
-                        'title' => 'Landing',
-                        'slug' => 'landing',
-                        'type' => 'landing',
-                        'content' => 'Welcome to our proven service system.',
-                        'cta_label' => 'See How It Works',
-                        'layout_json' => $this->layoutWithElements([
-                            $this->headingElement('Scale Your Client Acquisition'),
-                            $this->textElement('Discover the exact process we use to turn visitors into booked calls and paying clients.'),
-                            $this->buttonElement('See The Next Step', 'next_step'),
-                        ]),
-                    ],
-                    [
-                        'title' => 'Opt In',
-                        'slug' => 'opt-in',
-                        'type' => 'opt_in',
-                        'content' => 'Capture high-intent leads.',
-                        'layout_json' => $this->layoutWithElements([
-                            $this->headingElement('Get The Funnel Blueprint'),
-                            $this->textElement('Enter your details and we will send the full framework instantly.'),
-                            $this->formElement([
-                                ['type' => 'text', 'label' => 'First Name', 'required' => true],
-                                ['type' => 'email', 'label' => 'Email', 'required' => true],
-                            ], 'Get Instant Access'),
-                        ]),
-                    ],
-                    [
-                        'title' => 'Sales',
-                        'slug' => 'sales',
-                        'type' => 'sales',
-                        'content' => 'Present offer details and social proof.',
-                        'cta_label' => 'Go To Checkout',
-                        'layout_json' => $this->layoutWithElements([
-                            $this->headingElement('Done-For-You Funnel Buildout'),
-                            $this->textElement('We set up your complete funnel stack, tracking, and conversion optimization in under 14 days.'),
-                            $this->pricingElement('Growth Setup', 'PHP 9,900', 'one-time', 'Go To Checkout', 'next_step'),
-                        ]),
-                    ],
-                    [
-                        'title' => 'Checkout',
-                        'slug' => 'checkout',
-                        'type' => 'checkout',
-                        'content' => 'Secure your setup slot.',
-                        'cta_label' => 'Pay Now',
-                        'price' => 9900,
-                        'layout_json' => $this->layoutWithElements([
-                            $this->headingElement('Secure Your Spot'),
-                            $this->textElement('Complete your payment below to reserve onboarding this week.'),
-                            $this->checkoutSummaryElement('Growth Setup', 'PHP 9,900', 'one-time', 'Pay Now'),
-                        ]),
-                    ],
-                    [
-                        'title' => 'Thank You',
-                        'slug' => 'thank-you',
-                        'type' => 'thank_you',
-                        'content' => 'Payment received. We will email your onboarding steps.',
-                        'layout_json' => $this->layoutWithElements([
-                            $this->headingElement('You Are In'),
-                            $this->textElement('Thank you for your order. Check your email for onboarding and next steps.'),
-                        ]),
-                    ],
-                ],
+                'template_tags' => ['Step-by-Step', 'Placeholder'],
+                'status' => 'draft',
+                'steps' => [],
             ],
             [
-                'name' => 'Physical Product Quick Order',
-                'slug' => 'physical-product-quick-order',
-                'description' => 'Sales to checkout flow for COD or prepaid physical product campaigns.',
+                'name' => 'Step-by-Step Physical Products (Placeholder)',
+                'slug' => 'step-by-step-physical-products-placeholder',
+                'description' => 'Placeholder only. Step-by-step catalog is visible but not active yet.',
                 'template_type' => 'physical_product',
-                'template_tags' => ['Physical Product', 'Ecommerce', 'Quick Order'],
-                'steps' => [
-                    [
-                        'title' => 'Sales',
-                        'slug' => 'sales',
-                        'type' => 'sales',
-                        'content' => 'Show product value and urgency.',
-                        'cta_label' => 'Order Now',
-                        'layout_json' => $this->layoutWithElements([
-                            $this->headingElement('Best Seller Product Offer'),
-                            $this->textElement('Limited stock for this week. Reserve yours now with fast shipping.'),
-                            $this->productOfferElement('Premium Bundle', 'PHP 1,499', 'Order Now', 'next_step'),
-                        ]),
-                    ],
-                    [
-                        'title' => 'Checkout',
-                        'slug' => 'checkout',
-                        'type' => 'checkout',
-                        'content' => 'Collect delivery information and payment.',
-                        'cta_label' => 'Place Order',
-                        'price' => 1499,
-                        'layout_json' => $this->layoutWithElements([
-                            $this->headingElement('Complete Your Order'),
-                            $this->shippingDetailsElement(),
-                            $this->physicalCheckoutSummaryElement('Premium Bundle', 'PHP 1,499', 'Place Order'),
-                        ]),
-                    ],
-                    [
-                        'title' => 'Thank You',
-                        'slug' => 'thank-you',
-                        'type' => 'thank_you',
-                        'content' => 'Order confirmed.',
-                        'layout_json' => $this->layoutWithElements([
-                            $this->headingElement('Order Confirmed'),
-                            $this->textElement('Thank you. We will send shipping updates to your contact details soon.'),
-                        ]),
-                    ],
+                'template_tags' => ['Step-by-Step', 'Placeholder'],
+                'status' => 'draft',
+                'steps' => [],
+            ],
+        ];
+    }
+
+    private function syncTemplateSteps(FunnelTemplate $template, array $steps): void
+    {
+        $keptSlugs = [];
+
+        foreach (array_values($steps) as $index => $stepDefinition) {
+            $slug = Str::slug((string) ($stepDefinition['slug'] ?? ('step-' . ($index + 1))));
+            $slug = $slug !== '' ? $slug : ('step-' . ($index + 1));
+            $keptSlugs[] = $slug;
+
+            FunnelTemplateStep::query()->updateOrCreate(
+                [
+                    'funnel_template_id' => $template->id,
+                    'slug' => $slug,
                 ],
-            ],
-        ];
-    }
+                [
+                    'title' => (string) ($stepDefinition['title'] ?? ('Step ' . ($index + 1))),
+                    'subtitle' => $stepDefinition['subtitle'] ?? null,
+                    'type' => (string) ($stepDefinition['type'] ?? 'landing'),
+                    'content' => $stepDefinition['content'] ?? null,
+                    'cta_label' => $stepDefinition['cta_label'] ?? null,
+                    'price' => $stepDefinition['price'] ?? null,
+                    'position' => $index + 1,
+                    'is_active' => array_key_exists('is_active', $stepDefinition) ? (bool) $stepDefinition['is_active'] : true,
+                    'template' => (string) ($stepDefinition['template'] ?? 'simple'),
+                    'template_data' => is_array($stepDefinition['template_data'] ?? null) ? $stepDefinition['template_data'] : [],
+                    'step_tags' => is_array($stepDefinition['step_tags'] ?? null) ? $stepDefinition['step_tags'] : [],
+                    'layout_json' => is_array($stepDefinition['layout_json'] ?? null)
+                        ? $stepDefinition['layout_json']
+                        : ['root' => [], 'sections' => []],
+                ]
+            );
+        }
 
-    private function layoutWithElements(array $elements): array
-    {
-        return [
-            'root' => [[
-                'kind' => 'section',
-                'id' => 'sec-' . uniqid(),
-                'rows' => [[
-                    'id' => 'row-' . uniqid(),
-                    'columns' => [[
-                        'id' => 'col-' . uniqid(),
-                        'elements' => $elements,
-                    ]],
-                ]],
-            ]],
-            'sections' => [],
-        ];
-    }
+        $query = FunnelTemplateStep::query()->where('funnel_template_id', $template->id);
+        if ($keptSlugs === []) {
+            $query->delete();
+            return;
+        }
 
-    private function headingElement(string $content): array
-    {
-        return [
-            'id' => 'el-' . uniqid(),
-            'type' => 'heading',
-            'content' => $content,
-            'settings' => [],
-        ];
-    }
+        $query->whereNotIn('slug', $keptSlugs)->delete();
 
-    private function textElement(string $content): array
-    {
-        return [
-            'id' => 'el-' . uniqid(),
-            'type' => 'text',
-            'content' => $content,
-            'settings' => [],
-        ];
-    }
-
-    private function buttonElement(string $content, string $actionType): array
-    {
-        return [
-            'id' => 'el-' . uniqid(),
-            'type' => 'button',
-            'content' => $content,
-            'settings' => [
-                'actionType' => $actionType,
-            ],
-        ];
-    }
-
-    private function formElement(array $fields, string $buttonLabel): array
-    {
-        return [
-            'id' => 'el-' . uniqid(),
-            'type' => 'form',
-            'content' => $buttonLabel,
-            'settings' => [
-                'fields' => $fields,
-            ],
-        ];
-    }
-
-    private function pricingElement(string $plan, string $price, string $period, string $ctaLabel, string $actionType): array
-    {
-        return [
-            'id' => 'el-' . uniqid(),
-            'type' => 'pricing',
-            'content' => '',
-            'settings' => [
-                'plan' => $plan,
-                'price' => $price,
-                'period' => $period,
-                'ctaLabel' => $ctaLabel,
-                'ctaActionType' => $actionType,
-                'features' => [
-                    'Ready-to-launch funnel pages',
-                    'Checkout setup and automation',
-                    'Tracking and analytics',
-                ],
-            ],
-        ];
-    }
-
-    private function checkoutSummaryElement(string $plan, string $price, string $period, string $ctaLabel): array
-    {
-        return [
-            'id' => 'el-' . uniqid(),
-            'type' => 'checkout_summary',
-            'content' => '',
-            'settings' => [
-                'plan' => $plan,
-                'price' => $price,
-                'period' => $period,
-                'ctaLabel' => $ctaLabel,
-            ],
-        ];
-    }
-
-    private function productOfferElement(string $plan, string $price, string $ctaLabel, string $actionType): array
-    {
-        return [
-            'id' => 'el-' . uniqid(),
-            'type' => 'product_offer',
-            'content' => '',
-            'settings' => [
-                'plan' => $plan,
-                'price' => $price,
-                'ctaLabel' => $ctaLabel,
-                'ctaActionType' => $actionType,
-                'features' => [
-                    'Cash on delivery available',
-                    'Free shipping promo',
-                    '30-day guarantee',
-                ],
-            ],
-        ];
-    }
-
-    private function shippingDetailsElement(): array
-    {
-        return [
-            'id' => 'el-' . uniqid(),
-            'type' => 'shipping_details',
-            'content' => '',
-            'settings' => [
-                'title' => 'Delivery Information',
-                'subtitle' => 'Provide your shipping details before placing the order.',
-            ],
-        ];
-    }
-
-    private function physicalCheckoutSummaryElement(string $plan, string $price, string $ctaLabel): array
-    {
-        return [
-            'id' => 'el-' . uniqid(),
-            'type' => 'physical_checkout_summary',
-            'content' => '',
-            'settings' => [
-                'plan' => $plan,
-                'price' => $price,
-                'ctaLabel' => $ctaLabel,
-            ],
-        ];
+        foreach ($keptSlugs as $index => $slug) {
+            FunnelTemplateStep::query()
+                ->where('funnel_template_id', $template->id)
+                ->where('slug', $slug)
+                ->update(['position' => $index + 1]);
+        }
     }
 }

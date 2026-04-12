@@ -98,6 +98,7 @@
                 <br>1. Full template JSON with <code>steps</code>
                 <br>2. Full template JSON with <code>pages</code>
                 <br>3. Single-page JSON with one <code>layout_json</code> object
+                <br><br>Use <code>Single Page Funnel</code> for active templates. Step-by-step templates are placeholders only.
                 <br><br>Each step can include fields like <code>title</code>, <code>slug</code>, <code>type</code>, <code>description</code>, <code>template</code>, <code>step_tags</code>, and <code>layout_json</code>.
             </div>
 

@@ -46,9 +46,9 @@
             </div>
 
             <div style="margin:18px 0; padding:14px 16px; border-radius:12px; background:#fbf9fd; border:1px solid #ece2f5; color:#475569; font-size:13px; line-height:1.55;">
-                Starter sequence by purpose:
-                <br><strong>Service Funnel</strong>: Landing -> Opt-in -> Sales -> Checkout -> Thank You
-                <br><strong>Physical Product Funnel</strong>: Sales -> Checkout -> Thank You
+                Active build type:
+                <br><strong>Single Page Funnel</strong>: Single page canvas with sections for full journey content.
+                <br><strong>Step-by-Step templates</strong>: visible as placeholders only (no real content for now).
             </div>
 
             <div style="display:flex; gap:10px;">
@@ -58,4 +58,3 @@
         </form>
     </div>
 @endsection
-

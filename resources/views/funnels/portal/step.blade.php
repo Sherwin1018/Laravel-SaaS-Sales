@@ -206,15 +206,27 @@
         .builder-image-placeholder__plus { width: 58px; height: 58px; border-radius: 999px; background: #d9d9d9; color: #5f6368; display: flex; align-items: center; justify-content: center; font-size: 40px; font-weight: 300; line-height: 1; box-shadow: 0 6px 18px rgba(15, 23, 42, 0.16); }
         .builder-image-placeholder__label { font-size: 14px; font-weight: 600; color: #5f6368; letter-spacing: 0.01em; }
         .builder-menu { width: 100%; }
-        .builder-menu-shell { width: 100%; display: flex; align-items: center; gap: 12px; }
-        .builder-menu-left,
-        .builder-menu-right { flex: 0 0 auto; }
-        .builder-menu-center { flex: 1 1 auto; min-width: 0; }
-        .builder-menu-list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; }
+        .builder-menu-shell { width: 100%; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; }
+        .builder-menu-left { justify-self: start; min-width: 0; }
+        .builder-menu-right { justify-self: end; min-width: 0; }
+        .builder-menu-center { min-width: 0; justify-self: center; }
+        .builder-menu-list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; }
         .builder-menu-link { text-decoration: none; text-underline-offset: 3px; font: inherit; }
         .builder-menu-edit-btn { display: inline-block; padding: 8px 14px; border-radius: 999px; text-decoration: none; font-weight: 600; }
         .builder-menu-logo { display: block; max-height: 42px; width: auto; max-width: 180px; object-fit: contain; }
         .builder-menu-logo-placeholder { padding: 8px 12px; border: 1px dashed #cbd5e1; border-radius: 10px; font-size: 12px; color: #64748b; }
+        .builder-menu-toggle { display: none; width: 42px; height: 42px; border: 1px solid #cbd5e1; background: #fff; border-radius: 10px; align-items: center; justify-content: center; cursor: pointer; color: #0f172a; }
+        .builder-menu-toggle i { font-size: 16px; }
+        .builder-menu-mobile-overlay { position: fixed; inset: 0; display: none; z-index: 90; background: rgba(15, 23, 42, 0.4); }
+        .builder-menu-mobile-overlay.is-open { display: block; }
+        .builder-menu-mobile-drawer { position: absolute; top: 0; right: 0; width: min(84vw, 360px); height: 100%; background: #fff; box-shadow: -18px 0 36px rgba(15, 23, 42, 0.25); transform: translateX(100%); transition: transform 220ms ease; display: flex; flex-direction: column; }
+        .builder-menu-mobile-overlay.is-open .builder-menu-mobile-drawer { transform: translateX(0); }
+        .builder-menu-mobile-head { display: flex; align-items: center; justify-content: flex-start; padding: 12px; border-bottom: 1px solid #e2e8f0; }
+        .builder-menu-mobile-close { width: 40px; height: 40px; border: 1px solid #cbd5e1; background: #fff; border-radius: 0; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; color: #0f172a; }
+        .builder-menu-mobile-panel { padding: 12px; overflow-y: auto; }
+        .builder-menu-mobile-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+        .builder-menu-mobile-link { display: block; text-decoration: none; color: inherit; font: inherit; padding: 8px 0; }
+        .builder-menu-mobile-cta { margin-top: 12px; display: inline-flex; text-decoration: none; }
         .builder-testimonial { display: grid; gap: 10px; }
         .builder-testimonial-quote { font-style: italic; line-height: 1.5; color: #334155; }
         .builder-testimonial-author { display: flex; align-items: center; gap: 10px; }
@@ -482,15 +494,70 @@
         .builder-video-wrap iframe, .builder-video-wrap video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; object-fit: contain; }
         .builder-video-wrap .video-fallback-link { position: absolute; top: 8px; right: 8px; z-index: 2; font-size: 11px; color: rgba(255,255,255,0.8); background: rgba(0,0,0,0.5); padding: 4px 8px; border-radius: 6px; text-decoration: none; }
         .builder-video-wrap video { z-index: 1; }
-        .preview-badge {
-            display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px;
-            border-radius: 999px; font-size: 12px; font-weight: 800; color: #1d4ed8; background: #dbeafe;
-        }
         .preview-toolbar-left{
             display:flex;
             align-items:center;
             gap:12px;
             min-width: 0;
+            pointer-events:auto;
+        }
+        .preview-toolbar-right{
+            margin-left:auto;
+            pointer-events:auto;
+        }
+        .preview-back-btn{
+            width:44px;
+            height:44px;
+            border-radius:12px;
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            text-decoration:none;
+            background:#240E35;
+            border:1px solid #240E35;
+            color:#fff;
+            box-shadow:none;
+        }
+        .preview-back-btn i{ font-size:16px; line-height:1; }
+        .preview-mode-chip{
+            height:44px;
+            min-width:44px;
+            padding:0 12px;
+            border-radius:12px;
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            gap:0;
+            color:#fff;
+            background:#240E35;
+            border:1px solid #240E35;
+            overflow:hidden;
+            white-space:nowrap;
+            box-shadow:none;
+            transition:min-width 180ms ease,padding 180ms ease,gap 180ms ease;
+        }
+        .preview-mode-chip .preview-mode-label{
+            max-width:0;
+            opacity:0;
+            overflow:hidden;
+            margin-left:0;
+            transform:translateX(-4px);
+            transition:max-width 180ms ease,opacity 180ms ease,margin-left 180ms ease,transform 180ms ease;
+            font-size:12px;
+            font-weight:800;
+        }
+        .preview-mode-chip:hover,
+        .preview-mode-chip:focus-within{
+            min-width:150px;
+            padding:0 14px;
+            gap:8px;
+        }
+        .preview-mode-chip:hover .preview-mode-label,
+        .preview-mode-chip:focus-within .preview-mode-label{
+            max-width:120px;
+            opacity:1;
+            margin-left:2px;
+            transform:translateX(0);
         }
         .preview-device-switcher{
             display:flex;
@@ -693,15 +760,42 @@
             padding: 8px !important;
             font-size: 14px !important;
         }
-        body[data-preview-device="mobile"] .builder-menu-list{
-            flex-direction: column !important;
-            align-items: stretch !important;
-            gap: 4px !important;
+        body[data-preview-device="mobile"] .builder-menu-center,
+        body[data-preview-device="mobile"] .builder-menu-right{
+            display:none !important;
         }
-        body[data-preview-device="mobile"] .builder-menu-link{
-            display: block !important;
-            text-align: center !important;
-            padding: 8px !important;
+        body[data-preview-device="mobile"] .builder-menu-shell{
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            min-height: 88px !important;
+            padding: 0 8px !important;
+            gap: 28px !important;
+            border-bottom: 1px solid #e2e8f0 !important;
+        }
+        body[data-preview-device="mobile"] .builder-menu{
+            width: 100% !important;
+            max-width: none !important;
+        }
+        body[data-preview-device="mobile"] .builder-el[data-element-type="menu"]{
+            width: 100vw !important;
+            max-width: 100vw !important;
+            margin-left: calc(50% - 50vw) !important;
+            margin-right: calc(50% - 50vw) !important;
+            left: 0 !important;
+            right: 0 !important;
+        }
+        body[data-preview-device="mobile"] .builder-menu-toggle{
+            display:inline-flex !important;
+        }
+        body[data-preview-device="mobile"] .builder-menu-left .builder-menu-logo{
+            max-height: 50px !important;
+            max-width: 170px !important;
+        }
+        body[data-preview-device="mobile"] .builder-menu-left .builder-menu-logo-placeholder{
+            min-height: 50px !important;
+            display: inline-flex !important;
+            align-items: center !important;
         }
         body[data-preview-device="mobile"] .builder-countdown{
             gap: 6px !important;
@@ -809,15 +903,42 @@
                 padding: 8px;
                 font-size: 14px;
             }
-            body.is-published .builder-menu-list{
-                flex-direction: column;
-                align-items: stretch;
-                gap: 4px;
+            body.is-published .builder-menu-center,
+            body.is-published .builder-menu-right{
+                display:none;
             }
-            body.is-published .builder-menu-link{
-                display: block;
-                text-align: center;
-                padding: 8px;
+            body.is-published .builder-menu-shell{
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                min-height: 88px;
+                padding: 0 8px;
+                gap: 28px;
+                border-bottom: 1px solid #e2e8f0;
+            }
+            body.is-published .builder-menu{
+                width: 100%;
+                max-width: none;
+            }
+            body.is-published .builder-el[data-element-type="menu"]{
+                width: 100vw;
+                max-width: 100vw;
+                margin-left: calc(50% - 50vw);
+                margin-right: calc(50% - 50vw);
+                left: 0;
+                right: 0;
+            }
+            body.is-published .builder-menu-toggle{
+                display:inline-flex;
+            }
+            body.is-published .builder-menu-left .builder-menu-logo{
+                max-height: 50px;
+                max-width: 170px;
+            }
+            body.is-published .builder-menu-left .builder-menu-logo-placeholder{
+                min-height: 50px;
+                display: inline-flex;
+                align-items: center;
             }
             body.is-published .builder-el + .builder-el{
                 margin-top: 4px;
@@ -839,7 +960,6 @@
             border: 0;
             pointer-events: none;
         }
-        .preview-toolbar-left{ pointer-events:auto; }
         .preview-device-switcher{ pointer-events:auto; }
     </style>
 </head>
@@ -962,7 +1082,7 @@
         };
         $currentStepType = $normalizeStepType($step->type ?? '');
         $effectiveFunnelPurpose = strtolower(trim((string) (($funnel->purpose ?? null) ?: ($funnel->template_type ?? 'service'))));
-        if (! in_array($effectiveFunnelPurpose, ['service', 'digital_product', 'physical_product', 'hybrid'], true)) {
+        if (! in_array($effectiveFunnelPurpose, ['service', 'single_page', 'digital_product', 'physical_product', 'hybrid'], true)) {
             $effectiveFunnelPurpose = 'service';
         }
         $currentStepIndex = $activeSteps->search(fn ($s) => (int) $s->id === (int) $step->id);
@@ -1390,10 +1510,15 @@
         @if($isPreview && !$previewIframeMode)
         <div class="preview-toolbar">
             <div class="preview-toolbar-left">
-                <a class="btn secondary" href="{{ route('funnels.edit', $funnel) }}" style="padding:8px 14px; box-shadow:none;">
-                    <i class="fas fa-arrow-left"></i> Back to Builder
+                <a class="preview-back-btn" href="{{ route('funnels.edit', $funnel) }}" aria-label="Back to Builder" title="Back to Builder">
+                    <i class="fas fa-arrow-left" aria-hidden="true"></i>
                 </a>
-                <span class="preview-badge"><i class="fas fa-eye"></i> Preview Mode</span>
+            </div>
+            <div class="preview-toolbar-right">
+                <span class="preview-mode-chip" aria-label="Preview Mode" title="Preview Mode">
+                    <i class="fas fa-eye" aria-hidden="true"></i>
+                    <span class="preview-mode-label">Preview Mode</span>
+                </span>
             </div>
             <div class="preview-device-switcher" role="group" aria-label="Preview device">
                 <button type="button" class="preview-device-btn is-active" data-preview-device="desktop" title="Desktop"><i class="fas fa-desktop" aria-hidden="true"></i><span style="position:absolute;left:-9999px;">Desktop</span></button>
@@ -1554,8 +1679,17 @@
                                                 $type = $element['type'] ?? 'text';
                                                 $content = (string) ($element['content'] ?? '');
                                                 $rawStyle = is_array($element['style'] ?? null) ? $element['style'] : [];
-                                                $style = $styleToString($rawStyle);
-                                                $contentStyle = $contentStyleToString($rawStyle);
+                                                $allowAbsPos = $isFreeformCanvas;
+                                                $flowStyle = $rawStyle;
+                                                if (!$allowAbsPos) {
+                                                    foreach (['position','left','top','right','bottom','zIndex','z-index'] as $k) {
+                                                        if (array_key_exists($k, $flowStyle)) {
+                                                            unset($flowStyle[$k]);
+                                                        }
+                                                    }
+                                                }
+                                                $style = $styleToString($flowStyle);
+                                                $contentStyle = $contentStyleToString($flowStyle);
                                                 $settings = is_array($element['settings'] ?? null) ? $element['settings'] : [];
                                                 $link = trim((string) ($settings['link'] ?? '#'));
                                                 $src = trim((string) ($settings['src'] ?? ''));
@@ -1570,7 +1704,7 @@
                                                 }
                                                 $alignStyle = 'display:flex;justify-content:' . ($alignment === 'right' ? 'flex-end' : ($alignment === 'center' ? 'center' : 'flex-start')) . ';margin-left:' . ($alignment === 'left' ? '0' : 'auto') . ';margin-right:' . ($alignment === 'right' ? '0' : 'auto') . ';';
                                                 $menuAlign = $settings['menuAlign'] ?? 'left';
-                                                $menuAlignStyle = 'display:flex;justify-content:' . ($menuAlign === 'right' ? 'flex-end' : ($menuAlign === 'center' ? 'center' : 'flex-start')) . ';';
+                                                $menuAlignStyle = 'width:100%;';
                                                 $widthBehavior = $settings['widthBehavior'] ?? 'fluid';
                                                 $buttonContainerBg = trim((string) ($settings['containerBgColor'] ?? ''));
                                                 if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $buttonContainerBg)) {
@@ -1628,7 +1762,10 @@
                                                 $hasFixedWidth = !empty(trim((string) ($rawStyle['width'] ?? '')));
                                                 $hasFixedHeight = !empty(trim((string) ($rawStyle['height'] ?? '')));
                                                 $hasSizedImageBox = $type === 'image' && $hasFixedHeight;
-                                                $isAbsPos = (trim((string) ($settings['positionMode'] ?? '')) === 'absolute') || (trim((string) ($rawStyle['position'] ?? '')) === 'absolute');
+                                                $isAbsPos = $allowAbsPos && (
+                                                    (trim((string) ($settings['positionMode'] ?? '')) === 'absolute')
+                                                    || (trim((string) ($rawStyle['position'] ?? '')) === 'absolute')
+                                                );
                                                 $absPosStyle = '';
                                                 if ($isAbsPos) {
                                                     $absFreeX = (int) ($settings['freeX'] ?? 0);
@@ -1820,22 +1957,37 @@
                                                         $itemGap = max(0, min(300, (int) ($settings['itemGap'] ?? 13)));
                                                         $menuText = trim((string) ($settings['textColor'] ?? '#374151'));
                                                         $menuUnderline = trim((string) ($settings['underlineColor'] ?? ''));
-                                                        $leftButtonLabel = trim((string) ($settings['leftButtonLabel'] ?? 'Edit'));
-                                                        if ($leftButtonLabel === '') $leftButtonLabel = 'Edit';
-                                                        $leftButtonUrl = trim((string) ($settings['leftButtonUrl'] ?? '#'));
-                                                        if ($leftButtonUrl === '') $leftButtonUrl = '#';
-                                                        $leftButtonBg = trim((string) ($settings['leftButtonBgColor'] ?? '#240E35'));
-                                                        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $leftButtonBg)) $leftButtonBg = '#240E35';
-                                                        $leftButtonText = trim((string) ($settings['leftButtonTextColor'] ?? '#ffffff'));
-                                                        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $leftButtonText)) $leftButtonText = '#ffffff';
-                                                        $rightLogoUrl = trim((string) ($settings['rightLogoUrl'] ?? ''));
-                                                        $rightLogoAlt = trim((string) ($settings['rightLogoAlt'] ?? 'Logo'));
-                                                        if ($rightLogoAlt === '') $rightLogoAlt = 'Logo';
+                                                        $ctaButtonLabel = trim((string) ($settings['leftButtonLabel'] ?? 'Get Started'));
+                                                        if ($ctaButtonLabel === '') $ctaButtonLabel = 'Get Started';
+                                                        $ctaButtonUrl = trim((string) ($settings['leftButtonUrl'] ?? '#'));
+                                                        if ($ctaButtonUrl === '') $ctaButtonUrl = '#';
+                                                        $ctaButtonBg = trim((string) ($settings['leftButtonBgColor'] ?? '#240E35'));
+                                                        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $ctaButtonBg)) $ctaButtonBg = '#240E35';
+                                                        $ctaButtonText = trim((string) ($settings['leftButtonTextColor'] ?? '#ffffff'));
+                                                        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $ctaButtonText)) $ctaButtonText = '#ffffff';
+                                                        $ctaButtonTextSize = (int) ($settings['leftButtonTextSize'] ?? 14);
+                                                        $ctaButtonTextSize = max(10, min(48, $ctaButtonTextSize));
+                                                        $ctaButtonRadius = (int) ($settings['leftButtonBorderRadius'] ?? 999);
+                                                        $ctaButtonRadius = max(0, min(80, $ctaButtonRadius));
+                                                        $ctaButtonPadY = (int) ($settings['leftButtonPaddingY'] ?? 8);
+                                                        $ctaButtonPadY = max(4, min(40, $ctaButtonPadY));
+                                                        $ctaButtonPadX = (int) ($settings['leftButtonPaddingX'] ?? 14);
+                                                        $ctaButtonPadX = max(8, min(80, $ctaButtonPadX));
+                                                        $ctaButtonBold = (bool) ($settings['leftButtonBold'] ?? false);
+                                                        $ctaButtonItalic = (bool) ($settings['leftButtonItalic'] ?? false);
+                                                        $menuLogoUrl = trim((string) ($settings['rightLogoUrl'] ?? ''));
+                                                        $menuLogoAlt = trim((string) ($settings['rightLogoAlt'] ?? 'Logo'));
+                                                        if ($menuLogoAlt === '') $menuLogoAlt = 'Logo';
+                                                        $menuUid = $elId !== '' ? $elId : ('menu_' . mt_rand(1000, 999999));
                                                     @endphp
                                                     <nav class="builder-menu" style="{{ $menuAlignStyle }}{{ $style !== '' ? $style : '' }}">
                                                         <div class="builder-menu-shell">
                                                             <div class="builder-menu-left">
-                                                                <a class="builder-menu-edit-btn" href="{{ $leftButtonUrl }}" style="background-color: {{ $leftButtonBg }}; color: {{ $leftButtonText }};">{{ $leftButtonLabel }}</a>
+                                                                @if($menuLogoUrl !== '')
+                                                                    <img class="builder-menu-logo" src="{{ $menuLogoUrl }}" alt="{{ $menuLogoAlt }}">
+                                                                @else
+                                                                    <div class="builder-menu-logo-placeholder">Logo</div>
+                                                                @endif
                                                             </div>
                                                             <div class="builder-menu-center">
                                                                 <ul class="builder-menu-list" style="gap: {{ $itemGap }}px;">
@@ -1854,11 +2006,37 @@
                                                                 </ul>
                                                             </div>
                                                             <div class="builder-menu-right">
-                                                                @if($rightLogoUrl !== '')
-                                                                    <img class="builder-menu-logo" src="{{ $rightLogoUrl }}" alt="{{ $rightLogoAlt }}">
-                                                                @else
-                                                                    <div class="builder-menu-logo-placeholder">Logo</div>
-                                                                @endif
+                                                                <a class="builder-menu-edit-btn" href="{{ $ctaButtonUrl }}" style="background-color: {{ $ctaButtonBg }}; color: {{ $ctaButtonText }}; font-size: {{ $ctaButtonTextSize }}px; border-radius: {{ $ctaButtonRadius }}px; padding: {{ $ctaButtonPadY }}px {{ $ctaButtonPadX }}px; font-weight: {{ $ctaButtonBold ? '700' : '600' }}; font-style: {{ $ctaButtonItalic ? 'italic' : 'normal' }};">{{ $ctaButtonLabel }}</a>
+                                                            </div>
+                                                            <button type="button" class="builder-menu-toggle" data-menu-toggle="{{ $menuUid }}" aria-expanded="false" aria-controls="menu-mobile-{{ $menuUid }}">
+                                                                <i class="fas fa-bars" aria-hidden="true"></i>
+                                                                <span style="position:absolute;left:-9999px;">Open menu</span>
+                                                            </button>
+                                                        </div>
+                                                        <div class="builder-menu-mobile-overlay" id="menu-mobile-{{ $menuUid }}" data-menu-panel="{{ $menuUid }}" aria-hidden="true">
+                                                            <div class="builder-menu-mobile-drawer">
+                                                                <div class="builder-menu-mobile-head">
+                                                                    <button type="button" class="builder-menu-mobile-close" data-menu-close="{{ $menuUid }}" aria-label="Close menu">
+                                                                        <i class="fas fa-times" aria-hidden="true"></i>
+                                                                    </button>
+                                                                </div>
+                                                                <div class="builder-menu-mobile-panel">
+                                                                    <ul class="builder-menu-mobile-list">
+                                                                        @foreach($menuItems as $i => $menuItem)
+                                                                            @php
+                                                                                $menuLabel = trim((string) ($menuItem['label'] ?? 'Menu item ' . ($i + 1)));
+                                                                                $menuHref = trim((string) ($menuItem['url'] ?? '#'));
+                                                                                $menuNew = (bool) ($menuItem['newWindow'] ?? false);
+                                                                                $linkColor = $menuText;
+                                                                                $decoStyle = $menuUnderline !== '' ? 'text-decoration:underline;text-decoration-color:' . $menuUnderline . ';' : 'text-decoration:none;';
+                                                                            @endphp
+                                                                            <li>
+                                                                                <a class="builder-menu-mobile-link" href="{{ $menuHref !== '' ? $menuHref : '#' }}" @if($menuNew) target="_blank" rel="noopener" @endif style="color: {{ $linkColor }}; {{ $decoStyle }} font-family:inherit; font-size:inherit; line-height:inherit; letter-spacing:inherit; font-weight:inherit; font-style:inherit;">{{ $menuLabel !== '' ? $menuLabel : ('Menu item ' . ($i + 1)) }}</a>
+                                                                            </li>
+                                                                        @endforeach
+                                                                    </ul>
+                                                                    <a class="builder-menu-edit-btn builder-menu-mobile-cta" href="{{ $ctaButtonUrl }}" style="background-color: {{ $ctaButtonBg }}; color: {{ $ctaButtonText }}; font-size: {{ $ctaButtonTextSize }}px; border-radius: {{ $ctaButtonRadius }}px; padding: {{ $ctaButtonPadY }}px {{ $ctaButtonPadX }}px; font-weight: {{ $ctaButtonBold ? '700' : '600' }}; font-style: {{ $ctaButtonItalic ? 'italic' : 'normal' }};">{{ $ctaButtonLabel }}</a>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </nav>
@@ -2084,25 +2262,40 @@
                                                                                                         $itemGap = (int) ($ssc['itemGap'] ?? 13);
                                                                                                         $itemGap = max(0, min(64, $itemGap));
                                                                                                         $menuAlign = $ssc['menuAlign'] ?? 'left';
-                                                                                                        $menuAlignStyle = 'display:flex;justify-content:' . ($menuAlign === 'right' ? 'flex-end' : ($menuAlign === 'center' ? 'center' : 'flex-start')) . ';';
+                                                                                                        $menuAlignStyle = 'width:100%;';
                                                                                                         $menuText = trim((string) ($ssc['textColor'] ?? '#374151'));
                                                                                                         $menuUnderline = trim((string) ($ssc['underlineColor'] ?? ''));
-                                                                                                        $leftButtonLabel = trim((string) ($ssc['leftButtonLabel'] ?? 'Edit'));
-                                                                                                        if ($leftButtonLabel === '') $leftButtonLabel = 'Edit';
-                                                                                                        $leftButtonUrl = trim((string) ($ssc['leftButtonUrl'] ?? '#'));
-                                                                                                        if ($leftButtonUrl === '') $leftButtonUrl = '#';
-                                                                                                        $leftButtonBg = trim((string) ($ssc['leftButtonBgColor'] ?? '#240E35'));
-                                                                                                        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $leftButtonBg)) $leftButtonBg = '#240E35';
-                                                                                                        $leftButtonText = trim((string) ($ssc['leftButtonTextColor'] ?? '#ffffff'));
-                                                                                                        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $leftButtonText)) $leftButtonText = '#ffffff';
-                                                                                                        $rightLogoUrl = trim((string) ($ssc['rightLogoUrl'] ?? ''));
-                                                                                                        $rightLogoAlt = trim((string) ($ssc['rightLogoAlt'] ?? 'Logo'));
-                                                                                                        if ($rightLogoAlt === '') $rightLogoAlt = 'Logo';
+                                                                                                        $ctaButtonLabel = trim((string) ($ssc['leftButtonLabel'] ?? 'Get Started'));
+                                                                                                        if ($ctaButtonLabel === '') $ctaButtonLabel = 'Get Started';
+                                                                                                        $ctaButtonUrl = trim((string) ($ssc['leftButtonUrl'] ?? '#'));
+                                                                                                        if ($ctaButtonUrl === '') $ctaButtonUrl = '#';
+                                                                                                        $ctaButtonBg = trim((string) ($ssc['leftButtonBgColor'] ?? '#240E35'));
+                                                                                                        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $ctaButtonBg)) $ctaButtonBg = '#240E35';
+                                                                                                        $ctaButtonText = trim((string) ($ssc['leftButtonTextColor'] ?? '#ffffff'));
+                                                                                                        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $ctaButtonText)) $ctaButtonText = '#ffffff';
+                                                                                                        $ctaButtonTextSize = (int) ($ssc['leftButtonTextSize'] ?? 14);
+                                                                                                        $ctaButtonTextSize = max(10, min(48, $ctaButtonTextSize));
+                                                                                                        $ctaButtonRadius = (int) ($ssc['leftButtonBorderRadius'] ?? 999);
+                                                                                                        $ctaButtonRadius = max(0, min(80, $ctaButtonRadius));
+                                                                                                        $ctaButtonPadY = (int) ($ssc['leftButtonPaddingY'] ?? 8);
+                                                                                                        $ctaButtonPadY = max(4, min(40, $ctaButtonPadY));
+                                                                                                        $ctaButtonPadX = (int) ($ssc['leftButtonPaddingX'] ?? 14);
+                                                                                                        $ctaButtonPadX = max(8, min(80, $ctaButtonPadX));
+                                                                                                        $ctaButtonBold = (bool) ($ssc['leftButtonBold'] ?? false);
+                                                                                                        $ctaButtonItalic = (bool) ($ssc['leftButtonItalic'] ?? false);
+                                                                                                        $menuLogoUrl = trim((string) ($ssc['rightLogoUrl'] ?? ''));
+                                                                                                        $menuLogoAlt = trim((string) ($ssc['rightLogoAlt'] ?? 'Logo'));
+                                                                                                        if ($menuLogoAlt === '') $menuLogoAlt = 'Logo';
+                                                                                                        $menuUid = trim((string) ($sel['id'] ?? '')) !== '' ? trim((string) $sel['id']) : ('menu_' . mt_rand(1000, 999999));
                                                                                                     @endphp
                                                                                                     <nav class="builder-menu" style="{{ $menuAlignStyle }}{{ $ss !== '' ? $ss : '' }}">
                                                                                                         <div class="builder-menu-shell">
                                                                                                             <div class="builder-menu-left">
-                                                                                                                <a class="builder-menu-edit-btn" href="{{ $leftButtonUrl }}" style="background-color: {{ $leftButtonBg }}; color: {{ $leftButtonText }};">{{ $leftButtonLabel }}</a>
+                                                                                                                @if($menuLogoUrl !== '')
+                                                                                                                    <img class="builder-menu-logo" src="{{ $menuLogoUrl }}" alt="{{ $menuLogoAlt }}">
+                                                                                                                @else
+                                                                                                                    <div class="builder-menu-logo-placeholder">Logo</div>
+                                                                                                                @endif
                                                                                                             </div>
                                                                                                             <div class="builder-menu-center">
                                                                                                                 <ul class="builder-menu-list" style="gap: {{ $itemGap }}px;">
@@ -2121,11 +2314,37 @@
                                                                                                                 </ul>
                                                                                                             </div>
                                                                                                             <div class="builder-menu-right">
-                                                                                                                @if($rightLogoUrl !== '')
-                                                                                                                    <img class="builder-menu-logo" src="{{ $rightLogoUrl }}" alt="{{ $rightLogoAlt }}">
-                                                                                                                @else
-                                                                                                                    <div class="builder-menu-logo-placeholder">Logo</div>
-                                                                                                                @endif
+                                                                                                                <a class="builder-menu-edit-btn" href="{{ $ctaButtonUrl }}" style="background-color: {{ $ctaButtonBg }}; color: {{ $ctaButtonText }}; font-size: {{ $ctaButtonTextSize }}px; border-radius: {{ $ctaButtonRadius }}px; padding: {{ $ctaButtonPadY }}px {{ $ctaButtonPadX }}px; font-weight: {{ $ctaButtonBold ? '700' : '600' }}; font-style: {{ $ctaButtonItalic ? 'italic' : 'normal' }};">{{ $ctaButtonLabel }}</a>
+                                                                                                            </div>
+                                                                                                            <button type="button" class="builder-menu-toggle" data-menu-toggle="{{ $menuUid }}" aria-expanded="false" aria-controls="menu-mobile-{{ $menuUid }}">
+                                                                                                                <i class="fas fa-bars" aria-hidden="true"></i>
+                                                                                                                <span style="position:absolute;left:-9999px;">Open menu</span>
+                                                                                                            </button>
+                                                                                                        </div>
+                                                                                                        <div class="builder-menu-mobile-overlay" id="menu-mobile-{{ $menuUid }}" data-menu-panel="{{ $menuUid }}" aria-hidden="true">
+                                                                                                            <div class="builder-menu-mobile-drawer">
+                                                                                                                <div class="builder-menu-mobile-head">
+                                                                                                                    <button type="button" class="builder-menu-mobile-close" data-menu-close="{{ $menuUid }}" aria-label="Close menu">
+                                                                                                                        <i class="fas fa-times" aria-hidden="true"></i>
+                                                                                                                    </button>
+                                                                                                                </div>
+                                                                                                                <div class="builder-menu-mobile-panel">
+                                                                                                                    <ul class="builder-menu-mobile-list">
+                                                                                                                        @foreach($menuItems as $i => $menuItem)
+                                                                                                                            @php
+                                                                                                                                $menuLabel = trim((string) ($menuItem['label'] ?? 'Menu item ' . ($i + 1)));
+                                                                                                                                $menuHref = trim((string) ($menuItem['url'] ?? '#'));
+                                                                                                                                $menuNew = (bool) ($menuItem['newWindow'] ?? false);
+                                                                                                                                $linkColor = $menuText;
+                                                                                                                                $decoStyle = $menuUnderline !== '' ? 'text-decoration:underline;text-decoration-color:' . $menuUnderline . ';' : 'text-decoration:none;';
+                                                                                                                            @endphp
+                                                                                                                            <li>
+                                                                                                                                <a class="builder-menu-mobile-link" href="{{ $menuHref !== '' ? $menuHref : '#' }}" @if($menuNew) target="_blank" rel="noopener" @endif style="color: {{ $linkColor }}; {{ $decoStyle }} font-family:inherit; font-size:inherit; line-height:inherit; letter-spacing:inherit; font-weight:inherit; font-style:inherit;">{{ $menuLabel !== '' ? $menuLabel : ('Menu item ' . ($i + 1)) }}</a>
+                                                                                                                            </li>
+                                                                                                                        @endforeach
+                                                                                                                    </ul>
+                                                                                                                    <a class="builder-menu-edit-btn builder-menu-mobile-cta" href="{{ $ctaButtonUrl }}" style="background-color: {{ $ctaButtonBg }}; color: {{ $ctaButtonText }}; font-size: {{ $ctaButtonTextSize }}px; border-radius: {{ $ctaButtonRadius }}px; padding: {{ $ctaButtonPadY }}px {{ $ctaButtonPadX }}px; font-weight: {{ $ctaButtonBold ? '700' : '600' }}; font-style: {{ $ctaButtonItalic ? 'italic' : 'normal' }};">{{ $ctaButtonLabel }}</a>
+                                                                                                                </div>
                                                                                                             </div>
                                                                                                         </div>
                                                                                                     </nav>
@@ -5094,18 +5313,25 @@
         var previewDeviceWidths={desktop:null,tablet:768,mobile:375};
         var previewDevice="desktop";
         if(isPreview){
+            var hasDeviceParam=false;
             try{
                 var allowed={desktop:1,tablet:1,mobile:1};
                 var sp=new URLSearchParams(window.location.search||"");
                 var q=sp.get("preview_device")||sp.get("previewDevice")||sp.get("device")||"";
                 q=String(q||"").toLowerCase();
-                if(allowed[q])previewDevice=q;
+                if(allowed[q]){previewDevice=q;hasDeviceParam=true;}
             }catch(_e){}
-            try{
-                var stored=localStorage.getItem("fbPreviewDevice");
-                stored=String(stored||"").toLowerCase();
-                if(stored==="tablet"||stored==="mobile"||stored==="desktop")previewDevice=stored;
-            }catch(_e){}
+            if(!hasDeviceParam){
+                try{
+                    var stored=localStorage.getItem("fbPreviewDevice");
+                    stored=String(stored||"").toLowerCase();
+                    if(stored==="tablet"||stored==="mobile"||stored==="desktop")previewDevice=stored;
+                }catch(_e){}
+            }
+            if(!hasDeviceParam){
+                previewDevice="desktop";
+                try{localStorage.setItem("fbPreviewDevice","desktop");}catch(_e){}
+            }
 
             document.body.setAttribute("data-preview-device", previewDevice);
             // Outer-mode only: keep the iframe synced with the selected device.
@@ -5149,10 +5375,78 @@
                         if(typeof window.__fbSchedulePreviewScale==="function"){
                             window.__fbSchedulePreviewScale();
                         }
+                        if(typeof window.__fbSyncResponsiveMenus==="function"){
+                            window.__fbSyncResponsiveMenus();
+                        }
                     });
                 });
             }
         }
+        function initResponsiveMenus(){
+            var toggles=Array.from(document.querySelectorAll("[data-menu-toggle]")||[]);
+            var panels=Array.from(document.querySelectorAll("[data-menu-panel]")||[]);
+            var closeButtons=Array.from(document.querySelectorAll("[data-menu-close]")||[]);
+            if(!toggles.length||!panels.length)return;
+            var closeAll=function(){
+                toggles.forEach(function(toggle){
+                    var key=String(toggle.getAttribute("data-menu-toggle")||"").trim();
+                    var panel=document.querySelector('[data-menu-panel="'+key+'"]');
+                    if(!panel)return;
+                    panel.classList.remove("is-open");
+                    panel.setAttribute("aria-hidden","true");
+                    toggle.setAttribute("aria-expanded","false");
+                });
+            };
+            toggles.forEach(function(toggle){
+                if(toggle.getAttribute("data-menu-bound")==="1")return;
+                toggle.setAttribute("data-menu-bound","1");
+                toggle.addEventListener("click",function(ev){
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                    var key=String(toggle.getAttribute("data-menu-toggle")||"").trim();
+                    var panel=document.querySelector('[data-menu-panel="'+key+'"]');
+                    if(!panel)return;
+                    var isOpen=panel.classList.contains("is-open");
+                    closeAll();
+                    if(!isOpen){
+                        panel.classList.add("is-open");
+                        panel.setAttribute("aria-hidden","false");
+                        toggle.setAttribute("aria-expanded","true");
+                    }
+                });
+            });
+            closeButtons.forEach(function(btn){
+                if(btn.getAttribute("data-menu-close-bound")==="1")return;
+                btn.setAttribute("data-menu-close-bound","1");
+                btn.addEventListener("click",function(ev){
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                    closeAll();
+                });
+            });
+            document.addEventListener("click",function(){
+                closeAll();
+            });
+            panels.forEach(function(panel){
+                panel.addEventListener("click",function(ev){
+                    if(ev.target===panel){
+                        closeAll();
+                        return;
+                    }
+                    var drawer=panel.querySelector(".builder-menu-mobile-drawer");
+                    if(drawer&&drawer.contains(ev.target)){
+                        ev.stopPropagation();
+                    }
+                });
+            });
+            Array.from(document.querySelectorAll(".builder-menu-mobile-link,.builder-menu-mobile-cta")||[]).forEach(function(link){
+                if(link.getAttribute("data-menu-link-bound")==="1")return;
+                link.setAttribute("data-menu-link-bound","1");
+                link.addEventListener("click",function(){ closeAll(); });
+            });
+            window.__fbSyncResponsiveMenus=closeAll;
+        }
+        initResponsiveMenus();
         var measurePreviewContentHeight=function(content){
             if(!content||!content.getBoundingClientRect)return 0;
             var rootRect=content.getBoundingClientRect();
@@ -5264,6 +5558,9 @@
                 var baseW=(deviceW&&deviceW>0)?deviceW:viewportW;
                 var measuredW=measurePreviewContentWidth(content);
                 var baseCanvasWidth=Math.max(editorCanvasWidth||0,measuredW||0);
+                if(previewDevice==="tablet"||previewDevice==="mobile"){
+                    baseCanvasWidth=(deviceW&&deviceW>0)?deviceW:baseCanvasWidth;
+                }
                 if(baseCanvasWidth>0){
                     content.style.width=baseCanvasWidth+"px";
                 }

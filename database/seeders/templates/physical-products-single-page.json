@@ -1,0 +1,149 @@
+{
+  "name": "Single Page - Physical Products Delivery",
+  "slug": "single-page-physical-products-delivery",
+  "description": "Single-page physical product funnel with product offer, shipping details, and checkout summary for GCash/COD campaigns.",
+  "template_type": "single_page",
+  "template_tags": ["Single Page", "Physical Products", "GCash", "COD"],
+  "steps": [
+    {
+      "title": "Physical Products Single Page",
+      "slug": "single-page",
+      "type": "landing",
+      "content": "Single-page product delivery journey.",
+      "cta_label": "Order Now",
+      "layout_json": {
+        "root": [
+          {
+            "kind": "el",
+            "id": "el_menu_physical",
+            "type": "menu",
+            "style": {
+              "padding": "14px 22px",
+              "backgroundColor": "#111827",
+              "color": "#f8fafc",
+              "fontSize": "15px",
+              "fontWeight": "600"
+            },
+            "settings": {
+              "menuAlign": "center",
+              "itemGap": 16,
+              "items": [
+                {"label": "Product", "url": "#product", "newWindow": false, "hasSubmenu": false},
+                {"label": "Delivery", "url": "#delivery", "newWindow": false, "hasSubmenu": false},
+                {"label": "Checkout", "url": "#checkout", "newWindow": false, "hasSubmenu": false}
+              ],
+              "leftButtonLabel": "Buy Now",
+              "leftButtonUrl": "#checkout",
+              "leftButtonBgColor": "#f59e0b",
+              "leftButtonTextColor": "#111827",
+              "rightLogoUrl": "https://images.unsplash.com/photo-1583394838336-acd977736f90?auto=format&fit=crop&w=320&q=80",
+              "rightLogoAlt": "Product Brand"
+            }
+          },
+          {
+            "kind": "section",
+            "id": "sec_physical_hero",
+            "style": {
+              "padding": "56px 42px",
+              "backgroundColor": "#1f2937",
+              "backgroundImage": "url(https://images.unsplash.com/photo-1555529669-e69e7aa0ba9a?auto=format&fit=crop&w=1400&q=80)",
+              "backgroundSize": "cover",
+              "backgroundPosition": "center",
+              "borderRadius": "20px"
+            },
+            "settings": {
+              "anchorId": "product",
+              "contentWidth": "full"
+            },
+            "elements": [
+              {
+                "id": "el_physical_heading",
+                "type": "heading",
+                "content": "Launch Your Product Offer on One Page",
+                "style": {"fontSize": "44px", "color": "#ffffff", "fontWeight": "700"},
+                "settings": {}
+              },
+              {
+                "id": "el_physical_text",
+                "type": "text",
+                "content": "Present your best-selling product, collect shipping details, and accept GCash or COD in a single scroll experience.",
+                "style": {"fontSize": "18px", "color": "#e5e7eb", "maxWidth": "860px"},
+                "settings": {}
+              },
+              {
+                "id": "el_physical_image",
+                "type": "image",
+                "content": "",
+                "style": {"width": "440px", "borderRadius": "16px", "boxShadow": "0 18px 34px rgba(15, 23, 42, 0.3)"},
+                "settings": {
+                  "src": "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&w=900&q=80",
+                  "alt": "Featured product visual",
+                  "alignment": "left"
+                }
+              }
+            ],
+            "rows": []
+          },
+          {
+            "kind": "section",
+            "id": "sec_physical_checkout",
+            "style": {
+              "padding": "36px 30px",
+              "backgroundColor": "#ffffff",
+              "border": "1px solid #e5e7eb",
+              "borderRadius": "18px"
+            },
+            "settings": {
+              "anchorId": "checkout",
+              "contentWidth": "full"
+            },
+            "elements": [
+              {
+                "id": "el_product_offer",
+                "type": "product_offer",
+                "content": "",
+                "style": {"width": "340px"},
+                "settings": {
+                  "plan": "Premium Kit",
+                  "price": "PHP 1,499",
+                  "regularPrice": "PHP 1,999",
+                  "subtitle": "Limited run - ships nationwide",
+                  "features": ["Free shipping this week", "GCash and COD accepted", "Fast dispatch"],
+                  "ctaLabel": "Add to Cart",
+                  "ctaActionType": "checkout",
+                  "badge": "Best Seller"
+                }
+              },
+              {
+                "id": "el_shipping_details",
+                "type": "shipping_details",
+                "content": "",
+                "style": {"width": "390px"},
+                "settings": {
+                  "heading": "Delivery Details",
+                  "subtitle": "Enter your address for delivery. GCash and COD are available at checkout."
+                }
+              },
+              {
+                "id": "el_physical_checkout_summary",
+                "type": "physical_checkout_summary",
+                "content": "",
+                "style": {"width": "380px"},
+                "settings": {
+                  "heading": "Place Your Order",
+                  "plan": "Premium Kit",
+                  "price": "PHP 1,499",
+                  "subtitle": "Choose GCash for prepaid checkout or COD for delivery payment.",
+                  "ctaLabel": "Place Order",
+                  "badge": "GCash / COD"
+                }
+              }
+            ],
+            "rows": []
+          }
+        ],
+        "sections": []
+      }
+    }
+  ]
+}

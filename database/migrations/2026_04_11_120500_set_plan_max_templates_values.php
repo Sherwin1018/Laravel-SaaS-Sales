@@ -19,7 +19,7 @@ return new class extends Migration
             'updated_at' => $now,
         ]);
         DB::table('plans')->whereRaw('LOWER(code) = ?', ['starter'])->update([
-            'max_templates' => 3,
+            'max_templates' => 2,
             'updated_at' => $now,
         ]);
         DB::table('plans')->whereRaw('LOWER(code) = ?', ['growth'])->update([

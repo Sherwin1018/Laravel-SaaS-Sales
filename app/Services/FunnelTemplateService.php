@@ -50,6 +50,9 @@ class FunnelTemplateService
     private function starterTemplateStepsForType(string $templateType): array
     {
         return match (FunnelTemplate::normalizeTemplateType($templateType)) {
+            'single_page' => [
+                ['title' => 'Single Page Funnel', 'slug' => 'single-page', 'type' => 'landing', 'content' => 'Build your complete one-page experience here (hero, offer, proof, checkout, and closing sections).', 'cta_label' => 'Get Started'],
+            ],
             'digital_product' => [
                 ['title' => 'Sales', 'slug' => 'sales', 'type' => 'sales', 'content' => 'Present the digital product offer and why it is worth buying.', 'cta_label' => 'Go to Checkout'],
                 ['title' => 'Checkout', 'slug' => 'checkout', 'type' => 'checkout', 'content' => 'Collect buyer info and complete payment for the digital product.', 'cta_label' => 'Pay Now', 'price' => 1000],

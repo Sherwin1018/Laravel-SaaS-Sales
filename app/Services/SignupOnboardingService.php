@@ -165,7 +165,7 @@ class SignupOnboardingService
                 'max_users' => 5,
                 'max_leads' => 1000,
                 'max_funnels' => 3,
-                'max_templates' => 3,
+                'max_templates' => 2,
                 'max_workflows' => 1,
                 'max_monthly_messages' => 2000,
             ],

@@ -265,7 +265,7 @@ class FunnelPortalController extends Controller
         ]);
 
         $effectiveFunnelPurpose = strtolower(trim((string) (($funnel->purpose ?? null) ?: ($funnel->template_type ?? 'service'))));
-        if (! in_array($effectiveFunnelPurpose, ['service', 'digital_product', 'physical_product', 'hybrid'], true)) {
+        if (! in_array($effectiveFunnelPurpose, ['service', 'single_page', 'digital_product', 'physical_product', 'hybrid'], true)) {
             $effectiveFunnelPurpose = 'service';
         }
         $isPhysicalCheckout = in_array($effectiveFunnelPurpose, ['physical_product', 'hybrid'], true);

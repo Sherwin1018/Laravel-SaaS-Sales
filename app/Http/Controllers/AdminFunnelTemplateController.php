@@ -83,7 +83,7 @@ class AdminFunnelTemplateController extends Controller
 
         try {
             $template = $templateService->importTemplateFromJson($decoded, auth()->user(), [
-                'template_type' => FunnelTemplate::TEMPLATE_TYPE_SERVICE,
+                'template_type' => 'single_page',
                 'publish' => true,
             ]);
         } catch (\Throwable $e) {
@@ -1207,6 +1207,7 @@ class AdminFunnelTemplateController extends Controller
         $root = is_array($layout['root'] ?? null) ? $layout['root'] : [];
         $editor = is_array($layout['__editor'] ?? null) ? $layout['__editor'] : null;
         $resultRoot = [];
+        $menuItems = [];
         $pendingElements = [];
         $firstSectionIndex = null;
 
@@ -1228,6 +1229,35 @@ class AdminFunnelTemplateController extends Controller
             return $elements;
         };
 
+        $normalizeMenuElement = function (array $item): array {
+            $normalized = array_merge(['kind' => 'el'], $item);
+            $normalized['settings'] = is_array($normalized['settings'] ?? null) ? $normalized['settings'] : [];
+            $style = is_array($normalized['style'] ?? null) ? $normalized['style'] : [];
+            unset($style['position'], $style['top'], $style['left'], $style['right'], $style['bottom'], $style['transform']);
+            $style['width'] = '100%';
+            $normalized['style'] = $style;
+
+            return $normalized;
+        };
+        $splitMenuElements = function (array $elements) use (&$menuItems, $normalizeMenuElement): array {
+            $content = [];
+            foreach ($elements as $element) {
+                if (! is_array($element)) {
+                    continue;
+                }
+
+                $elementType = strtolower((string) ($element['type'] ?? ''));
+                if ($elementType === 'menu') {
+                    $menuItems[] = $normalizeMenuElement($element);
+                    continue;
+                }
+
+                $content[] = $element;
+            }
+
+            return $content;
+        };
+
         foreach ($root as $item) {
             if (! is_array($item)) {
                 continue;
@@ -1245,6 +1275,7 @@ class AdminFunnelTemplateController extends Controller
                     }
                     $elements = array_merge($elements, $collectElementsFromRow($row));
                 }
+                $elements = $splitMenuElements($elements);
 
                 $normalizedSection = [
                     'kind' => 'section',
@@ -1262,18 +1293,18 @@ class AdminFunnelTemplateController extends Controller
             }
 
             if ($kind === 'row') {
-                $pendingElements = array_merge($pendingElements, $collectElementsFromRow($item));
+                $pendingElements = array_merge($pendingElements, $splitMenuElements($collectElementsFromRow($item)));
                 continue;
             }
 
             if ($kind === 'column' || $kind === 'col') {
-                $pendingElements = array_merge($pendingElements, $collectElementsFromColumn($item));
+                $pendingElements = array_merge($pendingElements, $splitMenuElements($collectElementsFromColumn($item)));
                 continue;
             }
 
             $elementType = strtolower((string) ($item['type'] ?? ''));
             if ($elementType === 'menu') {
-                $resultRoot[] = array_merge(['kind' => 'el'], $item);
+                $menuItems[] = $normalizeMenuElement($item);
                 continue;
             }
 
@@ -1296,6 +1327,8 @@ class AdminFunnelTemplateController extends Controller
             $existing = is_array($resultRoot[$firstSectionIndex]['elements'] ?? null) ? $resultRoot[$firstSectionIndex]['elements'] : [];
             $resultRoot[$firstSectionIndex]['elements'] = array_values(array_merge($existing, $pendingElements));
         }
+
+        $resultRoot = array_values(array_merge($menuItems, $resultRoot));
 
         $sections = collect($resultRoot)
             ->filter(fn ($item) => is_array($item) && strtolower((string) ($item['kind'] ?? '')) === 'section')
@@ -1350,6 +1383,7 @@ class AdminFunnelTemplateController extends Controller
     private function requiredStepTypesForTemplateType(string $templateType): array
     {
         return match (FunnelTemplate::normalizeTemplateType($templateType)) {
+            'single_page' => [],
             'digital_product', 'physical_product' => ['sales', 'checkout', 'thank_you'],
             'hybrid' => ['landing', 'sales', 'checkout', 'thank_you'],
             default => ['landing', 'opt_in', 'sales', 'checkout', 'thank_you'],
@@ -1360,6 +1394,7 @@ class AdminFunnelTemplateController extends Controller
     {
         $ordered = collect($steps)->values();
         $issues = [];
+        $normalizedTemplateType = FunnelTemplate::normalizeTemplateType($templateType);
         $requiredTypes = $this->requiredStepTypesForTemplateType($templateType);
 
         foreach ($requiredTypes as $requiredType) {
@@ -1373,7 +1408,11 @@ class AdminFunnelTemplateController extends Controller
         if ($firstStep && strtolower(trim((string) ($firstStep->type ?? ''))) === 'thank_you') {
             $issues[] = 'The first active step cannot be a Thank You step.';
         }
-        if ($lastStep && strtolower(trim((string) ($lastStep->type ?? ''))) !== 'thank_you') {
+        if (
+            $normalizedTemplateType !== 'single_page'
+            && $lastStep
+            && strtolower(trim((string) ($lastStep->type ?? ''))) !== 'thank_you'
+        ) {
             $issues[] = 'The last active step must be a Thank You step so the flow resolves safely.';
         }
 

@@ -18,6 +18,7 @@ class FunnelTemplate extends Model
     public const TEMPLATE_TYPES = [
         self::TEMPLATE_TYPE_UNCATEGORIZED => 'Needs Purpose',
         'service' => 'Service Funnel',
+        'single_page' => 'Single Page Funnel',
         'digital_product' => 'Digital Product Funnel',
         'physical_product' => 'Physical Product Funnel',
         'hybrid' => 'Hybrid Funnel',
@@ -26,8 +27,7 @@ class FunnelTemplate extends Model
     public static function selectableTemplateTypes(): array
     {
         return [
-            'service' => self::TEMPLATE_TYPES['service'],
-            'physical_product' => self::TEMPLATE_TYPES['physical_product'],
+            'single_page' => self::TEMPLATE_TYPES['single_page'],
         ];
     }
 
@@ -92,4 +92,3 @@ class FunnelTemplate extends Model
         return $this->hasMany(FunnelTemplateAsset::class)->orderByDesc('created_at');
     }
 }
-
