@@ -1510,7 +1510,12 @@
         @if($isPreview && !$previewIframeMode)
         <div class="preview-toolbar">
             <div class="preview-toolbar-left">
-                <a class="preview-back-btn" href="{{ route('funnels.edit', $funnel) }}" aria-label="Back to Builder" title="Back to Builder">
+                <a
+                    class="preview-back-btn"
+                    href="{{ request()->routeIs('admin.funnel-templates.preview') ? route('admin.funnel-templates.edit', $funnel) : route('funnels.edit', $funnel) }}"
+                    aria-label="Back to Builder"
+                    title="Back to Builder"
+                >
                     <i class="fas fa-arrow-left" aria-hidden="true"></i>
                 </a>
             </div>
