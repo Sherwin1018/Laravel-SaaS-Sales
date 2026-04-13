@@ -1956,6 +1956,9 @@ class FunnelController extends Controller
             'backgroundAttachment',
             'justifyContent',
             'alignItems',
+            'flex',
+            'flexDirection',
+            'flexWrap',
             'gap',
             'lineHeight',
             'letterSpacing',
@@ -2480,6 +2483,20 @@ class FunnelController extends Controller
 
         if (array_key_exists('rowRadiusPerCorner', $settings)) {
             $safe['rowRadiusPerCorner'] = (bool) filter_var($settings['rowRadiusPerCorner'], FILTER_VALIDATE_BOOLEAN);
+        }
+
+        if (array_key_exists('stretch', $settings)) {
+            $safe['stretch'] = (bool) filter_var($settings['stretch'], FILTER_VALIDATE_BOOLEAN);
+        }
+
+        $stretchJustify = trim((string) ($settings['stretchJustify'] ?? ''));
+        if (in_array($stretchJustify, ['flex-start', 'center', 'flex-end', 'space-between', 'space-around', 'space-evenly'], true)) {
+            $safe['stretchJustify'] = $stretchJustify;
+        }
+
+        $stretchAlign = trim((string) ($settings['stretchAlign'] ?? ''));
+        if (in_array($stretchAlign, ['stretch', 'flex-start', 'center', 'flex-end', 'baseline'], true)) {
+            $safe['stretchAlign'] = $stretchAlign;
         }
 
         return $safe;

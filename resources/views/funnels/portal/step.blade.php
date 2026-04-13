@@ -106,12 +106,12 @@
             width: 100%;
             max-width: none;
             margin: 0;
-            padding: 32px 2rem 48px;
+            padding: 0;
             background: {{ $step->background_color ?: '#ffffff' }};
             border: none;
             border-radius: 0;
             box-shadow: none;
-            overflow-x: auto;
+            overflow-x: hidden;
             overflow-y: visible;
         }
         body.is-published:not(.portal-has-freeform-canvas) .step-content--full { padding-top: 0; }
@@ -126,7 +126,7 @@
             padding: 10px 1.5rem 24px;
             box-sizing: border-box;
         }
-        body.is-preview .step-content--full { padding: 10px; overflow-x: auto; overflow-y: visible; }
+        body.is-preview .step-content--full { padding: 0; overflow-x: auto; overflow-y: visible; }
         body.portal-has-freeform-canvas .step-content--full { opacity: 0; }
         body.portal-has-freeform-canvas .step-content--full.is-scale-ready { opacity: 1; }
         body.is-preview .builder-section--freeform {
@@ -170,7 +170,7 @@
         .builder-form-input::placeholder { color: var(--fb-placeholder-color, #94a3b8); opacity: 1; }
         .price { font-size: 34px; font-weight: 800; color: #047857; margin: 0 0 12px; }
         .row { display: flex; gap: 10px; flex-wrap: wrap; }
-        .builder-section { border-radius: 14px; margin-bottom: 14px; border: none; padding: 8px; }
+        .builder-section { border-radius: 0; margin-bottom: 0; border: none; padding: 8px; }
         .builder-section:last-child { margin-bottom: 0; }
         .builder-section--freeform { border-radius: 0; padding: 0; margin: 0 -2rem; background: transparent; border: none; width: calc(100% + 4rem); max-width: none; }
         .builder-section--freeform .builder-row { padding: 0; gap: 0; margin: 0; display: block; }
@@ -178,23 +178,25 @@
         .builder-section--freeform .builder-col { overflow: visible; background: transparent; min-width: 0; min-height: 0; padding: 0; margin: 0; }
         .builder-section--freeform .builder-col-inner { overflow: visible; position: relative; }
         .builder-section--freeform .builder-el { margin-top: 0 !important; }
-        .builder-row--section-elements { display:block; gap:0; padding:0; margin:0; background:transparent; }
-        .builder-row--section-elements > .builder-row-inner { display:block; gap:0; width:100%; position:static; }
-        .builder-col--section-elements { display:block; width:100%; flex:none; min-height:0; padding:0; margin:0; background:transparent; position:static; }
-        .builder-col--section-elements > .builder-col-inner--section-elements { display:block; width:100%; max-width:none; overflow:visible; position:static; min-height:0; }
+        .builder-row.builder-row--section-elements,
+        .builder-row--section-elements > .builder-row-inner,
+        .builder-col--section-elements,
+        .builder-col--section-elements > .builder-col-inner--section-elements { display: contents; }
         .builder-section-inner { width: 100%; box-sizing: border-box; position: relative; }
-        .builder-row-inner { width: 100%; box-sizing: border-box; display: flex; flex-wrap: wrap; gap: 8px; position: relative; }
-        .builder-col-inner { width: 100%; box-sizing: border-box; max-width: 100%; overflow: visible; position: relative; min-height: 100%; }
+        .builder-row-inner { width: 100%; box-sizing: border-box; display: flex; flex-wrap: wrap; gap: 8px; position: relative; align-items: stretch; }
+        .builder-col-inner { width: 100%; box-sizing: border-box; max-width: 100%; overflow: hidden; position: relative; min-height: 100%; }
         .builder-row { display: flex; gap: 8px; flex-wrap: wrap; padding: 6px; }
-        .builder-col { min-width: 0; min-height: 80px; flex: 1 1 0; position: relative; overflow: visible; background: #ffffff; padding: 4px; }
-        .builder-col > .builder-col-inner > .builder-el { max-width: 100%; overflow: visible; }
+        .builder-col { min-width: 0; min-height: 0; flex: 1 1 0; position: relative; overflow: hidden; background: transparent; padding: 6px; box-sizing: border-box; text-align: center; }
+        .builder-col > .builder-col-inner > .builder-el { max-width: 100%; overflow: hidden; box-sizing: border-box; }
+        .builder-col > .builder-col-inner > .builder-el[data-element-type="image"],
+        .builder-col > .builder-col-inner > .builder-el[data-element-type="video"] { max-width: 100%; }
         .builder-col.builder-col--abs { overflow: visible; }
         .builder-col.builder-col--abs > .builder-col-inner { overflow: visible; position: relative; }
         .builder-col.builder-col--abs > .builder-col-inner > .builder-el { max-width: none; overflow: visible; }
         .builder-col.builder-col--abs .builder-el + .builder-el { margin-top: 0; }
-        .builder-el + .builder-el { margin-top: 6px; }
-        .builder-heading { margin: 0; font-size: 32px; line-height: 1.2; overflow-wrap: break-word; word-break: break-word; color: #000000; }
-        .builder-text { margin: 0; color: #334155; line-height: normal; white-space: pre-wrap; overflow-wrap: break-word; word-break: break-word; }
+        .builder-el + .builder-el { margin-top: 8px; }
+        .builder-heading { margin: 0; font-size: 32px; line-height: 1.2; overflow-wrap: break-word; word-break: break-word; color: #000000; text-align: inherit; }
+        .builder-text { margin: 0; color: #334155; line-height: 1.6; white-space: pre-wrap; overflow-wrap: break-word; word-break: break-word; text-align: inherit; }
         .builder-text p,
         .builder-text div,
         .builder-text ul,
@@ -624,11 +626,24 @@
 
         /* ── TABLET (768px viewport) ── */
         body[data-preview-device="tablet"] .builder-row-inner{
-            flex-direction: column !important;
+            flex-wrap: wrap !important;
         }
         body[data-preview-device="tablet"] .builder-col{
-            flex: 0 0 100% !important;
+            flex: 1 1 45% !important;
+            min-width: 200px !important;
+            min-height: 0 !important;
+            height: auto !important;
+        }
+        body[data-preview-device="tablet"] .builder-el{
+            position: static !important;
+            left: auto !important;
+            top: auto !important;
+            max-width: 100% !important;
+        }
+        body[data-preview-device="tablet"] .builder-col-inner--section-elements > .builder-el,
+        body[data-preview-device="mobile"] .builder-col-inner--section-elements > .builder-el{
             width: 100% !important;
+            text-align: center !important;
         }
         body[data-preview-device="tablet"] .builder-carousel-content-row{
             flex-direction: column !important;
@@ -638,10 +653,16 @@
             width: 100% !important;
         }
         body[data-preview-device="tablet"] .step-content--full{
-            padding: 20px 1.25rem 32px !important;
+            padding: 10px 1rem 24px !important;
         }
         body[data-preview-device="tablet"] .builder-section{
-            padding: 6px !important;
+            padding: 0 !important;
+            min-height: 0 !important;
+            height: auto !important;
+        }
+        body[data-preview-device="tablet"] .builder-section-inner{
+            min-height: 0 !important;
+            height: auto !important;
         }
         body[data-preview-device="tablet"] .builder-heading{
             font-size: clamp(18px, 4vw, 28px) !important;
@@ -652,9 +673,14 @@
         body[data-preview-device="tablet"] .builder-pricing-grid{
             grid-template-columns: 1fr !important;
         }
+        body[data-preview-device="tablet"] .builder-el[data-element-type="image"]{
+            max-width: 100% !important;
+            height: auto !important;
+        }
         body[data-preview-device="tablet"] .builder-el[data-element-type="image"] img{
             max-width: 100% !important;
             height: auto !important;
+            object-fit: contain !important;
         }
         body[data-preview-device="tablet"] .builder-video-wrap{
             max-width: 100% !important;
@@ -679,8 +705,24 @@
             flex-direction: column !important;
         }
         body[data-preview-device="mobile"] .builder-col{
-            flex: 0 0 100% !important;
+            flex: 0 0 auto !important;
             width: 100% !important;
+            min-height: 0 !important;
+            height: auto !important;
+            padding: 6px !important;
+        }
+        body[data-preview-device="mobile"] .builder-el{
+            position: static !important;
+            left: auto !important;
+            top: auto !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            height: auto !important;
+        }
+        body[data-preview-device="mobile"] .builder-col:empty,
+        body[data-preview-device="mobile"] .builder-col:not(:has(.builder-el)){
+            padding: 0 !important;
+            display: none !important;
         }
         body[data-preview-device="mobile"] .builder-carousel-content-row{
             flex-direction: column !important;
@@ -690,20 +732,22 @@
             width: 100% !important;
         }
         body[data-preview-device="mobile"] .step-content--full{
-            padding: 12px 0.75rem 24px !important;
+            padding: 0 !important;
         }
         body[data-preview-device="mobile"] .builder-section{
-            padding: 4px !important;
-            margin-bottom: 8px !important;
-            border-radius: 8px !important;
+            padding: 0 !important;
+            margin-bottom: 0 !important;
+            border-radius: 0 !important;
+            min-height: 0 !important;
+            height: auto !important;
+        }
+        body[data-preview-device="mobile"] .builder-section-inner{
+            min-height: 0 !important;
+            height: auto !important;
         }
         body[data-preview-device="mobile"] .builder-row{
-            padding: 2px !important;
-            gap: 4px !important;
-        }
-        body[data-preview-device="mobile"] .builder-col{
-            padding: 2px !important;
-            min-height: 40px !important;
+            padding: 0 !important;
+            gap: 0 !important;
         }
         body[data-preview-device="mobile"] .builder-heading{
             font-size: clamp(16px, 5vw, 22px) !important;
@@ -729,9 +773,14 @@
         body[data-preview-device="mobile"] .builder-pricing-price{
             font-size: clamp(22px, 6vw, 32px) !important;
         }
+        body[data-preview-device="mobile"] .builder-el[data-element-type="image"]{
+            max-width: 100% !important;
+            height: auto !important;
+        }
         body[data-preview-device="mobile"] .builder-el[data-element-type="image"] img{
             max-width: 100% !important;
             height: auto !important;
+            object-fit: contain !important;
         }
         body[data-preview-device="mobile"] .builder-video-wrap{
             max-width: 100% !important;
@@ -768,10 +817,11 @@
             display: flex !important;
             justify-content: space-between !important;
             align-items: center !important;
-            min-height: 88px !important;
-            padding: 0 8px !important;
-            gap: 28px !important;
+            min-height: 0 !important;
+            padding: 8px 0 !important;
+            gap: 12px !important;
             border-bottom: 1px solid #e2e8f0 !important;
+            width: 100% !important;
         }
         body[data-preview-device="mobile"] .builder-menu{
             width: 100% !important;
@@ -782,20 +832,28 @@
             max-width: 100vw !important;
             margin-left: calc(50% - 50vw) !important;
             margin-right: calc(50% - 50vw) !important;
-            left: 0 !important;
-            right: 0 !important;
+            padding: 0 12px !important;
+            box-sizing: border-box !important;
         }
         body[data-preview-device="mobile"] .builder-menu-toggle{
-            display:inline-flex !important;
+            display: inline-flex !important;
+            width: 36px !important;
+            height: 36px !important;
+            flex-shrink: 0 !important;
+        }
+        body[data-preview-device="mobile"] .builder-menu-left{
+            flex: 1 !important;
+            min-width: 0 !important;
         }
         body[data-preview-device="mobile"] .builder-menu-left .builder-menu-logo{
-            max-height: 50px !important;
-            max-width: 170px !important;
+            max-height: 36px !important;
+            max-width: 140px !important;
         }
         body[data-preview-device="mobile"] .builder-menu-left .builder-menu-logo-placeholder{
-            min-height: 50px !important;
+            min-height: 36px !important;
             display: inline-flex !important;
             align-items: center !important;
+            font-size: 11px !important;
         }
         body[data-preview-device="mobile"] .builder-countdown{
             gap: 6px !important;
@@ -823,11 +881,23 @@
         /* ── REAL VIEWPORT responsive (published mode) ── */
         @media (max-width: 768px) {
             body.is-published .builder-row-inner{
-                flex-direction: column;
+                flex-wrap: wrap;
             }
             body.is-published .builder-col{
-                flex: 0 0 100%;
-                width: 100%;
+                flex: 1 1 45%;
+                min-width: 200px;
+                min-height: 0 !important;
+                height: auto !important;
+            }
+            body.is-published .builder-el{
+                position: static !important;
+                left: auto !important;
+                top: auto !important;
+                max-width: 100% !important;
+            }
+            body.is-published .builder-col-inner--section-elements > .builder-el{
+                width: 100% !important;
+                text-align: center !important;
             }
             body.is-published .builder-carousel-content-row{
                 flex-direction: column;
@@ -837,7 +907,16 @@
                 width: 100%;
             }
             body.is-published .step-content--full{
-                padding: 20px 1rem 32px;
+                padding: 0;
+            }
+            body.is-published .builder-section{
+                padding: 0;
+                min-height: 0 !important;
+                height: auto !important;
+            }
+            body.is-published .builder-section-inner{
+                min-height: 0 !important;
+                height: auto !important;
             }
             body.is-published .builder-heading{
                 font-size: clamp(18px, 5vw, 28px);
@@ -855,22 +934,59 @@
                 flex-wrap: wrap;
                 gap: 6px;
             }
+            body.is-published .builder-el[data-element-type="image"]{
+                max-width: 100%;
+                height: auto;
+            }
+            body.is-published .builder-el[data-element-type="image"] img{
+                max-width: 100%;
+                height: auto;
+                object-fit: contain;
+            }
         }
         @media (max-width: 480px) {
-            body.is-published .step-content--full{
-                padding: 12px 0.75rem 24px;
-            }
-            body.is-published .builder-section{
-                padding: 4px;
-                margin-bottom: 8px;
-            }
-            body.is-published .builder-row{
-                padding: 2px;
-                gap: 4px;
+            body.is-published .builder-row-inner{
+                flex-direction: column;
             }
             body.is-published .builder-col{
-                padding: 2px;
-                min-height: 40px;
+                flex: 0 0 auto;
+                width: 100%;
+                min-height: 0 !important;
+                height: auto !important;
+                padding: 6px;
+            }
+            body.is-published .builder-el{
+                position: static !important;
+                left: auto !important;
+                top: auto !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                height: auto !important;
+            }
+            body.is-published .builder-col-inner--section-elements > .builder-el{
+                text-align: center !important;
+            }
+            body.is-published .builder-col:empty,
+            body.is-published .builder-col:not(:has(.builder-el)){
+                padding: 0;
+                display: none;
+            }
+            body.is-published .step-content--full{
+                padding: 0;
+            }
+            body.is-published .builder-section{
+                padding: 0;
+                margin-bottom: 0;
+                min-height: 0 !important;
+                height: auto !important;
+            }
+            body.is-published .builder-section-inner{
+                min-height: 0 !important;
+                height: auto !important;
+            }
+            body.is-published .builder-row{
+                padding: 0;
+                gap: 0;
             }
             body.is-published .builder-heading{
                 font-size: clamp(16px, 5vw, 22px);
@@ -879,6 +995,15 @@
             body.is-published .builder-text{
                 font-size: clamp(12px, 3.5vw, 15px);
                 line-height: 1.5;
+            }
+            body.is-published .builder-el[data-element-type="image"]{
+                max-width: 100% !important;
+                height: auto !important;
+            }
+            body.is-published .builder-el[data-element-type="image"] img{
+                max-width: 100% !important;
+                height: auto !important;
+                object-fit: contain !important;
             }
             body.is-published .btn{
                 padding: 8px 14px;
@@ -911,10 +1036,11 @@
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                min-height: 88px;
-                padding: 0 8px;
-                gap: 28px;
+                min-height: 0;
+                padding: 8px 0;
+                gap: 12px;
                 border-bottom: 1px solid #e2e8f0;
+                width: 100%;
             }
             body.is-published .builder-menu{
                 width: 100%;
@@ -925,20 +1051,28 @@
                 max-width: 100vw;
                 margin-left: calc(50% - 50vw);
                 margin-right: calc(50% - 50vw);
-                left: 0;
-                right: 0;
+                padding: 0 12px;
+                box-sizing: border-box;
             }
             body.is-published .builder-menu-toggle{
-                display:inline-flex;
+                display: inline-flex;
+                width: 36px;
+                height: 36px;
+                flex-shrink: 0;
+            }
+            body.is-published .builder-menu-left{
+                flex: 1;
+                min-width: 0;
             }
             body.is-published .builder-menu-left .builder-menu-logo{
-                max-height: 50px;
-                max-width: 170px;
+                max-height: 36px;
+                max-width: 140px;
             }
             body.is-published .builder-menu-left .builder-menu-logo-placeholder{
-                min-height: 50px;
+                min-height: 36px;
                 display: inline-flex;
                 align-items: center;
+                font-size: 11px;
             }
             body.is-published .builder-el + .builder-el{
                 margin-top: 4px;
@@ -1541,7 +1675,21 @@
             @if($hasBuilderLayout)
                 @foreach($renderSections as $section)
                     @php
-                        $sectionStyle = $styleToString(is_array($section['style'] ?? null) ? $section['style'] : []);
+                        $sectionStyleArr = is_array($section['style'] ?? null) ? $section['style'] : [];
+                        $sectionRows = is_array($section['rows'] ?? null) ? $section['rows'] : [];
+                        $sectionElsRaw = is_array($section['elements'] ?? null) ? $section['elements'] : [];
+                        $sectionHasSectionElements = count($sectionElsRaw) > 0;
+                        if (count($sectionRows) > 0 && !$sectionHasSectionElements) {
+                            $secMH = strtolower(trim((string) ($sectionStyleArr['minHeight'] ?? ($sectionStyleArr['min-height'] ?? ''))));
+                            if ($secMH !== '') {
+                                unset($sectionStyleArr['minHeight'], $sectionStyleArr['min-height']);
+                            }
+                            $secH = strtolower(trim((string) ($sectionStyleArr['height'] ?? '')));
+                            if ($secH !== '') {
+                                unset($sectionStyleArr['height']);
+                            }
+                        }
+                        $sectionStyle = $styleToString($sectionStyleArr);
                         $sectionSettings = is_array($section['settings'] ?? null) ? $section['settings'] : [];
                         $sectionAnchorId = ltrim(trim((string) ($sectionSettings['anchorId'] ?? '')), '#');
                         if ($sectionAnchorId !== '') {
@@ -1571,15 +1719,55 @@
                                 $isBareCarouselWrap = true;
                             }
                         }
+                        $carrierMinHeight = 0;
                         if (count($sectionElements) > 0) {
+                            $carrierHasAbsElements = false;
+                            $carrierMaxRight = 0;
+                            foreach ($sectionElements as $_cEl) {
+                                $_cElS = is_array($_cEl['settings'] ?? null) ? $_cEl['settings'] : [];
+                                $_cElSt = is_array($_cEl['style'] ?? null) ? $_cEl['style'] : [];
+                                $_cIsAbs = (trim((string) ($_cElS['positionMode'] ?? '')) === 'absolute') || (trim((string) ($_cElSt['position'] ?? '')) === 'absolute');
+                                if ($_cIsAbs) {
+                                    $carrierHasAbsElements = true;
+                                    $_cY = (int) ($_cElS['freeY'] ?? 0);
+                                    if ($_cY <= 0) $_cY = (int) str_replace('px', '', (string) ($_cElSt['top'] ?? '0'));
+                                    $_cH = (int) str_replace('px', '', (string) ($_cElSt['height'] ?? '0'));
+                                    if ($_cH <= 0) $_cH = 80;
+                                    $_cBot = $_cY + $_cH + 20;
+                                    if ($_cBot > $carrierMinHeight) $carrierMinHeight = $_cBot;
+                                    $_cX = (int) ($_cElS['freeX'] ?? 0);
+                                    if ($_cX <= 0) $_cX = (int) str_replace('px', '', (string) ($_cElSt['left'] ?? '0'));
+                                    $_cW = (int) str_replace('px', '', (string) ($_cElSt['width'] ?? '0'));
+                                    if ($_cW <= 0) $_cW = 120;
+                                    $_cRight = $_cX + $_cW;
+                                    if ($_cRight > $carrierMaxRight) $carrierMaxRight = $_cRight;
+                                }
+                            }
+                            $carrierColStyle = ['flex' => '1 1 auto', 'backgroundColor' => 'transparent', 'padding' => '0', 'minHeight' => '0'];
+                            $carrierConstrainWidth = 0;
+                            if ($carrierHasAbsElements) {
+                                if ($sectionStageWidth > 0) {
+                                    $carrierConstrainWidth = $sectionStageWidth;
+                                } elseif ($editorCanvasWidth > 0) {
+                                    $carrierConstrainWidth = $editorCanvasWidth;
+                                } elseif ($carrierMaxRight > 0) {
+                                    $carrierConstrainWidth = $carrierMaxRight + 20;
+                                }
+                            }
+                            $carrierRowStyle = ['gap' => '0', 'padding' => '0', 'backgroundColor' => 'transparent'];
+                            if ($carrierConstrainWidth > 0) {
+                                $carrierColStyle['width'] = $carrierConstrainWidth . 'px';
+                                $carrierColStyle['maxWidth'] = '100%';
+                                $carrierColStyle['margin'] = '0 auto';
+                            }
                             array_unshift($rows, [
                                 'id' => 'sec_el_row_' . md5((string) ($section['id'] ?? uniqid('', true))),
-                                'style' => ['gap' => '0', 'padding' => '0', 'backgroundColor' => 'transparent'],
+                                'style' => $carrierRowStyle,
                                 'settings' => ['contentWidth' => 'full'],
                                 'isSectionElementCarrier' => true,
                                 'columns' => [[
                                     'id' => 'sec_el_col_' . md5((string) ($section['id'] ?? uniqid('', true))),
-                                    'style' => ['flex' => '1 1 auto', 'backgroundColor' => 'transparent', 'minHeight' => '0', 'padding' => '0'],
+                                    'style' => $carrierColStyle,
                                     'settings' => [],
                                     'elements' => $sectionElements,
                                     'isSectionElementCarrier' => true,
@@ -1594,6 +1782,9 @@
                             $sectionInlineStyle .= ($sectionInlineStyle !== '' ? '; ' : '') . 'border:none;';
                         }
                         $sectionInnerStyle = [];
+                        if ($carrierMinHeight > 0) {
+                            $sectionInnerStyle[] = 'min-height:' . $carrierMinHeight . 'px';
+                        }
                         if ($sectionStageWidth > 0 && $hasAbsoluteSectionElement && !$isBareCarouselWrap && !$isFreeformCanvas) {
                             $sectionInnerStyle[] = 'width:100%';
                             $sectionInnerStyle[] = 'max-width:' . $sectionStageWidth . 'px';
@@ -1640,6 +1831,16 @@
                                         if ($legacyColBg === '#f8fafc' || $legacyColBg === 'rgb(248, 250, 252)' || $legacyColBg === 'rgba(248, 250, 252, 1)') {
                                             $colStyleArr['backgroundColor'] = '#ffffff';
                                         }
+                                        $colHasExplicitBg = isset($colStyleArr['backgroundColor']) && trim((string) $colStyleArr['backgroundColor']) !== '' && strtolower(trim((string) $colStyleArr['backgroundColor'])) !== '#ffffff';
+                                        if (!$colHasExplicitBg) {
+                                            unset($colStyleArr['backgroundColor']);
+                                        }
+                                        foreach (['height', 'minHeight', 'min-height'] as $_hk) {
+                                            $hv = trim((string) ($colStyleArr[$_hk] ?? ''));
+                                            if ($hv !== '' && preg_match('/^\d+px$/', $hv) && (int) $hv <= 140) {
+                                                unset($colStyleArr[$_hk]);
+                                            }
+                                        }
                                         $colStyle = $styleToString($colStyleArr);
                                         $colSettings = is_array($column['settings'] ?? null) ? $column['settings'] : [];
                                         $colContentWidth = trim((string) ($colSettings['contentWidth'] ?? 'full'));
@@ -1667,9 +1868,23 @@
                                                 if ($_colRight > $colMinWidth) $colMinWidth = $_colRight;
                                             }
                                         }
-                                        $colHeightStyle = ($colMinHeight > 0 && !$isFreeformCanvas) ? 'min-height:' . $colMinHeight . 'px;' : '';
                                         $colWidthStyle = $isFreeformCanvas ? 'width:100%;margin-left:0;margin-right:0;' : '';
                                         $isSectionElementCarrierCol = (bool) ($column['isSectionElementCarrier'] ?? false);
+                                        $colHeightStyle = ($colMinHeight > 0 && !$isFreeformCanvas && $isSectionElementCarrierCol) ? 'min-height:' . $colMinHeight . 'px;' : '';
+
+                                        if ($hasAbsEl && !$isFreeformCanvas && !$isSectionElementCarrierCol) {
+                                            usort($elements, function ($a, $b) {
+                                                $aS = is_array($a['settings'] ?? null) ? $a['settings'] : [];
+                                                $bS = is_array($b['settings'] ?? null) ? $b['settings'] : [];
+                                                $aSt = is_array($a['style'] ?? null) ? $a['style'] : [];
+                                                $bSt = is_array($b['style'] ?? null) ? $b['style'] : [];
+                                                $aY = (int) ($aS['freeY'] ?? 0);
+                                                if ($aY <= 0) $aY = (int) str_replace('px', '', (string) ($aSt['top'] ?? '0'));
+                                                $bY = (int) ($bS['freeY'] ?? 0);
+                                                if ($bY <= 0) $bY = (int) str_replace('px', '', (string) ($bSt['top'] ?? '0'));
+                                                return $aY <=> $bY;
+                                            });
+                                        }
                                     @endphp
                                     <div class="builder-col{{ $hasAbsEl ? ' builder-col--abs' : '' }}{{ $isSectionElementCarrierCol ? ' builder-col--section-elements' : '' }}" style="{{ $colStyle }}{{ $colHeightStyle }}{{ $colWidthStyle }}">
                                         <div class="builder-col-inner{{ $isSectionElementCarrierCol ? ' builder-col-inner--section-elements' : '' }}" @if($colInnerMax !== '') style="max-width: {{ $colInnerMax }}; margin: 0 auto;" @endif>
@@ -1679,18 +1894,27 @@
                                                 $type = $element['type'] ?? 'text';
                                                 $content = (string) ($element['content'] ?? '');
                                                 $rawStyle = is_array($element['style'] ?? null) ? $element['style'] : [];
-                                                $allowAbsPos = $isFreeformCanvas;
+                                                $settings = is_array($element['settings'] ?? null) ? $element['settings'] : [];
+                                                $allowAbsPos = $isFreeformCanvas || $isSectionElementCarrierCol;
                                                 $flowStyle = $rawStyle;
                                                 if (!$allowAbsPos) {
+                                                    $wasAbsolute = (trim((string) ($rawStyle['position'] ?? '')) === 'absolute')
+                                                        || (trim((string) ($settings['positionMode'] ?? '')) === 'absolute');
                                                     foreach (['position','left','top','right','bottom','zIndex','z-index'] as $k) {
                                                         if (array_key_exists($k, $flowStyle)) {
                                                             unset($flowStyle[$k]);
                                                         }
                                                     }
+                                                    if ($wasAbsolute) {
+                                                        $origW = trim((string) ($rawStyle['width'] ?? ''));
+                                                        if ($origW !== '') {
+                                                            $flowStyle['maxWidth'] = $origW;
+                                                        }
+                                                        unset($flowStyle['width'], $flowStyle['height'], $flowStyle['margin']);
+                                                    }
                                                 }
                                                 $style = $styleToString($flowStyle);
                                                 $contentStyle = $contentStyleToString($flowStyle);
-                                                $settings = is_array($element['settings'] ?? null) ? $element['settings'] : [];
                                                 $link = trim((string) ($settings['link'] ?? '#'));
                                                 $src = trim((string) ($settings['src'] ?? ''));
                                                 $alt = trim((string) ($settings['alt'] ?? 'Image'));
@@ -1729,7 +1953,7 @@
                                                 }
                                                 $btnWrapStyle = ($type === 'button' ? ($btnWrapLayoutStyle . $alignStyle . ($buttonContainerBg !== '' ? 'background-color:' . $buttonContainerBg . ';' : '')) : '');
                                                 $iconWrapStyle = ($type === 'icon' ? $alignStyle : '');
-                                                $imageWrapStyle = ($style !== '' ? ($style . ';') : '');
+                                                $imageWrapStyle = ($style !== '' ? ($style . ';') : '') . $alignStyle;
                                                 $mediaWrapStyle = ($style !== '' ? ($style . ';') : '') . $alignStyle;
                                                 $btnInnerStyle = $contentStyle;
                                                 if ($type === 'button') {
@@ -1761,7 +1985,7 @@
                                                     : '';
                                                 $hasFixedWidth = !empty(trim((string) ($rawStyle['width'] ?? '')));
                                                 $hasFixedHeight = !empty(trim((string) ($rawStyle['height'] ?? '')));
-                                                $hasSizedImageBox = $type === 'image' && $hasFixedHeight;
+                                                $hasSizedImageBox = $type === 'image' && $hasFixedHeight && $isAbsPos;
                                                 $isAbsPos = $allowAbsPos && (
                                                     (trim((string) ($settings['positionMode'] ?? '')) === 'absolute')
                                                     || (trim((string) ($rawStyle['position'] ?? '')) === 'absolute')
@@ -1827,11 +2051,11 @@
                                                             $imgStyle = $mediaClipStyle;
                                                             if ($hasSizedImageBox) {
                                                                 $imgStyle .= ($imgStyle !== '' ? ';' : '') . 'width:100%;height:100%;object-fit:cover;';
-                                                            } elseif ($hasFixedWidth) {
-                                                                $imgStyle .= ($imgStyle !== '' ? ';' : '') . 'width:100%;height:auto;object-fit:contain;object-position:top center;display:block;';
+                                                            } else {
+                                                                $imgStyle .= ($imgStyle !== '' ? ';' : '') . 'width:100%;height:auto;max-width:100%;object-fit:contain;object-position:top center;display:block;';
                                                             }
                                                         @endphp
-                                                        <img class="builder-img" src="{{ $src }}" alt="{{ $alt !== '' ? $alt : 'Image' }}" @if($imgStyle !== '') style="{{ $imgStyle }}" @endif>
+                                                        <img class="builder-img" src="{{ $src }}" alt="{{ $alt !== '' ? $alt : 'Image' }}" style="{{ $imgStyle }}">
                                                     @else
                                                         <div class="builder-image-placeholder">
                                                             <div class="builder-image-placeholder__inner">
@@ -5297,17 +5521,19 @@
                 });
             });
         }
+        function scaleSectionElementCarriers(){}
         scheduleAbsoluteLayoutSync();
-        window.addEventListener("resize",function(){scheduleAbsoluteLayoutSync();});
-        window.addEventListener("load",function(){scheduleAbsoluteLayoutSync();});
+        window.addEventListener("resize",function(){scheduleAbsoluteLayoutSync();scaleSectionElementCarriers();});
+        window.addEventListener("load",function(){scheduleAbsoluteLayoutSync();scaleSectionElementCarriers();});
         if(document.fonts&&document.fonts.ready&&typeof document.fonts.ready.then==="function"){
             document.fonts.ready.then(function(){scheduleAbsoluteLayoutSync();}).catch(function(){});
         }
         Array.from(document.images||[]).forEach(function(img){
             if(!img||img.complete)return;
-            img.addEventListener("load",function(){scheduleAbsoluteLayoutSync();},{once:true});
-            img.addEventListener("error",function(){scheduleAbsoluteLayoutSync();},{once:true});
+            img.addEventListener("load",function(){scheduleAbsoluteLayoutSync();scaleSectionElementCarriers();},{once:true});
+            img.addEventListener("error",function(){scheduleAbsoluteLayoutSync();scaleSectionElementCarriers();},{once:true});
         });
+        setTimeout(function(){scaleSectionElementCarriers();},200);
         var isPreview={{ ($isPreview ?? false) ? 'true' : 'false' }};
         var editorCanvasWidth={{ (int) (($editorCanvasWidth ?? 0) + (($isPreview ?? false) ? $previewFreeformRightInset : 0)) }};
         var previewDeviceWidths={desktop:null,tablet:768,mobile:375};
@@ -5375,6 +5601,7 @@
                         if(typeof window.__fbSchedulePreviewScale==="function"){
                             window.__fbSchedulePreviewScale();
                         }
+                        setTimeout(function(){scaleSectionElementCarriers();},100);
                         if(typeof window.__fbSyncResponsiveMenus==="function"){
                             window.__fbSyncResponsiveMenus();
                         }

@@ -1211,22 +1211,35 @@ class AdminFunnelTemplateController extends Controller
         $pendingElements = [];
         $firstSectionIndex = null;
 
-        $collectElementsFromColumn = function (array $column): array {
-            return collect($column['elements'] ?? [])
+        $sanitizeColumn = function (array $column): array {
+            $elements = collect($column['elements'] ?? [])
                 ->filter(fn ($element) => is_array($element))
+                ->take(60)
                 ->values()
                 ->all();
+
+            return [
+                'id' => $column['id'] ?? ('col_' . Str::lower(Str::random(8))),
+                'style' => is_array($column['style'] ?? null) ? $column['style'] : [],
+                'settings' => is_array($column['settings'] ?? null) ? $column['settings'] : [],
+                'elements' => $elements,
+            ];
         };
 
-        $collectElementsFromRow = function (array $row) use ($collectElementsFromColumn): array {
-            $elements = [];
-            foreach ((array) ($row['columns'] ?? []) as $column) {
-                if (! is_array($column)) {
-                    continue;
-                }
-                $elements = array_merge($elements, $collectElementsFromColumn($column));
-            }
-            return $elements;
+        $sanitizeRow = function (array $row) use ($sanitizeColumn): array {
+            $columns = collect($row['columns'] ?? [])
+                ->filter(fn ($column) => is_array($column))
+                ->take(4)
+                ->map(fn (array $column) => $sanitizeColumn($column))
+                ->values()
+                ->all();
+
+            return [
+                'id' => $row['id'] ?? ('row_' . Str::lower(Str::random(8))),
+                'style' => is_array($row['style'] ?? null) ? $row['style'] : [],
+                'settings' => is_array($row['settings'] ?? null) ? $row['settings'] : [],
+                'columns' => $columns,
+            ];
         };
 
         $normalizeMenuElement = function (array $item): array {
@@ -1239,22 +1252,20 @@ class AdminFunnelTemplateController extends Controller
 
             return $normalized;
         };
-        $splitMenuElements = function (array $elements) use (&$menuItems, $normalizeMenuElement): array {
+
+        $splitMenuFromElements = function (array $elements) use (&$menuItems, $normalizeMenuElement): array {
             $content = [];
             foreach ($elements as $element) {
                 if (! is_array($element)) {
                     continue;
                 }
-
                 $elementType = strtolower((string) ($element['type'] ?? ''));
                 if ($elementType === 'menu') {
                     $menuItems[] = $normalizeMenuElement($element);
                     continue;
                 }
-
                 $content[] = $element;
             }
-
             return $content;
         };
 
@@ -1264,26 +1275,43 @@ class AdminFunnelTemplateController extends Controller
             }
 
             $kind = strtolower((string) ($item['kind'] ?? 'section'));
+
             if ($kind === 'section') {
-                $elements = collect($item['elements'] ?? [])
+                $sectionElements = collect($item['elements'] ?? [])
                     ->filter(fn ($element) => is_array($element))
+                    ->take(60)
                     ->values()
                     ->all();
-                foreach ((array) ($item['rows'] ?? []) as $row) {
-                    if (! is_array($row)) {
-                        continue;
-                    }
-                    $elements = array_merge($elements, $collectElementsFromRow($row));
-                }
-                $elements = $splitMenuElements($elements);
+                $sectionElements = $splitMenuFromElements($sectionElements);
+
+                $rows = collect($item['rows'] ?? [])
+                    ->filter(fn ($row) => is_array($row))
+                    ->take(12)
+                    ->map(function (array $row) use ($sanitizeRow, &$menuItems, $normalizeMenuElement) {
+                        $sanitized = $sanitizeRow($row);
+                        foreach ($sanitized['columns'] as $ci => $col) {
+                            $filtered = [];
+                            foreach ($col['elements'] as $el) {
+                                if (is_array($el) && strtolower((string) ($el['type'] ?? '')) === 'menu') {
+                                    $menuItems[] = $normalizeMenuElement($el);
+                                } else {
+                                    $filtered[] = $el;
+                                }
+                            }
+                            $sanitized['columns'][$ci]['elements'] = $filtered;
+                        }
+                        return $sanitized;
+                    })
+                    ->values()
+                    ->all();
 
                 $normalizedSection = [
                     'kind' => 'section',
                     'id' => $item['id'] ?? ('sec_' . Str::lower(Str::random(10))),
                     'style' => is_array($item['style'] ?? null) ? $item['style'] : [],
                     'settings' => is_array($item['settings'] ?? null) ? $item['settings'] : [],
-                    'elements' => $elements,
-                    'rows' => [],
+                    'elements' => $sectionElements,
+                    'rows' => $rows,
                 ];
                 if ($firstSectionIndex === null) {
                     $firstSectionIndex = count($resultRoot);
@@ -1293,12 +1321,14 @@ class AdminFunnelTemplateController extends Controller
             }
 
             if ($kind === 'row') {
-                $pendingElements = array_merge($pendingElements, $splitMenuElements($collectElementsFromRow($item)));
+                $sanitized = $sanitizeRow($item);
+                $resultRoot[] = array_merge(['kind' => 'row'], $sanitized);
                 continue;
             }
 
             if ($kind === 'column' || $kind === 'col') {
-                $pendingElements = array_merge($pendingElements, $splitMenuElements($collectElementsFromColumn($item)));
+                $sanitized = $sanitizeColumn($item);
+                $resultRoot[] = array_merge(['kind' => 'column'], $sanitized);
                 continue;
             }
 
@@ -1334,7 +1364,6 @@ class AdminFunnelTemplateController extends Controller
             ->filter(fn ($item) => is_array($item) && strtolower((string) ($item['kind'] ?? '')) === 'section')
             ->map(function (array $item) {
                 unset($item['kind']);
-                $item['rows'] = [];
                 return $item;
             })
             ->values()
