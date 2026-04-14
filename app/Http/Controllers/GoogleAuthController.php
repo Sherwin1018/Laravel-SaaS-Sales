@@ -213,13 +213,16 @@ class GoogleAuthController extends Controller
             return redirect()->route('login');
         }
 
+        $user = Auth::user();
         $redirectTo = $request->session()->pull('google_login_redirect_to');
         if (! is_string($redirectTo) || $redirectTo === '') {
-            $redirectTo = $this->dashboardRouteForUser(Auth::user()) ?? route('landing');
+            $redirectTo = $this->dashboardRouteForUser($user) ?? route('landing');
         }
 
         return view('auth.google-processing', [
             'redirectTo' => $redirectTo,
+            'splashRole' => $this->splashRoleKeyForUser($user),
+            'splashEmail' => mb_strtolower(trim((string) ($user->email ?? ''))),
         ]);
     }
 
@@ -325,5 +328,30 @@ class GoogleAuthController extends Controller
             'email_verified',
             'password_set',
         ], true);
+    }
+
+    private function splashRoleKeyForUser($user): string
+    {
+        if ($user->hasRole('super-admin')) {
+            return 'super_admin';
+        }
+
+        if ($user->hasRole('account-owner')) {
+            return 'account_owner';
+        }
+
+        if ($user->hasRole('marketing-manager')) {
+            return 'marketing_manager';
+        }
+
+        if ($user->hasRole('sales-agent')) {
+            return 'sales_agent';
+        }
+
+        if ($user->hasRole('finance')) {
+            return 'finance';
+        }
+
+        return 'customer';
     }
 }

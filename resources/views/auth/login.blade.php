@@ -10,7 +10,7 @@
 
     <!-- Custom CSS -->
     <!-- FontAwesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="{{ asset('css/new_login.css') }}">
 </head>
 <body>
@@ -105,7 +105,13 @@
 
     <div id="loginSplash" class="login-splash" aria-hidden="true">
         <div class="login-splash__panel">
-            <img src="{{ asset('images/nehemiahlogo.png') }}" alt="Nehemiah Solutions" class="login-splash__logo">
+            <div class="login-splash__icon-stack" aria-hidden="true">
+                <i id="loginSplashRoleIcon" class="fas fa-user-circle login-splash__role-icon"></i>
+                <span class="login-splash__slow-icon" title="Slow connection detected">
+                    <i class="fas fa-wifi"></i>
+                </span>
+            </div>
+            <p id="loginSplashRoleLabel" class="login-splash__role-label">Customer</p>
             <p class="login-splash__text">Signing you in...</p>
         </div>
     </div>
@@ -129,19 +135,80 @@
             const loginForm = document.getElementById('loginForm');
             const submitButton = document.getElementById('loginSubmitButton');
             const splash = document.getElementById('loginSplash');
+            const splashRoleIcon = document.getElementById('loginSplashRoleIcon');
+            const splashRoleLabel = document.getElementById('loginSplashRoleLabel');
+            const emailInput = loginForm ? loginForm.querySelector('input[name="email"]') : null;
             const defaultButtonLabel = submitButton ? submitButton.textContent : 'Login';
             const splashDisplayMs = 900;
+            const slowConnectionMs = 2200;
             let isSubmitting = false;
+            let slowTimer = null;
 
             if (!loginForm || !submitButton || !splash) {
                 return;
             }
 
+            const roleIcons = {
+                super_admin: 'fa-user-shield',
+                account_owner: 'fa-building-user',
+                marketing_manager: 'fa-chart-line',
+                sales_agent: 'fa-handshake',
+                finance: 'fa-file-peso-sign',
+                customer: 'fa-user-circle'
+            };
+            const roleLabels = {
+                super_admin: 'Super Admin',
+                account_owner: 'Account Owner',
+                marketing_manager: 'Marketing Manager',
+                sales_agent: 'Sales Agent',
+                finance: 'Finance',
+                customer: 'Customer'
+            };
+
+            const normalizeRoleKey = (value) => {
+                const key = String(value || '').trim().toLowerCase().replace(/[\s-]+/g, '_');
+                return Object.prototype.hasOwnProperty.call(roleIcons, key) ? key : 'customer';
+            };
+
+            const pickRoleFromStorage = () => {
+                let picked = '';
+                try {
+                    const email = String(emailInput && emailInput.value ? emailInput.value : '').trim().toLowerCase();
+                    const rawMap = localStorage.getItem('splashRoleByEmail');
+                    if (rawMap) {
+                        const roleMap = JSON.parse(rawMap);
+                        if (email && roleMap && typeof roleMap === 'object' && roleMap[email]) {
+                            picked = String(roleMap[email]);
+                        }
+                    }
+                    if (!picked) {
+                        picked = String(localStorage.getItem('splashRole') || '');
+                    }
+                } catch (_e) {}
+                return normalizeRoleKey(picked);
+            };
+
+            const setSplashRoleVisual = (roleKey) => {
+                const normalized = normalizeRoleKey(roleKey);
+                if (splashRoleIcon) {
+                    const icon = roleIcons[normalized] || roleIcons.customer;
+                    splashRoleIcon.className = 'fas ' + icon + ' login-splash__role-icon';
+                }
+                if (splashRoleLabel) {
+                    splashRoleLabel.textContent = roleLabels[normalized] || roleLabels.customer;
+                }
+            };
+
             const resetSubmitUi = () => {
                 splash.classList.remove('is-visible');
+                splash.classList.remove('is-slow');
                 splash.setAttribute('aria-hidden', 'true');
                 submitButton.disabled = false;
                 submitButton.textContent = defaultButtonLabel;
+                if (slowTimer) {
+                    window.clearTimeout(slowTimer);
+                    slowTimer = null;
+                }
                 isSubmitting = false;
             };
 
@@ -152,20 +219,19 @@
 
                 event.preventDefault();
                 isSubmitting = true;
+                setSplashRoleVisual(pickRoleFromStorage());
                 splash.classList.add('is-visible');
                 splash.setAttribute('aria-hidden', 'false');
                 submitButton.disabled = true;
                 submitButton.textContent = 'Signing In...';
+                splash.classList.remove('is-slow');
+                slowTimer = window.setTimeout(function () {
+                    splash.classList.add('is-slow');
+                }, slowConnectionMs);
 
                 window.setTimeout(function () {
                     loginForm.submit();
                 }, splashDisplayMs);
-
-                window.setTimeout(function () {
-                    if (document.body.contains(splash)) {
-                        resetSubmitUi();
-                    }
-                }, 12000);
             });
 
             window.addEventListener('pageshow', resetSubmitUi);

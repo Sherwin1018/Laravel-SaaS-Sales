@@ -65,6 +65,135 @@
             font-weight: 600 !important;
             line-height: 1.2 !important;
         }
+        .login-splash {
+            position: fixed;
+            inset: 0;
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(9, 6, 16, 0.9);
+            backdrop-filter: blur(3px);
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+        .login-splash.is-visible {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+        .login-splash__panel {
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 14px;
+            text-align: center;
+            padding: 26px 24px;
+            border-radius: 18px;
+            border: 1px solid rgba(214, 186, 242, 0.45);
+            background: linear-gradient(160deg, rgba(96, 68, 131, 0.8) 0%, rgba(64, 41, 98, 0.74) 100%);
+            backdrop-filter: blur(10px) saturate(120%);
+            box-shadow: 0 18px 45px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(151, 118, 195, 0.28) inset;
+        }
+        .login-splash__panel::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            background:
+                radial-gradient(ellipse at 50% 34%, rgba(255, 206, 178, 0.18) 0%, rgba(255, 206, 178, 0) 58%),
+                radial-gradient(ellipse at 50% 72%, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 62%);
+        }
+        .login-splash__icon-stack {
+            position: relative;
+            z-index: 1;
+            width: 104px;
+            height: 104px;
+            border-radius: 999px;
+            display: grid;
+            place-items: center;
+            background: radial-gradient(circle at 32% 28%, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.08) 38%, rgba(255,255,255,0.02) 100%);
+            border: 1px solid rgba(255,255,255,0.24);
+            box-shadow: 0 14px 30px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(255,255,255,0.12);
+            animation: splashIconPulse 900ms ease-in-out infinite;
+            transform-origin: center;
+        }
+        .login-splash__role-icon {
+            font-size: 40px;
+            color: #F8F5FF;
+            line-height: 1;
+            filter: drop-shadow(0 8px 18px rgba(0,0,0,0.45));
+        }
+        .login-splash__slow-icon {
+            position: absolute;
+            right: -4px;
+            bottom: -4px;
+            width: 34px;
+            height: 34px;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #f59e0b;
+            color: #1f2937;
+            border: 2px solid rgba(255,255,255,0.9);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+            opacity: 0;
+            transform: scale(0.72);
+            transition: opacity .2s ease, transform .2s ease;
+        }
+        .login-splash.is-slow .login-splash__slow-icon {
+            opacity: 1;
+            transform: scale(1);
+            animation: splashWarnPulse 880ms ease-in-out infinite;
+        }
+        .login-splash__text {
+            position: relative;
+            z-index: 1;
+            margin: 0;
+            color: #F8F5FF;
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            animation: splashTextBlink 900ms ease-in-out infinite;
+        }
+        .login-splash__role-label {
+            position: relative;
+            z-index: 1;
+            margin: 0;
+            color: #F8F5FF;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+            text-transform: none;
+        }
+        @keyframes splashIconPulse {
+            0% {
+                transform: scale(0.96);
+                opacity: 0.72;
+            }
+            100% {
+                transform: scale(1.03);
+                opacity: 1;
+            }
+        }
+        @keyframes splashTextBlink {
+            0% {
+                opacity: 0.5;
+            }
+            100% {
+                opacity: 1;
+            }
+        }
+        @keyframes splashWarnPulse {
+            0% { box-shadow: 0 0 0 0 rgba(245,158,11,.55), 0 6px 16px rgba(0,0,0,.3); }
+            100% { box-shadow: 0 0 0 10px rgba(245,158,11,0), 0 6px 16px rgba(0,0,0,.3); }
+        }
     </style>
     <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -72,7 +201,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     @yield('styles')
 </head>
-<body class="@if(request()->routeIs('funnels.edit') || request()->routeIs('admin.funnel-templates.edit')) builder-full-width @endif">
+<body class="@if(request()->routeIs('funnels.edit') || request()->routeIs('admin.funnel-templates.edit')) builder-full-width @endif" data-auth-role="{{ match (true) { auth()->user()->hasRole('super-admin') => 'super_admin', auth()->user()->hasRole('account-owner') => 'account_owner', auth()->user()->hasRole('marketing-manager') => 'marketing_manager', auth()->user()->hasRole('sales-agent') => 'sales_agent', auth()->user()->hasRole('finance') => 'finance', default => 'customer' } }}" data-auth-email="{{ strtolower((string) auth()->user()->email) }}">
     @php
         $primaryRole = auth()->user()->roles->first();
         $roleLabel = $primaryRole ? $primaryRole->name : ucwords(str_replace('-', ' ', auth()->user()->role ?? 'User'));
@@ -223,7 +352,7 @@
                     <div id="accountDropdown" class="account-dropdown">
                         <a href="{{ route('profile.show') }}" class="dropdown-link">Manage Profile</a>
 
-                        <form method="POST" action="{{ route('logout') }}">
+                        <form method="POST" action="{{ route('logout') }}" data-logout-form>
                             @csrf
                             <button type="submit" class="dropdown-btn">Logout</button>
                         </form>
@@ -238,6 +367,19 @@
     <!-- Main Content -->
     <div class="main-content">
         @yield('content')
+    </div>
+
+    <div id="loginSplash" class="login-splash" aria-hidden="true">
+        <div class="login-splash__panel">
+            <div class="login-splash__icon-stack" aria-hidden="true">
+                <i id="loginSplashRoleIcon" class="fas fa-user-circle login-splash__role-icon"></i>
+                <span class="login-splash__slow-icon" title="Slow connection detected">
+                    <i class="fas fa-wifi"></i>
+                </span>
+            </div>
+            <p id="loginSplashRoleLabel" class="login-splash__role-label">Customer</p>
+            <p class="login-splash__text">Signing you out...</p>
+        </div>
     </div>
 
     <script>
@@ -320,6 +462,102 @@
                 }
             });
         }
+
+        (function () {
+            const logoutForms = Array.from(document.querySelectorAll('form[data-logout-form]') || []);
+            const splash = document.getElementById('loginSplash');
+            const splashRoleIcon = document.getElementById('loginSplashRoleIcon');
+            const splashRoleLabel = document.getElementById('loginSplashRoleLabel');
+            const splashDisplayMs = 900;
+            const slowConnectionMs = 2200;
+            let isSubmitting = false;
+            let slowTimer = null;
+            const roleIcons = {
+                super_admin: 'fa-user-shield',
+                account_owner: 'fa-building-user',
+                marketing_manager: 'fa-chart-line',
+                sales_agent: 'fa-handshake',
+                finance: 'fa-file-peso-sign',
+                customer: 'fa-user-circle'
+            };
+            const roleLabels = {
+                super_admin: 'Super Admin',
+                account_owner: 'Account Owner',
+                marketing_manager: 'Marketing Manager',
+                sales_agent: 'Sales Agent',
+                finance: 'Finance',
+                customer: 'Customer'
+            };
+
+            const normalizeRoleKey = (value) => {
+                const key = String(value || '').trim().toLowerCase().replace(/[\s-]+/g, '_');
+                return Object.prototype.hasOwnProperty.call(roleIcons, key) ? key : 'customer';
+            };
+
+            const authRole = normalizeRoleKey(document.body.getAttribute('data-auth-role') || 'customer');
+            const authEmail = String(document.body.getAttribute('data-auth-email') || '').trim().toLowerCase();
+
+            const setSplashRoleVisual = (roleKey) => {
+                const normalized = normalizeRoleKey(roleKey);
+                if (splashRoleIcon) {
+                    const icon = roleIcons[normalized] || roleIcons.customer;
+                    splashRoleIcon.className = 'fas ' + icon + ' login-splash__role-icon';
+                }
+                if (splashRoleLabel) {
+                    splashRoleLabel.textContent = roleLabels[normalized] || roleLabels.customer;
+                }
+            };
+
+            if (!logoutForms.length || !splash) {
+                return;
+            }
+
+            setSplashRoleVisual(authRole);
+            try {
+                localStorage.setItem('splashRole', authRole);
+                if (authEmail) {
+                    const rawMap = localStorage.getItem('splashRoleByEmail');
+                    const roleMap = rawMap ? JSON.parse(rawMap) : {};
+                    roleMap[authEmail] = authRole;
+                    localStorage.setItem('splashRoleByEmail', JSON.stringify(roleMap));
+                }
+            } catch (_e) {}
+
+            const resetSubmitUi = () => {
+                splash.classList.remove('is-visible');
+                splash.classList.remove('is-slow');
+                splash.setAttribute('aria-hidden', 'true');
+                if (slowTimer) {
+                    window.clearTimeout(slowTimer);
+                    slowTimer = null;
+                }
+                isSubmitting = false;
+            };
+
+            logoutForms.forEach(function (logoutForm) {
+                logoutForm.addEventListener('submit', function (event) {
+                    if (isSubmitting) {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    isSubmitting = true;
+                    setSplashRoleVisual(authRole);
+                    splash.classList.add('is-visible');
+                    splash.setAttribute('aria-hidden', 'false');
+                    splash.classList.remove('is-slow');
+                    slowTimer = window.setTimeout(function () {
+                        splash.classList.add('is-slow');
+                    }, slowConnectionMs);
+
+                    window.setTimeout(function () {
+                        logoutForm.submit();
+                    }, splashDisplayMs);
+                });
+            });
+
+            window.addEventListener('pageshow', resetSubmitUi);
+        })();
     </script>
 
     @if(session('success') || session('error'))

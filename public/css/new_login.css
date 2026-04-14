@@ -366,14 +366,51 @@ button:hover {
         radial-gradient(ellipse at 50% 72%, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 62%);
 }
 
-.login-splash__logo {
-    width: min(46vw, 250px);
-    height: auto;
+.login-splash__icon-stack {
     position: relative;
     z-index: 1;
-    filter: brightness(1.1) contrast(1.14) drop-shadow(0 10px 24px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 18px rgba(255, 181, 149, 0.18));
-    animation: splashLogoPulse 900ms ease-in-out infinite;
+    width: 104px;
+    height: 104px;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    background: radial-gradient(circle at 32% 28%, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.08) 38%, rgba(255,255,255,0.02) 100%);
+    border: 1px solid rgba(255,255,255,0.24);
+    box-shadow: 0 14px 30px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(255,255,255,0.12);
+    animation: splashIconPulse 900ms ease-in-out infinite;
     transform-origin: center;
+}
+
+.login-splash__role-icon {
+    font-size: 40px;
+    color: #F8F5FF;
+    line-height: 1;
+    filter: drop-shadow(0 8px 18px rgba(0,0,0,0.45));
+}
+
+.login-splash__slow-icon {
+    position: absolute;
+    right: -4px;
+    bottom: -4px;
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #f59e0b;
+    color: #1f2937;
+    border: 2px solid rgba(255,255,255,0.9);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+    opacity: 0;
+    transform: scale(0.72);
+    transition: opacity .2s ease, transform .2s ease;
+}
+
+.login-splash.is-slow .login-splash__slow-icon {
+    opacity: 1;
+    transform: scale(1);
+    animation: splashWarnPulse 880ms ease-in-out infinite;
 }
 
 .login-splash__text {
@@ -388,7 +425,18 @@ button:hover {
     animation: splashTextBlink 900ms ease-in-out infinite;
 }
 
-@keyframes splashLogoPulse {
+.login-splash__role-label {
+    position: relative;
+    z-index: 1;
+    margin: 0;
+    color: #F8F5FF;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: none;
+}
+
+@keyframes splashIconPulse {
     0% {
         transform: scale(0.96);
         opacity: 0.72;
@@ -406,5 +454,10 @@ button:hover {
     100% {
         opacity: 1;
     }
+}
+
+@keyframes splashWarnPulse {
+    0% { box-shadow: 0 0 0 0 rgba(245,158,11,.55), 0 6px 16px rgba(0,0,0,.3); }
+    100% { box-shadow: 0 0 0 10px rgba(245,158,11,0), 0 6px 16px rgba(0,0,0,.3); }
 }
 
