@@ -8,6 +8,7 @@ use App\Models\FunnelReview;
 use App\Models\FunnelStep;
 use App\Models\Lead;
 use App\Models\Payment;
+use App\Services\CouponService;
 use App\Services\PayMongoCheckoutService;
 use App\Services\FunnelTrackingService;
 use Illuminate\Http\Request;
@@ -49,6 +50,8 @@ class FunnelPortalController extends Controller
             'selectedPricing' => $selectedPricing,
             'productInventory' => $this->productInventorySummary($funnel),
             'approvedReviews' => $this->approvedReviewsForFunnel($funnel),
+            // Used by the coupon popup (any step) and the checkout coupon prompt (checkout/offer steps only).
+            'availableCoupons' => app(CouponService::class)->availableForFunnel($funnel),
             'reviewPrefill' => [
                 'name' => trim((string) ($lead->name ?? '')),
                 'email' => trim((string) ($lead->email ?? '')),
@@ -227,6 +230,7 @@ class FunnelPortalController extends Controller
 
     public function checkout(
         Request $request,
+        CouponService $coupons,
         PayMongoCheckoutService $payMongo,
         FunnelTrackingService $tracking,
         string $funnelSlug,
@@ -249,6 +253,7 @@ class FunnelPortalController extends Controller
             'checkout_pricing_image' => 'nullable|string|max:2000',
             'checkout_pricing_features' => 'nullable|string|max:5000',
             'checkout_cart_items' => 'nullable|string|max:20000',
+            'coupon_code' => 'nullable|string|max:40',
             'first_name' => 'nullable|string|max:150',
             'last_name' => 'nullable|string|max:150',
             'name' => 'nullable|string|max:150',
@@ -343,6 +348,26 @@ class FunnelPortalController extends Controller
             $amount = $preferredAmount ?? $stepAmount;
         }
         abort_if($amount <= 0, 422, 'Checkout amount is not configured.');
+        $subtotalAmount = $amount;
+        $leadId = $this->currentLeadId($funnel->id);
+        $lead = $leadId ? Lead::query()->find($leadId) : null;
+        $couponCheck = $coupons->validateForCheckout(
+            $funnel,
+            $subtotalAmount,
+            $validated['coupon_code'] ?? null,
+            $checkoutEmail !== '' ? $checkoutEmail : ($lead?->email ?? null),
+            $lead
+        );
+        if ($couponCheck['error']) {
+            return redirect()->back()->withErrors(['coupon_code' => $couponCheck['error']])->withInput();
+        }
+        $coupon = $couponCheck['coupon'];
+        $discountAmount = (float) $couponCheck['discount_amount'];
+        $amount = (float) $couponCheck['final_amount'];
+        $request->attributes->set('checkout_coupon_id', $coupon?->id);
+        $request->attributes->set('checkout_coupon_code', $coupon?->code);
+        $request->attributes->set('checkout_subtotal_amount', $subtotalAmount);
+        $request->attributes->set('checkout_discount_amount', $discountAmount);
         $checkoutTrackingMeta = $this->checkoutTrackingMeta(
             $validated,
             $checkoutName,
@@ -352,27 +377,53 @@ class FunnelPortalController extends Controller
             $isPhysicalCheckout,
             $selectedPricing
         );
+        if ($coupon) {
+            $checkoutTrackingMeta['coupon'] = [
+                'code' => $coupon->code,
+                'discount_amount' => $discountAmount,
+                'subtotal_amount' => $subtotalAmount,
+                'final_amount' => $amount,
+            ];
+        }
 
-        $recentPayment = Payment::query()
-            ->where('tenant_id', $funnel->tenant_id)
-            ->where('funnel_id', $funnel->id)
-            ->where('funnel_step_id', $step->id)
-            ->where('session_identifier', $sessionIdentifier)
-            ->where('amount', $amount)
-            ->where('created_at', '>=', now()->subMinutes(10))
-            ->latest('id')
-            ->first();
+        if ($sessionIdentifier !== null && $sessionIdentifier !== '') {
+            $recentPayment = Payment::query()
+                ->where('tenant_id', $funnel->tenant_id)
+                ->where('payment_type', Payment::TYPE_FUNNEL_CHECKOUT)
+                ->where('funnel_id', $funnel->id)
+                ->where('funnel_step_id', $step->id)
+                ->where('session_identifier', $sessionIdentifier)
+                ->where('amount', $amount)
+                ->whereIn('status', ['pending', 'paid'])
+                ->where('created_at', '>=', now()->subMinutes(10))
+                ->latest('id')
+                ->first();
 
-        if ($recentPayment) {
-            if ($recentPayment->status === 'paid') {
-                $tracking->trackPaymentPaid($recentPayment, ['source' => 'checkout_repeat_guard']);
+            if ($recentPayment) {
+                if ($recentPayment->status === 'paid') {
+                    $tracking->trackPaymentPaid($recentPayment, ['source' => 'checkout_repeat_guard']);
 
-                return $this->redirectAfterPaidCheckout($funnel, $steps, $step);
+                    return $this->redirectAfterPaidCheckout($funnel, $steps, $step);
+                }
+
+                if ($recentPayment->provider === 'paymongo' && ! empty($recentPayment->provider_reference)) {
+                    if ($payMongo->isConfigured()) {
+                        $existingSession = $payMongo->retrieveCheckoutSession((string) $recentPayment->provider_reference);
+                        $existingCheckoutUrl = is_array($existingSession['attributes'] ?? null)
+                            ? (string) ($existingSession['attributes']['checkout_url'] ?? '')
+                            : '';
+                        if ($existingCheckoutUrl !== '') {
+                            return response()->view('funnels.portal.paymongo-redirect', [
+                                'checkoutUrl' => $existingCheckoutUrl,
+                            ]);
+                        }
+                    }
+
+                    return redirect()
+                        ->route('funnels.portal.step', ['funnelSlug' => $funnel->slug, 'stepSlug' => $step->slug])
+                        ->with('error', 'Checkout is already in progress for this session. Please finish the current payment before trying again.');
+                }
             }
-
-            return redirect()
-                ->route('funnels.portal.step', ['funnelSlug' => $funnel->slug, 'stepSlug' => $step->slug])
-                ->with('error', 'Checkout is already in progress for this session. Please finish the current payment before trying again.');
         }
 
         if ($payMongo->isConfigured()) {
@@ -385,7 +436,11 @@ class FunnelPortalController extends Controller
             'funnel_id' => $funnel->id,
             'funnel_step_id' => $step->id,
             'lead_id' => $this->currentLeadId($funnel->id),
+            'coupon_id' => $coupon?->id,
+            'coupon_code' => $coupon?->code,
             'amount' => $amount,
+            'subtotal_amount' => $subtotalAmount,
+            'discount_amount' => $discountAmount,
             'status' => 'paid',
             'payment_date' => now()->toDateString(),
             'session_identifier' => $sessionIdentifier,
@@ -400,6 +455,19 @@ class FunnelPortalController extends Controller
             array_merge($checkoutTrackingMeta, ['source' => 'direct_checkout'])
         );
         $tracking->trackPaymentPaid($payment, ['source' => 'direct_checkout']);
+        if ($coupon) {
+            $coupons->redeem(
+                $coupon,
+                $payment,
+                $funnel,
+                $step,
+                $lead,
+                $checkoutEmail !== '' ? strtolower($checkoutEmail) : ($lead?->email ? strtolower((string) $lead->email) : null),
+                $subtotalAmount,
+                $discountAmount,
+                $amount
+            );
+        }
 
         return $this->redirectAfterPaidCheckout($funnel, $steps, $step);
     }
@@ -490,7 +558,11 @@ class FunnelPortalController extends Controller
             'funnel_id' => $funnel->id,
             'funnel_step_id' => $step->id,
             'lead_id' => $leadId,
+            'coupon_id' => $couponId = $this->nullableCouponIdFromRequest(),
+            'coupon_code' => $couponCode = $this->currentCouponCodeFromRequest(),
             'amount' => $amount,
+            'subtotal_amount' => $this->currentSubtotalAmountFromRequest($amount),
+            'discount_amount' => $this->currentDiscountAmountFromRequest(),
             'status' => 'pending',
             'payment_date' => now()->toDateString(),
             'provider' => 'paymongo',
@@ -547,6 +619,8 @@ class FunnelPortalController extends Controller
                 'payment_id' => (string) $payment->id,
                 'funnel_slug' => $funnel->slug,
                 'step_slug' => $step->slug,
+                'coupon_id' => $couponId ? (string) $couponId : null,
+                'coupon_code' => $couponCode !== '' ? $couponCode : null,
             ],
             $billing,
         );
@@ -561,7 +635,9 @@ class FunnelPortalController extends Controller
 
         $payment->update(['provider_reference' => $session['id']]);
 
-        return redirect()->away($session['checkout_url']);
+        return response()->view('funnels.portal.paymongo-redirect', [
+            'checkoutUrl' => $session['checkout_url'],
+        ]);
     }
 
     private function redirectAfterPaidCheckout(Funnel $funnel, $steps, FunnelStep $step): \Illuminate\Http\RedirectResponse
@@ -957,6 +1033,21 @@ class FunnelPortalController extends Controller
                     return $this->completeConfirmedPayment($tracking, $recentPayment, $funnel, $steps, $step, 'offer_repeat_guard');
                 }
 
+                if ($recentPayment->provider === 'paymongo' && ! empty($recentPayment->provider_reference)) {
+                    $payMongo = app(PayMongoCheckoutService::class);
+                    if ($payMongo->isConfigured()) {
+                        $existingSession = $payMongo->retrieveCheckoutSession((string) $recentPayment->provider_reference);
+                        $existingCheckoutUrl = is_array($existingSession['attributes'] ?? null)
+                            ? (string) ($existingSession['attributes']['checkout_url'] ?? '')
+                            : '';
+                        if ($existingCheckoutUrl !== '') {
+                            return response()->view('funnels.portal.paymongo-redirect', [
+                                'checkoutUrl' => $existingCheckoutUrl,
+                            ]);
+                        }
+                    }
+                }
+
                 return redirect()
                     ->route('funnels.portal.step', ['funnelSlug' => $funnel->slug, 'stepSlug' => $step->slug])
                     ->with('error', 'Offer checkout is already in progress for this session. Please finish the current payment before trying again.');
@@ -1013,6 +1104,24 @@ class FunnelPortalController extends Controller
         FunnelStep $step,
         string $source
     ): \Illuminate\Http\RedirectResponse {
+        if ($payment->coupon_id && $payment->status === 'paid') {
+            $lead = $payment->lead_id ? Lead::query()->find($payment->lead_id) : null;
+            $coupon = $payment->coupon;
+            if ($coupon) {
+                app(CouponService::class)->redeem(
+                    $coupon,
+                    $payment,
+                    $funnel,
+                    $step,
+                    $lead,
+                    $lead?->email ? strtolower((string) $lead->email) : null,
+                    (float) ($payment->subtotal_amount ?? $payment->amount),
+                    (float) ($payment->discount_amount ?? 0),
+                    (float) $payment->amount
+                );
+            }
+        }
+
         $tracking->trackPaymentPaid($payment, ['source' => $source]);
 
         if (in_array($step->type, ['upsell', 'downsell'], true)) {
@@ -1467,6 +1576,32 @@ class FunnelPortalController extends Controller
 
         return $this->parseMoneyString($selection['price'] ?? null)
             ?? $this->parseMoneyString($selection['regularPrice'] ?? null);
+    }
+
+    private function nullableCouponIdFromRequest(): ?int
+    {
+        $couponId = request()->attributes->get('checkout_coupon_id');
+
+        return is_numeric($couponId) ? (int) $couponId : null;
+    }
+
+    private function currentCouponCodeFromRequest(): string
+    {
+        return trim((string) request()->attributes->get('checkout_coupon_code', ''));
+    }
+
+    private function currentSubtotalAmountFromRequest(float $fallback): float
+    {
+        $subtotal = request()->attributes->get('checkout_subtotal_amount');
+
+        return is_numeric($subtotal) ? (float) $subtotal : $fallback;
+    }
+
+    private function currentDiscountAmountFromRequest(): float
+    {
+        $discount = request()->attributes->get('checkout_discount_amount');
+
+        return is_numeric($discount) ? (float) $discount : 0.0;
     }
 
     private function primaryPricingAmountFromLayout(FunnelStep $step): ?float

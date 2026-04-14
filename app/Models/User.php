@@ -52,6 +52,11 @@ class User extends Authenticatable
         return $this->belongsTo(self::class, 'invited_by');
     }
 
+    public function createdCoupons(): HasMany
+    {
+        return $this->hasMany(Coupon::class, 'created_by');
+    }
+
     /**
      * Check if user has a role by slug
      */

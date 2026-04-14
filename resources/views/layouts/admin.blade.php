@@ -244,6 +244,9 @@
                 <a href="{{ route('admin.plans.index') }}" class="{{ request()->routeIs('admin.plans.*') ? 'active' : '' }}">
                     <i class="fas fa-tags"></i> <span>Plans</span>
                 </a>
+                <a href="{{ route('admin.coupons.index') }}" class="{{ request()->routeIs('admin.coupons.*') ? 'active' : '' }}">
+                    <i class="fas fa-ticket-alt"></i> <span>Coupons</span>
+                </a>
                 <a href="{{ route('admin.automation.index') }}" class="{{ request()->routeIs('admin.automation.*') ? 'active' : '' }}">
                     <i class="fas fa-clipboard-list"></i> <span>Automation</span>
                 </a>
@@ -296,6 +299,9 @@
             @if(auth()->user()->hasRole('account-owner'))
                 <a href="{{ route('users.index') }}" class="{{ request()->routeIs('users.*') ? 'active' : '' }}">
                     <i class="fas fa-users"></i> <span>Team</span>
+                </a>
+                <a href="{{ route('coupons.index') }}" class="{{ request()->routeIs('coupons.*') ? 'active' : '' }}">
+                    <i class="fas fa-ticket-alt"></i> <span>Coupons</span>
                 </a>
             @endif
 

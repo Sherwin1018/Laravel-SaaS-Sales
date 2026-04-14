@@ -413,6 +413,53 @@
         .checkout-shipping-modal-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:4px; }
         .checkout-shipping-modal-cancel { display:inline-flex; align-items:center; justify-content:center; min-width:120px; padding:11px 16px; border-radius:999px; border:1px solid #d7cdea; background:#ffffff; color:#240E35; font-weight:700; cursor:pointer; }
         .checkout-shipping-modal-submit { min-width:160px; }
+        /* Must be above portal loading overlay (z-index:2100) */
+        .coupon-prompt-modal-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.54); z-index: 2210; display: none; align-items: center; justify-content: center; padding: 18px; pointer-events: auto; }
+        .coupon-prompt-modal-backdrop.is-open { display: flex; }
+        .coupon-prompt-modal { width:min(460px,100%); background:#ffffff; border-radius:22px; box-shadow:0 28px 70px rgba(15,23,42,.28); padding:20px; display:grid; gap:14px; position:relative; z-index: 2211; pointer-events: auto; }
+        .coupon-prompt-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+        .coupon-prompt-title { margin:0; font-size:24px; line-height:1.1; color:#240E35; }
+        .coupon-prompt-copy { margin:4px 0 0; color:#64748b; font-size:13px; line-height:1.5; }
+        .coupon-prompt-close { width:36px; height:36px; border-radius:999px; border:1px solid #e2e8f0; background:#ffffff; color:#0f172a; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; flex:0 0 auto; }
+        .coupon-prompt-field { display:grid; gap:6px; }
+        .coupon-prompt-field label { font-size:11px; font-weight:700; color:#334155; text-transform:uppercase; letter-spacing:.08em; }
+        .coupon-prompt-field input { width:100%; padding:12px 14px; border:1px solid #E6E1EF; border-radius:12px; box-sizing:border-box; text-transform:uppercase; font-weight:700; letter-spacing:.08em; }
+        .coupon-prompt-preview { padding:12px 14px; border-radius:14px; background:#f8fafc; border:1px solid #e2e8f0; display:grid; gap:6px; }
+        .coupon-prompt-preview-row { display:flex; justify-content:space-between; gap:10px; color:#475569; font-size:13px; }
+        .coupon-prompt-preview-row strong { color:#0f172a; }
+        .coupon-prompt-preview-row--total strong:last-child { color:#16a34a; font-size:16px; }
+        .coupon-prompt-available { padding:12px 14px; border-radius:14px; background:#fbf9fd; border:1px solid #ece2f5; display:grid; gap:10px; }
+        .coupon-prompt-available-title { font-size:11px; font-weight:800; color:#334155; text-transform:uppercase; letter-spacing:.08em; }
+        .coupon-prompt-available-list { display:grid; gap:8px; max-height:220px; overflow:auto; padding-right:4px; }
+        .coupon-prompt-available-list::-webkit-scrollbar{width:8px}
+        .coupon-prompt-available-list::-webkit-scrollbar-track{background:#f1f5f9;border-radius:8px}
+        .coupon-prompt-available-list::-webkit-scrollbar-thumb{background:#e2e8f0;border-radius:8px}
+        .coupon-prompt-available-item { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; border-radius:12px; background:#ffffff; border:1px solid #E6E1EF; }
+        .coupon-prompt-available-code { font-weight:900; letter-spacing:.08em; color:#240E35; text-transform:uppercase; }
+        .coupon-prompt-available-meta { font-size:12px; color:#64748b; margin-top:2px; }
+        .coupon-prompt-available-actions { display:flex; gap:8px; flex:0 0 auto; }
+        .coupon-prompt-available-btn { padding:8px 10px; border-radius:999px; border:1px solid #d7cdea; background:#ffffff; color:#240E35; font-weight:800; cursor:pointer; font-size:12px; }
+        .coupon-prompt-available-btn.primary { background:#240E35; color:#ffffff; border-color:#240E35; }
+        .coupon-prompt-message { min-height:18px; font-size:12px; color:#64748b; }
+        .coupon-prompt-message.is-success { color:#166534; }
+        .coupon-prompt-message.is-error { color:#b91c1c; }
+        .coupon-prompt-actions { display:flex; justify-content:flex-end; gap:10px; }
+        .coupon-prompt-skip { display:inline-flex; align-items:center; justify-content:center; min-width:120px; padding:11px 16px; border-radius:999px; border:1px solid #d7cdea; background:#ffffff; color:#240E35; font-weight:700; cursor:pointer; }
+        .funnel-coupon-pop { position:fixed; right:18px; bottom:18px; z-index:1890; width:min(340px,calc(100vw - 28px)); transition:transform .24s ease, opacity .24s ease; }
+        .funnel-coupon-pop.is-hidden { opacity:0; pointer-events:none; transform:translateY(14px); }
+        .funnel-coupon-card { background:linear-gradient(160deg,#240E35 0%,#3d195c 58%,#5b2a86 100%); color:#fff; border-radius:24px; box-shadow:0 22px 60px rgba(36,14,53,.34); overflow:hidden; }
+        .funnel-coupon-card-body { padding:18px; display:grid; gap:12px; }
+        .funnel-coupon-kicker { font-size:11px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; opacity:.76; }
+        .funnel-coupon-title { margin:0; font-size:24px; line-height:1.05; }
+        .funnel-coupon-text { margin:0; font-size:13px; line-height:1.55; color:rgba(255,255,255,.82); }
+        .funnel-coupon-code-row { display:flex; gap:10px; align-items:center; }
+        .funnel-coupon-code { flex:1 1 auto; padding:12px 14px; border-radius:14px; background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.18); font-size:20px; font-weight:900; letter-spacing:.1em; text-align:center; }
+        .funnel-coupon-copy { display:inline-flex; align-items:center; justify-content:center; min-width:124px; padding:12px 14px; border:none; border-radius:14px; background:#ffffff; color:#240E35; font-weight:900; cursor:pointer; }
+        .funnel-coupon-meta { display:flex; justify-content:space-between; align-items:center; gap:10px; font-size:12px; color:rgba(255,255,255,.8); }
+        .funnel-coupon-progress { height:5px; background:rgba(255,255,255,.14); }
+        .funnel-coupon-progress > span { display:block; width:100%; height:100%; background:#facc15; transform-origin:left center; }
+        .funnel-coupon-minitab { margin-top:10px; margin-left:auto; display:none; align-items:center; gap:8px; padding:10px 14px; border:none; border-radius:999px; background:#240E35; color:#fff; box-shadow:0 16px 34px rgba(36,14,53,.26); cursor:pointer; font-weight:800; }
+        .funnel-coupon-minitab.is-visible { display:inline-flex; }
         .portal-loading-overlay { position:fixed; inset:0; z-index:2100; display:none; align-items:center; justify-content:center; background:rgba(248,250,252,.86); backdrop-filter:blur(4px); }
         .portal-loading-overlay.is-active { display:flex; }
         .portal-loading-card { width:min(280px,calc(100vw - 32px)); padding:24px 22px; border-radius:24px; background:rgba(255,255,255,.96); border:1px solid rgba(226,232,240,.95); box-shadow:0 28px 70px rgba(15,23,42,.16); display:grid; justify-items:center; gap:12px; text-align:center; }
@@ -435,6 +482,12 @@
             .checkout-shipping-modal-actions { flex-direction:column-reverse; }
             .checkout-shipping-modal-cancel,
             .checkout-shipping-modal-submit { width:100%; }
+            .coupon-prompt-actions { flex-direction:column-reverse; }
+            .coupon-prompt-skip,
+            .coupon-prompt-actions .builder-pricing-cta { width:100%; }
+            .funnel-coupon-pop { right:14px; left:14px; width:auto; bottom:14px; }
+            .funnel-coupon-code-row { flex-direction:column; }
+            .funnel-coupon-copy { width:100%; }
         }
         .builder-pricing-badge { align-self: flex-start; background: #e2e8f0; color: #0f172a; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; }
         .builder-pricing-title { font-size: 18px; font-weight: 900; color: #0f172a; }
@@ -1097,7 +1150,7 @@
         .preview-device-switcher{ pointer-events:auto; }
     </style>
 </head>
-<body class="{{ ($isPreview ?? false) ? 'is-preview' : 'is-published' }}{{ ($portalHasFreeformCanvas ?? false) ? ' portal-has-freeform-canvas' : '' }}">
+<body class="{{ ($isPreview ?? false) ? 'is-preview' : 'is-published' }}{{ ($portalHasFreeformCanvas ?? false) ? ' portal-has-freeform-canvas' : '' }}" data-funnel-slug="{{ $funnel->slug }}">
     <div class="portal-loading-overlay" id="portalLoadingOverlay" aria-hidden="true">
         <div class="portal-loading-card" role="status" aria-live="polite" aria-label="Loading next page">
             <div class="portal-loading-spinner" aria-hidden="true"></div>
@@ -1672,6 +1725,48 @@
                 <div style="padding: 12px 16px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; color: #991b1b; font-size: 14px;">
                     {{ session('error') }}
                 </div>
+            </div>
+        @endif
+
+        @if($errors->any())
+            <div class="wrap" style="padding: 12px 2rem 0;">
+                <div style="padding: 12px 16px; background: #fefce8; border: 1px solid #fde68a; border-radius: 10px; color: #92400e; font-size: 14px;">
+                    {{ $errors->first() }}
+                </div>
+            </div>
+        @endif
+
+        @php
+            // Buyer-facing coupon UX should only show AO-created (tenant-owned) coupons.
+            $promoCoupons = collect($availableCoupons ?? [])
+                ->filter(fn ($coupon) => ($coupon->scope_type ?? null) === \App\Models\Coupon::SCOPE_TENANT)
+                ->values();
+            $featuredPromoCoupon = $promoCoupons->first();
+        @endphp
+        @if(!$isPreview && $featuredPromoCoupon)
+            <div class="funnel-coupon-pop" id="funnelCouponPop"
+                data-coupon-code="{{ $featuredPromoCoupon->code }}"
+                data-coupon-title="{{ $featuredPromoCoupon->title ?: 'Special offer' }}"
+                data-coupon-seconds="60">
+                <div class="funnel-coupon-card">
+                    <div class="funnel-coupon-card-body">
+                        <div class="funnel-coupon-kicker">Limited-Time Coupon</div>
+                        <h3 class="funnel-coupon-title">{{ $featuredPromoCoupon->title ?: 'Special discount for this funnel' }}</h3>
+                        <p class="funnel-coupon-text">
+                            Use this code within the next 60 seconds. Copy it now and apply it during checkout before payment.
+                        </p>
+                        <div class="funnel-coupon-code-row">
+                            <div class="funnel-coupon-code" data-funnel-coupon-code>{{ $featuredPromoCoupon->code }}</div>
+                            <button type="button" class="funnel-coupon-copy" data-claim-funnel-coupon>Claim Coupon</button>
+                        </div>
+                        <div class="funnel-coupon-meta">
+                            <span data-funnel-coupon-timer>60s left</span>
+                            <button type="button" data-hide-funnel-coupon style="border:none;background:transparent;color:#fff;font-weight:700;cursor:pointer;">Hide</button>
+                        </div>
+                    </div>
+                    <div class="funnel-coupon-progress"><span data-funnel-coupon-progress></span></div>
+                </div>
+                <button type="button" class="funnel-coupon-minitab" data-show-funnel-coupon>Coupon Available</button>
             </div>
         @endif
 
@@ -3586,6 +3681,7 @@
                                                                     <input type="hidden" name="checkout_pricing_image" value="{{ $selectedImage }}">
                                                                     <input type="hidden" name="checkout_pricing_features" value="{{ $summaryFeaturesJson }}">
                                                                     <input type="hidden" name="checkout_cart_items" value="">
+                                                                    <input type="hidden" name="coupon_code" value="{{ strtoupper(trim((string) old('coupon_code', ''))) }}">
                                                                     @if($physicalSummaryUsesModal)
                                                                         <button type="button" class="builder-pricing-cta" data-open-shipping-modal style="{{ $ctaStyle }}background: {{ $ctaBg }}; color: {{ $ctaText }};">{{ $ctaLabel }}</button>
                                                                         <div class="checkout-shipping-modal-backdrop" data-shipping-modal aria-hidden="true">
@@ -3641,7 +3737,87 @@
                                                                                 </div>
                                                                                 <div class="checkout-shipping-modal-actions">
                                                                                     <button type="button" class="checkout-shipping-modal-cancel" data-close-shipping-modal>Cancel</button>
-                                                                                    <button type="submit" class="builder-pricing-cta checkout-shipping-modal-submit" style="{{ $ctaStyle }}background: {{ $ctaBg }}; color: {{ $ctaText }};">Continue to Payment</button>
+                                                                                    <button type="button" class="builder-pricing-cta checkout-shipping-modal-submit" data-open-coupon-prompt style="{{ $ctaStyle }}background: {{ $ctaBg }}; color: {{ $ctaText }};">Continue</button>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                        @php
+                                                                            // Only show AO-created (tenant-owned) coupons in the checkout coupon picker.
+                                                                            $checkoutCouponOptions = collect($availableCoupons ?? [])
+                                                                                ->filter(fn ($coupon) => ($coupon->scope_type ?? null) === \App\Models\Coupon::SCOPE_TENANT)
+                                                                                ->map(function ($coupon) {
+                                                                                    return [
+                                                                                        'code' => (string) $coupon->code,
+                                                                                        'title' => (string) ($coupon->title ?: 'Special coupon'),
+                                                                                        'discount_type' => (string) $coupon->discount_type,
+                                                                                        'discount_value' => (float) $coupon->discount_value,
+                                                                                    ];
+                                                                                })
+                                                                                ->values()
+                                                                                ->all();
+                                                                        @endphp
+                                                                        <div class="coupon-prompt-modal-backdrop" data-coupon-prompt aria-hidden="true">
+                                                                            <div class="coupon-prompt-modal" role="dialog" aria-modal="true" aria-label="Coupon code">
+                                                                                <div class="coupon-prompt-head">
+                                                                                    <div>
+                                                                                        <h3 class="coupon-prompt-title">Do you have a coupon code?</h3>
+                                                                                        <p class="coupon-prompt-copy">Paste a code if you have one. We will apply the discount before payment.</p>
+                                                                                    </div>
+                                                                                    <button type="button" class="coupon-prompt-close" data-close-coupon-prompt aria-label="Close"><i class="fas fa-times"></i></button>
+                                                                                </div>
+                                                                                <div class="coupon-prompt-field">
+                                                                                    <label for="coupon_prompt_{{ $elId }}">Coupon code</label>
+                                                                                    <input id="coupon_prompt_{{ $elId }}" type="text" data-coupon-prompt-input maxlength="40" placeholder="ENTER COUPON CODE" value="{{ strtoupper(trim((string) old('coupon_code', ''))) }}">
+                                                                                </div>
+                                                                                @if(count($checkoutCouponOptions) > 0)
+                                                                                <div class="coupon-prompt-available" data-coupon-available>
+                                                                                    <div class="coupon-prompt-available-title">Available coupons</div>
+                                                                                    <div class="coupon-prompt-available-list">
+                                                                                        @foreach($checkoutCouponOptions as $couponOpt)
+                                                                                            @php
+                                                                                                $optCode = strtoupper(trim((string) ($couponOpt['code'] ?? '')));
+                                                                                                $optTitle = trim((string) ($couponOpt['title'] ?? ''));
+                                                                                                $optType = trim((string) ($couponOpt['discount_type'] ?? ''));
+                                                                                                $optVal = (float) ($couponOpt['discount_value'] ?? 0);
+                                                                                                $optLabel = $optType === 'percent'
+                                                                                                    ? ($optVal > 0 ? rtrim(rtrim(number_format($optVal, 2), '0'), '.') . '% off' : '')
+                                                                                                    : ($optVal > 0 ? ('PHP ' . number_format($optVal, 2) . ' off') : '');
+                                                                                            @endphp
+                                                                                            @if($optCode !== '')
+                                                                                            <div class="coupon-prompt-available-item" data-coupon-item data-coupon-code="{{ $optCode }}">
+                                                                                                <div style="min-width:0;">
+                                                                                                    <div class="coupon-prompt-available-code">{{ $optCode }}</div>
+                                                                                                    <div class="coupon-prompt-available-meta">
+                                                                                                        {{ $optTitle !== '' ? $optTitle : 'Coupon' }}{!! $optLabel !== '' ? ' · <strong>'.$optLabel.'</strong>' : '' !!}
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                                <div class="coupon-prompt-available-actions">
+                                                                                                    <button type="button" class="coupon-prompt-available-btn primary" data-coupon-use="{{ $optCode }}">Use</button>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                            @endif
+                                                                                        @endforeach
+                                                                                    </div>
+                                                                                </div>
+                                                                                @endif
+                                                                                <div class="coupon-prompt-preview">
+                                                                                    <div class="coupon-prompt-preview-row">
+                                                                                        <span>Order subtotal</span>
+                                                                                        <strong data-coupon-subtotal>PHP 0.00</strong>
+                                                                                    </div>
+                                                                                    <div class="coupon-prompt-preview-row">
+                                                                                        <span>Estimated discount</span>
+                                                                                        <strong data-coupon-discount>PHP 0.00</strong>
+                                                                                    </div>
+                                                                                    <div class="coupon-prompt-preview-row coupon-prompt-preview-row--total">
+                                                                                        <strong>Total after coupon</strong>
+                                                                                        <strong data-coupon-total>PHP 0.00</strong>
+                                                                                    </div>
+                                                                                </div>
+                                                                                <div class="coupon-prompt-message" data-coupon-prompt-message></div>
+                                                                                <div class="coupon-prompt-actions">
+                                                                                    <button type="button" class="coupon-prompt-skip" data-coupon-skip>Skip for now</button>
+                                                                                    <button type="button" class="builder-pricing-cta" data-coupon-apply style="{{ $ctaStyle }}background: {{ $ctaBg }}; color: {{ $ctaText }};" data-coupon-options='@json($checkoutCouponOptions)'>Apply & Continue</button>
                                                                                 </div>
                                                                             </div>
                                                                         </div>
@@ -5271,8 +5447,9 @@
                 amountInput.value=String(amount);
             }
         }
-        function collectCheckoutCustomerInputs(){
-            var forms=Array.from(document.querySelectorAll("[data-checkout-customer-form]")||[]);
+        function collectCheckoutCustomerInputs(summaryForm){
+            if(!summaryForm)return [];
+            var forms=Array.from(summaryForm.querySelectorAll("[data-checkout-customer-form]")||[]);
             var inputs=[];
             forms.forEach(function(form){
                 Array.from(form.querySelectorAll("input, textarea, select")||[]).forEach(function(field){
@@ -5285,7 +5462,7 @@
         function syncCheckoutCustomerForm(summaryForm){
             if(!summaryForm)return {ok:true};
             var physicalPurpose={{ in_array($effectiveFunnelPurpose, ['physical_product','hybrid'], true) ? 'true' : 'false' }};
-            var customerInputs=collectCheckoutCustomerInputs();
+            var customerInputs=collectCheckoutCustomerInputs(summaryForm);
             if(!customerInputs.length)return {ok:true};
             var requiredNames={
                 email:true,
@@ -5349,11 +5526,13 @@
                 var syncedCustomer=syncCheckoutCustomerForm(form);
                 if(!syncedCustomer.ok){
                     e.preventDefault();
+                    if(typeof portalHideLoading==="function")portalHideLoading();
                     return;
                 }
             }
             if(form.getAttribute("data-submitting")==="1"){
                 e.preventDefault();
+                if(typeof portalHideLoading==="function")portalHideLoading();
                 return;
             }
             form.setAttribute("data-submitting","1");
@@ -5390,12 +5569,48 @@
                 if(form.getAttribute("data-shipping-modal-bound")==="1")return;
                 form.setAttribute("data-shipping-modal-bound","1");
                 var openBtn=form.querySelector("[data-open-shipping-modal]");
+                var continueBtn=form.querySelector("[data-open-coupon-prompt]");
                 var backdrop=form.querySelector("[data-shipping-modal]");
                 if(!openBtn||!backdrop)return;
                 openBtn.addEventListener("click",function(e){
                     e.preventDefault();
                     setShippingModalOpen(backdrop,true);
                 });
+                if(continueBtn){
+                    continueBtn.addEventListener("click",function(e){
+                        e.preventDefault();
+                        syncCheckoutPricingForm(form);
+                        var syncedCustomer=syncCheckoutCustomerForm(form);
+                        if(!syncedCustomer.ok){
+                            if(typeof portalHideLoading==="function")portalHideLoading();
+                            return;
+                        }
+                        setShippingModalOpen(backdrop,false);
+                        if(typeof window.__openCouponPrompt==="function"){
+                            window.__openCouponPrompt(form);
+                            var prompt=form.querySelector("[data-coupon-prompt]");
+                            window.setTimeout(function(){
+                                if(prompt && !prompt.classList.contains("is-open") && form.getAttribute("data-coupon-prompt-open")!=="1"){
+                                    form.setAttribute("data-coupon-confirmed","1");
+                                    if(typeof portalShowLoading==="function")portalShowLoading();
+                                    try{
+                                        HTMLFormElement.prototype.submit.call(form);
+                                    }catch(_e){
+                                        form.submit();
+                                    }
+                                }
+                            },350);
+                        }else{
+                            form.setAttribute("data-coupon-confirmed","1");
+                            if(typeof portalShowLoading==="function")portalShowLoading();
+                            try{
+                                HTMLFormElement.prototype.submit.call(form);
+                            }catch(_e){
+                                form.submit();
+                            }
+                        }
+                    });
+                }
                 backdrop.addEventListener("click",function(e){
                     if(e.target===backdrop){
                         setShippingModalOpen(backdrop,false);
@@ -5863,7 +6078,370 @@
             });
         }
     })();
+
+    (function(){
+        var sanitize=function(value){
+            return String(value||"").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,40);
+        };
+        var copiedCouponCode="";
+        var funnelSlug=(function(){
+            var body=document.body;
+            return body ? String(body.getAttribute("data-funnel-slug")||"").trim() : "";
+        })();
+        var claimedKey=function(){
+            return "claimed_coupon:"+(funnelSlug||"global");
+        };
+        var getClaimedCoupon=function(){
+            try{
+                var raw=window.localStorage ? window.localStorage.getItem(claimedKey()) : "";
+                return sanitize(raw||"");
+            }catch(_e){
+                return "";
+            }
+        };
+        var setClaimedCoupon=function(code){
+            var normalized=sanitize(code);
+            try{
+                if(window.localStorage){
+                    if(normalized){
+                        window.localStorage.setItem(claimedKey(), normalized);
+                    }else{
+                        window.localStorage.removeItem(claimedKey());
+                    }
+                }
+            }catch(_e){}
+            return normalized;
+        };
+        var applyClaimFilter=function(prompt){
+            if(!prompt)return;
+            var claimed=getClaimedCoupon();
+            var items=Array.from(prompt.querySelectorAll("[data-coupon-item]"));
+            var visibleCount=0;
+            items.forEach(function(item){
+                var code=sanitize(item.getAttribute("data-coupon-code")||"");
+                var show=claimed!=="" && code===claimed;
+                item.style.display=show?"":"none";
+                if(show)visibleCount++;
+            });
+            var wrapper=prompt.querySelector("[data-coupon-available]");
+            if(wrapper){
+                wrapper.style.display=visibleCount>0?"":"none";
+            }
+        };
+        var setCouponCodeOnForm=function(form,value){
+            if(!form)return;
+            var hidden=form.querySelector('input[name="coupon_code"]');
+            if(!hidden){
+                hidden=document.createElement("input");
+                hidden.type="hidden";
+                hidden.name="coupon_code";
+                form.appendChild(hidden);
+            }
+            hidden.value=sanitize(value);
+        };
+        var moneyText=function(amount){
+            var n=Number(amount||0);
+            if(!isFinite(n))n=0;
+            return "PHP "+n.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+        };
+        var parseMoney=function(value){
+            var text=String(value||"").replace(/[^0-9.\-]/g,"");
+            var parsed=parseFloat(text);
+            return isFinite(parsed)?parsed:0;
+        };
+        var previewCoupon=function(options,code,subtotal){
+            var normalized=sanitize(code);
+            var match=(Array.isArray(options)?options:[]).find(function(item){
+                return sanitize(item&&item.code)===normalized;
+            })||null;
+            var discount=0;
+            if(match){
+                if(String(match.discount_type||"")==="percent"){
+                    discount=Math.max(0,Math.min(subtotal,subtotal*(Number(match.discount_value||0)/100)));
+                }else{
+                    discount=Math.max(0,Math.min(subtotal,Number(match.discount_value||0)));
+                }
+            }
+            return {
+                match:match,
+                discount:Math.round(discount*100)/100,
+                total:Math.round(Math.max(0,subtotal-discount)*100)/100
+            };
+        };
+
+        var promoPop=document.getElementById("funnelCouponPop");
+        if(promoPop){
+            var code=String(promoPop.getAttribute("data-coupon-code")||"").trim();
+            var timerNode=promoPop.querySelector("[data-funnel-coupon-timer]");
+            var progressNode=promoPop.querySelector("[data-funnel-coupon-progress]");
+            var minitab=promoPop.querySelector("[data-show-funnel-coupon]");
+            var totalSeconds=parseInt(promoPop.getAttribute("data-coupon-seconds")||"60",10);
+            if(!isFinite(totalSeconds)||totalSeconds<1)totalSeconds=60;
+            var alreadyClaimed=getClaimedCoupon();
+            copiedCouponCode=sanitize(alreadyClaimed||code);
+            // If a coupon was already claimed for this funnel, never show the popup again.
+            if(alreadyClaimed!==""){
+                promoPop.style.display="none";
+                if(window.__funnelCouponTimer)clearInterval(window.__funnelCouponTimer);
+            }else{
+            var collapsePromo=function(){
+                promoPop.classList.add("is-hidden");
+                if(minitab)minitab.classList.add("is-visible");
+            };
+            var expandPromo=function(){
+                promoPop.classList.remove("is-hidden");
+                if(minitab)minitab.classList.remove("is-visible");
+            };
+            var remaining=totalSeconds;
+            var tick=function(){
+                remaining=Math.max(0,remaining-1);
+                if(timerNode)timerNode.textContent=remaining+"s left";
+                if(progressNode)progressNode.style.transform="scaleX("+(remaining/totalSeconds)+")";
+                if(remaining<=0){
+                    clearInterval(window.__funnelCouponTimer);
+                    collapsePromo();
+                }
+            };
+            if(timerNode)timerNode.textContent=remaining+"s left";
+            window.__funnelCouponTimer=window.setInterval(tick,1000);
+            var claimBtn=promoPop.querySelector("[data-claim-funnel-coupon]");
+            if(claimBtn){
+                claimBtn.addEventListener("click",function(){
+                    var normalized=setClaimedCoupon(code);
+                    if(normalized){
+                        copiedCouponCode=normalized;
+                    }
+                    claimBtn.textContent="Claimed";
+                    window.setTimeout(function(){ claimBtn.textContent="Claim Coupon"; },1400);
+                    // After claiming, hide the popup permanently for this funnel.
+                    promoPop.style.display="none";
+                    if(window.__funnelCouponTimer)clearInterval(window.__funnelCouponTimer);
+                });
+            }
+            var hideBtn=promoPop.querySelector("[data-hide-funnel-coupon]");
+            if(hideBtn)hideBtn.addEventListener("click",collapsePromo);
+            if(minitab)minitab.addEventListener("click",expandPromo);
+            }
+        }
+
+        var setPromptOpen=function(backdrop,open){
+            if(!backdrop)return;
+            backdrop.classList.toggle("is-open",!!open);
+            backdrop.setAttribute("aria-hidden",open?"false":"true");
+            document.body.style.overflow=open?"hidden":"";
+            backdrop.style.pointerEvents=open?"auto":"";
+            if(open && typeof portalHideLoading==="function"){
+                // Ensure no global loading overlay blocks modal clicks.
+                portalHideLoading();
+            }
+            if(open){
+                var input=backdrop.querySelector("[data-coupon-prompt-input]");
+                if(input){
+                    if(sanitize(input.value)==="" && copiedCouponCode!=="")input.value=copiedCouponCode;
+                    try{ input.focus(); }catch(_e){}
+                }
+            }
+        };
+        var openCouponPrompt=function(form){
+            if(!form)return;
+            var prompt=form.querySelector("[data-coupon-prompt]");
+            if(!prompt){
+                try{
+                    HTMLFormElement.prototype.submit.call(form);
+                }catch(_e){
+                    form.submit();
+                }
+                return;
+            }
+            // Always open the modal first; never auto-submit on JS errors.
+            setPromptOpen(prompt,true);
+            form.setAttribute("data-coupon-prompt-open","1");
+            try{
+                syncCheckoutPricingForm(form);
+                var amountInput=form.querySelector('input[name="amount"]');
+                var subtotal=parseMoney(amountInput?amountInput.value:"0");
+                prompt.setAttribute("data-coupon-subtotal-value",String(subtotal));
+                var input=prompt.querySelector("[data-coupon-prompt-input]");
+                var hidden=form.querySelector('input[name="coupon_code"]');
+                if(input){
+                    applyClaimFilter(prompt);
+                    var claimed=getClaimedCoupon();
+                    var nextValue=sanitize((hidden&&hidden.value)||claimed||copiedCouponCode||input.value);
+                    if(nextValue===""){
+                        var applyBtn0=prompt.querySelector("[data-coupon-apply]");
+                        var opts0=[];
+                        try{ opts0=JSON.parse(applyBtn0&&applyBtn0.getAttribute("data-coupon-options")||"[]"); }catch(_e){}
+                        if(Array.isArray(opts0) && opts0.length && opts0[0] && opts0[0].code){
+                            nextValue=sanitize(opts0[0].code);
+                        }
+                    }
+                    input.value=nextValue;
+                }
+                var previewBtn=prompt.querySelector("[data-coupon-apply]");
+                var options=[];
+                try{ options=JSON.parse(previewBtn&&previewBtn.getAttribute("data-coupon-options")||"[]"); }catch(_e){}
+                var preview=previewCoupon(options,input?input.value:"",subtotal);
+                var subtotalNode=prompt.querySelector("[data-coupon-subtotal]");
+                var discountNode=prompt.querySelector("[data-coupon-discount]");
+                var totalNode=prompt.querySelector("[data-coupon-total]");
+                var messageNode=prompt.querySelector("[data-coupon-prompt-message]");
+                if(subtotalNode)subtotalNode.textContent=moneyText(subtotal);
+                if(discountNode)discountNode.textContent=moneyText(preview.discount);
+                if(totalNode)totalNode.textContent=moneyText(preview.total);
+                if(messageNode){
+                    messageNode.className="coupon-prompt-message";
+                    messageNode.textContent=preview.match ? (preview.match.title||"Coupon detected. Discount will be applied at payment.") : "No coupon applied yet. You can continue without one.";
+                }
+            }catch(_e){}
+        };
+        window.__openCouponPrompt=openCouponPrompt;
+
+        // Coupon quick actions inside the prompt (Copy/Use)
+        document.querySelectorAll("[data-coupon-prompt]").forEach(function(prompt){
+            if(prompt.getAttribute("data-coupon-actions-bound")==="1")return;
+            prompt.setAttribute("data-coupon-actions-bound","1");
+            var input=prompt.querySelector("[data-coupon-prompt-input]");
+            var applyBtn=prompt.querySelector("[data-coupon-apply]");
+            prompt.querySelectorAll("[data-coupon-use]").forEach(function(btn){
+                btn.addEventListener("click",function(){
+                    var code=sanitize(btn.getAttribute("data-coupon-use")||"");
+                    if(code==="")return;
+                    if(input)input.value=code;
+                    copiedCouponCode=code;
+                    // trigger preview refresh quickly
+                    try{
+                        if(applyBtn){
+                            var subtotal=parseMoney(prompt.getAttribute("data-coupon-subtotal-value")||"0");
+                            var options=[];
+                            try{ options=JSON.parse(applyBtn.getAttribute("data-coupon-options")||"[]"); }catch(_e){}
+                            var preview=previewCoupon(options,code,subtotal);
+                            var discountNode=prompt.querySelector("[data-coupon-discount]");
+                            var totalNode=prompt.querySelector("[data-coupon-total]");
+                            var messageNode=prompt.querySelector("[data-coupon-prompt-message]");
+                            if(discountNode)discountNode.textContent=moneyText(preview.discount);
+                            if(totalNode)totalNode.textContent=moneyText(preview.total);
+                            if(messageNode){
+                                messageNode.className="coupon-prompt-message"+(preview.match?" is-success":"");
+                                messageNode.textContent=preview.match ? ((preview.match.title||"Coupon applied.")+" Discount will be applied at payment.") : "Coupon selected.";
+                            }
+                        }
+                    }catch(_e){}
+                });
+            });
+        });
+        var bindPromptPreview=function(prompt,form){
+            if(!prompt||!form||prompt.getAttribute("data-coupon-prompt-bound")==="1")return;
+            prompt.setAttribute("data-coupon-prompt-bound","1");
+            var input=prompt.querySelector("[data-coupon-prompt-input]");
+            var applyBtn=prompt.querySelector("[data-coupon-apply]");
+            var messageNode=prompt.querySelector("[data-coupon-prompt-message]");
+            var subtotalNode=prompt.querySelector("[data-coupon-subtotal]");
+            var discountNode=prompt.querySelector("[data-coupon-discount]");
+            var totalNode=prompt.querySelector("[data-coupon-total]");
+            var forceCheckoutSubmit=function(){
+                syncCheckoutPricingForm(form);
+                var syncedCustomer=syncCheckoutCustomerForm(form);
+                if(!syncedCustomer.ok){
+                    if(messageNode){
+                        messageNode.className="coupon-prompt-message is-error";
+                        messageNode.textContent="Please complete your shipping details before continuing.";
+                    }
+                    var shippingModal=form.querySelector("[data-shipping-modal]");
+                    if(shippingModal)setShippingModalOpen(shippingModal,true);
+                    return;
+                }
+                form.setAttribute("data-coupon-confirmed","1");
+                if(typeof portalShowLoading==="function")portalShowLoading();
+                // Submit immediately; also keep a 0ms fallback in case browser blocks sync submit.
+                try{ HTMLFormElement.prototype.submit.call(form); }catch(_e){ try{ form.submit(); }catch(_e2){} }
+                window.setTimeout(function(){
+                    if(form.getAttribute("data-submitting")==="1")return;
+                    try{ HTMLFormElement.prototype.submit.call(form); }catch(_e){ try{ form.submit(); }catch(_e2){} }
+                },0);
+            };
+            var recalc=function(){
+                var subtotal=parseMoney(prompt.getAttribute("data-coupon-subtotal-value")||"0");
+                var options=[];
+                try{ options=JSON.parse(applyBtn&&applyBtn.getAttribute("data-coupon-options")||"[]"); }catch(_e){}
+                var preview=previewCoupon(options,input?input.value:"",subtotal);
+                if(subtotalNode)subtotalNode.textContent=moneyText(subtotal);
+                if(discountNode)discountNode.textContent=moneyText(preview.discount);
+                if(totalNode)totalNode.textContent=moneyText(preview.total);
+                if(messageNode){
+                    messageNode.className="coupon-prompt-message"+(preview.match?" is-success":"");
+                    messageNode.textContent=preview.match
+                        ? "Coupon found: "+String(preview.match.title||preview.match.code||"Discount")+""
+                        : "We will still verify the code securely before payment.";
+                }
+            };
+            if(input){
+                input.addEventListener("input",function(){
+                    input.value=sanitize(input.value);
+                    recalc();
+                });
+            }
+            prompt.querySelectorAll("[data-close-coupon-prompt]").forEach(function(btn){
+                btn.addEventListener("click",function(){ setPromptOpen(prompt,false); });
+            });
+            var skipBtn=prompt.querySelector("[data-coupon-skip]");
+            if(skipBtn){
+                skipBtn.addEventListener("click",function(){
+                    try{ event && event.preventDefault && event.preventDefault(); }catch(_e){}
+                    setCouponCodeOnForm(form,"");
+                    setPromptOpen(prompt,false);
+                    forceCheckoutSubmit();
+                });
+            }
+            if(applyBtn){
+                applyBtn.addEventListener("click",function(){
+                    try{ event && event.preventDefault && event.preventDefault(); }catch(_e){}
+                    setCouponCodeOnForm(form,input?input.value:"");
+                    copiedCouponCode=sanitize(input?input.value:"");
+                    setPromptOpen(prompt,false);
+                    forceCheckoutSubmit();
+                });
+            }
+            recalc();
+        };
+
+        // Extra safety: global click delegation so the buttons always work even if
+        // the modal DOM is re-rendered or bound handlers fail.
+        document.addEventListener("click",function(e){
+            var btn=e.target&&e.target.closest?e.target.closest("[data-coupon-apply],[data-coupon-skip]"):null;
+            if(!btn)return;
+            var prompt=btn.closest("[data-coupon-prompt]");
+            var form=btn.closest("form[data-checkout-summary-form]");
+            if(!prompt||!form)return;
+            // If the prompt is bound, its handlers will run; this delegation is just a fallback.
+            if(prompt.getAttribute("data-coupon-prompt-bound")==="1")return;
+            e.preventDefault();
+            var input=prompt.querySelector("[data-coupon-prompt-input]");
+            if(btn.hasAttribute("data-coupon-skip")){
+                setCouponCodeOnForm(form,"");
+            }else{
+                setCouponCodeOnForm(form,input?input.value:"");
+            }
+            setPromptOpen(prompt,false);
+            syncCheckoutPricingForm(form);
+            var syncedCustomer=syncCheckoutCustomerForm(form);
+            if(!syncedCustomer.ok){
+                var shippingModal=form.querySelector("[data-shipping-modal]");
+                if(shippingModal)setShippingModalOpen(shippingModal,true);
+                return;
+            }
+            form.setAttribute("data-coupon-confirmed","1");
+            if(typeof portalShowLoading==="function")portalShowLoading();
+            try{ HTMLFormElement.prototype.submit.call(form); }catch(_e){ try{ form.submit(); }catch(_e2){} }
+        },true);
+
+        document.querySelectorAll("[data-checkout-summary-form]").forEach(function(form){
+            setCouponCodeOnForm(form,"");
+            var prompt=form.querySelector("[data-coupon-prompt]");
+            bindPromptPreview(prompt,form);
+        });
+
+        bindShippingModals();
+    })();
     </script>
 </body>
 </html>
-

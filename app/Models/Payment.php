@@ -28,7 +28,11 @@ class Payment extends Model
         'funnel_id',
         'funnel_step_id',
         'lead_id',
+        'coupon_id',
+        'coupon_code',
         'amount',
+        'subtotal_amount',
+        'discount_amount',
         'status',
         'payment_date',
         'provider',
@@ -39,6 +43,8 @@ class Payment extends Model
 
     protected $casts = [
         'amount' => 'decimal:2',
+        'subtotal_amount' => 'decimal:2',
+        'discount_amount' => 'decimal:2',
         'payment_date' => 'date',
     ];
 
@@ -106,6 +112,11 @@ class Payment extends Model
     public function lead(): BelongsTo
     {
         return $this->belongsTo(Lead::class);
+    }
+
+    public function coupon(): BelongsTo
+    {
+        return $this->belongsTo(Coupon::class);
     }
 
     public function events(): HasMany

@@ -1,10 +1,12 @@
 <?php
 
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\AdminCouponController;
 use App\Http\Controllers\AutomationController;
 use App\Http\Controllers\AdminFunnelTemplateController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\CouponController;
 use App\Http\Controllers\FunnelController;
 use App\Http\Controllers\FunnelPortalController;
 use App\Http\Controllers\FunnelReviewController;
@@ -127,6 +129,12 @@ Route::middleware(['auth', 'tenant.subscription', 'role:super-admin'])->group(fu
     Route::get('/admin/plans/{plan}/edit', [PlanController::class, 'edit'])->name('admin.plans.edit');
     Route::put('/admin/plans/{plan}', [PlanController::class, 'update'])->name('admin.plans.update');
     Route::delete('/admin/plans/{plan}', [PlanController::class, 'destroy'])->name('admin.plans.destroy');
+    Route::get('/admin/coupons', [AdminCouponController::class, 'index'])->name('admin.coupons.index');
+    Route::get('/admin/coupons/create', [AdminCouponController::class, 'create'])->name('admin.coupons.create');
+    Route::post('/admin/coupons', [AdminCouponController::class, 'store'])->name('admin.coupons.store');
+    Route::get('/admin/coupons/{coupon}/edit', [AdminCouponController::class, 'edit'])->name('admin.coupons.edit');
+    Route::put('/admin/coupons/{coupon}', [AdminCouponController::class, 'update'])->name('admin.coupons.update');
+    Route::delete('/admin/coupons/{coupon}', [AdminCouponController::class, 'destroy'])->name('admin.coupons.destroy');
 
     Route::get('/admin/users', [UserController::class, 'adminIndex'])->name('admin.users.index');
     Route::patch('/admin/users/{user}/status', [UserController::class, 'toggleOwnerStatus'])->name('admin.users.status');
@@ -161,6 +169,12 @@ Route::middleware(['auth', 'tenant.subscription', 'role:sales-agent,marketing-ma
         Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
         Route::post('/users', [UserController::class, 'store'])->name('users.store');
         Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+        Route::get('/coupons', [CouponController::class, 'index'])->name('coupons.index');
+        Route::get('/coupons/create', [CouponController::class, 'create'])->name('coupons.create');
+        Route::post('/coupons', [CouponController::class, 'store'])->name('coupons.store');
+        Route::get('/coupons/{coupon}/edit', [CouponController::class, 'edit'])->name('coupons.edit');
+        Route::put('/coupons/{coupon}', [CouponController::class, 'update'])->name('coupons.update');
+        Route::delete('/coupons/{coupon}', [CouponController::class, 'destroy'])->name('coupons.destroy');
     });
 
     Route::middleware(['role:account-owner,marketing-manager,sales-agent,finance'])->group(function () {

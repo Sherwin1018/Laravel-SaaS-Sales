@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Lead;
 use App\Models\LeadActivity;
 use App\Models\Payment;
+use App\Services\CouponService;
 use App\Services\AnalyticsDashboardService;
 use Illuminate\Support\Facades\DB;
 
@@ -17,7 +18,7 @@ class DashboardController extends Controller
             : "DATE_FORMAT({$column}, '%Y-%m')";
     }
 
-    public function owner(AnalyticsDashboardService $analytics)
+    public function owner(AnalyticsDashboardService $analytics, CouponService $coupons)
     {
         $tenant = auth()->user()->tenant;
         $tenantId = auth()->user()->tenant_id;
@@ -90,6 +91,11 @@ class DashboardController extends Controller
         $trialDaysRemaining = $tenant?->trialDaysRemaining() ?? 0;
         $trialEndsAt = $tenant?->trial_ends_at;
         $trialActive = $tenant?->isOnTrial() && ! $tenant?->isTrialExpired();
+        $visibleCoupons = $coupons->visibleToTenant((int) $tenantId)
+            ->get()
+            ->map(fn ($coupon) => $coupons->syncCouponStatus($coupon));
+        $activeCouponCount = $visibleCoupons->where('status', 'active')->count();
+        $platformCouponCount = $visibleCoupons->where('scope_type', 'platform')->count();
         $analyticsSummary = $tenant ? $analytics->tenantOwnerSummary($tenant) : [
             'usage' => [],
             'revenue_trend_labels' => [],
@@ -112,6 +118,8 @@ class DashboardController extends Controller
             'trialDaysRemaining',
             'trialEndsAt',
             'trialActive',
+            'activeCouponCount',
+            'platformCouponCount',
             'analyticsSummary'
         ));
     }

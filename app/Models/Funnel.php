@@ -89,4 +89,10 @@ class Funnel extends Model
     {
         return $this->hasMany(FunnelReview::class);
     }
+
+    public function coupons()
+    {
+        return $this->belongsToMany(Coupon::class, 'coupon_funnels')
+            ->withTimestamps();
+    }
 }

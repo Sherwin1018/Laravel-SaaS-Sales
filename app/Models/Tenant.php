@@ -84,6 +84,11 @@ class Tenant extends Model
         return $this->hasMany(Funnel::class);
     }
 
+    public function coupons()
+    {
+        return $this->hasMany(Coupon::class);
+    }
+
     public function customFields()
     {
         return $this->hasMany(TenantCustomField::class)->orderBy('sort_order');

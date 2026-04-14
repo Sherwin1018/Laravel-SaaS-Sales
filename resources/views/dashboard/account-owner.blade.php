@@ -123,6 +123,14 @@
             <h3>Total Leads</h3>
             <p>{{ data_get($analyticsSummary, 'usage.leads.used', 0) }}</p>
         </div>
+        <div class="card">
+            <h3>Active Coupons</h3>
+            <p>{{ $activeCouponCount ?? 0 }}</p>
+        </div>
+        <div class="card">
+            <h3>Platform Coupons</h3>
+            <p>{{ $platformCouponCount ?? 0 }}</p>
+        </div>
     </div>
 
     <div class="charts">
@@ -419,4 +427,3 @@
         }
     </script>
 @endsection
-
