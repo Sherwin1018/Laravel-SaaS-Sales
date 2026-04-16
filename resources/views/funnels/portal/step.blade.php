@@ -1663,7 +1663,14 @@
                     continue;
                 }
                 if ($key === 'backgroundImage') {
-                    if (!preg_match('/^url\(((https?:\/\/|\/)[^\s)]+)\)$/i', $value)) {
+                    // Allow background images and our safe overlay form:
+                    // `linear-gradient(rgba(...),rgba(...)),url(...)`
+                    $isPlainUrl = preg_match('/^url\(((https?:\/\/|\/)[^\s)]+)\)$/i', $value);
+                    $isOverlay = preg_match(
+                        '/^linear-gradient\(\s*rgba\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*(0(\.\d+)?|1(\.0+)?)\s*\)\s*,\s*rgba\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*(0(\.\d+)?|1(\.0+)?)\s*\)\s*\)\s*,\s*url\(((https?:\/\/|\/)[^\s)]+)\)\s*$/i',
+                        $value
+                    );
+                    if (!$isPlainUrl && !$isOverlay) {
                         continue;
                     }
                     $out[] = $cssProp . ':' . $value;
@@ -1807,6 +1814,25 @@
                 @foreach($renderSections as $section)
                     @php
                         $sectionStyleArr = is_array($section['style'] ?? null) ? $section['style'] : [];
+                        // Background overlay (color + opacity) for readability over background images.
+                        $overlayColor = trim((string) ($sectionStyleArr['overlayColor'] ?? ($sectionStyleArr['overlay_color'] ?? '#000000')));
+                        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $overlayColor)) {
+                            $overlayColor = '#000000';
+                        }
+                        $overlayOpacityRaw = $sectionStyleArr['overlayOpacity'] ?? ($sectionStyleArr['overlay_opacity'] ?? 0);
+                        $overlayOpacity = is_numeric($overlayOpacityRaw) ? (float) $overlayOpacityRaw : 0.0;
+                        if ($overlayOpacity > 1.0) {
+                            $overlayOpacity = $overlayOpacity / 100.0;
+                        }
+                        $overlayOpacity = max(0.0, min(1.0, $overlayOpacity));
+                        $bgImg = trim((string) ($sectionStyleArr['backgroundImage'] ?? ($sectionStyleArr['background-image'] ?? '')));
+                        if ($bgImg !== '' && $overlayOpacity > 0) {
+                            $r = hexdec(substr($overlayColor, 1, 2));
+                            $g = hexdec(substr($overlayColor, 3, 2));
+                            $b = hexdec(substr($overlayColor, 5, 2));
+                            $rgba = 'rgba(' . $r . ',' . $g . ',' . $b . ',' . $overlayOpacity . ')';
+                            $sectionStyleArr['backgroundImage'] = 'linear-gradient(' . $rgba . ',' . $rgba . '),' . $bgImg;
+                        }
                         $sectionRows = is_array($section['rows'] ?? null) ? $section['rows'] : [];
                         $sectionElsRaw = is_array($section['elements'] ?? null) ? $section['elements'] : [];
                         $sectionHasSectionElements = count($sectionElsRaw) > 0;

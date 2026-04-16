@@ -10946,6 +10946,13 @@ function renderCanvas(){
     state._linkTargetIds=getLinkedPricingIdsForSelection();
     canvas.innerHTML="";
     var widthMap={full:"",wide:"1200px",medium:"992px",small:"768px",xsmall:"576px"};
+    function hexToRgba(hex,alpha){
+        var h=String(hex||"").trim();
+        if(!/^#[0-9a-f]{6}$/i.test(h))h="#000000";
+        var r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);
+        var a=Math.max(0,Math.min(1,Number(alpha)||0));
+        return "rgba("+r+","+g+","+b+","+a+")";
+    }
     (state.layout.sections||[]).forEach(s=>{
         var contentWidth=((s.settings&&s.settings.contentWidth)||"full");
         var secElements=Array.isArray(s.elements)?s.elements:[];
@@ -10960,6 +10967,16 @@ function renderCanvas(){
         if(outlineLabel!=="")sn.setAttribute("data-outline-label",outlineLabel);
         sn.setAttribute("data-sec-id",String(s.id||""));
         styleApply(sn,s.style||{});
+        // Background image overlay (for readability)
+        try{
+            var bgImg=String(s&&s.style&&s.style.backgroundImage||"").trim();
+            var ovOp=Number(s&&s.style&&s.style.overlayOpacity)||0;
+            var ovColor=String(s&&s.style&&s.style.overlayColor||"#000000").trim()||"#000000";
+            if(bgImg!=="" && ovOp>0){
+                var a=Math.max(0,Math.min(1,ovOp>1?ovOp/100:ovOp));
+                sn.style.backgroundImage="linear-gradient("+hexToRgba(ovColor,a)+","+hexToRgba(ovColor,a)+"),"+bgImg;
+            }
+        }catch(_e){}
         var secHasRows=Array.isArray(s.rows)&&s.rows.length>0;
         if(!isBareSection&&!s.__freeformCanvas){
             var secMinH=(s&&s.style&&String(s.style.minHeight||"").trim())||"";
@@ -12212,9 +12229,11 @@ function renderSettings(){
         var padDef=[20,20,20,20],marDef=[0,0,0,0];
         var pad=parseSpacing(t.style&&t.style.padding,padDef),mar=parseSpacing(t.style&&t.style.margin,marDef);
         var cw=(t.settings&&t.settings.contentWidth)||"full";
-        settings.innerHTML='<div class="menu-section-title">Layout</div>'+helpLabelHtml("contentWidth","Content width")+'<select id="secCw"><option value="full">Full page</option><option value="wide">Wide</option><option value="medium">Medium</option><option value="small">Small</option><option value="xsmall">Extra small</option></select>'+helpLabelHtml("sectionAnchor","Section ID (anchor)")+'<input id="secAnchor" placeholder="contact"><div class="meta">Example: contact, etc</div><div class="menu-split"></div><div class="menu-section-title">Spacing</div><div class="size-position"><div class="size-label">Size and position</div><label class="size-label">Padding</label><div class="size-grid"><div class="fld"><label>T</label><input id="pTop" type="number" value="'+pad[0]+'"></div><div class="fld"><label>R</label><input id="pRight" type="number" value="'+pad[1]+'"></div><div class="fld"><label>B</label><input id="pBottom" type="number" value="'+pad[2]+'"></div><div class="fld"><label>L</label><input id="pLeft" type="number" value="'+pad[3]+'"></div><div class="size-link"><button type="button" id="linkPad" title="Link padding"><span>&harr;</span></button><span>Link</span></div></div><label class="size-label">Margin</label><div class="size-grid"><div class="fld"><label>T</label><input id="mTop" type="number" value="'+mar[0]+'"></div><div class="fld"><label>R</label><input id="mRight" type="number" value="'+mar[1]+'"></div><div class="fld"><label>B</label><input id="mBottom" type="number" value="'+mar[2]+'"></div><div class="fld"><label>L</label><input id="mLeft" type="number" value="'+mar[3]+'"></div><div class="size-link"><button type="button" id="linkMar" title="Link margin"><span>&harr;</span></button><span>Link</span></div></div></div><div class="menu-split"></div><div class="menu-section-title">Style</div><label>Background color</label><input id="bg" type="color"><label>Background image URL</label><input id="bgImg" placeholder="https://..."><label>Upload background image</label><input id="bgUp" type="file" accept="image/*">'+radiusHelpLabelHtml("secRadiusHelp","Border radius")+'<div class="px-wrap"><input id="secRadius" type="number" min="0" step="1"><span class="px-unit">px</span></div>'+remove;
+        settings.innerHTML='<div class="menu-section-title">Layout</div>'+helpLabelHtml("contentWidth","Content width")+'<select id="secCw"><option value="full">Full page</option><option value="wide">Wide</option><option value="medium">Medium</option><option value="small">Small</option><option value="xsmall">Extra small</option></select>'+helpLabelHtml("sectionAnchor","Section ID (anchor)")+'<input id="secAnchor" placeholder="contact"><div class="meta">Example: contact, etc</div><div class="menu-split"></div><div class="menu-section-title">Spacing</div><div class="size-position"><div class="size-label">Size and position</div><label class="size-label">Padding</label><div class="size-grid"><div class="fld"><label>T</label><input id="pTop" type="number" value="'+pad[0]+'"></div><div class="fld"><label>R</label><input id="pRight" type="number" value="'+pad[1]+'"></div><div class="fld"><label>B</label><input id="pBottom" type="number" value="'+pad[2]+'"></div><div class="fld"><label>L</label><input id="pLeft" type="number" value="'+pad[3]+'"></div><div class="size-link"><button type="button" id="linkPad" title="Link padding"><span>&harr;</span></button><span>Link</span></div></div><label class="size-label">Margin</label><div class="size-grid"><div class="fld"><label>T</label><input id="mTop" type="number" value="'+mar[0]+'"></div><div class="fld"><label>R</label><input id="mRight" type="number" value="'+mar[1]+'"></div><div class="fld"><label>B</label><input id="mBottom" type="number" value="'+mar[2]+'"></div><div class="fld"><label>L</label><input id="mLeft" type="number" value="'+mar[3]+'"></div><div class="size-link"><button type="button" id="linkMar" title="Link margin"><span>&harr;</span></button><span>Link</span></div></div></div><div class="menu-split"></div><div class="menu-section-title">Style</div><label>Background color</label><input id="bg" type="color"><label>Background image URL</label><input id="bgImg" placeholder="https://..."><label>Upload background image</label><input id="bgUp" type="file" accept="image/*"><div class="menu-split"></div><div class="menu-section-title">Background overlay</div><label>Overlay color</label><input id="bgOverlayColor" type="color"><label>Overlay opacity</label><div class="px-wrap"><input id="bgOverlayOpacity" type="number" min="0" max="100" step="5"><span class="px-unit">%</span></div>'+radiusHelpLabelHtml("secRadiusHelp","Border radius")+'<div class="px-wrap"><input id="secRadius" type="number" min="0" step="1"><span class="px-unit">px</span></div>'+remove;
         bind("bg",(t.style&&t.style.backgroundColor)||"#ffffff",v=>sty().backgroundColor=v,{undo:true});
         bind("bgImg",readBgImageUrl(),v=>{var s=sty();s.backgroundImage=(v&&String(v).trim()!=="")?('url('+String(v).trim()+')'):"";renderCanvas();},{undo:true});
+        bind("bgOverlayColor",(t.style&&t.style.overlayColor)||"#000000",v=>{sty().overlayColor=String(v||"#000000");renderCanvas();},{undo:true});
+        bind("bgOverlayOpacity",(t.style&&t.style.overlayOpacity)!=null?String(t.style.overlayOpacity):"0",v=>{sty().overlayOpacity=Math.max(0,Math.min(100,Number(v)||0));renderCanvas();},{undo:true});
         bind("secCw",cw,v=>{t.settings=t.settings||{};t.settings.contentWidth=v;renderCanvas();},{undo:true});
         bind("secAnchor",(t.settings&&t.settings.anchorId)||"",v=>{
             t.settings=t.settings||{};

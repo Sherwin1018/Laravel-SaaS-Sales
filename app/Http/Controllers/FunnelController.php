@@ -2023,6 +2023,8 @@ class FunnelController extends Controller
 
         $allowedKeys = [
             'backgroundColor',
+            'overlayColor',
+            'overlayOpacity',
             'color',
             'fontSize',
             'fontWeight',
@@ -2076,6 +2078,24 @@ class FunnelController extends Controller
             if ($key === 'backgroundImage') {
                 if (preg_match('/^url\(((https?:\/\/|\/)[^\s)]+)\)$/i', $value)) {
                     $safe[$key] = $value;
+                }
+                continue;
+            }
+
+            if ($key === 'overlayColor') {
+                if (preg_match('/^#[0-9A-Fa-f]{6}$/', $value)) {
+                    $safe[$key] = $value;
+                }
+                continue;
+            }
+
+            if ($key === 'overlayOpacity') {
+                if (is_numeric($value)) {
+                    $n = (float) $value;
+                    // Accept either 0..1 or 0..100 (percent). Store as given to preserve UI intent.
+                    if (($n >= 0.0 && $n <= 1.0) || ($n >= 0.0 && $n <= 100.0)) {
+                        $safe[$key] = rtrim(rtrim((string) $n, '0'), '.');
+                    }
                 }
                 continue;
             }
