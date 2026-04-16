@@ -486,7 +486,7 @@ class AdminFunnelTemplateController extends Controller
     {
         $issues = $this->validatePublishReadiness(
             $funnelTemplate->steps()->where('is_active', true)->orderBy('position')->get(),
-            (string) $funnelTemplate->template_type
+            $funnelTemplate
         );
         if ($issues !== []) {
             return redirect()->back()->with('error', implode(' ', $issues));
@@ -1568,9 +1568,20 @@ class AdminFunnelTemplateController extends Controller
             ->all();
     }
 
-    private function requiredStepTypesForTemplateType(string $templateType): array
+    private function requiredStepTypesForTemplate(FunnelTemplate $template): array
     {
-        return match (FunnelTemplate::normalizeTemplateType($templateType)) {
+        $templateType = FunnelTemplate::normalizeTemplateType($template->template_type);
+        $purpose = $template->resolvedFunnelPurpose();
+
+        // Step-by-step templates follow funnel purpose rules.
+        // Physical products do not require an Opt-in step.
+        if ($templateType === 'step_by_step') {
+            return $purpose === 'physical_product'
+                ? ['landing', 'sales', 'checkout', 'thank_you']
+                : ['landing', 'opt_in', 'sales', 'checkout', 'thank_you'];
+        }
+
+        return match ($templateType) {
             'single_page' => [],
             'digital_product', 'physical_product' => ['sales', 'checkout', 'thank_you'],
             'hybrid' => ['landing', 'sales', 'checkout', 'thank_you'],
@@ -1578,12 +1589,12 @@ class AdminFunnelTemplateController extends Controller
         };
     }
 
-    private function validatePublishReadiness($steps, string $templateType = 'service'): array
+    private function validatePublishReadiness($steps, FunnelTemplate $template): array
     {
         $ordered = collect($steps)->values();
         $issues = [];
-        $normalizedTemplateType = FunnelTemplate::normalizeTemplateType($templateType);
-        $requiredTypes = $this->requiredStepTypesForTemplateType($templateType);
+        $normalizedTemplateType = FunnelTemplate::normalizeTemplateType($template->template_type);
+        $requiredTypes = $this->requiredStepTypesForTemplate($template);
 
         foreach ($requiredTypes as $requiredType) {
             if (! $ordered->contains(fn ($step) => strtolower(trim((string) ($step->type ?? ''))) === $requiredType)) {

@@ -4286,6 +4286,17 @@ function persistLayoutsForSteps(stepList,skipRevision){
     var list=Array.isArray(stepList)?stepList:[];
     var sr=skipRevision!==false;
     var queue=Promise.resolve(true);
+    function sleep(ms){ return new Promise(function(res){ setTimeout(res,ms); }); }
+    function saveWithRetry(stepId,layout,bg,skipRev,attempt){
+        return postStepLayoutSave(stepId,layout,bg,skipRev).catch(function(err){
+            var a=Number(attempt||0);
+            if(a>=2)throw err;
+            // brief backoff then retry (helps with transient network/timeout issues)
+            return sleep(250*(a+1)).then(function(){
+                return saveWithRetry(stepId,layout,bg,skipRev,a+1);
+            });
+        });
+    }
     list.forEach(function(step){
         if(!step||!step.id)return;
         queue=queue.then(function(){
@@ -4296,7 +4307,7 @@ function persistLayoutsForSteps(stepList,skipRevision){
             if(!bg&&layout&&layout.__editor&&typeof layout.__editor.canvasBg==="string"&&layout.__editor.canvasBg.trim()!==""){
                 bg=layout.__editor.canvasBg.trim();
             }
-            return postStepLayoutSave(step.id,layout,bg,sr).then(function(resp){
+            return saveWithRetry(step.id,layout,bg,sr,0).then(function(resp){
                 if(resp&&resp.layout_json)step.layout_json=resp.layout_json;
                 if(resp&&typeof resp.background_color==="string"){
                     step.background_color=resp.background_color.trim()||null;

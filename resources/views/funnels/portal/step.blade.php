@@ -428,7 +428,8 @@
         .builder-checkout-summary--physical .builder-pricing-features { gap: var(--checkout-physical-features-gap, 5px); }
         .builder-checkout-summary--physical .builder-pricing-features li { font-size: var(--checkout-physical-feature-size, 11px); }
         .builder-checkout-summary--physical .builder-pricing-cta { width:100%; padding: var(--checkout-physical-cta-pad-y, 10px) var(--checkout-physical-cta-pad-x, 14px); border-radius: var(--checkout-physical-cta-radius, 12px); }
-        .checkout-shipping-modal-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.54); z-index: 1950; display: none; align-items: flex-start; justify-content: center; overflow-y: auto; padding: 18px; }
+        /* Keep shipping modal above scaled/absolute canvas layers. */
+        .checkout-shipping-modal-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.54); z-index: 999999; display: none; align-items: flex-start; justify-content: center; overflow-y: auto; padding: 18px; isolation: isolate; }
         .checkout-shipping-modal-backdrop.is-open { display: flex; }
         .checkout-shipping-modal { width: min(500px, 100%); max-height: calc(100vh - 36px); overflow: auto; margin: auto 0; background: #ffffff; border-radius: 22px; box-shadow: 0 28px 70px rgba(15, 23, 42, 0.28); padding: 18px; display: grid; gap: 12px; }
         .checkout-shipping-modal-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
@@ -443,8 +444,8 @@
         .checkout-shipping-modal-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:4px; }
         .checkout-shipping-modal-cancel { display:inline-flex; align-items:center; justify-content:center; min-width:120px; padding:11px 16px; border-radius:999px; border:1px solid #d7cdea; background:#ffffff; color:#240E35; font-weight:700; cursor:pointer; }
         .checkout-shipping-modal-submit { min-width:160px; }
-        /* Must be above portal loading overlay (z-index:2100) */
-        .coupon-prompt-modal-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.54); z-index: 2210; display: none; align-items: center; justify-content: center; padding: 18px; pointer-events: auto; }
+        /* Keep coupon modal above scaled/absolute canvas layers. */
+        .coupon-prompt-modal-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.54); z-index: 999999; display: none; align-items: center; justify-content: center; padding: 18px; pointer-events: auto; isolation: isolate; }
         .coupon-prompt-modal-backdrop.is-open { display: flex; }
         .coupon-prompt-modal { width:min(460px,100%); background:#ffffff; border-radius:22px; box-shadow:0 28px 70px rgba(15,23,42,.28); padding:20px; display:grid; gap:14px; position:relative; z-index: 2211; pointer-events: auto; }
         .coupon-prompt-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
@@ -5752,6 +5753,26 @@
         },true);
         function setShippingModalOpen(backdrop,open){
             if(!backdrop)return;
+            // If the funnel canvas is scaled/transformed, fixed overlays inside it can fall behind.
+            // Portal the backdrop to <body> while open so it always overlays the whole page.
+            if(open){
+                try{
+                    if(!backdrop.__fbPortal){
+                        backdrop.__fbPortal={parent:backdrop.parentNode,next:backdrop.nextSibling};
+                    }
+                    if(backdrop.parentNode!==document.body){
+                        document.body.appendChild(backdrop);
+                    }
+                }catch(_e){}
+            }else{
+                try{
+                    var p=backdrop.__fbPortal;
+                    if(p&&p.parent){
+                        if(p.next&&p.next.parentNode===p.parent)p.parent.insertBefore(backdrop,p.next);
+                        else p.parent.appendChild(backdrop);
+                    }
+                }catch(_e){}
+            }
             backdrop.classList.toggle("is-open",!!open);
             backdrop.setAttribute("aria-hidden",open?"false":"true");
             if(open){
@@ -6430,6 +6451,25 @@
 
         var setPromptOpen=function(backdrop,open){
             if(!backdrop)return;
+            // Portal the coupon prompt to <body> while open so it always overlays the scaled canvas.
+            if(open){
+                try{
+                    if(!backdrop.__fbPortal){
+                        backdrop.__fbPortal={parent:backdrop.parentNode,next:backdrop.nextSibling};
+                    }
+                    if(backdrop.parentNode!==document.body){
+                        document.body.appendChild(backdrop);
+                    }
+                }catch(_e){}
+            }else{
+                try{
+                    var p=backdrop.__fbPortal;
+                    if(p&&p.parent){
+                        if(p.next&&p.next.parentNode===p.parent)p.parent.insertBefore(backdrop,p.next);
+                        else p.parent.appendChild(backdrop);
+                    }
+                }catch(_e){}
+            }
             backdrop.classList.toggle("is-open",!!open);
             backdrop.setAttribute("aria-hidden",open?"false":"true");
             document.body.style.overflow=open?"hidden":"";

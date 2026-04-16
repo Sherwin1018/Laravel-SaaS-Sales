@@ -441,7 +441,9 @@ class FunnelController extends Controller
             return true;
         }
 
-        return ! (bool) $user->hasAnyRole(['super-admin']);
+        // Allow funnel builders (AO/marketing) to access step-by-step templates too.
+        // Only restrict viewers without builder roles to single-page templates.
+        return ! (bool) $user->hasAnyRole(['super-admin', 'account-owner', 'marketing-manager']);
     }
 
     private function templateLibraryLimitForUser($user): ?int
@@ -497,7 +499,9 @@ class FunnelController extends Controller
 
     private function canEditSharedTemplates($user): bool
     {
-        return (bool) ($user && $user->hasAnyRole(['super-admin', 'account-owner', 'marketing-manager']));
+        // Shared template cards represent super-admin curated templates.
+        // Only super-admin can edit card metadata (name/description/tags/status).
+        return (bool) ($user && $user->hasRole('super-admin'));
     }
 
     private function templateCardTags(FunnelTemplate $template, int $stepCount, array $fallbackStepTypeTags): array
