@@ -37,7 +37,7 @@
                 account_owner: 'fa-building-user',
                 marketing_manager: 'fa-chart-line',
                 sales_agent: 'fa-handshake',
-                finance: 'fa-file-peso-sign',
+                finance: 'fa-file-invoice-dollar',
                 customer: 'fa-user-circle'
             };
             const roleLabels = {
