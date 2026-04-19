@@ -633,9 +633,18 @@ class AdminFunnelTemplateController extends Controller
                 Rule::exists('funnel_template_steps', 'id')->where(fn ($q) => $q->where('funnel_template_id', $funnelTemplate->id)),
             ],
             'layout_json' => 'required',
+            'layout_breakpoint' => ['nullable', 'string', Rule::in(['desktop', 'mobile', 'tablet'])],
             'background_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'skip_revision' => ['nullable', 'boolean'],
         ]);
+
+        $layoutBreakpoint = strtolower((string) ($validated['layout_breakpoint'] ?? 'desktop'));
+        if ($layoutBreakpoint === 'tablet') {
+            $layoutBreakpoint = 'mobile';
+        }
+        if (! in_array($layoutBreakpoint, ['desktop', 'mobile'], true)) {
+            $layoutBreakpoint = 'desktop';
+        }
 
         $rawLayout = $validated['layout_json'];
         if (is_string($rawLayout)) {
@@ -651,19 +660,24 @@ class AdminFunnelTemplateController extends Controller
 
         $step = $funnelTemplate->steps()->where('id', $validated['step_id'])->firstOrFail();
         $skipRevision = (bool) ($validated['skip_revision'] ?? false);
-        if (! $skipRevision) {
+        if (! $skipRevision && $layoutBreakpoint === 'desktop') {
             $this->rememberStepRevision($step, $this->normalizeRevisionLayout($step->layout_json), $this->normalizeRevisionBackground($step->background_color));
         }
 
         $layout = $this->enforceBuilderStructureRules($rawLayout);
         $this->mergeElementSizeFromRaw($layout, $rawLayout);
 
-        $step->update([
-            'layout_json' => $layout,
+        $update = [
             'background_color' => $validated['background_color'] ?? null,
-        ]);
+        ];
+        if ($layoutBreakpoint === 'desktop') {
+            $update['layout_json'] = $layout;
+        } else {
+            $update['layout_json_mobile'] = $layout;
+        }
+        $step->update($update);
 
-        if (! $skipRevision) {
+        if (! $skipRevision && $layoutBreakpoint === 'desktop') {
             $this->rememberStepRevision($step, $layout, $this->normalizeRevisionBackground($step->background_color));
         }
 
@@ -672,7 +686,10 @@ class AdminFunnelTemplateController extends Controller
         return response()->json([
             'message' => 'Layout saved successfully.',
             'step_id' => $step->id,
-            'layout_json' => $layout,
+            'layout_json' => $step->layout_json,
+            'layout_json_tablet' => $step->layout_json_tablet,
+            'layout_json_mobile' => $step->layout_json_mobile,
+            'layout_breakpoint' => $layoutBreakpoint,
             'background_color' => $step->background_color,
             'revision_history' => $this->revisionHistoryPayload($step),
         ]);
@@ -1176,6 +1193,8 @@ class AdminFunnelTemplateController extends Controller
             'slug' => $step->slug,
             'type' => $step->type,
             'layout_json' => $step->layout_json,
+            'layout_json_tablet' => $step->layout_json_tablet,
+            'layout_json_mobile' => $step->layout_json_mobile,
             'background_color' => $step->background_color,
             'position' => (int) $step->position,
             'is_active' => (bool) $step->is_active,

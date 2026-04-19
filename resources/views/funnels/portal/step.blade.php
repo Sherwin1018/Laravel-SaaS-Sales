@@ -33,7 +33,33 @@
         }
         return 0;
     };
-    $initialLayout = is_array($step->layout_json ?? null) ? $step->layout_json : [];
+    $isPreviewPage = ($isPreview ?? false);
+    $portalLayoutBreakpoint = 'desktop';
+    if ($isPreviewPage) {
+        $pd = strtolower((string) request()->query('preview_device', 'desktop'));
+        if ($pd === 'tablet') {
+            $portalLayoutBreakpoint = 'mobile';
+        } elseif (in_array($pd, ['desktop', 'mobile'], true)) {
+            $portalLayoutBreakpoint = $pd;
+        } else {
+            $portalLayoutBreakpoint = 'desktop';
+        }
+    } else {
+        $pd = strtolower((string) request()->query('layout_breakpoint', ''));
+        if ($pd === 'tablet') {
+            $portalLayoutBreakpoint = 'mobile';
+        } elseif (in_array($pd, ['desktop', 'mobile'], true)) {
+            $portalLayoutBreakpoint = $pd;
+        } else {
+            $ua = strtolower((string) request()->userAgent());
+            if (str_contains($ua, 'ipad') || str_contains($ua, 'tablet')
+                || str_contains($ua, 'mobile') || str_contains($ua, 'iphone') || str_contains($ua, 'ipod')
+                || (str_contains($ua, 'android') && str_contains($ua, 'mobile'))) {
+                $portalLayoutBreakpoint = 'mobile';
+            }
+        }
+    }
+    $initialLayout = $step->effectiveLayoutForBreakpoint($portalLayoutBreakpoint);
     $initialRootItems = is_array($initialLayout['root'] ?? null) ? $initialLayout['root'] : [];
     if (count($initialRootItems) === 0 && is_array($initialLayout['sections'] ?? null)) {
         foreach ($initialLayout['sections'] as $legacySection) {
@@ -86,6 +112,96 @@
     $portalHasFreeformCanvas = count($initialFreeformEls) > 0;
 
     $previewIframeMode = (string) request()->query('preview_iframe') === '1';
+
+    /** @param  array<string, mixed>  $style */
+    $portalHexToRgb = function (string $hex): ?array {
+        $hex = trim($hex);
+        if ($hex !== '' && $hex[0] === '#') {
+            $hex = substr($hex, 1);
+        }
+        if (strlen($hex) === 3 && ctype_xdigit($hex)) {
+            $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
+        }
+        if (strlen($hex) !== 6 || !ctype_xdigit($hex)) {
+            return null;
+        }
+
+        return [
+            hexdec(substr($hex, 0, 2)),
+            hexdec(substr($hex, 2, 2)),
+            hexdec(substr($hex, 4, 2)),
+        ];
+    };
+    /** WCAG relative luminance for sRGB #rrggbb (used for menu link vs bar contrast). */
+    $portalRelativeLuminance = function (array $rgb): float {
+        $lin = function (int $c): float {
+            $c = $c / 255;
+
+            return $c <= 0.03928 ? $c / 12.92 : pow(($c + 0.055) / 1.055, 2.4);
+        };
+
+        return 0.2126 * $lin($rgb[0]) + 0.7152 * $lin($rgb[1]) + 0.0722 * $lin($rgb[2]);
+    };
+    /**
+     * If the menu bar is dark but link text is still the default slate (#374151), use a light color so
+     * preview/published stay readable. Any other explicit hex from the user (e.g. blue) is always honored —
+     * saturated blues have low luminance and were incorrectly rewritten to white before.
+     *
+     * @param  array<string, mixed>  $rawStyle
+     */
+    $portalNormalizeMenuHex = function (string $color): string {
+        $h = trim($color);
+        if ($h !== '' && $h[0] === '#') {
+            $h = substr($h, 1);
+        }
+        if (strlen($h) === 3 && ctype_xdigit($h)) {
+            $h = $h[0] . $h[0] . $h[1] . $h[1] . $h[2] . $h[2];
+        }
+        if (strlen($h) === 6 && ctype_xdigit($h)) {
+            return '#' . strtolower($h);
+        }
+
+        return '';
+    };
+    $portalResolveMenuLinkColor = function (string $textColor, array $rawStyle) use ($portalHexToRgb, $portalRelativeLuminance, $portalNormalizeMenuHex): string {
+        $text = trim($textColor);
+        if ($text === '') {
+            $text = '#374151';
+        }
+        $normalized = $portalNormalizeMenuHex($text);
+        if ($normalized !== '' && $normalized !== '#374151') {
+            return $text;
+        }
+        $textRgb = $portalHexToRgb($text);
+        if ($textRgb === null) {
+            return $text;
+        }
+        $bgStr = '';
+        foreach (['backgroundColor', 'background-color', 'background'] as $k) {
+            $v = trim((string) ($rawStyle[$k] ?? ''));
+            if ($v !== '') {
+                $bgStr = $v;
+                break;
+            }
+        }
+        if ($bgStr === '' || !preg_match('/#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})\b/', $bgStr, $m)) {
+            return $text;
+        }
+        $bgRgb = $portalHexToRgb($m[0]);
+        if ($bgRgb === null) {
+            return $text;
+        }
+        $bgL = $portalRelativeLuminance($bgRgb);
+        $textL = $portalRelativeLuminance($textRgb);
+        if ($bgL < 0.45 && $textL < 0.55) {
+            return '#f8fafc';
+        }
+        if ($bgL > 0.65 && $textL > 0.85) {
+            return '#0f172a';
+        }
+
+        return $text;
+    };
 @endphp
 <!DOCTYPE html>
 <html lang="en">
@@ -137,6 +253,74 @@
             padding: 0 0 8px;
             overflow-x: auto;
             overflow-y: visible;
+        }
+        /* Preview and published freeform both use zoom/transform scale on `.step-content--full` when the saved
+           canvas is wider than the viewport. Very short saved menu heights look clipped (links/CTA intersect bar
+           edges, logo misaligned). Nudge minimum size and padding for any mode that uses that scaling — but not on
+           narrow phone layouts where the hamburger menu replaces the horizontal bar (see @media max-width 480px). */
+        body.is-preview .builder-el[data-element-type="menu"] .builder-menu {
+            min-height: 72px !important;
+            box-sizing: border-box;
+        }
+        body.is-preview .builder-menu--has-height {
+            min-height: 72px !important;
+        }
+        body.is-preview .builder-menu-shell {
+            padding-top: 8px;
+            padding-bottom: 8px;
+            min-height: 46px;
+            box-sizing: border-box;
+        }
+        body.is-preview .builder-menu-list {
+            min-height: 38px;
+            align-items: center;
+        }
+        body.is-preview .builder-menu-link {
+            line-height: 1.45 !important;
+            -webkit-font-smoothing: antialiased;
+        }
+        body.is-preview .builder-menu--has-height .builder-menu-logo {
+            width: auto !important;
+            height: auto !important;
+            max-width: min(180px, 45vw) !important;
+            max-height: 42px !important;
+            object-fit: contain !important;
+            object-position: left center !important;
+            flex: 0 0 auto !important;
+            align-self: center !important;
+        }
+        @media (min-width: 481px) {
+            body.is-published .builder-el[data-element-type="menu"] .builder-menu {
+                min-height: 72px !important;
+                box-sizing: border-box;
+            }
+            body.is-published .builder-menu--has-height {
+                min-height: 72px !important;
+            }
+            body.is-published .builder-menu-shell {
+                padding-top: 8px;
+                padding-bottom: 8px;
+                min-height: 46px;
+                box-sizing: border-box;
+            }
+            body.is-published .builder-menu-list {
+                min-height: 38px;
+                align-items: center;
+            }
+            body.is-published .builder-menu-link {
+                line-height: 1.45 !important;
+                -webkit-font-smoothing: antialiased;
+            }
+            body.is-published .builder-menu--has-height .builder-menu-logo {
+                width: auto !important;
+                height: auto !important;
+                max-width: min(180px, 45vw) !important;
+                max-height: 42px !important;
+                object-fit: contain !important;
+                object-position: left center !important;
+                flex: 0 0 auto !important;
+                align-self: center !important;
+            }
         }
         body.portal-has-freeform-canvas .step-content--full { opacity: 0; }
         body.portal-has-freeform-canvas .step-content--full.is-scale-ready { opacity: 1; }
@@ -206,11 +390,15 @@
         .builder-row { display: flex; gap: 8px; flex-wrap: wrap; padding: 6px; }
         .builder-col { min-width: 0; min-height: 0; flex: 1 1 0; position: relative; overflow: hidden; background: transparent; padding: 6px; box-sizing: border-box; text-align: center; }
         .builder-col > .builder-col-inner > .builder-el { max-width: 100%; overflow: hidden; box-sizing: border-box; }
+        /* Must beat the rule above (section / column wrappers clip overflow by default). */
+        .builder-el[data-element-type="menu"] { overflow: visible !important; }
         /* Guarantee full-width wrappers so "Center" alignment matches Builder canvas.
            Otherwise width can shrink to content and the component appears slightly off-center in preview/published. */
         .builder-el:not(.builder-el--abs)[data-element-type="heading"],
         .builder-el:not(.builder-el--abs)[data-element-type="text"],
-        .builder-el:not(.builder-el--abs)[data-element-type="button"]{
+        .builder-el:not(.builder-el--abs)[data-element-type="button"],
+        .builder-el:not(.builder-el--abs)[data-element-type="pricing"],
+        .builder-el:not(.builder-el--abs)[data-element-type="product_offer"]{
             width:100% !important;
         }
         /* Keep button wrapper full width for centering, but do not force the button itself to stretch. */
@@ -236,15 +424,120 @@
         .builder-image-placeholder__inner { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 18px; text-align: center; }
         .builder-image-placeholder__plus { width: 58px; height: 58px; border-radius: 999px; background: #d9d9d9; color: #5f6368; display: flex; align-items: center; justify-content: center; font-size: 40px; font-weight: 300; line-height: 1; box-shadow: 0 6px 18px rgba(15, 23, 42, 0.16); }
         .builder-image-placeholder__label { font-size: 14px; font-weight: 600; color: #5f6368; letter-spacing: 0.01em; }
-        .builder-menu { width: 100%; }
-        .builder-menu-shell { width: 100%; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; }
-        .builder-menu-left { justify-self: start; min-width: 0; }
-        .builder-menu-right { justify-self: end; min-width: 0; }
-        .builder-menu-center { min-width: 0; justify-self: center; }
-        .builder-menu-list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; }
-        .builder-menu-link { text-decoration: none; text-underline-offset: 3px; font: inherit; }
+        .builder-menu { width: 100%; position: relative; z-index: 5; }
+        /* When the menu bar has an explicit height (canvas resize or settings), fill it so the logo is not clipped. */
+        .builder-menu--has-height {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            box-sizing: border-box;
+            min-height: 0;
+            overflow: hidden;
+        }
+        /* One horizontal row; center all columns — stretch was pinning links/logo to the top while the CTA looked centered. */
+        .builder-menu--has-height .builder-menu-shell {
+            flex: 1 1 auto;
+            min-height: 0;
+            height: 100%;
+            width: 100%;
+            align-items: center;
+            overflow: hidden;
+        }
+        .builder-menu--has-height .builder-menu-logo {
+            width: auto !important;
+            max-width: min(180px, 45vw) !important;
+            height: auto !important;
+            max-height: 42px !important;
+            object-fit: contain !important;
+            object-position: left center !important;
+            flex: 0 0 auto !important;
+            flex-shrink: 0;
+            align-self: center !important;
+            min-width: 0 !important;
+        }
+        /* Match builder (#canvas menu): flex row — logo | flex-grow nav | CTA. Grid (1fr auto 1fr) made the
+           center column shrink-to-fit so links looked off-center vs the builder. */
+        .builder-menu-shell { width: 100%; display: flex; align-items: center; gap: 12px; box-sizing: border-box; }
+        .builder-menu--has-height .builder-menu-left,
+        .builder-menu--has-height .builder-menu-right {
+            display: flex;
+            align-items: center;
+            align-self: center;
+        }
+        .builder-menu--has-height .builder-menu-center {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            align-self: center;
+            flex: 1 1 auto;
+            min-width: 0;
+            min-height: 0;
+        }
+        .builder-menu--has-height .builder-menu-list {
+            flex: 1 1 auto;
+            min-width: 0;
+            max-width: 100%;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .builder-menu-left {
+            flex: 0 0 auto;
+            min-width: 0;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            max-width: min(200px, 48vw);
+        }
+        .builder-menu-center { flex: 1 1 auto; min-width: 0; }
+        .builder-menu-right { flex: 0 0 auto; min-width: 0; flex-shrink: 0; }
+        /* overflow-x:auto makes overflow-y compute to auto in many browsers — tiny bar + nav = vertical scrollbar + clipped text. */
+        .builder-menu-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-wrap: nowrap;
+            white-space: nowrap;
+            align-items: center;
+            justify-content: flex-start;
+            overflow-x: auto;
+            overflow-y: hidden;
+            scrollbar-width: thin;
+        }
+        .builder-menu-list::-webkit-scrollbar {
+            height: 5px;
+        }
+        .builder-menu-list::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.55);
+            border-radius: 999px;
+        }
+        .builder-menu-link { text-decoration: none; text-underline-offset: 3px; font: inherit; line-height: 1.25; }
         .builder-menu-edit-btn { display: inline-block; padding: 8px 14px; border-radius: 999px; text-decoration: none; font-weight: 600; }
-        .builder-menu-logo { display: block; max-height: 42px; width: auto; max-width: 180px; object-fit: contain; }
+        /* Keep intrinsic aspect ratio in preview/published — match builder (max ~42px tall, never fill bar height). */
+        .builder-menu-logo {
+            display: block;
+            width: auto !important;
+            max-width: min(180px, 45vw) !important;
+            height: auto !important;
+            max-height: 42px !important;
+            object-fit: contain !important;
+            object-position: left center;
+            flex: 0 0 auto !important;
+            flex-grow: 0 !important;
+            flex-shrink: 0 !important;
+            align-self: center !important;
+            min-width: 0 !important;
+        }
+        /* Beat stray global/legacy rules on published pages */
+        .builder-el[data-element-type="menu"] .builder-menu .builder-menu-logo {
+            width: auto !important;
+            max-width: min(180px, 45vw) !important;
+            height: auto !important;
+            max-height: 42px !important;
+            object-fit: contain !important;
+            object-position: left center !important;
+        }
         .builder-menu-logo-placeholder { padding: 8px 12px; border: 1px dashed #cbd5e1; border-radius: 10px; font-size: 12px; color: #64748b; }
         .builder-menu-toggle { display: none; width: 42px; height: 42px; border: 1px solid #cbd5e1; background: #fff; border-radius: 10px; align-items: center; justify-content: center; cursor: pointer; color: #0f172a; }
         .builder-menu-toggle i { font-size: 16px; }
@@ -324,10 +617,46 @@
             45% { transform: scale(1.16); }
             100% { transform: scale(1); }
         }
-        .builder-product-media { position: relative; border-radius: 14px; overflow: hidden; background: #f8fafc; border: 1px solid #e2e8f0; }
-        .builder-product-media .builder-carousel-wrap { min-height: 88px; border-radius: 0; aspect-ratio: 1 / 1; }
-        .builder-product-media .builder-carousel-track { height: 100%; }
-        .builder-product-media .builder-carousel-slide { background: #ffffff !important; height: 100%; }
+        .builder-product-media { position: relative; border-radius: 14px; overflow: hidden; background: #f8fafc; border: 1px solid #e2e8f0; width: 100%; box-sizing: border-box; }
+        /* Slightly taller than square (4:5) — more height for the same column width so images feel less cramped. */
+        .builder-product-media .builder-carousel-wrap { min-height: 100px; border-radius: 0; aspect-ratio: 4 / 5; width: 100% !important; box-sizing: border-box; }
+        .builder-product-media .builder-carousel-track,
+        .product-quick-view-media .builder-carousel-track { height: 100%; width: 100%; box-sizing: border-box; }
+        .builder-product-media .builder-carousel-slide,
+        .product-quick-view-media .builder-carousel-slide { background: #ffffff !important; height: 100%; width: 100% !important; min-width: 100% !important; box-sizing: border-box; }
+        /* Fill the frame like desktop preview: crop with cover (no non-uniform stretch). */
+        /* Inline markup used display:flex; with position:absolute imgs — no in-flow flex items, so the box could size wrong on mobile. */
+        .builder-product-media .builder-carousel-slide > div,
+        .product-quick-view-media .builder-carousel-slide > div {
+            position: relative !important;
+            width: 100% !important;
+            height: 100% !important;
+            box-sizing: border-box !important;
+            min-height: 0 !important;
+            overflow: hidden !important;
+            display: block !important;
+        }
+        .builder-product-media .builder-carousel-slide > div video,
+        .product-quick-view-media .builder-carousel-slide > div video {
+            position: absolute !important;
+            inset: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: cover !important;
+            display: block !important;
+        }
+        .builder-product-media .builder-img,
+        .product-quick-view-media .builder-img {
+            position: absolute !important;
+            inset: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            max-width: none !important;
+            object-fit: cover !important;
+            object-position: center !important;
+            display: block !important;
+        }
+        .product-quick-view-media .builder-carousel-wrap { width: 100% !important; box-sizing: border-box; }
         .builder-product-media .builder-carousel-dots { padding-bottom: 6px; }
         .builder-product-media .builder-carousel-arrow { width: 24px !important; height: 24px !important; min-width: 24px; min-height: 24px; }
         .builder-product-media .builder-carousel-arrow i { font-size: 10px !important; }
@@ -577,9 +906,10 @@
             .builder-carousel-arrow.is-right { right: 10px; }
         }
         .builder-video-wrap { position: relative; width: 100%; padding-top: 56.25%; min-height: 200px; border-radius: 10px; overflow: hidden; background: #0f172a; box-sizing: border-box; }
-        .builder-video-wrap iframe, .builder-video-wrap video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; object-fit: contain; }
-        .builder-video-wrap .video-fallback-link { position: absolute; top: 8px; right: 8px; z-index: 2; font-size: 11px; color: rgba(255,255,255,0.8); background: rgba(0,0,0,0.5); padding: 4px 8px; border-radius: 6px; text-decoration: none; }
-        .builder-video-wrap video { z-index: 1; }
+        .builder-video-wrap iframe, .builder-video-wrap video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; object-fit: contain; pointer-events: auto; }
+        .builder-video-wrap iframe { z-index: 3; }
+        .builder-video-wrap .video-fallback-link { position: absolute; top: 8px; right: 8px; z-index: 4; font-size: 11px; color: rgba(255,255,255,0.8); background: rgba(0,0,0,0.5); padding: 4px 8px; border-radius: 6px; text-decoration: none; }
+        .builder-video-wrap video { z-index: 3; }
         .preview-toolbar-left{
             display:flex;
             align-items:center;
@@ -696,9 +1026,13 @@
         .preview-iframe-shell iframe{
             height:900px;
             width:100%;
+            max-width:100%;
             border:1px solid #e2e8f0;
             border-radius:12px;
             background:#ffffff;
+            display:block;
+            margin-left:auto;
+            margin-right:auto;
         }
         /* Preview device buttons should emulate viewport width only.
            Structural layout must stay on the same render path as publish mode. */
@@ -708,85 +1042,42 @@
            regardless of the actual browser viewport width.
            ═══════════════════════════════════════════════════════════ */
 
-        /* ── TABLET (768px viewport) ── */
-        body[data-preview-device="tablet"] .builder-row-inner{
-            flex-wrap: wrap !important;
-        }
-        body[data-preview-device="tablet"] .builder-col{
-            flex: 1 1 45% !important;
-            min-width: 200px !important;
-            min-height: 0 !important;
-            height: auto !important;
-        }
-        body[data-preview-device="tablet"] .builder-el{
-            position: static !important;
-            left: auto !important;
-            top: auto !important;
-            max-width: 100% !important;
-        }
-        body[data-preview-device="tablet"] .builder-col-inner--section-elements > .builder-el,
+        /* ── MOBILE (375px viewport) ── */
         body[data-preview-device="mobile"] .builder-col-inner--section-elements > .builder-el{
             width: 100% !important;
             text-align: center !important;
         }
-        body[data-preview-device="tablet"] .builder-carousel-content-row{
-            flex-direction: column !important;
-        }
-        body[data-preview-device="tablet"] .builder-carousel-content-col{
-            min-width: 0 !important;
-            width: 100% !important;
-        }
-        body[data-preview-device="tablet"] .step-content--full{
-            padding: 10px 1rem 24px !important;
-        }
-        body[data-preview-device="tablet"] .builder-section{
-            padding: 0 !important;
-            min-height: 0 !important;
-            height: auto !important;
-        }
-        body[data-preview-device="tablet"] .builder-section-inner{
-            min-height: 0 !important;
-            height: auto !important;
-        }
-        body[data-preview-device="tablet"] .builder-heading{
-            font-size: clamp(18px, 4vw, 28px) !important;
-        }
-        body[data-preview-device="tablet"] .builder-pricing{
-            max-width: 100% !important;
-        }
-        body[data-preview-device="tablet"] .builder-pricing-grid{
-            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-        }
-        body[data-preview-device="tablet"] .builder-el[data-element-type="image"]{
-            max-width: 100% !important;
-            height: auto !important;
-        }
-        body[data-preview-device="tablet"] .builder-el[data-element-type="image"] img{
-            max-width: 100% !important;
-            height: auto !important;
-            object-fit: contain !important;
-        }
-        body[data-preview-device="tablet"] .builder-video-wrap{
-            max-width: 100% !important;
-        }
-        body[data-preview-device="tablet"] .builder-video-wrap iframe,
-        body[data-preview-device="tablet"] .builder-video-wrap video{
-            max-width: 100% !important;
-        }
-        body[data-preview-device="tablet"] .builder-section--freeform{
-            width: 100% !important;
-            margin-left: 0 !important;
-            margin-right: 0 !important;
-            overflow-x: auto !important;
-        }
-        body[data-preview-device="tablet"] .builder-menu-list{
-            flex-wrap: wrap !important;
-            gap: 6px !important;
-        }
-
-        /* ── MOBILE (375px viewport) ── */
+        /* Stack every row: columns AND hoisted .builder-el (display:contents) share one vertical column */
         body[data-preview-device="mobile"] .builder-row-inner{
             flex-direction: column !important;
+            flex-wrap: nowrap !important;
+            align-items: stretch !important;
+            gap: 12px !important;
+        }
+        body[data-preview-device="mobile"] .builder-row-inner > .builder-el{
+            flex: 0 0 auto !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+            align-self: stretch !important;
+        }
+        /* Product offers inside a column: single column grid (2-col grid broke single-card width) */
+        body[data-preview-device="mobile"] .builder-col-inner:has(> .builder-el[data-element-type="product_offer"]):not(:has(> .builder-el:not([data-element-type="product_offer"]))) {
+            display: grid !important;
+            grid-template-columns: minmax(0, 1fr) !important;
+            gap: 12px !important;
+            align-items: stretch !important;
+            justify-items: stretch !important;
+            width: 100% !important;
+        }
+        body[data-preview-device="mobile"] .builder-col-inner:has(> .builder-el[data-element-type="product_offer"]):not(:has(> .builder-el:not([data-element-type="product_offer"]))) > .builder-el[data-element-type="product_offer"] {
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+            grid-column: 1 / -1 !important;
+        }
+        body[data-preview-device="mobile"] .builder-col-inner:has(> .builder-el[data-element-type="product_offer"]):not(:has(> .builder-el:not([data-element-type="product_offer"]))) > .builder-el + .builder-el {
+            margin-top: 0 !important;
         }
         body[data-preview-device="mobile"] .builder-col{
             flex: 0 0 auto !important;
@@ -874,6 +1165,14 @@
             max-width: 100% !important;
             height: auto !important;
         }
+        /* Hero / split rows: keep video embed readable when stacked under image */
+        body[data-preview-device="mobile"] .builder-el[data-element-type="video"] .builder-video-wrap{
+            max-height: min(52vw, 220px) !important;
+        }
+        body[data-preview-device="mobile"] .builder-el[data-element-type="image"] .builder-img{
+            max-height: min(70vw, 320px) !important;
+            object-fit: contain !important;
+        }
         body[data-preview-device="mobile"] .builder-section--freeform{
             width: 100% !important;
             margin-left: 0 !important;
@@ -926,12 +1225,15 @@
             flex-shrink: 0 !important;
         }
         body[data-preview-device="mobile"] .builder-menu-left{
-            flex: 1 !important;
+            flex: 0 0 auto !important;
             min-width: 0 !important;
+            max-width: min(200px, 55vw) !important;
         }
         body[data-preview-device="mobile"] .builder-menu-left .builder-menu-logo{
+            width: auto !important;
             max-height: 36px !important;
-            max-width: 140px !important;
+            max-width: min(140px, 42vw) !important;
+            object-fit: contain !important;
         }
         body[data-preview-device="mobile"] .builder-menu-left .builder-menu-logo-placeholder{
             min-height: 36px !important;
@@ -958,18 +1260,155 @@
         body[data-preview-device="mobile"] .builder-review-card-text{
             font-size: 12px !important;
         }
+        body[data-preview-device="mobile"] .builder-col-inner .builder-product-offer{
+            text-align: center !important;
+        }
+        body[data-preview-device="mobile"] .builder-col-inner .builder-pricing-features{
+            text-align: left !important;
+        }
         body[data-preview-device="mobile"] .builder-product-offer{
             gap: 3px !important;
+            /* Builder may set 2-column grid on the card (media | copy); on mobile stack one column */
+            grid-template-columns: minmax(0, 1fr) !important;
+        }
+        body[data-preview-device="mobile"] .builder-product-media .builder-carousel-wrap{
+            min-height: 0 !important;
+            aspect-ratio: 4 / 5 !important;
+        }
+        body[data-preview-device="mobile"] .builder-product-media .builder-carousel-slide > div {
+            width: 100% !important;
+            height: 100% !important;
+            min-height: 0 !important;
+            display: block !important;
+        }
+        body[data-preview-device="mobile"] .builder-product-offer .builder-product-utility {
+            grid-template-columns: minmax(0, 1fr) 28px !important;
+            gap: 4px !important;
+        }
+        body[data-preview-device="mobile"] .builder-product-offer .builder-product-cart {
+            width: 28px !important;
+            height: 28px !important;
+            min-width: 28px !important;
+            font-size: 11px !important;
+        }
+        body[data-preview-device="mobile"] .builder-product-offer .builder-pricing-title[style]{
+            font-size: clamp(11px, 3.2vw, 14px) !important;
+            line-height: 1.2 !important;
+        }
+        body[data-preview-device="mobile"] .builder-product-offer .builder-pricing-price[style]{
+            font-size: clamp(13px, 4vw, 18px) !important;
+        }
+        body[data-preview-device="mobile"] .builder-product-offer .builder-pricing-subtitle[style]{
+            font-size: clamp(9px, 2.4vw, 11px) !important;
+        }
+        body[data-preview-device="mobile"] .builder-product-offer .builder-pricing-features li[style]{
+            font-size: clamp(8px, 2.2vw, 10px) !important;
+        }
+        body[data-preview-device="mobile"] .builder-product-offer .builder-pricing-cta[style]{
+            font-size: clamp(10px, 2.8vw, 12px) !important;
+            padding: 6px 8px !important;
+        }
+        body[data-preview-device="mobile"] .builder-product-offer .builder-product-secondary {
+            font-size: 9px !important;
+            padding: 5px 6px !important;
         }
 
         /* ── REAL VIEWPORT responsive (published mode) ── */
+        @media (max-width: 1024px) {
+            body.is-published .builder-product-media .builder-carousel-wrap{
+                min-height: 0 !important;
+                aspect-ratio: 4 / 5 !important;
+                max-height: min(62vw, 440px) !important;
+            }
+            /* 2-up when multiple product_offer in one column; single card spans full grid width */
+            body.is-published .builder-col-inner:has(> .builder-el[data-element-type="product_offer"]):not(:has(> .builder-el:not([data-element-type="product_offer"]))) {
+                display: grid !important;
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                gap: 12px !important;
+                align-items: start !important;
+            }
+            body.is-published .builder-col-inner:has(> .builder-el[data-element-type="product_offer"]):not(:has(> .builder-el:not([data-element-type="product_offer"]))) > .builder-el[data-element-type="product_offer"]:only-child {
+                grid-column: 1 / -1 !important;
+            }
+            body.is-published .builder-row-inner > .builder-el[data-element-type="product_offer"] {
+                flex: 0 0 auto !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                min-width: 0 !important;
+            }
+            body.is-published .builder-col-inner:has(> .builder-el[data-element-type="product_offer"]):not(:has(> .builder-el:not([data-element-type="product_offer"]))) > .builder-el[data-element-type="product_offer"] {
+                width: 100% !important;
+                max-width: 100% !important;
+                min-width: 0 !important;
+            }
+            body.is-published .builder-product-offer .builder-pricing-title[style]{
+                font-size: clamp(14px, 2.6vw, 18px) !important;
+            }
+            body.is-published .builder-product-offer .builder-pricing-price[style]{
+                font-size: clamp(18px, 3.8vw, 26px) !important;
+            }
+            body.is-published .builder-product-offer .builder-pricing-features li[style]{
+                font-size: clamp(10px, 2vw, 12px) !important;
+            }
+            /* Tablet / narrow desktop: flex columns + embeds (same idea as preview tablet) */
+            body.is-published .builder-col-inner{
+                min-width: 0;
+                max-width: 100%;
+            }
+            body.is-published .builder-el[data-element-type="video"]{
+                min-width: 0;
+                width: 100%;
+                max-width: 100%;
+                overflow: hidden;
+                box-sizing: border-box;
+            }
+            body.is-published .builder-video-wrap{
+                width: 100%;
+                max-width: 100%;
+                min-width: 0;
+                min-height: 0;
+                padding-top: 0;
+                aspect-ratio: 16 / 9;
+                height: auto;
+                overflow: hidden;
+                box-sizing: border-box;
+            }
+            body.is-published .builder-video-wrap iframe{
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                border: 0;
+            }
+            body.is-published .builder-video-wrap video{
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                border: 0;
+                object-fit: cover;
+            }
+        }
         @media (max-width: 768px) {
             body.is-published .builder-row-inner{
-                flex-wrap: wrap;
+                flex-wrap: nowrap !important;
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 12px !important;
+            }
+            body.is-published .builder-row-inner > .builder-el{
+                flex: 0 0 auto !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                min-width: 0 !important;
+                align-self: stretch !important;
             }
             body.is-published .builder-col{
-                flex: 1 1 45%;
-                min-width: 200px;
+                flex: 0 0 auto !important;
+                width: 100% !important;
+                min-width: 0;
                 min-height: 0 !important;
                 height: auto !important;
             }
@@ -977,6 +1416,7 @@
                 position: static !important;
                 left: auto !important;
                 top: auto !important;
+                width: 100% !important;
                 max-width: 100% !important;
             }
             body.is-published .builder-col-inner--section-elements > .builder-el{
@@ -1008,6 +1448,24 @@
             body.is-published .builder-pricing-grid{
                 grid-template-columns: 1fr;
             }
+            body.is-published .builder-product-media .builder-carousel-wrap{
+                min-height: 0 !important;
+                aspect-ratio: 4 / 5 !important;
+                max-height: min(62vw, 440px) !important;
+            }
+            body.is-published .builder-product-offer .builder-pricing-title[style]{
+                font-size: clamp(14px, 3vw, 18px) !important;
+            }
+            body.is-published .builder-product-offer .builder-pricing-price[style]{
+                font-size: clamp(18px, 4.2vw, 26px) !important;
+            }
+            body.is-published .builder-product-offer .builder-pricing-features li[style]{
+                font-size: clamp(10px, 2.4vw, 12px) !important;
+            }
+            body.is-published .builder-product-offer .builder-pricing-cta[style]{
+                font-size: clamp(11px, 2.6vw, 13px) !important;
+                padding: 8px 10px !important;
+            }
             body.is-published .builder-section--freeform{
                 width: 100% !important;
                 margin-left: 0;
@@ -1030,7 +1488,17 @@
         }
         @media (max-width: 480px) {
             body.is-published .builder-row-inner{
-                flex-direction: column;
+                flex-direction: column !important;
+                flex-wrap: nowrap !important;
+                align-items: stretch !important;
+                gap: 12px !important;
+            }
+            body.is-published .builder-row-inner > .builder-el{
+                flex: 0 0 auto !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                min-width: 0 !important;
+                align-self: stretch !important;
             }
             body.is-published .builder-col{
                 flex: 0 0 auto;
@@ -1046,6 +1514,71 @@
                 width: 100% !important;
                 max-width: 100% !important;
                 height: auto !important;
+            }
+            /* Phone: same vertical stack as mobile preview (no 2-up row overrides) */
+            body.is-published .builder-col-inner:has(> .builder-el[data-element-type="product_offer"]):not(:has(> .builder-el:not([data-element-type="product_offer"]))) {
+                display: grid !important;
+                grid-template-columns: minmax(0, 1fr) !important;
+                gap: 12px !important;
+                justify-items: stretch !important;
+            }
+            body.is-published .builder-col-inner:has(> .builder-el[data-element-type="product_offer"]):not(:has(> .builder-el:not([data-element-type="product_offer"]))) > .builder-el[data-element-type="product_offer"] {
+                grid-column: 1 / -1 !important;
+            }
+            body.is-published .builder-row-inner > .builder-el[data-element-type="product_offer"] {
+                flex: 0 0 auto !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                min-width: 0 !important;
+            }
+            body.is-published .builder-col-inner:has(> .builder-el[data-element-type="product_offer"]):not(:has(> .builder-el:not([data-element-type="product_offer"]))) > .builder-el + .builder-el {
+                margin-top: 0 !important;
+            }
+            body.is-published .builder-product-media .builder-carousel-wrap {
+                aspect-ratio: 4 / 5 !important;
+            }
+            body.is-published .builder-product-media .builder-carousel-slide > div {
+                position: relative !important;
+                width: 100% !important;
+                height: 100% !important;
+                min-height: 0 !important;
+                overflow: hidden !important;
+                display: block !important;
+            }
+            body.is-published .builder-product-media .builder-img {
+                position: absolute !important;
+                inset: 0 !important;
+                width: 100% !important;
+                height: 100% !important;
+                max-width: none !important;
+                object-fit: cover !important;
+                object-position: center !important;
+            }
+            body.is-published .builder-product-offer {
+                grid-template-columns: minmax(0, 1fr) !important;
+            }
+            body.is-published .builder-col-inner .builder-product-offer{
+                text-align: center !important;
+            }
+            body.is-published .builder-col-inner .builder-pricing-features{
+                text-align: left !important;
+            }
+            body.is-published .builder-product-offer .builder-product-utility {
+                grid-template-columns: minmax(0, 1fr) 28px !important;
+                gap: 4px !important;
+            }
+            body.is-published .builder-product-offer .builder-product-cart {
+                width: 28px !important;
+                height: 28px !important;
+                min-width: 28px !important;
+                font-size: 11px !important;
+            }
+            body.is-published .builder-el[data-element-type="video"] .builder-video-wrap {
+                max-height: min(52vw, 220px) !important;
+            }
+            body.is-published .builder-el[data-element-type="image"] .builder-img {
+                max-height: min(70vw, 320px) !important;
+                object-fit: contain !important;
             }
             body.is-published .builder-col-inner--section-elements > .builder-el{
                 text-align: center !important;
@@ -1099,6 +1632,27 @@
             body.is-published .builder-pricing-price{
                 font-size: clamp(22px, 6vw, 32px);
             }
+            body.is-published .builder-product-offer .builder-pricing-title[style]{
+                font-size: clamp(11px, 3.2vw, 14px) !important;
+                line-height: 1.2 !important;
+            }
+            body.is-published .builder-product-offer .builder-pricing-price[style]{
+                font-size: clamp(13px, 4vw, 18px) !important;
+            }
+            body.is-published .builder-product-offer .builder-pricing-subtitle[style]{
+                font-size: clamp(9px, 2.4vw, 11px) !important;
+            }
+            body.is-published .builder-product-offer .builder-pricing-features li[style]{
+                font-size: clamp(8px, 2.2vw, 10px) !important;
+            }
+            body.is-published .builder-product-offer .builder-pricing-cta[style]{
+                font-size: clamp(10px, 2.8vw, 12px) !important;
+                padding: 6px 8px !important;
+            }
+            body.is-published .builder-product-offer .builder-product-secondary{
+                font-size: 9px !important;
+                padding: 5px 6px !important;
+            }
             body.is-published .builder-faq-question{
                 font-size: 14px;
             }
@@ -1145,12 +1699,15 @@
                 flex-shrink: 0;
             }
             body.is-published .builder-menu-left{
-                flex: 1;
+                flex: 0 0 auto;
                 min-width: 0;
+                max-width: min(200px, 55vw);
             }
             body.is-published .builder-menu-left .builder-menu-logo{
+                width: auto !important;
                 max-height: 36px;
-                max-width: 140px;
+                max-width: min(140px, 42vw);
+                object-fit: contain !important;
             }
             body.is-published .builder-menu-left .builder-menu-logo-placeholder{
                 min-height: 36px;
@@ -1181,7 +1738,7 @@
         .preview-device-switcher{ pointer-events:auto; }
     </style>
 </head>
-<body class="{{ ($isPreview ?? false) ? 'is-preview' : 'is-published' }}{{ ($portalHasFreeformCanvas ?? false) ? ' portal-has-freeform-canvas' : '' }}" data-funnel-slug="{{ $funnel->slug }}">
+<body class="{{ ($isPreview ?? false) ? 'is-preview' : 'is-published' }}{{ ($portalHasFreeformCanvas ?? false) ? ' portal-has-freeform-canvas' : '' }}{{ ($previewIframeMode ?? false) ? ' preview-iframe-doc' : '' }}" data-funnel-slug="{{ $funnel->slug }}">
     <div class="portal-loading-overlay" id="portalLoadingOverlay" aria-hidden="true">
         <div class="portal-loading-card" role="status" aria-live="polite" aria-label="Loading next page">
             <div class="portal-loading-spinner" aria-hidden="true"></div>
@@ -1191,7 +1748,7 @@
     </div>
     @php
         $isPreview = $isPreview ?? false;
-        $layout = is_array($step->layout_json ?? null) ? $step->layout_json : [];
+        $layout = $step->effectiveLayoutForBreakpoint($portalLayoutBreakpoint ?? 'desktop');
         $rootItems = is_array($layout['root'] ?? null) ? $layout['root'] : [];
         if (count($rootItems) === 0 && is_array($layout['sections'] ?? null)) {
             foreach ($layout['sections'] as $legacySection) {
@@ -1455,6 +2012,24 @@
 
             return ['kind' => 'link', 'href' => ($link !== '' ? $link : '#')];
         };
+        $resolveMenuCtaUrl = function (array $settings) use ($nextStep, $activeStepsBySlug, $stepRoute) {
+            $mode = strtolower(trim((string) ($settings['leftButtonActionType'] ?? 'link')));
+            if ($mode === 'next_step') {
+                return $nextStep ? $stepRoute($nextStep) : '#';
+            }
+            if ($mode === 'step') {
+                $slug = strtolower(trim((string) ($settings['leftButtonStepSlug'] ?? '')));
+                if ($slug === '') {
+                    return '#';
+                }
+                $target = $activeStepsBySlug->get($slug);
+
+                return $target ? $stepRoute($target) : '#';
+            }
+            $url = trim((string) ($settings['leftButtonUrl'] ?? '#'));
+
+            return $url !== '' ? $url : '#';
+        };
         $resolvePricingCtaAction = function (array $settings) use ($choosePricingTarget, $resolveButtonAction, $activeStepsBySlug, $step) {
             $stepType = strtolower(trim((string) ($step->type ?? '')));
             if ($stepType === 'checkout') {
@@ -1575,7 +2150,7 @@
             if (preg_match('#^(https?:)?//#i', $src) === 1) {
                 return str_starts_with($src, '//') ? ('https:' . $src) : $src;
             }
-            if (preg_match('#^(www\.)?(youtube\.com|youtu\.be|vimeo\.com)/#i', $src) === 1) {
+            if (preg_match('#^(www\.)?(youtube\.com|youtube-nocookie\.com|youtu\.be|vimeo\.com)/#i', $src) === 1) {
                 return 'https://' . ltrim($src, '/');
             }
             return $src;
@@ -1752,7 +2327,6 @@
             </div>
             <div class="preview-device-switcher" role="group" aria-label="Preview device">
                 <button type="button" class="preview-device-btn is-active" data-preview-device="desktop" title="Desktop"><i class="fas fa-desktop" aria-hidden="true"></i><span style="position:absolute;left:-9999px;">Desktop</span></button>
-                <button type="button" class="preview-device-btn" data-preview-device="tablet" title="Tablet"><i class="fas fa-tablet-alt" aria-hidden="true"></i><span style="position:absolute;left:-9999px;">Tablet</span></button>
                 <button type="button" class="preview-device-btn" data-preview-device="mobile" title="Mobile"><i class="fas fa-mobile-alt" aria-hidden="true"></i><span style="position:absolute;left:-9999px;">Mobile</span></button>
             </div>
         </div>
@@ -1929,7 +2503,7 @@
                         if (count($sectionElements) > 0) {
                             $carrierHasAbsElements = false;
                             $carrierMaxRight = 0;
-                            foreach ($sectionElements as $_cEl) {
+                            foreach ($sectionElements as $_cIx => $_cEl) {
                                 $_cElS = is_array($_cEl['settings'] ?? null) ? $_cEl['settings'] : [];
                                 $_cElSt = is_array($_cEl['style'] ?? null) ? $_cEl['style'] : [];
                                 $_cHasAbsCoords =
@@ -1944,6 +2518,21 @@
                                     $carrierHasAbsElements = true;
                                     $_cY = (int) ($_cElS['freeY'] ?? 0);
                                     if ($_cY <= 0) $_cY = (int) str_replace('px', '', (string) ($_cElSt['top'] ?? '0'));
+                                    if ($isFreeformCanvas) {
+                                        $_priorMenuH = 0;
+                                        for ($_pi = 0; $_pi < $_cIx; $_pi++) {
+                                            $_pel = $sectionElements[$_pi] ?? [];
+                                            if (strtolower((string) ($_pel['type'] ?? '')) === 'menu') {
+                                                $_pmst = is_array($_pel['style'] ?? null) ? $_pel['style'] : [];
+                                                $_pmh = (int) str_replace('px', '', (string) ($_pmst['height'] ?? '0'));
+                                                if ($_pmh < 72) {
+                                                    $_pmh = 72;
+                                                }
+                                                $_priorMenuH += $_pmh;
+                                            }
+                                        }
+                                        $_cY += $_priorMenuH;
+                                    }
                                     $_cType = strtolower((string) ($_cEl['type'] ?? ''));
                                     $_cH = $estimateElementHeight($_cElSt, $_cElS, $_cType);
                                     $_cBot = $_cY + $_cH + 8;
@@ -2115,10 +2704,25 @@
                                                 return $aY <=> $bY;
                                             });
                                         }
+                                        $freeformFlowYOffsetByIndex = [];
+                                        if ($isFreeformCanvas && $isSectionElementCarrierCol) {
+                                            $accFlow = 0;
+                                            foreach ($elements as $fi => $_fe) {
+                                                $freeformFlowYOffsetByIndex[$fi] = $accFlow;
+                                                if (strtolower((string) ($_fe['type'] ?? '')) === 'menu') {
+                                                    $_mst = is_array($_fe['style'] ?? null) ? $_fe['style'] : [];
+                                                    $_mh = (int) str_replace('px', '', (string) ($_mst['height'] ?? '0'));
+                                                    if ($_mh < 72) {
+                                                        $_mh = 72;
+                                                    }
+                                                    $accFlow += $_mh;
+                                                }
+                                            }
+                                        }
                                     @endphp
                                     <div class="builder-col{{ $hasAbsEl ? ' builder-col--abs' : '' }}{{ $isSectionElementCarrierCol ? ' builder-col--section-elements' : '' }}" style="{{ $colStyle }}{{ $colHeightStyle }}{{ $colWidthStyle }}">
                                         <div class="builder-col-inner{{ $isSectionElementCarrierCol ? ' builder-col-inner--section-elements' : '' }}" @if($colInnerMax !== '') style="max-width: {{ $colInnerMax }}; margin: 0 auto;" @endif>
-                                        @foreach($elements as $element)
+                                        @foreach($elements as $elLoopIndex => $element)
                                             @php
                                                 $elId = trim((string) ($element['id'] ?? ''));
                                                 $type = $element['type'] ?? 'text';
@@ -2141,6 +2745,40 @@
                                                             $flowStyle['maxWidth'] = $origW;
                                                         }
                                                         unset($flowStyle['width'], $flowStyle['height'], $flowStyle['margin']);
+                                                    }
+                                                }
+                                                /* Video: percentage width/maxWidth in the builder mean "share of the row". They become
+                                                   inline rules that beat CSS — on stacked/tablet columns the parent is full width but
+                                                   e.g. max-width:50% keeps the embed half-width vs a full-width image. Drop % sizing for flow layout. */
+                                                if ($type === 'video' && !$allowAbsPos) {
+                                                    foreach (['width', 'maxWidth', 'max-width'] as $_vwk) {
+                                                        if (! array_key_exists($_vwk, $flowStyle)) {
+                                                            continue;
+                                                        }
+                                                        $_vv = trim((string) $flowStyle[$_vwk]);
+                                                        if ($_vv !== '' && str_contains($_vv, '%')) {
+                                                            unset($flowStyle[$_vwk]);
+                                                        }
+                                                    }
+                                                }
+                                                if ($isFreeformCanvas && $isSectionElementCarrierCol && $type === 'menu') {
+                                                    foreach (['position', 'left', 'top', 'right', 'bottom', 'zIndex', 'z-index'] as $_mk) {
+                                                        if (array_key_exists($_mk, $flowStyle)) {
+                                                            unset($flowStyle[$_mk]);
+                                                        }
+                                                    }
+                                                }
+                                                /* Menu: never pass flex/width/align from saved JSON to <nav> — they fight .builder-menu-shell
+                                                   and can stretch the logo (e.g. align-items:stretch + width:100%). Colors/fonts/border/height stay. */
+                                                if ($type === 'menu') {
+                                                    foreach ([
+                                                        'width', 'maxWidth', 'max-width', 'minWidth', 'min-width',
+                                                        'flex', 'alignItems', 'align-items', 'justifyContent', 'justify-content',
+                                                        'gap',
+                                                    ] as $_mk) {
+                                                        if (array_key_exists($_mk, $flowStyle)) {
+                                                            unset($flowStyle[$_mk]);
+                                                        }
                                                     }
                                                 }
                                                 $style = $styleToString($flowStyle);
@@ -2230,19 +2868,36 @@
                                                     : '';
                                                 $hasFixedWidth = !empty(trim((string) ($rawStyle['width'] ?? '')));
                                                 $hasFixedHeight = !empty(trim((string) ($rawStyle['height'] ?? '')));
-                                                $hasSizedImageBox = $type === 'image' && $hasFixedHeight && $isAbsPos;
                                                 $isAbsPos = $allowAbsPos && (
                                                     (trim((string) ($settings['positionMode'] ?? '')) === 'absolute')
                                                     || (trim((string) ($rawStyle['position'] ?? '')) === 'absolute')
                                                 );
+                                                if ($isFreeformCanvas && $isSectionElementCarrierCol && $type === 'menu') {
+                                                    $isAbsPos = false;
+                                                }
+                                                $hasSizedImageBox = $type === 'image' && $hasFixedHeight && $isAbsPos;
                                                 $absPosStyle = '';
                                                 if ($isAbsPos) {
                                                     $absFreeX = (int) ($settings['freeX'] ?? 0);
                                                     $absFreeY = (int) ($settings['freeY'] ?? 0);
+                                                    if ($isFreeformCanvas && $isSectionElementCarrierCol) {
+                                                        $absFreeY += (int) ($freeformFlowYOffsetByIndex[$elLoopIndex] ?? 0);
+                                                    }
                                                     $absLeft = trim((string) ($rawStyle['left'] ?? ''));
                                                     $absTop = trim((string) ($rawStyle['top'] ?? ''));
-                                                    if ($absLeft === '' && $absFreeX > 0) $absLeft = $absFreeX . 'px';
-                                                    if ($absTop === '' && $absFreeY > 0) $absTop = $absFreeY . 'px';
+                                                    if ($isFreeformCanvas && $isSectionElementCarrierCol) {
+                                                        if ($absLeft === '' && $absFreeX > 0) {
+                                                            $absLeft = $absFreeX . 'px';
+                                                        }
+                                                        $absTop = $absFreeY . 'px';
+                                                    } else {
+                                                        if ($absLeft === '' && $absFreeX > 0) {
+                                                            $absLeft = $absFreeX . 'px';
+                                                        }
+                                                        if ($absTop === '' && $absFreeY > 0) {
+                                                            $absTop = $absFreeY . 'px';
+                                                        }
+                                                    }
                                                     $absWidth = trim((string) ($rawStyle['width'] ?? ''));
                                                     $absHeight = trim((string) ($rawStyle['height'] ?? ''));
                                                     // If an absolute element is intended to be centered (builder "Center"),
@@ -2295,10 +2950,35 @@
                                                         $elWrapStyle .= $formWrapLayoutStyle . $alignStyle;
                                                     }
                                                     elseif (in_array($type, ['heading', 'text', 'spacer', 'divider', 'testimonial', 'faq', 'pricing', 'countdown', 'product_offer', 'review_form', 'review_list', 'reviews', 'carousel', 'menu', 'checkout_summary', 'physical_checkout_summary', 'shipping_details'], true)) {
-                                                        $elWrapStyle .= $style;
+                                                        if ($type === 'menu') {
+                                                            // Builder applies `item.style` once on the outer `.el` only; inner shell is layout.
+                                                            // Portal was putting the same bar chrome on `.builder-el` and `<nav>` → double background /
+                                                            // double rounded corners in preview & published. Keep painting on `<nav>` only.
+                                                            $menuWrapFlow = $flowStyle;
+                                                            foreach ([
+                                                                'background', 'backgroundColor', 'background-color',
+                                                                'border', 'borderTop', 'borderRight', 'borderBottom', 'borderLeft',
+                                                                'borderWidth', 'borderStyle', 'borderColor',
+                                                                'borderRadius', 'border-radius',
+                                                                'boxShadow', 'box-shadow',
+                                                                'padding', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft',
+                                                                'height', 'minHeight', 'min-height', 'maxHeight', 'max-height',
+                                                            ] as $_mwk) {
+                                                                if (array_key_exists($_mwk, $menuWrapFlow)) {
+                                                                    unset($menuWrapFlow[$_mwk]);
+                                                                }
+                                                            }
+                                                            $elWrapStyle .= $styleToString($menuWrapFlow);
+                                                        } else {
+                                                            $elWrapStyle .= $style;
+                                                        }
                                                         // For heading/text, ensure the element wrapper takes full width so "center"
                                                         // is computed inside the whole section column (not only inside content box).
                                                         if ($type === 'heading' || $type === 'text') {
+                                                            $elWrapStyle .= $alignStyle;
+                                                        } elseif (in_array($type, ['pricing', 'product_offer', 'testimonial', 'faq', 'countdown', 'review_form', 'review_list', 'reviews', 'checkout_summary', 'physical_checkout_summary', 'shipping_details'], true)) {
+                                                            // Same idea as form/image: flex-align the card inside the column so
+                                                            // settings.alignment (center/left/right) matches the builder canvas.
                                                             $elWrapStyle .= $alignStyle;
                                                         }
                                                     }
@@ -2378,14 +3058,22 @@
                                                         $videoWrapStyle = $contentStyle;
                                                         $widthVal = !empty($elStyle['width']) ? trim((string) $elStyle['width']) : (!empty($elSettings['width']) ? trim((string) $elSettings['width']) : '');
                                                         if ($widthVal !== '' && preg_match('/^[#(),.%\-\sA-Za-z0-9]+$/u', $widthVal)) {
-                                                            $videoWrapStyle .= ($videoWrapStyle !== '' ? '; ' : '') . 'width: ' . $widthVal . ' !important';
+                                                            /* px/rem: cap width; %: row-fraction in builder — do not cap stacked column (inline !important beats CSS). */
+                                                            if (str_contains($widthVal, '%')) {
+                                                                $videoWrapStyle .= ($videoWrapStyle !== '' ? '; ' : '') . 'width: 100% !important; max-width: 100% !important';
+                                                            } else {
+                                                                $videoWrapStyle .= ($videoWrapStyle !== '' ? '; ' : '') . 'width: 100% !important; max-width: ' . $widthVal . ' !important';
+                                                            }
                                                         }
                                                         if (!empty($elStyle['height']) && preg_match('/^[#(),.%\-\sA-Za-z0-9]+$/u', trim((string) $elStyle['height']))) {
                                                             $videoWrapStyle .= ($videoWrapStyle !== '' ? '; ' : '') . 'height: ' . trim((string) $elStyle['height']) . ' !important';
                                                             $videoWrapStyle .= '; padding-top: 0 !important; min-height: 0 !important';
                                                         }
                                                         if (!empty($elStyle['maxWidth']) && preg_match('/^[#(),.%\-\sA-Za-z0-9]+$/u', trim((string) $elStyle['maxWidth']))) {
-                                                            $videoWrapStyle .= ($videoWrapStyle !== '' ? '; ' : '') . 'max-width: ' . trim((string) $elStyle['maxWidth']) . ' !important';
+                                                            $_maw = trim((string) $elStyle['maxWidth']);
+                                                            if (! str_contains($_maw, '%')) {
+                                                                $videoWrapStyle .= ($videoWrapStyle !== '' ? '; ' : '') . 'max-width: ' . $_maw . ' !important';
+                                                            }
                                                         }
                                                         if ($mediaClipStyle !== '') {
                                                             $videoWrapStyle .= ($videoWrapStyle !== '' ? '; ' : '') . $mediaClipStyle;
@@ -2394,15 +3082,31 @@
                                                     @if($videoSrcRaw !== '')
                                                         @php
                                                             $vSrc = $normalizeVideoSource($videoSrcRaw);
+                                                            $vLower = strtolower($vSrc);
+                                                            // Host checks must be case-insensitive (saved URLs may be uppercase). Include privacy/nocookie host.
+                                                            $isYoutubeVimeo = str_contains($vLower, 'youtube.com')
+                                                                || str_contains($vLower, 'youtu.be')
+                                                                || str_contains($vLower, 'youtube-nocookie.com')
+                                                                || str_contains($vLower, 'vimeo.com');
                                                             $videoEmbedUrl = $vSrc;
-                                                            $isYoutubeVimeo = str_contains($vSrc, 'youtube.com') || str_contains($vSrc, 'youtu.be') || str_contains($vSrc, 'vimeo.com');
-                                                            if (str_contains($vSrc, 'youtube.com/watch')) {
-                                                                parse_str(parse_url($vSrc, PHP_URL_QUERY) ?: '', $yt);
-                                                                $videoEmbedUrl = isset($yt['v']) ? 'https://www.youtube.com/embed/' . $yt['v'] : $vSrc;
-                                                            } elseif (preg_match('#youtu\.be/([a-zA-Z0-9_-]+)#', $vSrc, $m)) {
-                                                                $videoEmbedUrl = 'https://www.youtube.com/embed/' . $m[1];
-                                                            } elseif (preg_match('#vimeo\.com/(?:video/)?(\d+)#', $vSrc, $m)) {
-                                                                $videoEmbedUrl = 'https://player.vimeo.com/video/' . $m[1];
+                                                            if ($isYoutubeVimeo) {
+                                                                if (preg_match('#(?:youtube\.com|youtube-nocookie\.com)/embed/#i', $vSrc)) {
+                                                                    $videoEmbedUrl = $vSrc;
+                                                                } elseif (preg_match('#(?:youtube\.com|youtube-nocookie\.com)/watch#i', $vSrc)) {
+                                                                    parse_str(parse_url($vSrc, PHP_URL_QUERY) ?: '', $yt);
+                                                                    $vid = $yt['v'] ?? $yt['V'] ?? null;
+                                                                    if (is_string($vid) && $vid !== '') {
+                                                                        $videoEmbedUrl = str_contains($vLower, 'youtube-nocookie.com')
+                                                                            ? ('https://www.youtube-nocookie.com/embed/' . $vid)
+                                                                            : ('https://www.youtube.com/embed/' . $vid);
+                                                                    }
+                                                                } elseif (preg_match('#youtu\.be/([a-zA-Z0-9_-]+)#i', $vSrc, $m)) {
+                                                                    $videoEmbedUrl = 'https://www.youtube.com/embed/' . $m[1];
+                                                                } elseif (preg_match('#youtube\.com/(?:shorts|live)/([a-zA-Z0-9_-]+)#i', $vSrc, $m)) {
+                                                                    $videoEmbedUrl = 'https://www.youtube.com/embed/' . $m[1];
+                                                                } elseif (preg_match('#vimeo\.com/(?:video/)?(\d+)#i', $vSrc, $m)) {
+                                                                    $videoEmbedUrl = 'https://player.vimeo.com/video/' . $m[1];
+                                                                }
                                                             }
                                                             $videoFinalSrc = $isYoutubeVimeo ? $videoEmbedUrl : $resolveMediaUrl($videoSrcRaw);
                                                         @endphp
@@ -2419,7 +3123,7 @@
                                                                     $embedSrc = $videoEmbedUrl . (str_contains($videoEmbedUrl, '?') ? '&' : '?') . implode('&', $qs);
                                                                     $embedSrc = rtrim($embedSrc, '?&');
                                                                 @endphp
-                                                                <iframe src="{{ $embedSrc }}" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" loading="lazy"></iframe>
+                                                                <iframe src="{{ $embedSrc }}" title="Embedded video" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" loading="lazy"></iframe>
                                                             @else
                                                                 <video src="{{ $videoFinalSrc }}" @if(($settings['controls'] ?? true) !== false) controls @endif @if(($settings['autoplay'] ?? false) === true) autoplay muted @endif playsinline preload="metadata"></video>
                                                             @endif
@@ -2443,12 +3147,11 @@
                                                             ];
                                                         }
                                                         $itemGap = max(0, min(300, (int) ($settings['itemGap'] ?? 13)));
-                                                        $menuText = trim((string) ($settings['textColor'] ?? '#374151'));
+                                                        $menuText = $portalResolveMenuLinkColor(trim((string) ($settings['textColor'] ?? '#374151')), $rawStyle);
                                                         $menuUnderline = trim((string) ($settings['underlineColor'] ?? ''));
                                                         $ctaButtonLabel = trim((string) ($settings['leftButtonLabel'] ?? 'Get Started'));
                                                         if ($ctaButtonLabel === '') $ctaButtonLabel = 'Get Started';
-                                                        $ctaButtonUrl = trim((string) ($settings['leftButtonUrl'] ?? '#'));
-                                                        if ($ctaButtonUrl === '') $ctaButtonUrl = '#';
+                                                        $ctaButtonUrl = $resolveMenuCtaUrl($settings);
                                                         $ctaButtonBg = trim((string) ($settings['leftButtonBgColor'] ?? '#240E35'));
                                                         if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $ctaButtonBg)) $ctaButtonBg = '#240E35';
                                                         $ctaButtonText = trim((string) ($settings['leftButtonTextColor'] ?? '#ffffff'));
@@ -2467,18 +3170,25 @@
                                                         $menuLogoAlt = trim((string) ($settings['rightLogoAlt'] ?? 'Logo'));
                                                         if ($menuLogoAlt === '') $menuLogoAlt = 'Logo';
                                                         $menuUid = $elId !== '' ? $elId : ('menu_' . mt_rand(1000, 999999));
+                                                        $menuAlignNav = strtolower(trim((string) ($settings['menuAlign'] ?? 'left')));
+                                                        if (! in_array($menuAlignNav, ['left', 'center', 'right'], true)) {
+                                                            $menuAlignNav = 'left';
+                                                        }
+                                                        $menuListJustify = $menuAlignNav === 'center' ? 'center' : ($menuAlignNav === 'right' ? 'flex-end' : 'flex-start');
+                                                        $menuHasHeight = trim((string) ($rawStyle['height'] ?? '')) !== '';
+                                                        $menuLogoImgStyle = 'width:auto;max-width:min(180px,45vw);height:auto;max-height:42px;object-fit:contain;object-position:left center;flex:0 0 auto;align-self:center;';
                                                     @endphp
-                                                    <nav class="builder-menu" style="{{ $menuAlignStyle }}{{ $style !== '' ? $style : '' }}">
+                                                    <nav class="builder-menu{{ $menuHasHeight ? ' builder-menu--has-height' : '' }}" style="{{ $menuAlignStyle }}{{ $style !== '' ? $style : '' }}">
                                                         <div class="builder-menu-shell">
                                                             <div class="builder-menu-left">
                                                                 @if($menuLogoUrl !== '')
-                                                                    <img class="builder-menu-logo" src="{{ $menuLogoUrl }}" alt="{{ $menuLogoAlt }}">
+                                                                    <img class="builder-menu-logo" src="{{ $menuLogoUrl }}" alt="{{ $menuLogoAlt }}" style="{{ $menuLogoImgStyle }}">
                                                                 @else
                                                                     <div class="builder-menu-logo-placeholder">Logo</div>
                                                                 @endif
                                                             </div>
                                                             <div class="builder-menu-center">
-                                                                <ul class="builder-menu-list" style="gap: {{ $itemGap }}px;">
+                                                                <ul class="builder-menu-list" style="gap: {{ $itemGap }}px; justify-content: {{ $menuListJustify }};">
                                                                     @foreach($menuItems as $i => $menuItem)
                                                                         @php
                                                                             $menuLabel = trim((string) ($menuItem['label'] ?? 'Menu item ' . ($i + 1)));
@@ -2751,12 +3461,12 @@
                                                                                                         $itemGap = max(0, min(64, $itemGap));
                                                                                                         $menuAlign = $ssc['menuAlign'] ?? 'left';
                                                                                                         $menuAlignStyle = 'width:100%;';
-                                                                                                        $menuText = trim((string) ($ssc['textColor'] ?? '#374151'));
+                                                                                                        $selStyleArrMenuFull = is_array($sel['style'] ?? null) ? $sel['style'] : [];
+                                                                                                        $menuText = $portalResolveMenuLinkColor(trim((string) ($ssc['textColor'] ?? '#374151')), $selStyleArrMenuFull);
                                                                                                         $menuUnderline = trim((string) ($ssc['underlineColor'] ?? ''));
                                                                                                         $ctaButtonLabel = trim((string) ($ssc['leftButtonLabel'] ?? 'Get Started'));
                                                                                                         if ($ctaButtonLabel === '') $ctaButtonLabel = 'Get Started';
-                                                                                                        $ctaButtonUrl = trim((string) ($ssc['leftButtonUrl'] ?? '#'));
-                                                                                                        if ($ctaButtonUrl === '') $ctaButtonUrl = '#';
+                                                                                                        $ctaButtonUrl = $resolveMenuCtaUrl($ssc);
                                                                                                         $ctaButtonBg = trim((string) ($ssc['leftButtonBgColor'] ?? '#240E35'));
                                                                                                         if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $ctaButtonBg)) $ctaButtonBg = '#240E35';
                                                                                                         $ctaButtonText = trim((string) ($ssc['leftButtonTextColor'] ?? '#ffffff'));
@@ -2775,18 +3485,37 @@
                                                                                                         $menuLogoAlt = trim((string) ($ssc['rightLogoAlt'] ?? 'Logo'));
                                                                                                         if ($menuLogoAlt === '') $menuLogoAlt = 'Logo';
                                                                                                         $menuUid = trim((string) ($sel['id'] ?? '')) !== '' ? trim((string) $sel['id']) : ('menu_' . mt_rand(1000, 999999));
+                                                                                                        $menuAlignNavSec = strtolower(trim((string) ($ssc['menuAlign'] ?? 'left')));
+                                                                                                        if (! in_array($menuAlignNavSec, ['left', 'center', 'right'], true)) {
+                                                                                                            $menuAlignNavSec = 'left';
+                                                                                                        }
+                                                                                                        $menuListJustifySec = $menuAlignNavSec === 'center' ? 'center' : ($menuAlignNavSec === 'right' ? 'flex-end' : 'flex-start');
+                                                                                                        $selStyleArrMenu = is_array($sel['style'] ?? null) ? $sel['style'] : [];
+                                                                                                        $menuHasHeightSec = trim((string) ($selStyleArrMenu['height'] ?? '')) !== '';
+                                                                                                        $menuNavStyleArrSec = $selStyleArrMenu;
+                                                                                                        foreach ([
+                                                                                                            'width', 'maxWidth', 'max-width', 'minWidth', 'min-width',
+                                                                                                            'flex', 'alignItems', 'align-items', 'justifyContent', 'justify-content',
+                                                                                                            'gap', 'position', 'left', 'top', 'right', 'bottom', 'zIndex', 'z-index',
+                                                                                                        ] as $_mnsk) {
+                                                                                                            if (array_key_exists($_mnsk, $menuNavStyleArrSec)) {
+                                                                                                                unset($menuNavStyleArrSec[$_mnsk]);
+                                                                                                            }
+                                                                                                        }
+                                                                                                        $ssMenuNav = $styleToString($menuNavStyleArrSec);
+                                                                                                        $menuLogoImgStyleSec = 'width:auto;max-width:min(180px,45vw);height:auto;max-height:42px;object-fit:contain;object-position:left center;flex:0 0 auto;align-self:center;';
                                                                                                     @endphp
-                                                                                                    <nav class="builder-menu" style="{{ $menuAlignStyle }}{{ $ss !== '' ? $ss : '' }}">
+                                                                                                    <nav class="builder-menu{{ $menuHasHeightSec ? ' builder-menu--has-height' : '' }}" style="{{ $menuAlignStyle }}{{ $ssMenuNav !== '' ? $ssMenuNav : '' }}">
                                                                                                         <div class="builder-menu-shell">
                                                                                                             <div class="builder-menu-left">
                                                                                                                 @if($menuLogoUrl !== '')
-                                                                                                                    <img class="builder-menu-logo" src="{{ $menuLogoUrl }}" alt="{{ $menuLogoAlt }}">
+                                                                                                                    <img class="builder-menu-logo" src="{{ $menuLogoUrl }}" alt="{{ $menuLogoAlt }}" style="{{ $menuLogoImgStyleSec }}">
                                                                                                                 @else
                                                                                                                     <div class="builder-menu-logo-placeholder">Logo</div>
                                                                                                                 @endif
                                                                                                             </div>
                                                                                                             <div class="builder-menu-center">
-                                                                                                                <ul class="builder-menu-list" style="gap: {{ $itemGap }}px;">
+                                                                                                                <ul class="builder-menu-list" style="gap: {{ $itemGap }}px; justify-content: {{ $menuListJustifySec }};">
                                                                                                                     @foreach($menuItems as $i => $menuItem)
                                                                                                                         @php
                                                                                                                             $menuLabel = trim((string) ($menuItem['label'] ?? 'Menu item ' . ($i + 1)));
@@ -3379,14 +4108,14 @@
                                                                             <div class="builder-carousel-slide" style="justify-content:center;background:#ffffff !important;">
                                                                                 @if(trim((string) ($media['src'] ?? '')) !== '')
                                                                                     @if(($media['type'] ?? 'image') === 'video')
-                                                                                        <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#ffffff;">
+                                                                                        <div style="width:100%;height:100%;position:relative;background:#ffffff;">
                                                                                             <video controls preload="metadata" playsinline @if(trim((string) ($media['poster'] ?? '')) !== '') poster="{{ $media['poster'] }}" @endif style="width:100%;height:100%;object-fit:cover;display:block;background:#ffffff;">
                                                                                                 <source src="{{ $media['src'] }}">
                                                                                             </video>
                                                                                         </div>
                                                                                     @else
-                                                                                        <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#ffffff;">
-                                                                                            <img class="builder-img" src="{{ $media['src'] }}" alt="{{ trim((string) ($media['alt'] ?? 'Product media')) }}" style="width:100%;height:100%;object-fit:cover;display:block;border-radius:0;">
+                                                                                        <div style="width:100%;height:100%;position:relative;background:#ffffff;">
+                                                                                            <img class="builder-img" src="{{ $media['src'] }}" alt="{{ trim((string) ($media['alt'] ?? 'Product media')) }}" style="width:100%;height:100%;object-fit:cover;object-position:center;display:block;border-radius:0;">
                                                                                         </div>
                                                                                     @endif
                                                                                 @else
@@ -3506,14 +4235,14 @@
                                                                                 <div class="builder-carousel-slide" style="justify-content:center;background:#ffffff !important;">
                                                                                     @if(trim((string) ($media['src'] ?? '')) !== '')
                                                                                         @if(($media['type'] ?? 'image') === 'video')
-                                                                                            <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#ffffff;">
+                                                                                            <div style="width:100%;height:100%;position:relative;background:#ffffff;">
                                                                                                 <video controls preload="metadata" playsinline @if(trim((string) ($media['poster'] ?? '')) !== '') poster="{{ $media['poster'] }}" @endif style="width:100%;height:100%;object-fit:cover;display:block;background:#ffffff;">
                                                                                                     <source src="{{ $media['src'] }}">
                                                                                                 </video>
                                                                                             </div>
                                                                                         @else
-                                                                                            <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#ffffff;">
-                                                                                                <img class="builder-img" src="{{ $media['src'] }}" alt="{{ trim((string) ($media['alt'] ?? 'Product media')) }}" style="width:100%;height:100%;object-fit:cover;display:block;border-radius:0;">
+                                                                                            <div style="width:100%;height:100%;position:relative;background:#ffffff;">
+                                                                                                <img class="builder-img" src="{{ $media['src'] }}" alt="{{ trim((string) ($media['alt'] ?? 'Product media')) }}" style="width:100%;height:100%;object-fit:cover;object-position:center;display:block;border-radius:0;">
                                                                                             </div>
                                                                                         @endif
                                                                                     @else
@@ -3568,7 +4297,7 @@
                                                 @elseif($type === 'checkout_summary' || $type === 'physical_checkout_summary')
                                                     @php
                                                         $isPhysicalCheckoutSummary = $type === 'physical_checkout_summary';
-                                                        $stepLayoutForShippingCheck = is_array($step->layout_json ?? null) ? $step->layout_json : [];
+                                                        $stepLayoutForShippingCheck = $step->effectiveLayoutForBreakpoint($portalLayoutBreakpoint ?? 'desktop');
                                                         $hideLegacyCheckoutSummary = false;
                                                         $hideDuplicatePhysicalCheckoutSummary = false;
                                                         $physicalCheckoutSummaryIds = [];
@@ -4271,7 +5000,7 @@
                                                     @php
                                                         $hideLegacyShippingBlock = false;
                                                         if ($currentStepType === 'checkout' && in_array($effectiveFunnelPurpose, ['physical_product', 'hybrid'], true)) {
-                                                            $stepLayoutForPhysicalSummaryCheck = is_array($step->layout_json ?? null) ? $step->layout_json : [];
+                                                            $stepLayoutForPhysicalSummaryCheck = $step->effectiveLayoutForBreakpoint($portalLayoutBreakpoint ?? 'desktop');
                                                             $hasPhysicalCheckoutSummary = false;
                                                             $walkPhysicalCheckoutSummary = function ($node) use (&$walkPhysicalCheckoutSummary, &$hasPhysicalCheckoutSummary) {
                                                                 if ($hasPhysicalCheckoutSummary || ! is_array($node)) {
@@ -6005,22 +6734,25 @@
         setTimeout(function(){scaleSectionElementCarriers();},200);
         var isPreview={{ ($isPreview ?? false) ? 'true' : 'false' }};
         var editorCanvasWidth={{ (int) (($editorCanvasWidth ?? 0) + (($isPreview ?? false) ? $previewFreeformRightInset : 0)) }};
-        var previewDeviceWidths={desktop:null,tablet:768,mobile:375};
+        try { window.__fbEditorCanvasWidth = editorCanvasWidth; } catch (_e) {}
+        var previewDeviceWidths={desktop:null,mobile:390};
         var previewDevice="desktop";
         if(isPreview){
             var hasDeviceParam=false;
             try{
-                var allowed={desktop:1,tablet:1,mobile:1};
+                var allowed={desktop:1,mobile:1};
                 var sp=new URLSearchParams(window.location.search||"");
                 var q=sp.get("preview_device")||sp.get("previewDevice")||sp.get("device")||"";
                 q=String(q||"").toLowerCase();
+                if(q==="tablet")q="mobile";
                 if(allowed[q]){previewDevice=q;hasDeviceParam=true;}
             }catch(_e){}
             if(!hasDeviceParam){
                 try{
                     var stored=localStorage.getItem("fbPreviewDevice");
                     stored=String(stored||"").toLowerCase();
-                    if(stored==="tablet"||stored==="mobile"||stored==="desktop")previewDevice=stored;
+                    if(stored==="tablet")stored="mobile";
+                    if(stored==="mobile"||stored==="desktop")previewDevice=stored;
                 }catch(_e){}
             }
             if(!hasDeviceParam){
@@ -6030,10 +6762,12 @@
 
             document.body.setAttribute("data-preview-device", previewDevice);
             // Outer-mode only: keep the iframe synced with the selected device.
+            // Mobile used to be a fixed 375px strip — the inner doc viewport stayed narrow, so preview
+            // looked tiny with large side gutters. Full-width lets applyCanvasScale use the real width.
+            var previewShellDeviceWidths={desktop:"100%",mobile:"100%"};
             var maybeIframe=document.getElementById("previewDeviceFrame");
             if(maybeIframe){
-                var deviceWidthMap={desktop:"100%",tablet:"768px",mobile:"375px"};
-                maybeIframe.style.width=deviceWidthMap[previewDevice]||"100%";
+                maybeIframe.style.width=previewShellDeviceWidths[previewDevice]||"100%";
                 var frameParams=new URLSearchParams(window.location.search||"");
                 frameParams.set("preview_iframe","1");
                 frameParams.set("preview_device",previewDevice);
@@ -6053,15 +6787,16 @@
                 deviceBtns.forEach(function(btn){
                     btn.addEventListener("click",function(){
                         var d=String(btn.getAttribute("data-preview-device")||"desktop").toLowerCase();
-                        if(!(d==="desktop"||d==="tablet"||d==="mobile"))d="desktop";
+                        if(d==="tablet")d="mobile";
+                        if(!(d==="desktop"||d==="mobile"))d="desktop";
                         previewDevice=d;
                         try{localStorage.setItem("fbPreviewDevice",previewDevice);}catch(_e){}
                         document.body.setAttribute("data-preview-device", previewDevice);
                         setActiveDeviceUI();
                         var iframe=document.getElementById("previewDeviceFrame");
                         if(iframe){
-                            var deviceWidthMap={desktop:"100%",tablet:"768px",mobile:"375px"};
-                            iframe.style.width=deviceWidthMap[previewDevice]||"100%";
+                            var previewShellDeviceWidths={desktop:"100%",mobile:"100%"};
+                            iframe.style.width=previewShellDeviceWidths[previewDevice]||"100%";
                             var frameParams=new URLSearchParams(window.location.search||"");
                             frameParams.set("preview_iframe","1");
                             frameParams.set("preview_device",previewDevice);
@@ -6193,6 +6928,25 @@
             content.style.zoom="";
             content.style.transform="none";
             content.style.height="auto";
+            var targetPad=10;
+            var viewportW=document.documentElement?document.documentElement.clientWidth:window.innerWidth;
+            /* Shrinking a 1200px-wide canvas to fit a ~390px phone made scale ~0.3 and illegible type.
+               Published mode already has @media (max-width: 768px/1024px) rules — zoom was defeating them. */
+            var publishedFluidMaxVp=1024;
+            if(viewportW<=publishedFluidMaxVp){
+                content.style.width="100%";
+                content.style.maxWidth="100%";
+                content.style.boxSizing="border-box";
+                content.style.marginLeft="auto";
+                content.style.marginRight="auto";
+                content.style.display="block";
+                content.style.position="relative";
+                content.style.left="0";
+                content.style.padding=targetPad+"px";
+                document.body.style.overflowX="hidden";
+                content.classList.add("is-scale-ready");
+                return;
+            }
             content.style.width=editorCanvasWidth+"px";
             content.style.maxWidth="none";
             content.style.boxSizing="border-box";
@@ -6202,9 +6956,7 @@
             content.style.display="block";
             content.style.position="relative";
             content.style.left="0";
-            var targetPad=10;
             content.style.padding=targetPad+"px";
-            var viewportW=document.documentElement?document.documentElement.clientWidth:window.innerWidth;
             var measuredW=measurePreviewContentWidth(content);
             var baseCanvasWidth=Math.max(editorCanvasWidth||0,measuredW||0);
             if(baseCanvasWidth>0){
@@ -6243,9 +6995,10 @@
                 content.style.height="auto";
                 content.style.width=editorCanvasWidth+"px";
                 content.style.maxWidth="none";
-                // Desktop preview should be horizontally centered to match builder.
-                content.style.marginLeft=(previewDevice==="desktop"?"auto":"0");
-                content.style.marginRight=(previewDevice==="desktop"?"auto":"0");
+                /* Center the scaled canvas for every device. Tablet/mobile used margin 0 before, which
+                   left-aligned the fixed-width canvas in a wide browser window (empty gutter on the right). */
+                content.style.marginLeft="auto";
+                content.style.marginRight="auto";
                 content.style.display="block";
                 content.style.position="relative";
                 content.style.left="0";
@@ -6253,18 +7006,23 @@
                 content.style.padding=targetPad+"px";
                 var viewportW=document.documentElement?document.documentElement.clientWidth:window.innerWidth;
                 var deviceW=previewDeviceWidths[previewDevice];
-                var baseW=(deviceW&&deviceW>0)?deviceW:viewportW;
                 var measuredW=measurePreviewContentWidth(content);
                 var baseCanvasWidth=Math.max(editorCanvasWidth||0,measuredW||0);
-                if(previewDevice==="tablet"||previewDevice==="mobile"){
+                if(previewDevice==="mobile"){
                     baseCanvasWidth=(deviceW&&deviceW>0)?deviceW:baseCanvasWidth;
                 }
                 if(baseCanvasWidth>0){
                     content.style.width=baseCanvasWidth+"px";
                 }
-                var availW=baseW-(targetPad*2);
-                if(availW<200)availW=viewportW-(targetPad*2);
-                if(availW<200)availW=viewportW;
+                /* Fit to the real preview viewport. Using device width here left mobile stuck at ~375px
+                   in a wide browser (tiny column, huge gutters). */
+                var availW=Math.max(viewportW-(targetPad*2),1);
+                /* Mobile: cap the width used for scale. Full viewport × 390px canvas hit the 3× zoom cap and
+                   looked comically large; we only need ~large-phone width (~480px) for readable preview. */
+                var mobilePreviewMaxScaleWidth=480;
+                if(previewDevice==="mobile"){
+                    availW=Math.min(availW,mobilePreviewMaxScaleWidth);
+                }
                 var scale=availW/baseCanvasWidth;
                 if(scale<=0)scale=1;
                 // Let desktop preview/test fill the available viewport again so
@@ -6272,7 +7030,7 @@
                 if(scale>3.0)scale=3.0;
                 content.style.padding=(targetPad/scale)+"px";
                 // Using `zoom` makes the browser reflow based on scaled layout, which is
-                // what we need for tablet/mobile "layout adjustment" in preview.
+                // what we need for mobile "layout adjustment" in preview.
                 // Fallback to `transform` when zoom is not supported.
                 if(useZoom){
                     content.style.zoom=String(scale);
@@ -7013,6 +7771,230 @@
                 } catch (e) {
                     // Fail silently so production isn't affected
                 }
+            })();
+        </script>
+    @endif
+    @if((string) request()->query('debug_product_offer') === '1')
+        <script>
+            (function () {
+                function logProductOfferMetrics() {
+                    var wraps = document.querySelectorAll('.builder-product-media .builder-carousel-wrap');
+                    if (!wraps.length) {
+                        console.info('[debug_product_offer] No .builder-product-media .builder-carousel-wrap nodes found.');
+                        return;
+                    }
+                    var rows = [];
+                    wraps.forEach(function (n, i) {
+                        var r = n.getBoundingClientRect();
+                        var cs = window.getComputedStyle(n);
+                        rows.push({
+                            idx: i,
+                            widthPx: Math.round(r.width),
+                            heightPx: Math.round(r.height),
+                            aspectRatio: cs.aspectRatio,
+                            maxHeight: cs.maxHeight,
+                            previewDevice: document.body.getAttribute('data-preview-device') || '(none)'
+                        });
+                    });
+                    console.table(rows);
+                }
+                window.addEventListener('load', function () {
+                    setTimeout(logProductOfferMetrics, 400);
+                });
+                window.addEventListener('resize', function () {
+                    logProductOfferMetrics();
+                });
+                logProductOfferMetrics();
+            })();
+        </script>
+    @endif
+    @if((string) request()->query('debug_responsive') === '1')
+        <script>
+            (function () {
+                function logResponsiveLayout() {
+                    var device = document.body.getAttribute('data-preview-device') || '(published / no data-preview-device)';
+                    var vw = Math.round(window.innerWidth || 0);
+                    var preview = document.body.classList && document.body.classList.contains('is-preview');
+                    var inners = document.querySelectorAll('.builder-row-inner');
+                    var rows = [];
+                    inners.forEach(function (inner, ri) {
+                        var cs = window.getComputedStyle(inner);
+                        var kids = Array.prototype.slice.call(inner.children || []);
+                        var cols = kids.filter(function (n) { return n.classList && n.classList.contains('builder-col'); });
+                        var directEls = kids.filter(function (n) { return n.classList && n.classList.contains('builder-el'); });
+                        var r = inner.getBoundingClientRect();
+                        var colWidths = cols.map(function (c) {
+                            return Math.round(c.getBoundingClientRect().width);
+                        });
+                        rows.push({
+                            rowIdx: ri,
+                            viewportPx: vw,
+                            isPreview: preview,
+                            rowInnerW: Math.round(r.width),
+                            flexDir: cs.flexDirection,
+                            flexWrap: cs.flexWrap,
+                            gap: cs.gap,
+                            colCount: cols.length,
+                            colWidthsPx: colWidths.join(','),
+                            directBuilderElCount: directEls.length,
+                            previewDevice: device
+                        });
+                    });
+                    if (rows.length) {
+                        console.info('[debug_responsive] Funnel step layout. window.innerWidth=viewportPx. isPreview=' + preview + '. data-preview-device=' + device + '.');
+                        console.info('[debug_responsive] colCount = .builder-col children of .builder-row-inner. directBuilderElCount>0 => section uses display:contents (elements hoist to row-inner).');
+                        console.table(rows);
+                    } else {
+                        console.info('[debug_responsive] No .builder-row-inner found.');
+                    }
+                    try {
+                        var mc = document.querySelectorAll('.builder-row-inner:has(> .builder-col:nth-child(2))');
+                        var ho = document.querySelectorAll('.builder-row-inner:has(> .builder-el[data-element-type="product_offer"] ~ .builder-el[data-element-type="product_offer"])');
+                        console.info('[debug_responsive] Preview mobile multicol CSS applies to rows: 2+ .builder-col=' + mc.length + ', 2+ hoisted product_offer=' + ho.length + '.');
+                    } catch (e) {
+                        console.info('[debug_responsive] :has() selector not supported in this browser; skip multicol count.');
+                    }
+                    var vids = document.querySelectorAll('.builder-video-wrap');
+                    var vidRows = [];
+                    vids.forEach(function (w, i) {
+                        var br = w.getBoundingClientRect();
+                        var cs = window.getComputedStyle(w);
+                        vidRows.push({
+                            idx: i,
+                            wPx: Math.round(br.width),
+                            hPx: Math.round(br.height),
+                            aspectRatio: cs.aspectRatio,
+                            maxW: cs.maxWidth,
+                            previewDevice: device
+                        });
+                    });
+                    if (vidRows.length) {
+                        console.info('[debug_responsive] .builder-video-wrap boxes (embed containers).');
+                        console.table(vidRows);
+                    }
+                }
+                window.addEventListener('load', function () {
+                    setTimeout(logResponsiveLayout, 400);
+                });
+                window.addEventListener('resize', logResponsiveLayout);
+                logResponsiveLayout();
+            })();
+        </script>
+    @endif
+    @if((string) request()->query('debug_preview_canvas') === '1')
+        <script>
+            (function () {
+                function logPreviewCanvas() {
+                    var el = document.querySelector('.step-content--full');
+                    var device = document.body.getAttribute('data-preview-device') || '(none)';
+                    var ecw = typeof window.__fbEditorCanvasWidth !== 'undefined' ? window.__fbEditorCanvasWidth : '(unset)';
+                    if (!el) {
+                        console.info('[debug_preview_canvas] No .step-content--full. editorCanvasWidthPx=' + ecw + ' data-preview-device=' + device);
+                        return;
+                    }
+                    var cs = window.getComputedStyle(el);
+                    var br = el.getBoundingClientRect();
+                    console.info('[debug_preview_canvas] Portal scales .step-content--full when editorCanvasWidth>0. Empty right gutter often meant marginLeft/Right was 0 on tablet/mobile (fixed: both auto).');
+                    console.table([{
+                        editorCanvasWidthPx: ecw,
+                        previewDevice: device,
+                        clientWidth: el.clientWidth,
+                        offsetWidth: el.offsetWidth,
+                        rectWidth: Math.round(br.width),
+                        inlineWidth: el.style.width || '(none)',
+                        marginLeft: cs.marginLeft,
+                        marginRight: cs.marginRight,
+                        transform: cs.transform && cs.transform !== 'none' ? cs.transform : '(none)',
+                        zoom: cs.zoom || '(none)',
+                        windowInnerWidth: window.innerWidth
+                    }]);
+                }
+                window.addEventListener('load', function () { setTimeout(logPreviewCanvas, 600); });
+                window.addEventListener('resize', logPreviewCanvas);
+                logPreviewCanvas();
+            })();
+        </script>
+    @endif
+    @if((string) request()->query('debug_columns') === '1')
+        <script>
+            (function () {
+                function logColumnComponents() {
+                    var vw = Math.round(window.innerWidth || 0);
+                    var preview = document.body.classList && document.body.classList.contains('is-preview');
+                    var published = document.body.classList && document.body.classList.contains('is-published');
+                    var device = document.body.getAttribute('data-preview-device') || '';
+                    var mode = preview ? 'preview' : (published ? 'published' : 'unknown');
+                    console.groupCollapsed('[fb debug_columns] column layout (preview + published) — add ?debug_columns=1 to URL');
+                    console.log('Funnel step column trace. Works in browser DevTools only (not Laravel terminal). Switch tablet/mobile in preview to compare.');
+                    console.log({ mode: mode, dataPreviewDevice: device || '(use real viewport when published)', windowInnerWidth: vw });
+                    var step = document.querySelector('.step-content--full');
+                    if (step) {
+                        var sbr = step.getBoundingClientRect();
+                        var scs = window.getComputedStyle(step);
+                        console.table([{
+                            stepContentRectW_px: Math.round(sbr.width),
+                            maxWidth: scs.maxWidth,
+                            marginLeft: scs.marginLeft,
+                            marginRight: scs.marginRight,
+                            hasTransform: scs.transform && scs.transform !== 'none',
+                            zoom: scs.zoom || '1'
+                        }]);
+                    } else {
+                        console.warn('[fb debug_columns] .step-content--full missing');
+                    }
+                    var colRows = [];
+                    var allCols = document.querySelectorAll('.builder-col');
+                    allCols.forEach(function (col, idx) {
+                        var rowInner = col.closest('.builder-row-inner');
+                        var secInner = col.closest('.builder-section-inner');
+                        var rw = rowInner ? rowInner.getBoundingClientRect().width : 0;
+                        var cr = col.getBoundingClientRect();
+                        var cw = cr.width;
+                        var ccs = window.getComputedStyle(col);
+                        colRows.push({
+                            idx: idx,
+                            rowInnerW_px: rw ? Math.round(rw) : '—',
+                            colW_px: Math.round(cw),
+                            pctOfRowInner: rw > 0 ? (Math.round((cw / rw) * 1000) / 10 + '%') : '—',
+                            flex: ccs.flex,
+                            flexBasis: ccs.flexBasis,
+                            minWidth: ccs.minWidth,
+                            maxWidth: ccs.maxWidth,
+                            hasRowInner: !!rowInner
+                        });
+                    });
+                    if (colRows.length) {
+                        console.info('[fb debug_columns] Every .builder-col (N=' + colRows.length + ')');
+                        console.table(colRows);
+                    } else {
+                        console.info('[fb debug_columns] No .builder-col nodes (freeform or display:contents layout).');
+                    }
+                    var innerRows = [];
+                    document.querySelectorAll('.builder-row-inner').forEach(function (inner, ri) {
+                        var kids = Array.prototype.slice.call(inner.children || []);
+                        var nCol = kids.filter(function (n) { return n.classList && n.classList.contains('builder-col'); }).length;
+                        var nEl = kids.filter(function (n) { return n.classList && n.classList.contains('builder-el'); }).length;
+                        var ir = inner.getBoundingClientRect();
+                        var ics = window.getComputedStyle(inner);
+                        innerRows.push({
+                            rowInnerIdx: ri,
+                            width_px: Math.round(ir.width),
+                            flexDir: ics.flexDirection,
+                            flexWrap: ics.flexWrap,
+                            gap: ics.gap,
+                            childCols: nCol,
+                            directBuilderEls: nEl
+                        });
+                    });
+                    if (innerRows.length) {
+                        console.info('[fb debug_columns] Each .builder-row-inner');
+                        console.table(innerRows);
+                    }
+                    console.groupEnd();
+                }
+                window.addEventListener('load', function () { setTimeout(logColumnComponents, 450); });
+                window.addEventListener('resize', logColumnComponents);
+                logColumnComponents();
             })();
         </script>
     @endif
