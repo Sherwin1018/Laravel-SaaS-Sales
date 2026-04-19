@@ -5,9 +5,12 @@ namespace Tests\Feature;
 use App\Models\Funnel;
 use App\Models\FunnelEvent;
 use App\Models\FunnelStep;
+use App\Models\Lead;
+use App\Models\Payment;
 use App\Models\Role;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\FunnelTrackingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -397,6 +400,71 @@ class FunnelBuilderModuleTest extends TestCase
         $response->assertSee('funnel_opt_in_submitted', false);
     }
 
+    public function test_physical_order_analytics_view_shows_excel_download_actions(): void
+    {
+        [$tenant, $user] = $this->createTenantUserWithRole('marketing-manager');
+        $funnel = $this->createPhysicalOrderFunnel($tenant, $user, 'physical-order-actions');
+        $this->seedPhysicalOrderAnalytics($funnel);
+
+        $response = $this->actingAs($user)->get(route('funnels.analytics', $funnel));
+
+        $response->assertOk();
+        $response->assertSee('Pending Orders');
+        $response->assertSee('Paid Orders');
+        $response->assertSee('Order Directory');
+        $response->assertSee('Download to Excel');
+        $response->assertSee(route('funnels.analytics.orders.export', ['funnel' => $funnel, 'section' => 'pending']), false);
+        $response->assertSee(route('funnels.analytics.orders.export', ['funnel' => $funnel, 'section' => 'paid']), false);
+        $response->assertSee(route('funnels.analytics.orders.export', ['funnel' => $funnel, 'section' => 'directory']), false);
+    }
+
+    public function test_physical_order_excel_exports_download_real_xlsx_files_for_pending_paid_and_directory(): void
+    {
+        [$tenant, $user] = $this->createTenantUserWithRole('marketing-manager');
+        $funnel = $this->createPhysicalOrderFunnel($tenant, $user, 'physical-order-export');
+        $this->seedPhysicalOrderAnalytics($funnel);
+
+        $pendingResponse = $this->actingAs($user)->get(route('funnels.analytics.orders.export', [
+            'funnel' => $funnel,
+            'section' => 'pending',
+        ]));
+        $pendingResponse->assertOk();
+        $pendingResponse->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        $this->assertStringContainsString('.xlsx"', (string) $pendingResponse->headers->get('content-disposition'));
+        $pendingBinary = $pendingResponse->getContent();
+        $this->assertStringStartsWith('PK', $pendingBinary);
+        $this->assertStringContainsString('xl/worksheets/sheet1.xml', $pendingBinary);
+        $this->assertStringContainsString('Pending Orders', $pendingBinary);
+        $this->assertStringContainsString('Pending Customer', $pendingBinary);
+        $this->assertStringContainsString('Pending Product x1', $pendingBinary);
+
+        $paidResponse = $this->actingAs($user)->get(route('funnels.analytics.orders.export', [
+            'funnel' => $funnel,
+            'section' => 'paid',
+        ]));
+        $paidResponse->assertOk();
+        $paidResponse->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        $paidBinary = $paidResponse->getContent();
+        $this->assertStringStartsWith('PK', $paidBinary);
+        $this->assertStringContainsString('Paid Orders', $paidBinary);
+        $this->assertStringContainsString('Paid Customer', $paidBinary);
+        $this->assertStringContainsString('Protein Box x2', $paidBinary);
+        $this->assertStringContainsString('https://tracking.example.com/paid-order', $paidBinary);
+
+        $directoryResponse = $this->actingAs($user)->get(route('funnels.analytics.orders.export', [
+            'funnel' => $funnel,
+            'section' => 'directory',
+        ]));
+        $directoryResponse->assertOk();
+        $directoryResponse->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        $directoryBinary = $directoryResponse->getContent();
+        $this->assertStringStartsWith('PK', $directoryBinary);
+        $this->assertStringContainsString('Order Directory', $directoryBinary);
+        $this->assertStringContainsString('Paid Customer', $directoryBinary);
+        $this->assertStringContainsString('Pending Customer', $directoryBinary);
+        $this->assertStringContainsString('Leave package at front desk', $directoryBinary);
+    }
+
     private function createTenantUserWithRole(string $roleSlug, string $companyName = 'Tracked Workspace'): array
     {
         $tenant = Tenant::create([
@@ -446,6 +514,192 @@ class FunnelBuilderModuleTest extends TestCase
         }
 
         return $funnel->fresh('steps');
+    }
+
+    private function createPhysicalOrderFunnel(Tenant $tenant, User $user, string $slug): Funnel
+    {
+        $funnel = Funnel::create([
+            'tenant_id' => $tenant->id,
+            'created_by' => $user->id,
+            'name' => ucfirst(str_replace('-', ' ', $slug)),
+            'slug' => $slug,
+            'purpose' => 'physical_product',
+            'status' => 'published',
+        ]);
+
+        $steps = [
+            ['title' => 'Landing', 'slug' => 'landing', 'type' => 'landing', 'position' => 1, 'layout_json' => $this->buttonLayout('next_step')],
+            ['title' => 'Checkout', 'slug' => 'checkout', 'type' => 'checkout', 'position' => 2, 'price' => 1499, 'layout_json' => $this->buttonLayout('checkout')],
+            ['title' => 'Thank You', 'slug' => 'thank-you', 'type' => 'thank_you', 'position' => 3, 'layout_json' => $this->emptyLayout()],
+        ];
+
+        foreach ($steps as $step) {
+            FunnelStep::create(array_merge([
+                'funnel_id' => $funnel->id,
+                'is_active' => true,
+            ], $step));
+        }
+
+        return $funnel->fresh('steps');
+    }
+
+    private function seedPhysicalOrderAnalytics(Funnel $funnel): void
+    {
+        $checkoutStep = $funnel->steps()->where('type', 'checkout')->firstOrFail();
+
+        $paidLead = Lead::create([
+            'tenant_id' => $funnel->tenant_id,
+            'name' => 'Paid Customer',
+            'email' => 'paid@example.com',
+            'phone' => '09123456789',
+            'status' => 'new',
+            'score' => 0,
+        ]);
+
+        $pendingLead = Lead::create([
+            'tenant_id' => $funnel->tenant_id,
+            'name' => 'Pending Customer',
+            'email' => 'pending@example.com',
+            'phone' => '09987654321',
+            'status' => 'new',
+            'score' => 0,
+        ]);
+
+        $paidPayment = Payment::create([
+            'tenant_id' => $funnel->tenant_id,
+            'payment_type' => Payment::TYPE_FUNNEL_CHECKOUT,
+            'funnel_id' => $funnel->id,
+            'funnel_step_id' => $checkoutStep->id,
+            'lead_id' => $paidLead->id,
+            'amount' => 2998,
+            'subtotal_amount' => 2998,
+            'discount_amount' => 0,
+            'status' => 'paid',
+            'payment_date' => now()->toDateString(),
+            'provider' => 'manual',
+            'session_identifier' => 'session-paid-order',
+        ]);
+
+        $pendingPayment = Payment::create([
+            'tenant_id' => $funnel->tenant_id,
+            'payment_type' => Payment::TYPE_FUNNEL_CHECKOUT,
+            'funnel_id' => $funnel->id,
+            'funnel_step_id' => $checkoutStep->id,
+            'lead_id' => $pendingLead->id,
+            'amount' => 1499,
+            'subtotal_amount' => 1499,
+            'discount_amount' => 0,
+            'status' => 'pending',
+            'payment_date' => now()->toDateString(),
+            'provider' => 'paymongo',
+            'session_identifier' => 'session-pending-order',
+        ]);
+
+        FunnelEvent::create([
+            'tenant_id' => $funnel->tenant_id,
+            'funnel_id' => $funnel->id,
+            'funnel_step_id' => $checkoutStep->id,
+            'lead_id' => $paidLead->id,
+            'payment_id' => $paidPayment->id,
+            'event_name' => FunnelTrackingService::EVENT_CHECKOUT_STARTED,
+            'session_identifier' => $paidPayment->session_identifier,
+            'meta' => [
+                'step_slug' => $checkoutStep->slug,
+                'step_type' => $checkoutStep->type,
+                'amount' => 2998,
+                'payment_status' => 'paid',
+                'provider' => 'manual',
+                'order_key' => 'payment:' . $paidPayment->id,
+                'funnel_purpose' => 'physical_product',
+                'customer' => [
+                    'full_name' => 'Paid Customer',
+                    'email' => 'paid@example.com',
+                    'phone' => '09123456789',
+                ],
+                'shipping' => [
+                    'street' => '123 Paid Street',
+                    'barangay' => 'Barangay Uno',
+                    'city_municipality' => 'Manila',
+                    'province' => 'Metro Manila',
+                    'postal_code' => '1000',
+                    'notes' => 'Leave package at front desk',
+                ],
+                'delivery_address' => '123 Paid Street, Barangay Uno, Manila, Metro Manila, 1000',
+                'order_items' => [
+                    ['name' => 'Protein Box', 'quantity' => 2, 'price' => '1499.00', 'badge' => 'Best Seller'],
+                ],
+                'order_quantity' => 2,
+                'order_items_label' => 'Protein Box x2',
+            ],
+            'occurred_at' => now()->subHours(2),
+        ]);
+
+        app(FunnelTrackingService::class)->trackPaymentPaid($paidPayment, ['source' => 'feature_test_paid_order']);
+
+        FunnelEvent::query()
+            ->where('payment_id', $paidPayment->id)
+            ->where('event_name', FunnelTrackingService::EVENT_PAYMENT_PAID)
+            ->latest('id')
+            ->firstOrFail()
+            ->update(['occurred_at' => now()->subHour()]);
+
+        FunnelEvent::create([
+            'tenant_id' => $funnel->tenant_id,
+            'funnel_id' => $funnel->id,
+            'funnel_step_id' => $checkoutStep->id,
+            'lead_id' => $paidLead->id,
+            'payment_id' => $paidPayment->id,
+            'event_name' => FunnelTrackingService::EVENT_ORDER_DELIVERY_UPDATED,
+            'session_identifier' => $paidPayment->session_identifier,
+            'meta' => [
+                'order_key' => 'payment:' . $paidPayment->id,
+                'recipient_email' => 'paid@example.com',
+                'customer_name' => 'Paid Customer',
+                'delivery_status' => 'shipped',
+                'tracking_url' => 'https://tracking.example.com/paid-order',
+                'courier_name' => 'LBC',
+                'custom_message' => 'Packed and ready for delivery.',
+            ],
+            'occurred_at' => now()->subMinutes(50),
+        ]);
+
+        FunnelEvent::create([
+            'tenant_id' => $funnel->tenant_id,
+            'funnel_id' => $funnel->id,
+            'funnel_step_id' => $checkoutStep->id,
+            'lead_id' => $pendingLead->id,
+            'payment_id' => $pendingPayment->id,
+            'event_name' => FunnelTrackingService::EVENT_CHECKOUT_STARTED,
+            'session_identifier' => $pendingPayment->session_identifier,
+            'meta' => [
+                'step_slug' => $checkoutStep->slug,
+                'step_type' => $checkoutStep->type,
+                'amount' => 1499,
+                'payment_status' => 'pending',
+                'provider' => 'paymongo',
+                'order_key' => 'payment:' . $pendingPayment->id,
+                'funnel_purpose' => 'physical_product',
+                'customer' => [
+                    'full_name' => 'Pending Customer',
+                    'email' => 'pending@example.com',
+                    'phone' => '09987654321',
+                ],
+                'shipping' => [
+                    'street' => '456 Pending Avenue',
+                    'barangay' => 'Barangay Dos',
+                    'city_municipality' => 'Quezon City',
+                    'province' => 'Metro Manila',
+                    'postal_code' => '1100',
+                ],
+                'delivery_address' => '456 Pending Avenue, Barangay Dos, Quezon City, Metro Manila, 1100',
+                'order_items' => [
+                    ['name' => 'Pending Product', 'quantity' => 1, 'price' => '1499.00'],
+                ],
+                'order_quantity' => 1,
+                'order_items_label' => 'Pending Product x1',
+            ],
+            'occurred_at' => now()->subMinutes(30),
+        ]);
     }
 
     private function emptyLayout(): array

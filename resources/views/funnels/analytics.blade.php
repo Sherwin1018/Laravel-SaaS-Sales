@@ -50,6 +50,9 @@
             'out_for_delivery' => 'Out for Delivery',
             'delivered' => 'Delivered',
         ];
+        $pendingOrdersExcelUrl = route('funnels.analytics.orders.export', array_merge(['funnel' => $funnel], request()->query(), ['section' => 'pending']));
+        $paidOrdersExcelUrl = route('funnels.analytics.orders.export', array_merge(['funnel' => $funnel], request()->query(), ['section' => 'paid']));
+        $orderDirectoryExcelUrl = route('funnels.analytics.orders.export', array_merge(['funnel' => $funnel], request()->query(), ['section' => 'directory']));
         $offerActivityGroups = [
             'upsell_accepted' => [
                 'title' => 'Upsell Accepted',
@@ -477,9 +480,19 @@
 
         @if($isPhysicalAnalytics)
             <div class="analytics-card">
-                <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+                <div class="analytics-section-actions">
                     <h3 style="margin:0;">Pending Orders</h3>
-                    <button type="button" id="togglePendingOrdersBtn" class="analytics-toggle-btn" aria-expanded="false" aria-controls="pendingOrdersContent"><i class="fas fa-eye" aria-hidden="true"></i><span>Show</span></button>
+                    <div class="analytics-section-actions__controls">
+                        <a
+                            href="{{ $pendingOrdersExcelUrl }}"
+                            class="analytics-btn analytics-btn--icon-only"
+                            aria-label="Download to Excel"
+                        >
+                            <i class="fas fa-file-excel" aria-hidden="true"></i>
+                            <span class="analytics-btn-tooltip" role="tooltip">Download to Excel</span>
+                        </a>
+                        <button type="button" id="togglePendingOrdersBtn" class="analytics-toggle-btn" aria-expanded="false" aria-controls="pendingOrdersContent"><i class="fas fa-eye" aria-hidden="true"></i><span>Show</span></button>
+                    </div>
                 </div>
                 <div id="pendingOrdersContent" style="display:none;">
                     <div class="analytics-table-wrap">
@@ -526,9 +539,19 @@
             </div>
 
             <div class="analytics-card">
-                <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+                <div class="analytics-section-actions">
                     <h3 style="margin:0;">Paid Orders</h3>
-                    <button type="button" id="togglePaidOrdersBtn" class="analytics-toggle-btn" aria-expanded="false" aria-controls="paidOrdersContent"><i class="fas fa-eye" aria-hidden="true"></i><span>Show</span></button>
+                    <div class="analytics-section-actions__controls">
+                        <a
+                            href="{{ $paidOrdersExcelUrl }}"
+                            class="analytics-btn analytics-btn--icon-only"
+                            aria-label="Download to Excel"
+                        >
+                            <i class="fas fa-file-excel" aria-hidden="true"></i>
+                            <span class="analytics-btn-tooltip" role="tooltip">Download to Excel</span>
+                        </a>
+                        <button type="button" id="togglePaidOrdersBtn" class="analytics-toggle-btn" aria-expanded="false" aria-controls="paidOrdersContent"><i class="fas fa-eye" aria-hidden="true"></i><span>Show</span></button>
+                    </div>
                 </div>
                 <div id="paidOrdersContent" style="display:none;">
                     <div class="analytics-table-wrap">
@@ -608,9 +631,21 @@
         @endif
 
         <div class="analytics-card">
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+            <div class="analytics-section-actions">
                 <h3 style="margin:0;">{{ $summarySectionTitle }}</h3>
-                <button type="button" id="toggleOfferActivityBtn" class="analytics-toggle-btn" aria-expanded="false" aria-controls="offerActivityContent"><i class="fas fa-eye" aria-hidden="true"></i><span>Show</span></button>
+                <div class="analytics-section-actions__controls">
+                    @if($isPhysicalAnalytics)
+                        <a
+                            href="{{ $orderDirectoryExcelUrl }}"
+                            class="analytics-btn analytics-btn--icon-only"
+                            aria-label="Download to Excel"
+                        >
+                            <i class="fas fa-file-excel" aria-hidden="true"></i>
+                            <span class="analytics-btn-tooltip" role="tooltip">Download to Excel</span>
+                        </a>
+                    @endif
+                    <button type="button" id="toggleOfferActivityBtn" class="analytics-toggle-btn" aria-expanded="false" aria-controls="offerActivityContent"><i class="fas fa-eye" aria-hidden="true"></i><span>Show</span></button>
+                </div>
             </div>
             <div id="offerActivityContent" style="display:none;">
                 @unless($isPhysicalAnalytics)

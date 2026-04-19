@@ -12,6 +12,7 @@ use App\Models\FunnelStepRevision;
 use App\Models\FunnelTemplate;
 use App\Services\FunnelTrackingService;
 use App\Support\TenantPlanEnforcer;
+use App\Support\XlsxWorkbookBuilder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -585,6 +586,195 @@ class FunnelController extends Controller
         }, $filename, [
             'Content-Type' => 'text/csv',
         ]);
+    }
+
+    public function exportPhysicalOrdersExcel(Request $request, Funnel $funnel, FunnelTrackingService $tracking)
+    {
+        $this->ensureTenantFunnelAccess($funnel);
+
+        $filters = $tracking->normalizeDateFilters($request->only(['from', 'to', 'step_id', 'event_name']));
+        $analytics = $tracking->analyticsForFunnel($funnel, $filters);
+        $purpose = Funnel::normalizePurpose($funnel->purpose ?? ($funnel->template_type ?? 'service'));
+
+        abort_unless(in_array($purpose, ['physical_product', 'hybrid'], true), 404);
+
+        $section = Str::lower(trim((string) $request->query('section', 'directory')));
+        $config = $this->physicalOrderExcelExportConfig($section, $analytics);
+
+        abort_if($config === null, 404);
+
+        $filename = Str::slug($config['title'])
+            . '-'
+            . $funnel->slug
+            . '-'
+            . now()->format('Ymd_His')
+            . '.xlsx';
+
+        return response(
+            (new XlsxWorkbookBuilder(
+                $config['worksheet'],
+                $config['title'],
+                $this->physicalOrderExcelSummaryLine($funnel, $config['title'], $request, count($config['rows'])),
+                $config['headings'],
+                $config['widths'],
+                $config['rows']
+            ))->build(),
+            200,
+            [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+                'Cache-Control' => 'max-age=0, no-cache, no-store, must-revalidate',
+            ]
+        );
+    }
+
+    private function physicalOrderExcelExportConfig(string $section, array $analytics): ?array
+    {
+        $section = Str::lower(trim($section));
+
+        return match ($section) {
+            'pending' => [
+                'worksheet' => 'Pending Orders',
+                'title' => 'Pending Orders',
+                'headings' => ['Customer', 'Email', 'Phone', 'Order Items', 'Qty', 'Amount (PHP)', 'Delivery Address', 'Last Activity'],
+                'widths' => [160, 220, 105, 250, 55, 95, 240, 145],
+                'rows' => collect($analytics['physical_pending_orders'] ?? [])
+                    ->map(fn (array $row) => [
+                        $this->excelTextCell($row['customer'] ?? 'Anonymous visitor'),
+                        $this->excelTextCell($row['email'] ?? 'N/A'),
+                        $this->excelTextCell($row['phone'] ?? 'N/A'),
+                        $this->excelTextCell($this->physicalOrderItemsForExcel($row), 'wrap'),
+                        $this->excelNumberCell((int) ($row['order_quantity'] ?? 0), 'center'),
+                        $this->excelNumberCell((float) ($row['checkout_amount'] ?? 0), 'currency'),
+                        $this->excelTextCell($row['delivery_address'] ?? 'N/A', 'wrap'),
+                        $this->excelTextCell($row['last_activity'] ?? 'N/A'),
+                    ])
+                    ->all(),
+            ],
+            'paid' => [
+                'worksheet' => 'Paid Orders',
+                'title' => 'Paid Orders',
+                'headings' => ['Customer', 'Email', 'Phone', 'Paid Order', 'Qty', 'Amount (PHP)', 'Delivery Status', 'Last Delivery Email', 'Tracking URL', 'Delivery Address'],
+                'widths' => [160, 220, 105, 250, 55, 95, 125, 155, 220, 240],
+                'rows' => collect($analytics['physical_paid_orders'] ?? [])
+                    ->map(fn (array $row) => [
+                        $this->excelTextCell($row['customer'] ?? 'Anonymous visitor'),
+                        $this->excelTextCell($row['email'] ?? 'N/A'),
+                        $this->excelTextCell($row['phone'] ?? 'N/A'),
+                        $this->excelTextCell($this->physicalOrderItemsForExcel($row), 'wrap'),
+                        $this->excelNumberCell((int) ($row['order_quantity'] ?? 0), 'center'),
+                        $this->excelNumberCell((float) ($row['checkout_amount'] ?? 0), 'currency'),
+                        $this->excelTextCell($this->formatDeliveryStatusForExcel($row['delivery_status'] ?? 'paid'), 'status'),
+                        $this->excelTextCell($row['delivery_updated_label'] ?? 'N/A'),
+                        $this->excelTextCell($row['tracking_url'] ?? 'N/A', 'wrap'),
+                        $this->excelTextCell($row['delivery_address'] ?? 'N/A', 'wrap'),
+                    ])
+                    ->all(),
+            ],
+            'directory' => [
+                'worksheet' => 'Order Directory',
+                'title' => 'Order Directory',
+                'headings' => ['Customer', 'Email', 'Phone', 'Order Items', 'Qty', 'Status', 'Checkout Paid (PHP)', 'Delivery Address', 'Order Notes', 'Last Activity'],
+                'widths' => [160, 220, 105, 250, 55, 115, 110, 240, 180, 145],
+                'rows' => collect($analytics['physical_orders'] ?? [])
+                    ->map(fn (array $row) => [
+                        $this->excelTextCell($row['customer'] ?? 'Anonymous visitor'),
+                        $this->excelTextCell($row['email'] ?? 'N/A'),
+                        $this->excelTextCell($row['phone'] ?? 'N/A'),
+                        $this->excelTextCell($this->physicalOrderItemsForExcel($row), 'wrap'),
+                        $this->excelNumberCell((int) ($row['order_quantity'] ?? 0), 'center'),
+                        $this->excelTextCell(Str::upper(str_replace('_', ' ', (string) ($row['order_status'] ?? 'pending'))), 'status'),
+                        $this->excelNumberCell((float) ($row['checkout_amount'] ?? 0), 'currency'),
+                        $this->excelTextCell($row['delivery_address'] ?? 'N/A', 'wrap'),
+                        $this->excelTextCell($row['notes'] ?? 'N/A', 'wrap'),
+                        $this->excelTextCell($row['last_activity'] ?? 'N/A'),
+                    ])
+                    ->all(),
+            ],
+            default => null,
+        };
+    }
+
+    private function physicalOrderExcelSummaryLine(Funnel $funnel, string $title, Request $request, int $rowCount): string
+    {
+        $from = trim((string) $request->query('from', ''));
+        $to = trim((string) $request->query('to', ''));
+        $range = $from !== '' || $to !== ''
+            ? trim(($from !== '' ? $from : 'Start') . ' to ' . ($to !== '' ? $to : 'Today'))
+            : 'All dates';
+
+        return 'Funnel: '
+            . $funnel->name
+            . ' | Export: '
+            . $title
+            . ' | Date Range: '
+            . $range
+            . ' | Rows: '
+            . number_format($rowCount)
+            . ' | Generated: '
+            . now()->format('Y-m-d h:i A');
+    }
+
+    private function physicalOrderItemsForExcel(array $row): string
+    {
+        $items = $row['order_items'] ?? null;
+        if (is_array($items) && $items !== []) {
+            $lines = [];
+            foreach ($items as $item) {
+                if (! is_array($item)) {
+                    continue;
+                }
+
+                $name = trim((string) ($item['name'] ?? 'Product'));
+                $quantity = max(1, (int) ($item['quantity'] ?? 1));
+                $price = trim((string) ($item['price'] ?? ''));
+                $badge = trim((string) ($item['badge'] ?? ''));
+
+                $line = $name !== '' ? $name : 'Product';
+                $line .= ' x' . $quantity;
+
+                $details = array_values(array_filter([$badge, $price]));
+                if ($details !== []) {
+                    $line .= ' (' . implode(' | ', $details) . ')';
+                }
+
+                $lines[] = $line;
+            }
+
+            if ($lines !== []) {
+                return implode("\n", $lines);
+            }
+        }
+
+        return trim((string) ($row['order_items_label'] ?? ($row['selected_offer'] ?? 'N/A'))) ?: 'N/A';
+    }
+
+    private function formatDeliveryStatusForExcel(?string $value): string
+    {
+        $normalized = trim((string) $value);
+        if ($normalized === '') {
+            return 'N/A';
+        }
+
+        return Str::title(str_replace('_', ' ', $normalized));
+    }
+
+    private function excelTextCell(mixed $value, string $style = 'text'): array
+    {
+        return [
+            'type' => 'String',
+            'style' => $style,
+            'value' => trim((string) $value) !== '' ? (string) $value : 'N/A',
+        ];
+    }
+
+    private function excelNumberCell(int|float $value, string $style = 'number'): array
+    {
+        return [
+            'type' => 'Number',
+            'style' => $style,
+            'value' => $value,
+        ];
     }
 
     public function sendDeliveryUpdate(Request $request, Funnel $funnel, FunnelTrackingService $tracking)

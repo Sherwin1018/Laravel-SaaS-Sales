@@ -196,6 +196,7 @@ Route::middleware(['auth', 'tenant.subscription', 'role:sales-agent,marketing-ma
         Route::post('/funnels/{funnel}/unpublish', [FunnelController::class, 'unpublish'])->name('funnels.unpublish');
         Route::get('/funnels/{funnel}/analytics', [FunnelController::class, 'analytics'])->name('funnels.analytics');
         Route::get('/funnels/{funnel}/analytics/export', [FunnelController::class, 'exportAnalytics'])->name('funnels.analytics.export');
+        Route::get('/funnels/{funnel}/analytics/orders/export', [FunnelController::class, 'exportPhysicalOrdersExcel'])->name('funnels.analytics.orders.export');
         Route::post('/funnels/{funnel}/analytics/delivery-update', [FunnelController::class, 'sendDeliveryUpdate'])->name('funnels.analytics.delivery-update');
         Route::get('/funnels/{funnel}/reviews', [FunnelReviewController::class, 'index'])->name('funnels.reviews.index');
         Route::patch('/funnels/{funnel}/reviews/{review}', [FunnelReviewController::class, 'updateStatus'])->name('funnels.reviews.update');
