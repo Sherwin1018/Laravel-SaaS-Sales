@@ -356,11 +356,17 @@
                     </button>
 
                     <div id="accountDropdown" class="account-dropdown">
-                        <a href="{{ route('profile.show') }}" class="dropdown-link">Manage Profile</a>
+                        <a href="{{ route('profile.show') }}" class="dropdown-link">
+                            <i class="fas fa-user-cog" aria-hidden="true"></i>
+                            <span>Manage Profile</span>
+                        </a>
 
                         <form method="POST" action="{{ route('logout') }}" data-logout-form>
                             @csrf
-                            <button type="submit" class="dropdown-btn">Logout</button>
+                            <button type="submit" class="dropdown-btn">
+                                <i class="fas fa-sign-out-alt" aria-hidden="true"></i>
+                                <span>Logout</span>
+                            </button>
                         </form>
                     </div>
                 </div>

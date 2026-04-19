@@ -501,7 +501,9 @@
                             class="analytics-btn analytics-btn--icon-only"
                             aria-label="Download to Excel"
                         >
-                            <i class="fas fa-file-excel" aria-hidden="true"></i>
+                            <span class="analytics-btn-icon" aria-hidden="true">
+                                <i class="fas fa-file-excel" aria-hidden="true"></i>
+                            </span>
                             <span class="analytics-btn-tooltip" role="tooltip">Download to Excel</span>
                         </a>
                         <button type="button" id="togglePendingOrdersBtn" class="analytics-toggle-btn" aria-expanded="false" aria-controls="pendingOrdersContent"><i class="fas fa-eye" aria-hidden="true"></i><span>Show</span></button>
@@ -560,7 +562,9 @@
                             class="analytics-btn analytics-btn--icon-only"
                             aria-label="Download to Excel"
                         >
-                            <i class="fas fa-file-excel" aria-hidden="true"></i>
+                            <span class="analytics-btn-icon" aria-hidden="true">
+                                <i class="fas fa-file-excel" aria-hidden="true"></i>
+                            </span>
                             <span class="analytics-btn-tooltip" role="tooltip">Download to Excel</span>
                         </a>
                         <button type="button" id="togglePaidOrdersBtn" class="analytics-toggle-btn" aria-expanded="false" aria-controls="paidOrdersContent"><i class="fas fa-eye" aria-hidden="true"></i><span>Show</span></button>
@@ -653,7 +657,9 @@
                             class="analytics-btn analytics-btn--icon-only"
                             aria-label="Download to Excel"
                         >
-                            <i class="fas fa-file-excel" aria-hidden="true"></i>
+                            <span class="analytics-btn-icon" aria-hidden="true">
+                                <i class="fas fa-file-excel" aria-hidden="true"></i>
+                            </span>
                             <span class="analytics-btn-tooltip" role="tooltip">Download to Excel</span>
                         </a>
                     @endif
