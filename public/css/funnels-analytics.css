@@ -6,6 +6,7 @@
         .analytics-btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:10px 14px; border-radius:10px; border:1px solid var(--theme-border, #E6E1EF); background:#fff; color:var(--theme-primary, #240E35); text-decoration:none; font-weight:700; }
         .analytics-btn--icon-only { position:relative; width:46px; height:46px; padding:0; border-radius:12px; flex:0 0 46px; }
         .analytics-btn--icon-only i { font-size:18px; }
+        .analytics-btn--icon-only.primary { border-color:var(--theme-primary, #240E35); }
         .analytics-btn-tooltip { position:absolute; right:calc(100% + 10px); top:50%; transform:translateY(-50%) translateX(6px); padding:7px 10px; border-radius:10px; background:var(--theme-primary, #240E35); color:#fff; font-size:12px; font-weight:700; white-space:nowrap; pointer-events:none; opacity:0; visibility:hidden; transition:opacity .16s ease, transform .16s ease, visibility .16s ease; box-shadow:0 10px 24px rgba(15,23,42,.16); }
         .analytics-btn-tooltip::after { content:""; position:absolute; top:50%; left:100%; transform:translateY(-50%); border-width:6px; border-style:solid; border-color:transparent transparent transparent var(--theme-primary, #240E35); }
         .analytics-btn--icon-only:hover .analytics-btn-tooltip,
