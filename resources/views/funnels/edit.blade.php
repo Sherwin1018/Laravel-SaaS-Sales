@@ -11285,6 +11285,15 @@ function renderCanvas(){
         if(outlineLabel!=="")sn.setAttribute("data-outline-label",outlineLabel);
         sn.setAttribute("data-sec-id",String(s.id||""));
         styleApply(sn,s.style||{});
+        // Default background image presentation (cover + center + no-repeat) when not specified.
+        try{
+            var _bg=String(s&&s.style&&s.style.backgroundImage||"").trim();
+            if(_bg!==""){
+                if(!s.style||!s.style.backgroundSize||String(s.style.backgroundSize).trim()==="")sn.style.backgroundSize="cover";
+                if(!s.style||!s.style.backgroundPosition||String(s.style.backgroundPosition).trim()==="")sn.style.backgroundPosition="center center";
+                if(!s.style||!s.style.backgroundRepeat||String(s.style.backgroundRepeat).trim()==="")sn.style.backgroundRepeat="no-repeat";
+            }
+        }catch(_e2){}
         // Background image overlay (for readability)
         try{
             var bgImg=String(s&&s.style&&s.style.backgroundImage||"").trim();
@@ -11470,6 +11479,25 @@ function renderCanvas(){
             };
             (r.columns||[]).forEach((c,colIndex)=>{
                 const cn=document.createElement("div");cn.className="col";cn.setAttribute("data-node-kind","column");cn.setAttribute("data-outline-label","Column");cn.setAttribute("data-s",String(s.id||""));cn.setAttribute("data-r",String(r.id||""));styleApply(cn,c.style||{});
+                // Default background image presentation (cover + center + no-repeat) when not specified.
+                try{
+                    var _cbg=String(c&&c.style&&c.style.backgroundImage||"").trim();
+                    if(_cbg!==""){
+                        if(!c.style||!c.style.backgroundSize||String(c.style.backgroundSize).trim()==="")cn.style.backgroundSize="cover";
+                        if(!c.style||!c.style.backgroundPosition||String(c.style.backgroundPosition).trim()==="")cn.style.backgroundPosition="center center";
+                        if(!c.style||!c.style.backgroundRepeat||String(c.style.backgroundRepeat).trim()==="")cn.style.backgroundRepeat="no-repeat";
+                    }
+                }catch(_e3){}
+                // Background image overlay (for readability)
+                try{
+                    var _cbg2=String(c&&c.style&&c.style.backgroundImage||"").trim();
+                    var _ovOp=Number(c&&c.style&&c.style.overlayOpacity)||0;
+                    var _ovColor=String(c&&c.style&&c.style.overlayColor||"#000000").trim()||"#000000";
+                    if(_cbg2!=="" && _ovOp>0){
+                        var _a=Math.max(0,Math.min(1,_ovOp>1?_ovOp/100:_ovOp));
+                        cn.style.backgroundImage="linear-gradient("+hexToRgba(_ovColor,_a)+","+hexToRgba(_ovColor,_a)+"),"+_cbg2;
+                    }
+                }catch(_e4){}
                 cn.setAttribute("data-col-id",c.id);
                 const colInner=document.createElement("div");colInner.className="col-inner";colInner.style.width="100%";colInner.style.boxSizing="border-box";
                 colInner.style.position="relative";
@@ -12558,7 +12586,17 @@ function renderSettings(){
         var cw=(t.settings&&t.settings.contentWidth)||"full";
         settings.innerHTML='<div class="menu-section-title">Layout</div>'+helpLabelHtml("contentWidth","Content width")+'<select id="secCw"><option value="full">Full page</option><option value="wide">Wide</option><option value="medium">Medium</option><option value="small">Small</option><option value="xsmall">Extra small</option></select>'+helpLabelHtml("sectionAnchor","Section ID (anchor)")+'<input id="secAnchor" placeholder="contact"><div class="meta">Example: contact, etc</div><div class="menu-split"></div><div class="menu-section-title">Spacing</div><div class="size-position"><div class="size-label">Size and position</div><label class="size-label">Padding</label><div class="size-grid"><div class="fld"><label>T</label><input id="pTop" type="number" value="'+pad[0]+'"></div><div class="fld"><label>R</label><input id="pRight" type="number" value="'+pad[1]+'"></div><div class="fld"><label>B</label><input id="pBottom" type="number" value="'+pad[2]+'"></div><div class="fld"><label>L</label><input id="pLeft" type="number" value="'+pad[3]+'"></div><div class="size-link"><button type="button" id="linkPad" title="Link padding"><span>&harr;</span></button><span>Link</span></div></div><label class="size-label">Margin</label><div class="size-grid"><div class="fld"><label>T</label><input id="mTop" type="number" value="'+mar[0]+'"></div><div class="fld"><label>R</label><input id="mRight" type="number" value="'+mar[1]+'"></div><div class="fld"><label>B</label><input id="mBottom" type="number" value="'+mar[2]+'"></div><div class="fld"><label>L</label><input id="mLeft" type="number" value="'+mar[3]+'"></div><div class="size-link"><button type="button" id="linkMar" title="Link margin"><span>&harr;</span></button><span>Link</span></div></div></div><div class="menu-split"></div><div class="menu-section-title">Style</div><label>Background color</label><input id="bg" type="color"><label>Background image URL</label><input id="bgImg" placeholder="https://..."><label>Upload background image</label><input id="bgUp" type="file" accept="image/*"><div class="menu-split"></div><div class="menu-section-title">Background overlay</div><label>Overlay color</label><input id="bgOverlayColor" type="color"><label>Overlay opacity</label><div class="px-wrap"><input id="bgOverlayOpacity" type="number" min="0" max="100" step="5"><span class="px-unit">%</span></div>'+radiusHelpLabelHtml("secRadiusHelp","Border radius")+'<div class="px-wrap"><input id="secRadius" type="number" min="0" step="1"><span class="px-unit">px</span></div>'+remove;
         bind("bg",(t.style&&t.style.backgroundColor)||"#ffffff",v=>sty().backgroundColor=v,{undo:true});
-        bind("bgImg",readBgImageUrl(),v=>{var s=sty();s.backgroundImage=(v&&String(v).trim()!=="")?('url('+String(v).trim()+')'):"";renderCanvas();},{undo:true});
+        bind("bgImg",readBgImageUrl(),v=>{
+            var s=sty();
+            var next=String(v||"").trim();
+            s.backgroundImage=(next!=="")?('url('+next+')'):"";
+            if(next!==""){
+                if(!s.backgroundSize||String(s.backgroundSize).trim()==="")s.backgroundSize="cover";
+                if(!s.backgroundPosition||String(s.backgroundPosition).trim()==="")s.backgroundPosition="center center";
+                if(!s.backgroundRepeat||String(s.backgroundRepeat).trim()==="")s.backgroundRepeat="no-repeat";
+            }
+            renderCanvas();
+        },{undo:true});
         bind("bgOverlayColor",(t.style&&t.style.overlayColor)||"#000000",v=>{sty().overlayColor=String(v||"#000000");renderCanvas();},{undo:true});
         bind("bgOverlayOpacity",(t.style&&t.style.overlayOpacity)!=null?String(t.style.overlayOpacity):"0",v=>{sty().overlayOpacity=Math.max(0,Math.min(100,Number(v)||0));renderCanvas();},{undo:true});
         bind("secCw",cw,v=>{t.settings=t.settings||{};t.settings.contentWidth=v;renderCanvas();},{undo:true});
@@ -12571,7 +12609,7 @@ function renderSettings(){
             renderCanvas();
         },{undo:true});
         var bgUp=document.getElementById("bgUp");
-        if(bgUp)bgUp.onchange=()=>{if(bgUp.files&&bgUp.files[0]){saveToHistory();var bgImg=document.getElementById("bgImg");uploadImage(bgUp.files[0],url=>{var s=sty();s.backgroundImage='url('+url+')';if(bgImg)bgImg.value=url;renderCanvas();},"Background image upload");}};
+        if(bgUp)bgUp.onchange=()=>{if(bgUp.files&&bgUp.files[0]){saveToHistory();var bgImg=document.getElementById("bgImg");uploadImage(bgUp.files[0],url=>{var s=sty();s.backgroundImage='url('+url+')';if(!s.backgroundSize||String(s.backgroundSize).trim()==="")s.backgroundSize="cover";if(!s.backgroundPosition||String(s.backgroundPosition).trim()==="")s.backgroundPosition="center center";if(!s.backgroundRepeat||String(s.backgroundRepeat).trim()==="")s.backgroundRepeat="no-repeat";if(bgImg)bgImg.value=url;renderCanvas();},"Background image upload");}};
         mountBackgroundAssetLibrary("bgUp","bgAssetLibraryBtn","bgImg","Background Asset Library");
         var paddingLinked=false,marginLinked=false;
         function syncPadding(){saveToHistory();var pt=Number(document.getElementById("pTop").value)||0,pr=Number(document.getElementById("pRight").value)||0,pb=Number(document.getElementById("pBottom").value)||0,pl=Number(document.getElementById("pLeft").value)||0;if(paddingLinked){document.getElementById("pRight").value=pt;document.getElementById("pBottom").value=pt;document.getElementById("pLeft").value=pt;sty().padding=spacingToCss([pt,pt,pt,pt]);}else sty().padding=spacingToCss([pt,pr,pb,pl]);renderCanvas();}
@@ -12714,9 +12752,19 @@ function renderSettings(){
             : '<div class="row-radius-field"><span>R</span><input id="rowRadAll" type="number" value="'+rad[0]+'"></div>';
         settings.innerHTML='<div class="menu-section-title">Layout</div>'+helpLabelHtml("contentWidth","Content width")+'<select id="rowCw"><option value="full">Full page</option><option value="wide">Wide</option><option value="medium">Medium</option><option value="small">Small</option><option value="xsmall">Extra small</option></select><label>Gap</label><div class="px-wrap"><input id="g" type="number" step="1"><span class="px-unit">px</span></div><div class="menu-split"></div><div class="menu-section-title">Spacing</div><div class="size-position"><div class="size-label">Size and position</div><label class="size-label">Padding</label><div class="size-grid"><div class="fld"><label>T</label><input id="pTop" type="number" value="'+pad[0]+'"></div><div class="fld"><label>R</label><input id="pRight" type="number" value="'+pad[1]+'"></div><div class="fld"><label>B</label><input id="pBottom" type="number" value="'+pad[2]+'"></div><div class="fld"><label>L</label><input id="pLeft" type="number" value="'+pad[3]+'"></div><div class="size-link"><button type="button" id="linkPad" title="Link padding"><span>&harr;</span></button><span>Link</span></div></div><label class="size-label">Margin</label><div class="size-grid"><div class="fld"><label>T</label><input id="mTop" type="number" value="'+mar[0]+'"></div><div class="fld"><label>R</label><input id="mRight" type="number" value="'+mar[1]+'"></div><div class="fld"><label>B</label><input id="mBottom" type="number" value="'+mar[2]+'"></div><div class="fld"><label>L</label><input id="mLeft" type="number" value="'+mar[3]+'"></div><div class="size-link"><button type="button" id="linkMar" title="Link margin"><span>&harr;</span></button><span>Link</span></div></div></div><div class="menu-split"></div><div class="menu-section-title">Style</div><label>Background color</label><input id="bg" type="color"><label>Background image URL</label><input id="bgImg" placeholder="https://..."><label>Upload background image</label><input id="bgUp" type="file" accept="image/*"><div class="row-border-card"><div class="row-border-head"><strong>Border</strong></div><select id="rowBorderStyle"><option value="none">None</option><option value="solid">Solid</option><option value="dashed">Dashed</option><option value="dotted">Dotted</option><option value="double">Double</option></select>'+radiusHelpLabelHtml("rowRadiusHelp","Corner radius")+radiusBlock+'<div class="size-link"><button type="button" id="rowRadiusToggle" title="Toggle radius mode"><i class="fas fa-expand"></i></button><span>'+(perCorner?'Per corner':'Single value')+'</span></div></div><div class="menu-split"></div><div class="menu-section-title">Behavior</div><button type="button" id="rowBorderReset" class="fb-btn" style="width:100%;"><i class="fas fa-rotate-right"></i> Reset row border</button>'+remove;
         bind("bg",(t.style&&t.style.backgroundColor)||"#ffffff",v=>sty().backgroundColor=v,{undo:true});
-        bind("bgImg",readBgImageUrl(),v=>{var s=sty();s.backgroundImage=(v&&String(v).trim()!=="")?('url('+String(v).trim()+')'):"";renderCanvas();},{undo:true});
+        bind("bgImg",readBgImageUrl(),v=>{
+            var s=sty();
+            var next=String(v||"").trim();
+            s.backgroundImage=(next!=="")?('url('+next+')'):"";
+            if(next!==""){
+                if(!s.backgroundSize||String(s.backgroundSize).trim()==="")s.backgroundSize="cover";
+                if(!s.backgroundPosition||String(s.backgroundPosition).trim()==="")s.backgroundPosition="center center";
+                if(!s.backgroundRepeat||String(s.backgroundRepeat).trim()==="")s.backgroundRepeat="no-repeat";
+            }
+            renderCanvas();
+        },{undo:true});
         bind("rowCw",rowCw,v=>{t.settings=t.settings||{};t.settings.contentWidth=v;renderCanvas();},{undo:true});
-        var bgUp=document.getElementById("bgUp");if(bgUp)bgUp.onchange=()=>{if(bgUp.files&&bgUp.files[0]){saveToHistory();var bgImg=document.getElementById("bgImg");uploadImage(bgUp.files[0],url=>{var s=sty();s.backgroundImage='url('+url+')';if(bgImg)bgImg.value=url;renderCanvas();},"Background image upload");}};
+        var bgUp=document.getElementById("bgUp");if(bgUp)bgUp.onchange=()=>{if(bgUp.files&&bgUp.files[0]){saveToHistory();var bgImg=document.getElementById("bgImg");uploadImage(bgUp.files[0],url=>{var s=sty();s.backgroundImage='url('+url+')';if(!s.backgroundSize||String(s.backgroundSize).trim()==="")s.backgroundSize="cover";if(!s.backgroundPosition||String(s.backgroundPosition).trim()==="")s.backgroundPosition="center center";if(!s.backgroundRepeat||String(s.backgroundRepeat).trim()==="")s.backgroundRepeat="no-repeat";if(bgImg)bgImg.value=url;renderCanvas();},"Background image upload");}};
         mountBackgroundAssetLibrary("bgUp","bgAssetLibraryBtn","bgImg","Background Asset Library");
         var paddingLinked=false,marginLinked=false;
         function syncPadding(){saveToHistory();var pt=Number(document.getElementById("pTop").value)||0,pr=Number(document.getElementById("pRight").value)||0,pb=Number(document.getElementById("pBottom").value)||0,pl=Number(document.getElementById("pLeft").value)||0;if(paddingLinked){document.getElementById("pRight").value=pt;document.getElementById("pBottom").value=pt;document.getElementById("pLeft").value=pt;sty().padding=spacingToCss([pt,pt,pt,pt]);}else sty().padding=spacingToCss([pt,pr,pb,pl]);renderCanvas();}
@@ -12767,12 +12815,35 @@ function renderSettings(){
         t.settings=t.settings||{};
         var colCw=(t.settings&&t.settings.contentWidth)||"full";
         var layoutHtml='<div class="col-layout-wrap"><div class="col-layout-title">Column layout</div><div class="col-layout-grid"><button type="button" class="col-layout-btn'+(currentCols===1?' active':'')+'" data-cols="1"><i class="fas fa-square"></i><span>1</span></button><button type="button" class="col-layout-btn'+(currentCols===2?' active':'')+'" data-cols="2"><i class="fas fa-columns"></i><span>2</span></button><button type="button" class="col-layout-btn'+(currentCols===3?' active':'')+'" data-cols="3"><i class="fas fa-table-columns"></i><span>3</span></button><button type="button" class="col-layout-btn'+(currentCols===4?' active':'')+'" data-cols="4"><i class="fas fa-grip"></i><span>4</span></button></div></div>';
-        settings.innerHTML='<div class="menu-section-title">Layout</div>'+layoutHtml+helpLabelHtml("contentWidth","Content width")+'<select id="colCw"><option value="full">Full page</option><option value="wide">Wide</option><option value="medium">Medium</option><option value="small">Small</option><option value="xsmall">Extra small</option></select><div class="menu-split"></div><div class="menu-section-title">Spacing</div><div class="size-position"><div class="size-label">Size and position</div><label class="size-label">Padding</label><div class="size-grid"><div class="fld"><label>T</label><input id="pTop" type="number" value="'+pad[0]+'"></div><div class="fld"><label>R</label><input id="pRight" type="number" value="'+pad[1]+'"></div><div class="fld"><label>B</label><input id="pBottom" type="number" value="'+pad[2]+'"></div><div class="fld"><label>L</label><input id="pLeft" type="number" value="'+pad[3]+'"></div><div class="size-link"><button type="button" id="linkPad" title="Link padding"><span>&harr;</span></button><span>Link</span></div></div><label class="size-label">Margin</label><div class="size-grid"><div class="fld"><label>T</label><input id="mTop" type="number" value="'+mar[0]+'"></div><div class="fld"><label>R</label><input id="mRight" type="number" value="'+mar[1]+'"></div><div class="fld"><label>B</label><input id="mBottom" type="number" value="'+mar[2]+'"></div><div class="fld"><label>L</label><input id="mLeft" type="number" value="'+mar[3]+'"></div><div class="size-link"><button type="button" id="linkMar" title="Link margin"><span>&harr;</span></button><span>Link</span></div></div></div><div class="menu-split"></div><div class="menu-section-title">Style</div><label>Background color</label><input id="bg" type="color"><label>Background image URL</label><input id="bgImg" placeholder="https://..."><label>Upload background image</label><input id="bgUp" type="file" accept="image/*">'+radiusHelpLabelHtml("colRadiusHelp","Border radius")+'<div class="px-wrap"><input id="colRadius" type="number" min="0" step="1"><span class="px-unit">px</span></div>'+remove;
+        settings.innerHTML='<div class="menu-section-title">Layout</div>'+layoutHtml+helpLabelHtml("contentWidth","Content width")+'<select id="colCw"><option value="full">Full page</option><option value="wide">Wide</option><option value="medium">Medium</option><option value="small">Small</option><option value="xsmall">Extra small</option></select><div class="menu-split"></div><div class="menu-section-title">Spacing</div><div class="size-position"><div class="size-label">Size and position</div><label class="size-label">Padding</label><div class="size-grid"><div class="fld"><label>T</label><input id="pTop" type="number" value="'+pad[0]+'"></div><div class="fld"><label>R</label><input id="pRight" type="number" value="'+pad[1]+'"></div><div class="fld"><label>B</label><input id="pBottom" type="number" value="'+pad[2]+'"></div><div class="fld"><label>L</label><input id="pLeft" type="number" value="'+pad[3]+'"></div><div class="size-link"><button type="button" id="linkPad" title="Link padding"><span>&harr;</span></button><span>Link</span></div></div><label class="size-label">Margin</label><div class="size-grid"><div class="fld"><label>T</label><input id="mTop" type="number" value="'+mar[0]+'"></div><div class="fld"><label>R</label><input id="mRight" type="number" value="'+mar[1]+'"></div><div class="fld"><label>B</label><input id="mBottom" type="number" value="'+mar[2]+'"></div><div class="fld"><label>L</label><input id="mLeft" type="number" value="'+mar[3]+'"></div><div class="size-link"><button type="button" id="linkMar" title="Link margin"><span>&harr;</span></button><span>Link</span></div></div></div><div class="menu-split"></div><div class="menu-section-title">Style</div><label>Background color</label><input id="bg" type="color"><label>Background image URL</label><input id="bgImg" placeholder="https://..."><label>Upload background image</label><input id="bgUp" type="file" accept="image/*"><label>Background overlay</label><div class="bg-overlay-wrap"><div class="bg-overlay-row"><input id="bgOverlayColor" type="color" title="Overlay color"><input id="bgOverlayOpacity" type="range" min="0" max="100" step="1"><span class="bg-overlay-val" id="bgOverlayOpacityVal"></span></div><div class="meta">Opacity 0–100</div></div>'+radiusHelpLabelHtml("colRadiusHelp","Border radius")+'<div class="px-wrap"><input id="colRadius" type="number" min="0" step="1"><span class="px-unit">px</span></div>'+remove;
         bind("bg",(t.style&&t.style.backgroundColor)||"#ffffff",v=>sty().backgroundColor=v,{undo:true});
-        bind("bgImg",readBgImageUrl(),v=>{var s=sty();s.backgroundImage=(v&&String(v).trim()!=="")?('url('+String(v).trim()+')'):"";renderCanvas();},{undo:true});
+        bind("bgImg",readBgImageUrl(),v=>{
+            var s=sty();
+            var next=String(v||"").trim();
+            s.backgroundImage=(next!=="")?('url('+next+')'):"";
+            if(next!==""){
+                if(!s.backgroundSize||String(s.backgroundSize).trim()==="")s.backgroundSize="cover";
+                if(!s.backgroundPosition||String(s.backgroundPosition).trim()==="")s.backgroundPosition="center center";
+                if(!s.backgroundRepeat||String(s.backgroundRepeat).trim()==="")s.backgroundRepeat="no-repeat";
+            }
+            renderCanvas();
+        },{undo:true});
         bind("colCw",colCw,v=>{t.settings=t.settings||{};t.settings.contentWidth=v;renderCanvas();},{undo:true});
-        var bgUp=document.getElementById("bgUp");if(bgUp)bgUp.onchange=()=>{if(bgUp.files&&bgUp.files[0]){saveToHistory();var bgImg=document.getElementById("bgImg");uploadImage(bgUp.files[0],url=>{var s=sty();s.backgroundImage='url('+url+')';if(bgImg)bgImg.value=url;renderCanvas();},"Background image upload");}};
+        var bgUp=document.getElementById("bgUp");if(bgUp)bgUp.onchange=()=>{if(bgUp.files&&bgUp.files[0]){saveToHistory();var bgImg=document.getElementById("bgImg");uploadImage(bgUp.files[0],url=>{var s=sty();s.backgroundImage='url('+url+')';if(!s.backgroundSize||String(s.backgroundSize).trim()==="")s.backgroundSize="cover";if(!s.backgroundPosition||String(s.backgroundPosition).trim()==="")s.backgroundPosition="center center";if(!s.backgroundRepeat||String(s.backgroundRepeat).trim()==="")s.backgroundRepeat="no-repeat";if(bgImg)bgImg.value=url;renderCanvas();},"Background image upload");}};
         mountBackgroundAssetLibrary("bgUp","bgAssetLibraryBtn","bgImg","Background Asset Library");
+        var bgOverlayOpacityVal=document.getElementById("bgOverlayOpacityVal");
+        function syncBgOverlayOpacityUi(v){
+            if(!bgOverlayOpacityVal)return;
+            var n=Math.max(0,Math.min(100,Number(v)||0));
+            bgOverlayOpacityVal.textContent=String(n);
+        }
+        bind("bgOverlayColor",(t.style&&t.style.overlayColor)||"#000000",v=>{sty().overlayColor=String(v||"#000000");renderCanvas();},{undo:true});
+        bind("bgOverlayOpacity",(t.style&&t.style.overlayOpacity)!=null?String(t.style.overlayOpacity):"0",v=>{var n=Math.max(0,Math.min(100,Number(v)||0));sty().overlayOpacity=n;syncBgOverlayOpacityUi(n);renderCanvas();},{undo:true});
+        var bgOverlayOpacityEl=document.getElementById("bgOverlayOpacity");
+        if(bgOverlayOpacityEl){
+            syncBgOverlayOpacityUi(bgOverlayOpacityEl.value);
+            bgOverlayOpacityEl.addEventListener("input",()=>syncBgOverlayOpacityUi(bgOverlayOpacityEl.value));
+        }
         var paddingLinked=false,marginLinked=false;
         function syncPadding(){saveToHistory();var pt=Number(document.getElementById("pTop").value)||0,pr=Number(document.getElementById("pRight").value)||0,pb=Number(document.getElementById("pBottom").value)||0,pl=Number(document.getElementById("pLeft").value)||0;if(paddingLinked){document.getElementById("pRight").value=pt;document.getElementById("pBottom").value=pt;document.getElementById("pLeft").value=pt;sty().padding=spacingToCss([pt,pt,pt,pt]);}else sty().padding=spacingToCss([pt,pr,pb,pl]);renderCanvas();}
         function syncMargin(){saveToHistory();var mt=Number(document.getElementById("mTop").value)||0,mr=Number(document.getElementById("mRight").value)||0,mb=Number(document.getElementById("mBottom").value)||0,ml=Number(document.getElementById("mLeft").value)||0;if(marginLinked){document.getElementById("mRight").value=mt;document.getElementById("mBottom").value=mt;document.getElementById("mLeft").value=mt;sty().margin=spacingToCss([mt,mt,mt,mt]);}else sty().margin=spacingToCss([mt,mr,mb,ml]);renderCanvas();}

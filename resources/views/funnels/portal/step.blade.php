@@ -377,6 +377,14 @@
         .builder-row--section-elements > .builder-row-inner,
         .builder-col--section-elements,
         .builder-col--section-elements > .builder-col-inner--section-elements { display: contents; }
+        /* Section-level elements (not inside normal columns) must still center like the builder canvas.
+           On desktop, they might not inherit `text-align:center` from `.builder-col`, so force it here. */
+        body.is-preview .builder-col-inner--section-elements > .builder-el,
+        body.is-published .builder-col-inner--section-elements > .builder-el{
+            /* Center carrier elements without forcing them to full-width.
+               Forcing width:100% breaks fixed-size media embeds (video/image). */
+            text-align: center !important;
+        }
         .builder-section-inner { width: 100%; box-sizing: border-box; position: relative; }
         /* When portal constrains max-width of section inner boxes, ensure they remain centered.
            This prevents subtle left/right offsets between builder canvas vs preview/published. */
@@ -1935,12 +1943,58 @@
             return $optInStep ?: $salesStep ?: $checkoutStep ?: $thankYouStep ?: $homeStep ?: $nextStep ?: $activeSteps->first(fn ($candidate) => (int) $candidate->id !== (int) $step->id);
         };
         $isAdminTemplatePreview = request()->routeIs('admin.funnel-templates.preview');
-        $stepRoute = function ($targetStep) use ($funnel, $isPreview, $isTemplateTest, $isAdminTemplatePreview) {
+        $appendQueryParams = function (string $url, array $params): string {
+            $url = trim($url);
+            if ($url === '' || $url === '#') return $url;
+            $parsed = parse_url($url);
+            if (!is_array($parsed) || !isset($parsed['path'])) {
+                return $url;
+            }
+            $existing = [];
+            if (!empty($parsed['query'])) {
+                parse_str($parsed['query'], $existing);
+            }
+            foreach ($params as $k => $v) {
+                if ($v === null) continue;
+                $existing[$k] = (string) $v;
+            }
+            $query = http_build_query($existing);
+            $rebuilt =
+                (isset($parsed['scheme']) ? ($parsed['scheme'] . '://') : '')
+                . ($parsed['host'] ?? '')
+                . (isset($parsed['port']) ? (':' . $parsed['port']) : '')
+                . ($parsed['path'] ?? '');
+            if ($query !== '') $rebuilt .= '?' . $query;
+            if (!empty($parsed['fragment'])) $rebuilt .= '#' . $parsed['fragment'];
+            return $rebuilt;
+        };
+        $previewDeviceParam = (string) request()->query('preview_device', request()->query('previewDevice', ''));
+        $previewDebugLayout = (string) request()->query('debug_layout', '');
+        $previewDebugAlign = (string) request()->query('debug_align', '');
+        $stepRoute = function ($targetStep) use ($funnel, $isPreview, $isTemplateTest, $isAdminTemplatePreview, $previewIframeMode, $appendQueryParams, $previewDeviceParam, $previewDebugLayout, $previewDebugAlign) {
             if ($isPreview) {
                 if ($isAdminTemplatePreview || $isTemplateTest) {
-                    return route('admin.funnel-templates.preview', ['funnel_template' => $funnel, 'step' => $targetStep]);
+                    $url = route('admin.funnel-templates.preview', ['funnel_template' => $funnel, 'step' => $targetStep]);
+                    if ($previewIframeMode) {
+                        $url = $appendQueryParams($url, [
+                            'preview_iframe' => '1',
+                            'preview_device' => $previewDeviceParam !== '' ? $previewDeviceParam : null,
+                            'debug_layout' => $previewDebugLayout !== '' ? $previewDebugLayout : null,
+                            'debug_align' => $previewDebugAlign !== '' ? $previewDebugAlign : null,
+                        ]);
+                    }
+                    return $url;
                 }
-                return route('funnels.preview', ['funnel' => $funnel, 'step' => $targetStep]);
+                $url = route('funnels.preview', ['funnel' => $funnel, 'step' => $targetStep]);
+                if ($previewIframeMode) {
+                    $url = $appendQueryParams($url, [
+                        'preview_iframe' => '1',
+                        'preview_device' => $previewDeviceParam !== '' ? $previewDeviceParam : null,
+                        'debug_layout' => $previewDebugLayout !== '' ? $previewDebugLayout : null,
+                        'debug_align' => $previewDebugAlign !== '' ? $previewDebugAlign : null,
+                    ]);
+                }
+                return $url;
             }
             if ($isTemplateTest) {
                 return route('admin.funnel-templates.test', ['funnel_template' => $funnel, 'step' => $targetStep]);
@@ -2400,6 +2454,17 @@
                         }
                         $overlayOpacity = max(0.0, min(1.0, $overlayOpacity));
                         $bgImg = trim((string) ($sectionStyleArr['backgroundImage'] ?? ($sectionStyleArr['background-image'] ?? '')));
+                        if ($bgImg !== '') {
+                            if (!isset($sectionStyleArr['backgroundSize']) || trim((string) $sectionStyleArr['backgroundSize']) === '') {
+                                $sectionStyleArr['backgroundSize'] = 'cover';
+                            }
+                            if (!isset($sectionStyleArr['backgroundPosition']) || trim((string) $sectionStyleArr['backgroundPosition']) === '') {
+                                $sectionStyleArr['backgroundPosition'] = 'center center';
+                            }
+                            if (!isset($sectionStyleArr['backgroundRepeat']) || trim((string) $sectionStyleArr['backgroundRepeat']) === '') {
+                                $sectionStyleArr['backgroundRepeat'] = 'no-repeat';
+                            }
+                        }
                         if ($bgImg !== '' && $overlayOpacity > 0) {
                             $r = hexdec(substr($overlayColor, 1, 2));
                             $g = hexdec(substr($overlayColor, 3, 2));
@@ -2435,16 +2500,22 @@
                         $innerMax = $widthMap[$contentWidth] ?? '';
                         $sectionElements = is_array($section['elements'] ?? null) ? $section['elements'] : [];
                         $hasAbsoluteSectionElement = false;
+                        $hasNonZeroCssPos = function ($v): bool {
+                            $s = strtolower(trim((string) $v));
+                            if ($s === '') return false;
+                            if ($s === '0' || $s === '0px') return false;
+                            return true;
+                        };
                         foreach ($sectionElements as $_sectionEl) {
                             $_sectionElStyle = is_array($_sectionEl['style'] ?? null) ? $_sectionEl['style'] : [];
                             $_sectionElSettings = is_array($_sectionEl['settings'] ?? null) ? $_sectionEl['settings'] : [];
                             $_secHasAbsCoords =
                                 (int) ($_sectionElSettings['freeX'] ?? 0) !== 0
                                 || (int) ($_sectionElSettings['freeY'] ?? 0) !== 0
-                                || trim((string) ($_sectionElStyle['left'] ?? '')) !== ''
-                                || trim((string) ($_sectionElStyle['top'] ?? '')) !== ''
-                                || trim((string) ($_sectionElStyle['right'] ?? '')) !== ''
-                                || trim((string) ($_sectionElStyle['bottom'] ?? '')) !== '';
+                                || $hasNonZeroCssPos($_sectionElStyle['left'] ?? '')
+                                || $hasNonZeroCssPos($_sectionElStyle['top'] ?? '')
+                                || $hasNonZeroCssPos($_sectionElStyle['right'] ?? '')
+                                || $hasNonZeroCssPos($_sectionElStyle['bottom'] ?? '');
                             if ((trim((string) ($_sectionElSettings['positionMode'] ?? '')) === 'absolute' || trim((string) ($_sectionElStyle['position'] ?? '')) === 'absolute') && $_secHasAbsCoords) {
                                 $hasAbsoluteSectionElement = true;
                                 break;
@@ -2500,19 +2571,27 @@
                             };
                         };
                         $carrierMinHeight = 0;
+                        $carrierUsesAbsoluteLayout = false;
                         if (count($sectionElements) > 0) {
                             $carrierHasAbsElements = false;
                             $carrierMaxRight = 0;
+                            $hasNonZeroCssPos = function ($v): bool {
+                                $s = strtolower(trim((string) $v));
+                                if ($s === '') return false;
+                                // Treat 0 / 0px as "not positioned" for our layout detection.
+                                if ($s === '0' || $s === '0px') return false;
+                                return true;
+                            };
                             foreach ($sectionElements as $_cIx => $_cEl) {
                                 $_cElS = is_array($_cEl['settings'] ?? null) ? $_cEl['settings'] : [];
                                 $_cElSt = is_array($_cEl['style'] ?? null) ? $_cEl['style'] : [];
                                 $_cHasAbsCoords =
                                     (int) ($_cElS['freeX'] ?? 0) !== 0
                                     || (int) ($_cElS['freeY'] ?? 0) !== 0
-                                    || trim((string) ($_cElSt['left'] ?? '')) !== ''
-                                    || trim((string) ($_cElSt['top'] ?? '')) !== ''
-                                    || trim((string) ($_cElSt['right'] ?? '')) !== ''
-                                    || trim((string) ($_cElSt['bottom'] ?? '')) !== '';
+                                    || $hasNonZeroCssPos($_cElSt['left'] ?? '')
+                                    || $hasNonZeroCssPos($_cElSt['top'] ?? '')
+                                    || $hasNonZeroCssPos($_cElSt['right'] ?? '')
+                                    || $hasNonZeroCssPos($_cElSt['bottom'] ?? '');
                                 $_cIsAbs = ((trim((string) ($_cElS['positionMode'] ?? '')) === 'absolute') || (trim((string) ($_cElSt['position'] ?? '')) === 'absolute')) && $_cHasAbsCoords;
                                 if ($_cIsAbs) {
                                     $carrierHasAbsElements = true;
@@ -2545,7 +2624,10 @@
                                     if ($_cRight > $carrierMaxRight) $carrierMaxRight = $_cRight;
                                 }
                             }
-                            $carrierUsesAbsoluteLayout = $carrierHasAbsElements;
+                            // Only use the "absolute carrier" rendering when we can anchor it to a real stage width
+                            // (or when the section itself is a freeform canvas). Otherwise, treating legacy section-level
+                            // flow elements as absolute causes inflated min-heights and extra blank space.
+                            $carrierUsesAbsoluteLayout = $carrierHasAbsElements && ($sectionStageWidth > 0 || $isFreeformCanvas);
                             $carrierColStyle = ['flex' => '1 1 auto', 'backgroundColor' => 'transparent', 'padding' => '0'];
                             if ($carrierUsesAbsoluteLayout) {
                                 $carrierColStyle['minHeight'] = '0';
@@ -2594,7 +2676,9 @@
                             $sectionInlineStyle .= ($sectionInlineStyle !== '' ? '; ' : '') . 'border:none;';
                         }
                         $sectionInnerStyle = [];
-                        if ($carrierMinHeight > 0 && $hasAbsoluteSectionElement) {
+                        // Only enforce carrier min-height when the section-level elements truly use absolute positioning.
+                        // Otherwise we can create unnecessary blank space below the section in preview/published.
+                        if ($carrierMinHeight > 0 && $carrierUsesAbsoluteLayout) {
                             $sectionInnerStyle[] = 'min-height:' . $carrierMinHeight . 'px';
                         }
                         if ($sectionStageWidth > 0 && $hasAbsoluteSectionElement && !$isBareCarouselWrap && !$isFreeformCanvas) {
@@ -2639,6 +2723,36 @@
                                 @foreach($columns as $column)
                                     @php
                                         $colStyleArr = is_array($column['style'] ?? null) ? $column['style'] : [];
+                                        $colBgImg = trim((string) ($colStyleArr['backgroundImage'] ?? ($colStyleArr['background-image'] ?? '')));
+                                        if ($colBgImg !== '') {
+                                            if (!isset($colStyleArr['backgroundSize']) || trim((string) $colStyleArr['backgroundSize']) === '') {
+                                                $colStyleArr['backgroundSize'] = 'cover';
+                                            }
+                                            if (!isset($colStyleArr['backgroundPosition']) || trim((string) $colStyleArr['backgroundPosition']) === '') {
+                                                $colStyleArr['backgroundPosition'] = 'center center';
+                                            }
+                                            if (!isset($colStyleArr['backgroundRepeat']) || trim((string) $colStyleArr['backgroundRepeat']) === '') {
+                                                $colStyleArr['backgroundRepeat'] = 'no-repeat';
+                                            }
+                                        }
+                                        // Background overlay (color + opacity) for readability over column background images.
+                                        $colOverlayColor = trim((string) ($colStyleArr['overlayColor'] ?? ($colStyleArr['overlay_color'] ?? '#000000')));
+                                        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $colOverlayColor)) {
+                                            $colOverlayColor = '#000000';
+                                        }
+                                        $colOverlayOpacityRaw = $colStyleArr['overlayOpacity'] ?? ($colStyleArr['overlay_opacity'] ?? 0);
+                                        $colOverlayOpacity = is_numeric($colOverlayOpacityRaw) ? (float) $colOverlayOpacityRaw : 0.0;
+                                        if ($colOverlayOpacity > 1.0) {
+                                            $colOverlayOpacity = $colOverlayOpacity / 100.0;
+                                        }
+                                        $colOverlayOpacity = max(0.0, min(1.0, $colOverlayOpacity));
+                                        if ($colBgImg !== '' && $colOverlayOpacity > 0) {
+                                            $r = hexdec(substr($colOverlayColor, 1, 2));
+                                            $g = hexdec(substr($colOverlayColor, 3, 2));
+                                            $b = hexdec(substr($colOverlayColor, 5, 2));
+                                            $rgba = 'rgba(' . $r . ',' . $g . ',' . $b . ',' . $colOverlayOpacity . ')';
+                                            $colStyleArr['backgroundImage'] = 'linear-gradient(' . $rgba . ',' . $rgba . '),' . $colBgImg;
+                                        }
                                         $legacyColBg = strtolower(trim((string) ($colStyleArr['backgroundColor'] ?? '')));
                                         if ($legacyColBg === '#f8fafc' || $legacyColBg === 'rgb(248, 250, 252)' || $legacyColBg === 'rgba(248, 250, 252, 1)') {
                                             $colStyleArr['backgroundColor'] = '#ffffff';
@@ -7601,41 +7715,67 @@
                     }
 
                     function renderLayoutDebug() {
-                        const firstSection = document.querySelector('.builder-section');
-                        if (!firstSection) return;
-                        const firstInner = firstSection.querySelector('.builder-section-inner');
-                        const firstRow = firstSection.querySelector('.builder-row');
-                        const firstRowInner = firstSection.querySelector('.builder-row-inner');
-                        const firstCol = firstSection.querySelector('.builder-col');
-                        const firstColInner = firstSection.querySelector('.builder-col-inner');
-                        const firstButton = firstSection.querySelector('.builder-el[data-element-type="button"]');
-                        const firstHeading = firstSection.querySelector('.builder-el[data-element-type="heading"]');
-                        const firstText = firstSection.querySelector('.builder-el[data-element-type="text"]');
+                        const sections = Array.from(document.querySelectorAll('.builder-section'));
+                        const targetIndex = 1; // 2nd section (0-based)
+                        const targetSection = sections[targetIndex] || sections[0] || null;
+                        if (!targetSection) return;
+
                         const content = document.querySelector('.step-content--full');
                         const scaleInfo = getScaleInfo(content);
-                        const secRect = firstSection.getBoundingClientRect();
-                        const innerRect = firstInner ? firstInner.getBoundingClientRect() : null;
-                        const rowRect = firstRow ? firstRow.getBoundingClientRect() : null;
-                        const rowInnerRect = firstRowInner ? firstRowInner.getBoundingClientRect() : null;
-                        const colRect = firstCol ? firstCol.getBoundingClientRect() : null;
-                        const colInnerRect = firstColInner ? firstColInner.getBoundingClientRect() : null;
-                        const btnRect = firstButton ? firstButton.getBoundingClientRect() : null;
-                        const headingRect = firstHeading ? firstHeading.getBoundingClientRect() : null;
-                        const textRect = firstText ? firstText.getBoundingClientRect() : null;
-                        const secStyle = window.getComputedStyle(firstSection);
-                        const innerStyle = firstInner ? window.getComputedStyle(firstInner) : null;
-                        const rowStyle = firstRow ? window.getComputedStyle(firstRow) : null;
-                        const rowInnerStyle = firstRowInner ? window.getComputedStyle(firstRowInner) : null;
-                        const colStyle = firstCol ? window.getComputedStyle(firstCol) : null;
-                        const colInnerStyle = firstColInner ? window.getComputedStyle(firstColInner) : null;
 
+                        function describeSection(sec, idx) {
+                            const inner = sec.querySelector('.builder-section-inner');
+                            const row = sec.querySelector('.builder-row');
+                            const rowInner = sec.querySelector('.builder-row-inner');
+                            const col = sec.querySelector('.builder-col');
+                            const colInner = sec.querySelector('.builder-col-inner');
+                            const firstEl = sec.querySelector('.builder-el[data-element-type]');
+                            const lastEl = Array.from(sec.querySelectorAll('.builder-el[data-element-type]')).slice(-1)[0] || null;
+
+                            const secRect = sec.getBoundingClientRect();
+                            const innerRect = inner ? inner.getBoundingClientRect() : null;
+                            const rowRect = row ? row.getBoundingClientRect() : null;
+                            const colRect = col ? col.getBoundingClientRect() : null;
+                            const firstElRect = firstEl ? firstEl.getBoundingClientRect() : null;
+                            const lastElRect = lastEl ? lastEl.getBoundingClientRect() : null;
+
+                            const secStyle = window.getComputedStyle(sec);
+                            const rowStyle = row ? window.getComputedStyle(row) : null;
+                            const colStyle = col ? window.getComputedStyle(col) : null;
+
+                            const bottomGap = lastElRect ? roundPx(secRect.bottom - lastElRect.bottom) : null;
+                            const topGap = firstElRect ? roundPx(firstElRect.top - secRect.top) : null;
+
+                            return [
+                                'Section #' + (idx + 1),
+                                '  height: ' + roundPx(secRect.height) + 'px',
+                                '  paddingTop/Bottom: ' + secStyle.paddingTop + ' / ' + secStyle.paddingBottom,
+                                '  minHeight(inline): ' + (sec.style.minHeight || '(none)'),
+                                '  innerMaxWidth(inline): ' + (inner ? (inner.style.maxWidth || '(none)') : '(none)'),
+                                '  rowPaddingTop/Bottom: ' + (rowStyle ? (rowStyle.paddingTop + ' / ' + rowStyle.paddingBottom) : '(none)'),
+                                '  colPaddingTop/Bottom: ' + (colStyle ? (colStyle.paddingTop + ' / ' + colStyle.paddingBottom) : '(none)'),
+                                '  isCarrierRow: ' + (row && row.classList.contains('builder-row--section-elements') ? 'yes' : 'no'),
+                                '  isCarrierCol: ' + (col && col.classList.contains('builder-col--section-elements') ? 'yes' : 'no'),
+                                '  firstElType: ' + (firstEl ? (firstEl.getAttribute('data-element-type') || '(none)') : '(none)'),
+                                '  lastElType: ' + (lastEl ? (lastEl.getAttribute('data-element-type') || '(none)') : '(none)'),
+                                '  topGap(sec->firstEl): ' + (topGap != null ? topGap + 'px' : '(none)'),
+                                '  bottomGap(lastEl->sec): ' + (bottomGap != null ? bottomGap + 'px' : '(none)')
+                            ].join('\n');
+                        }
+
+                        // Outline target section group for quick visual inspection
+                        const tInner = targetSection.querySelector('.builder-section-inner');
+                        const tRow = targetSection.querySelector('.builder-row');
+                        const tRowInner = targetSection.querySelector('.builder-row-inner');
+                        const tCol = targetSection.querySelector('.builder-col');
+                        const tColInner = targetSection.querySelector('.builder-col-inner');
                         [
-                            [firstSection, 'rgba(245, 158, 11, .95)'],
-                            [firstInner, 'rgba(34, 197, 94, .95)'],
-                            [firstRow, 'rgba(59, 130, 246, .95)'],
-                            [firstRowInner, 'rgba(236, 72, 153, .95)'],
-                            [firstCol, 'rgba(168, 85, 247, .95)'],
-                            [firstColInner, 'rgba(14, 165, 233, .95)']
+                            [targetSection, 'rgba(245, 158, 11, .95)'],
+                            [tInner, 'rgba(34, 197, 94, .95)'],
+                            [tRow, 'rgba(59, 130, 246, .95)'],
+                            [tRowInner, 'rgba(236, 72, 153, .95)'],
+                            [tCol, 'rgba(168, 85, 247, .95)'],
+                            [tColInner, 'rgba(14, 165, 233, .95)']
                         ].forEach(function(entry){
                             var node = entry[0];
                             var color = entry[1];
@@ -7660,33 +7800,22 @@
                         panel.style.lineHeight = '1.45';
                         panel.style.fontFamily = 'Consolas, Monaco, monospace';
                         panel.style.whiteSpace = 'pre-wrap';
-                        panel.textContent = [
-                            'Hero Layout Debug',
-                            'scaleMethod: ' + scaleInfo.method,
-                            'scale: ' + roundPx(scaleInfo.scale),
-                            'sectionHeight: ' + roundPx(secRect.height) + 'px',
-                            'sectionPaddingTop: ' + secStyle.paddingTop,
-                            'sectionPaddingBottom: ' + secStyle.paddingBottom,
-                            'sectionMinHeight: ' + (firstSection.style.minHeight || '(none)'),
-                            'innerHeight: ' + (innerRect ? roundPx(innerRect.height) + 'px' : '(none)'),
-                            'innerMinHeight: ' + (innerStyle ? innerStyle.minHeight : '(none)'),
-                            'rowHeight: ' + (rowRect ? roundPx(rowRect.height) + 'px' : '(none)'),
-                            'rowPadding: ' + (rowStyle ? (rowStyle.paddingTop + ' / ' + rowStyle.paddingBottom) : '(none)'),
-                            'rowGap: ' + (rowStyle ? rowStyle.gap : '(none)'),
-                            'rowInnerHeight: ' + (rowInnerRect ? roundPx(rowInnerRect.height) + 'px' : '(none)'),
-                            'colHeight: ' + (colRect ? roundPx(colRect.height) + 'px' : '(none)'),
-                            'colPadding: ' + (colStyle ? (colStyle.paddingTop + ' / ' + colStyle.paddingBottom) : '(none)'),
-                            'colMinHeight: ' + (colStyle ? colStyle.minHeight : '(none)'),
-                            'colInnerHeight: ' + (colInnerRect ? roundPx(colInnerRect.height) + 'px' : '(none)'),
-                            'colInnerMinHeight: ' + (colInnerStyle ? colInnerStyle.minHeight : '(none)'),
-                            'isCarrierRow: ' + (firstRow && firstRow.classList.contains('builder-row--section-elements') ? 'yes' : 'no'),
-                            'isCarrierCol: ' + (firstCol && firstCol.classList.contains('builder-col--section-elements') ? 'yes' : 'no'),
-                            'headingHeight: ' + (headingRect ? roundPx(headingRect.height) + 'px' : '(none)'),
-                            'textHeight: ' + (textRect ? roundPx(textRect.height) + 'px' : '(none)'),
-                            'buttonHeight: ' + (btnRect ? roundPx(btnRect.height) + 'px' : '(none)'),
-                            'buttonBottomGap: ' + (btnRect ? roundPx(secRect.bottom - btnRect.bottom) + 'px' : '(none)'),
-                            'buttonTopGap: ' + (btnRect ? roundPx(btnRect.top - secRect.top) + 'px' : '(none)')
-                        ].join('\n');
+                        const lines = [];
+                        lines.push('Layout Debug');
+                        lines.push('scaleMethod: ' + scaleInfo.method);
+                        lines.push('scale: ' + roundPx(scaleInfo.scale));
+                        lines.push('');
+                        lines.push(describeSection(targetSection, targetIndex));
+                        lines.push('');
+                        if (sections.length >= 1) {
+                            lines.push('---');
+                            lines.push('Quick compare (first 3 sections):');
+                            sections.slice(0, 3).forEach(function(sec, i){
+                                lines.push('');
+                                lines.push(describeSection(sec, i));
+                            });
+                        }
+                        panel.textContent = lines.join('\n');
                         document.body.appendChild(panel);
                     }
 
