@@ -409,6 +409,10 @@ class AdminFunnelTemplateController extends Controller
 
     public function publish(FunnelTemplate $funnelTemplate)
     {
+        $validated = request()->validate([
+            'description' => 'nullable|string|max:2000',
+        ]);
+
         $issues = $this->validatePublishReadiness(
             $funnelTemplate->steps()->where('is_active', true)->orderBy('position')->get(),
             (string) $funnelTemplate->template_type
@@ -418,6 +422,7 @@ class AdminFunnelTemplateController extends Controller
         }
 
         $funnelTemplate->update([
+            'description' => $validated['description'] ?? $funnelTemplate->description,
             'status' => 'published',
             'published_at' => now(),
         ]);
