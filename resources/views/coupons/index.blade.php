@@ -65,13 +65,21 @@
                                     <th>Title</th>
                                     <th>Discount</th>
                                     <th>Funnel Scope</th>
+                                    <th>Ends</th>
                                     <th>Status</th>
                                     <th>Used</th>
+                                    <th>Remaining</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @forelse($myCoupons as $coupon)
+                                    @php
+                                        $maxTotalUses = $coupon->usage_mode === \App\Models\Coupon::USAGE_SINGLE ? 1 : ($coupon->max_total_uses ?: null);
+                                        $remainingTotal = $maxTotalUses === null ? null : max(0, (int) $maxTotalUses - (int) $coupon->times_used);
+                                        $perCustomerLimit = $coupon->usage_mode === \App\Models\Coupon::USAGE_SINGLE ? 1 : ($coupon->max_uses_per_user ?: null);
+                                        $endsLabel = $coupon->ends_at ? $coupon->ends_at->format('M j, Y g:i A') : 'No end date';
+                                    @endphp
                                     <tr>
                                         <td style="font-weight:800;letter-spacing:.08em;">{{ $coupon->code }}</td>
                                         <td>{{ $coupon->title ?: 'Untitled coupon' }}</td>
@@ -89,8 +97,23 @@
                                                 {{ $coupon->funnels->pluck('name')->implode(', ') }}
                                             @endif
                                         </td>
+                                        <td style="white-space:nowrap;">
+                                            {{ $endsLabel }}
+                                        </td>
                                         <td>{{ ucfirst($coupon->status) }}</td>
                                         <td>{{ (int) $coupon->times_used }}</td>
+                                        <td style="white-space:nowrap;">
+                                            @if($remainingTotal === null)
+                                                ∞
+                                            @else
+                                                {{ (int) $remainingTotal }}
+                                            @endif
+                                            @if($perCustomerLimit !== null)
+                                                <div style="margin-top:4px;font-size:12px;color:#64748b;">Per customer: {{ (int) $perCustomerLimit }}</div>
+                                            @else
+                                                <div style="margin-top:4px;font-size:12px;color:#64748b;">Per customer: ∞</div>
+                                            @endif
+                                        </td>
                                         <td style="white-space:nowrap;">
                                             <a href="{{ route('coupons.edit', $coupon) }}" class="btn-create" style="padding:8px 12px;">Edit</a>
                                             <form method="POST" action="{{ route('coupons.destroy', $coupon) }}" style="display:inline-block;" onsubmit="return confirm('Delete this coupon?');">
@@ -102,7 +125,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="7" style="text-align:center;color:#64748b;">You have not created any tenant coupons yet.</td>
+                                        <td colspan="9" style="text-align:center;color:#64748b;">You have not created any tenant coupons yet.</td>
                                     </tr>
                                 @endforelse
                             </tbody>
@@ -131,13 +154,21 @@
                                     <th>Title</th>
                                     <th>Discount</th>
                                     <th>Funnel Scope</th>
+                                    <th>Ends</th>
                                     <th>Status</th>
                                     <th>Used</th>
+                                    <th>Remaining</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @forelse($platformCoupons as $coupon)
+                                    @php
+                                        $maxTotalUses = $coupon->usage_mode === \App\Models\Coupon::USAGE_SINGLE ? 1 : ($coupon->max_total_uses ?: null);
+                                        $remainingTotal = $maxTotalUses === null ? null : max(0, (int) $maxTotalUses - (int) $coupon->times_used);
+                                        $perCustomerLimit = $coupon->usage_mode === \App\Models\Coupon::USAGE_SINGLE ? 1 : ($coupon->max_uses_per_user ?: null);
+                                        $endsLabel = $coupon->ends_at ? $coupon->ends_at->format('M j, Y g:i A') : 'No end date';
+                                    @endphp
                                     <tr>
                                         <td style="font-weight:800;letter-spacing:.08em;">{{ $coupon->code }}</td>
                                         <td>{{ $coupon->title ?: 'Untitled coupon' }}</td>
@@ -155,13 +186,28 @@
                                                 {{ $coupon->funnels->pluck('name')->implode(', ') }}
                                             @endif
                                         </td>
+                                        <td style="white-space:nowrap;">
+                                            {{ $endsLabel }}
+                                        </td>
                                         <td>{{ ucfirst($coupon->status) }}</td>
                                         <td>{{ (int) $coupon->times_used }}</td>
+                                        <td style="white-space:nowrap;">
+                                            @if($remainingTotal === null)
+                                                ∞
+                                            @else
+                                                {{ (int) $remainingTotal }}
+                                            @endif
+                                            @if($perCustomerLimit !== null)
+                                                <div style="margin-top:4px;font-size:12px;color:#64748b;">Per customer: {{ (int) $perCustomerLimit }}</div>
+                                            @else
+                                                <div style="margin-top:4px;font-size:12px;color:#64748b;">Per customer: ∞</div>
+                                            @endif
+                                        </td>
                                         <td style="color:#64748b;font-weight:700;">Read only</td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="7" style="text-align:center;color:#64748b;">No superadmin coupons are assigned to this tenant yet.</td>
+                                        <td colspan="9" style="text-align:center;color:#64748b;">No superadmin coupons are assigned to this tenant yet.</td>
                                     </tr>
                                 @endforelse
                             </tbody>
@@ -265,20 +311,25 @@
                                 <option value="single_use" {{ old('usage_mode', 'single_use') === 'single_use' ? 'selected' : '' }}>Single Use</option>
                                 <option value="multi_use" {{ old('usage_mode') === 'multi_use' ? 'selected' : '' }}>Multi Use</option>
                             </select>
+                            <div style="margin-top:6px;color:#475569;font-size:12px;">
+                                <strong>Single Use</strong> = redeemable once total (and once per customer). <strong>Multi Use</strong> = set limits below.
+                            </div>
                             @error('usage_mode')<div style="margin-top:6px;color:#b91c1c;font-size:12px;">{{ $message }}</div>@enderror
                         </div>
                     </div>
                     <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:16px;">
                         <div>
-                            <label for="tenant_max_total_uses" style="display:block;margin-bottom:8px;font-weight:bold;">Max Total Uses</label>
+                            <label for="tenant_max_total_uses" style="display:block;margin-bottom:8px;font-weight:bold;">Total redemptions (all customers)</label>
                             <input type="number" min="1" name="max_total_uses" id="tenant_max_total_uses" value="{{ old('max_total_uses') }}"
                                 style="width:100%;padding:12px 14px;border:1px solid #dbe2ea;border-radius:10px;">
+                            <div style="margin-top:6px;color:#475569;font-size:12px;">How many times this coupon can be redeemed <strong>in total</strong>. Leave blank for unlimited.</div>
                             @error('max_total_uses')<div style="margin-top:6px;color:#b91c1c;font-size:12px;">{{ $message }}</div>@enderror
                         </div>
                         <div>
-                            <label for="tenant_max_uses_per_user" style="display:block;margin-bottom:8px;font-weight:bold;">Max Uses Per User</label>
+                            <label for="tenant_max_uses_per_user" style="display:block;margin-bottom:8px;font-weight:bold;">Redemptions per customer</label>
                             <input type="number" min="1" name="max_uses_per_user" id="tenant_max_uses_per_user" value="{{ old('max_uses_per_user') }}"
                                 style="width:100%;padding:12px 14px;border:1px solid #dbe2ea;border-radius:10px;">
+                            <div style="margin-top:6px;color:#475569;font-size:12px;">How many times <strong>one customer</strong> can redeem this coupon. Leave blank for unlimited.</div>
                             @error('max_uses_per_user')<div style="margin-top:6px;color:#b91c1c;font-size:12px;">{{ $message }}</div>@enderror
                         </div>
                         <div>
@@ -348,6 +399,9 @@
             const sanitize = (value) => String(value || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 40);
             const randomCode = () => 'CPN' + Math.random().toString(36).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
             const currentMode = () => (Array.from(modeInputs).find((input) => input.checked) || {}).value || 'manual';
+            const usageMode = document.getElementById('tenant_usage_mode');
+            const totalUses = document.getElementById('tenant_max_total_uses');
+            const usesPerUser = document.getElementById('tenant_max_uses_per_user');
             const validateCurrentStep = () => {
                 const activeStep = steps[currentStep - 1];
                 if (!activeStep) return true;
@@ -430,11 +484,26 @@
                 });
             });
 
+            const syncUsageFields = () => {
+                if (!usageMode || !totalUses || !usesPerUser) return;
+                const isSingle = String(usageMode.value || '') === 'single_use';
+                if (isSingle) {
+                    totalUses.value = '1';
+                    usesPerUser.value = '1';
+                }
+                totalUses.disabled = isSingle;
+                usesPerUser.disabled = isSingle;
+                totalUses.style.backgroundColor = isSingle ? '#f8fafc' : '#ffffff';
+                usesPerUser.style.backgroundColor = isSingle ? '#f8fafc' : '#ffffff';
+            };
+
             syncCodeMode();
+            syncUsageFields();
             renderStep();
             @if($openCreateModal)
                 openModal();
             @endif
+            if (usageMode) usageMode.addEventListener('change', syncUsageFields);
         });
     </script>
 @endsection

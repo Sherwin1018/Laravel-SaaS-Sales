@@ -98,6 +98,8 @@ Route::middleware(['auth', 'tenant.subscription', 'role:super-admin'])->group(fu
     Route::post('/admin/funnel-templates', [AdminFunnelTemplateController::class, 'store'])->name('admin.funnel-templates.store');
     Route::post('/admin/funnel-templates/import', [AdminFunnelTemplateController::class, 'importStore'])->name('admin.funnel-templates.import.store');
     Route::get('/admin/funnel-templates/{funnel_template}/edit', [AdminFunnelTemplateController::class, 'edit'])->name('admin.funnel-templates.edit');
+    Route::get('/admin/funnel-templates/{funnel_template}/replace-json', [AdminFunnelTemplateController::class, 'replaceJson'])->name('admin.funnel-templates.replace-json');
+    Route::post('/admin/funnel-templates/{funnel_template}/replace-json', [AdminFunnelTemplateController::class, 'replaceJsonStore'])->name('admin.funnel-templates.replace-json.store');
     Route::put('/admin/funnel-templates/{funnel_template}', [AdminFunnelTemplateController::class, 'update'])->name('admin.funnel-templates.update');
     Route::delete('/admin/funnel-templates/{funnel_template}', [AdminFunnelTemplateController::class, 'destroy'])->name('admin.funnel-templates.destroy');
     Route::post('/admin/funnel-templates/{funnel_template}/publish', [AdminFunnelTemplateController::class, 'publish'])->name('admin.funnel-templates.publish');
@@ -205,6 +207,8 @@ Route::middleware(['auth', 'tenant.subscription', 'role:sales-agent,marketing-ma
         Route::delete('/funnels/{funnel}/steps/{step}', [FunnelController::class, 'destroyStep'])->name('funnels.steps.destroy');
         Route::post('/funnels/{funnel}/steps/{step}/versions', [FunnelController::class, 'storeVersion'])->name('funnels.steps.versions.store');
         Route::post('/funnels/{funnel}/steps/reorder', [FunnelController::class, 'reorderSteps'])->name('funnels.steps.reorder');
+        Route::post('/funnels/{funnel}/shared-templates/{funnel_template}/apply-all', [FunnelController::class, 'applySharedTemplateAllPages'])
+            ->name('funnels.shared-templates.apply-all');
 
     });
 

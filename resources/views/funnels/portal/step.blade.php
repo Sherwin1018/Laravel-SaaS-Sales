@@ -33,7 +33,33 @@
         }
         return 0;
     };
-    $initialLayout = is_array($step->layout_json ?? null) ? $step->layout_json : [];
+    $isPreviewPage = ($isPreview ?? false);
+    $portalLayoutBreakpoint = 'desktop';
+    if ($isPreviewPage) {
+        $pd = strtolower((string) request()->query('preview_device', 'desktop'));
+        if ($pd === 'tablet') {
+            $portalLayoutBreakpoint = 'mobile';
+        } elseif (in_array($pd, ['desktop', 'mobile'], true)) {
+            $portalLayoutBreakpoint = $pd;
+        } else {
+            $portalLayoutBreakpoint = 'desktop';
+        }
+    } else {
+        $pd = strtolower((string) request()->query('layout_breakpoint', ''));
+        if ($pd === 'tablet') {
+            $portalLayoutBreakpoint = 'mobile';
+        } elseif (in_array($pd, ['desktop', 'mobile'], true)) {
+            $portalLayoutBreakpoint = $pd;
+        } else {
+            $ua = strtolower((string) request()->userAgent());
+            if (str_contains($ua, 'ipad') || str_contains($ua, 'tablet')
+                || str_contains($ua, 'mobile') || str_contains($ua, 'iphone') || str_contains($ua, 'ipod')
+                || (str_contains($ua, 'android') && str_contains($ua, 'mobile'))) {
+                $portalLayoutBreakpoint = 'mobile';
+            }
+        }
+    }
+    $initialLayout = $step->effectiveLayoutForBreakpoint($portalLayoutBreakpoint);
     $initialRootItems = is_array($initialLayout['root'] ?? null) ? $initialLayout['root'] : [];
     if (count($initialRootItems) === 0 && is_array($initialLayout['sections'] ?? null)) {
         foreach ($initialLayout['sections'] as $legacySection) {
@@ -86,6 +112,96 @@
     $portalHasFreeformCanvas = count($initialFreeformEls) > 0;
 
     $previewIframeMode = (string) request()->query('preview_iframe') === '1';
+
+    /** @param  array<string, mixed>  $style */
+    $portalHexToRgb = function (string $hex): ?array {
+        $hex = trim($hex);
+        if ($hex !== '' && $hex[0] === '#') {
+            $hex = substr($hex, 1);
+        }
+        if (strlen($hex) === 3 && ctype_xdigit($hex)) {
+            $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
+        }
+        if (strlen($hex) !== 6 || !ctype_xdigit($hex)) {
+            return null;
+        }
+
+        return [
+            hexdec(substr($hex, 0, 2)),
+            hexdec(substr($hex, 2, 2)),
+            hexdec(substr($hex, 4, 2)),
+        ];
+    };
+    /** WCAG relative luminance for sRGB #rrggbb (used for menu link vs bar contrast). */
+    $portalRelativeLuminance = function (array $rgb): float {
+        $lin = function (int $c): float {
+            $c = $c / 255;
+
+            return $c <= 0.03928 ? $c / 12.92 : pow(($c + 0.055) / 1.055, 2.4);
+        };
+
+        return 0.2126 * $lin($rgb[0]) + 0.7152 * $lin($rgb[1]) + 0.0722 * $lin($rgb[2]);
+    };
+    /**
+     * If the menu bar is dark but link text is still the default slate (#374151), use a light color so
+     * preview/published stay readable. Any other explicit hex from the user (e.g. blue) is always honored —
+     * saturated blues have low luminance and were incorrectly rewritten to white before.
+     *
+     * @param  array<string, mixed>  $rawStyle
+     */
+    $portalNormalizeMenuHex = function (string $color): string {
+        $h = trim($color);
+        if ($h !== '' && $h[0] === '#') {
+            $h = substr($h, 1);
+        }
+        if (strlen($h) === 3 && ctype_xdigit($h)) {
+            $h = $h[0] . $h[0] . $h[1] . $h[1] . $h[2] . $h[2];
+        }
+        if (strlen($h) === 6 && ctype_xdigit($h)) {
+            return '#' . strtolower($h);
+        }
+
+        return '';
+    };
+    $portalResolveMenuLinkColor = function (string $textColor, array $rawStyle) use ($portalHexToRgb, $portalRelativeLuminance, $portalNormalizeMenuHex): string {
+        $text = trim($textColor);
+        if ($text === '') {
+            $text = '#374151';
+        }
+        $normalized = $portalNormalizeMenuHex($text);
+        if ($normalized !== '' && $normalized !== '#374151') {
+            return $text;
+        }
+        $textRgb = $portalHexToRgb($text);
+        if ($textRgb === null) {
+            return $text;
+        }
+        $bgStr = '';
+        foreach (['backgroundColor', 'background-color', 'background'] as $k) {
+            $v = trim((string) ($rawStyle[$k] ?? ''));
+            if ($v !== '') {
+                $bgStr = $v;
+                break;
+            }
+        }
+        if ($bgStr === '' || !preg_match('/#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})\b/', $bgStr, $m)) {
+            return $text;
+        }
+        $bgRgb = $portalHexToRgb($m[0]);
+        if ($bgRgb === null) {
+            return $text;
+        }
+        $bgL = $portalRelativeLuminance($bgRgb);
+        $textL = $portalRelativeLuminance($textRgb);
+        if ($bgL < 0.45 && $textL < 0.55) {
+            return '#f8fafc';
+        }
+        if ($bgL > 0.65 && $textL > 0.85) {
+            return '#0f172a';
+        }
+
+        return $text;
+    };
 @endphp
 <!DOCTYPE html>
 <html lang="en">
@@ -98,9 +214,15 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Manrope:wght@400;600;700;800&family=Montserrat:wght@400;600;700;800&family=Nunito:wght@400;600;700;800&family=Open+Sans:wght@400;600;700;800&family=Playfair+Display:wght@400;600;700&family=Poppins:wght@400;600;700;800&family=Raleway:wght@400;600;700;800&family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
     <style>
-        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        * { box-sizing: border-box; }
         html { scroll-behavior: smooth; }
-        body { margin: 0; background: {{ $step->background_color ?: '#ffffff' }}; color: #0f172a; min-height: 100vh; }
+        body {
+            margin: 0;
+            background: {{ $step->background_color ?: '#ffffff' }};
+            color: #0f172a;
+            min-height: 100vh;
+            font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+        }
         .wrap { width: 100%; max-width: none; margin: 0; padding: 0; }
         .step-content--full {
             width: 100%;
@@ -126,7 +248,80 @@
             padding: 10px 1.5rem 24px;
             box-sizing: border-box;
         }
-        body.is-preview .step-content--full { padding: 0; overflow-x: auto; overflow-y: visible; }
+        body.is-preview .step-content--full {
+            /* Keep preview canvas tight so sections stack like in the builder. */
+            padding: 0 0 8px;
+            overflow-x: auto;
+            overflow-y: visible;
+        }
+        /* Preview and published freeform both use zoom/transform scale on `.step-content--full` when the saved
+           canvas is wider than the viewport. Very short saved menu heights look clipped (links/CTA intersect bar
+           edges, logo misaligned). Nudge minimum size and padding for any mode that uses that scaling — but not on
+           narrow phone layouts where the hamburger menu replaces the horizontal bar (see @media max-width 480px). */
+        body.is-preview .builder-el[data-element-type="menu"] .builder-menu {
+            min-height: 72px !important;
+            box-sizing: border-box;
+        }
+        body.is-preview .builder-menu--has-height {
+            min-height: 72px !important;
+        }
+        body.is-preview .builder-menu-shell {
+            padding-top: 8px;
+            padding-bottom: 8px;
+            min-height: 46px;
+            box-sizing: border-box;
+        }
+        body.is-preview .builder-menu-list {
+            min-height: 38px;
+            align-items: center;
+        }
+        body.is-preview .builder-menu-link {
+            line-height: 1.45 !important;
+            -webkit-font-smoothing: antialiased;
+        }
+        body.is-preview .builder-menu--has-height .builder-menu-logo {
+            width: auto !important;
+            height: auto !important;
+            max-width: min(180px, 45vw) !important;
+            max-height: 42px !important;
+            object-fit: contain !important;
+            object-position: left center !important;
+            flex: 0 0 auto !important;
+            align-self: center !important;
+        }
+        @media (min-width: 481px) {
+            body.is-published .builder-el[data-element-type="menu"] .builder-menu {
+                min-height: 72px !important;
+                box-sizing: border-box;
+            }
+            body.is-published .builder-menu--has-height {
+                min-height: 72px !important;
+            }
+            body.is-published .builder-menu-shell {
+                padding-top: 8px;
+                padding-bottom: 8px;
+                min-height: 46px;
+                box-sizing: border-box;
+            }
+            body.is-published .builder-menu-list {
+                min-height: 38px;
+                align-items: center;
+            }
+            body.is-published .builder-menu-link {
+                line-height: 1.45 !important;
+                -webkit-font-smoothing: antialiased;
+            }
+            body.is-published .builder-menu--has-height .builder-menu-logo {
+                width: auto !important;
+                height: auto !important;
+                max-width: min(180px, 45vw) !important;
+                max-height: 42px !important;
+                object-fit: contain !important;
+                object-position: left center !important;
+                flex: 0 0 auto !important;
+                align-self: center !important;
+            }
+        }
         body.portal-has-freeform-canvas .step-content--full { opacity: 0; }
         body.portal-has-freeform-canvas .step-content--full.is-scale-ready { opacity: 1; }
         body.is-preview .builder-section--freeform {
@@ -170,7 +365,7 @@
         .builder-form-input::placeholder { color: var(--fb-placeholder-color, #94a3b8); opacity: 1; }
         .price { font-size: 34px; font-weight: 800; color: #047857; margin: 0 0 12px; }
         .row { display: flex; gap: 10px; flex-wrap: wrap; }
-        .builder-section { border-radius: 0; margin-bottom: 0; border: none; padding: 8px; }
+        .builder-section { border-radius: 0; margin-bottom: 0; border: none; padding: 4px 8px 4px; }
         .builder-section:last-child { margin-bottom: 0; }
         .builder-section--freeform { border-radius: 0; padding: 0; margin: 0 -2rem; background: transparent; border: none; width: calc(100% + 4rem); max-width: none; }
         .builder-section--freeform .builder-row { padding: 0; gap: 0; margin: 0; display: block; }
@@ -182,12 +377,42 @@
         .builder-row--section-elements > .builder-row-inner,
         .builder-col--section-elements,
         .builder-col--section-elements > .builder-col-inner--section-elements { display: contents; }
+        /* Section-level elements (not inside normal columns) must still center like the builder canvas.
+           On desktop, they might not inherit `text-align:center` from `.builder-col`, so force it here. */
+        body.is-preview .builder-col-inner--section-elements > .builder-el,
+        body.is-published .builder-col-inner--section-elements > .builder-el{
+            /* Center carrier elements without forcing them to full-width.
+               Forcing width:100% breaks fixed-size media embeds (video/image). */
+            text-align: center !important;
+        }
         .builder-section-inner { width: 100%; box-sizing: border-box; position: relative; }
+        /* When portal constrains max-width of section inner boxes, ensure they remain centered.
+           This prevents subtle left/right offsets between builder canvas vs preview/published. */
+        body.is-preview .builder-section-inner,
+        body.is-published .builder-section-inner {
+            margin-left: auto !important;
+            margin-right: auto !important;
+        }
         .builder-row-inner { width: 100%; box-sizing: border-box; display: flex; flex-wrap: wrap; gap: 8px; position: relative; align-items: stretch; }
         .builder-col-inner { width: 100%; box-sizing: border-box; max-width: 100%; overflow: hidden; position: relative; min-height: 100%; }
         .builder-row { display: flex; gap: 8px; flex-wrap: wrap; padding: 6px; }
         .builder-col { min-width: 0; min-height: 0; flex: 1 1 0; position: relative; overflow: hidden; background: transparent; padding: 6px; box-sizing: border-box; text-align: center; }
         .builder-col > .builder-col-inner > .builder-el { max-width: 100%; overflow: hidden; box-sizing: border-box; }
+        /* Must beat the rule above (section / column wrappers clip overflow by default). */
+        .builder-el[data-element-type="menu"] { overflow: visible !important; }
+        /* Guarantee full-width wrappers so "Center" alignment matches Builder canvas.
+           Otherwise width can shrink to content and the component appears slightly off-center in preview/published. */
+        .builder-el:not(.builder-el--abs)[data-element-type="heading"],
+        .builder-el:not(.builder-el--abs)[data-element-type="text"],
+        .builder-el:not(.builder-el--abs)[data-element-type="button"],
+        .builder-el:not(.builder-el--abs)[data-element-type="pricing"],
+        .builder-el:not(.builder-el--abs)[data-element-type="product_offer"]{
+            width:100% !important;
+        }
+        /* Keep button wrapper full width for centering, but do not force the button itself to stretch. */
+        .builder-el[data-element-type="button"] .btn{
+            width: auto !important;
+        }
         .builder-col > .builder-col-inner > .builder-el[data-element-type="image"],
         .builder-col > .builder-col-inner > .builder-el[data-element-type="video"] { max-width: 100%; }
         .builder-col.builder-col--abs { overflow: visible; }
@@ -207,15 +432,120 @@
         .builder-image-placeholder__inner { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 18px; text-align: center; }
         .builder-image-placeholder__plus { width: 58px; height: 58px; border-radius: 999px; background: #d9d9d9; color: #5f6368; display: flex; align-items: center; justify-content: center; font-size: 40px; font-weight: 300; line-height: 1; box-shadow: 0 6px 18px rgba(15, 23, 42, 0.16); }
         .builder-image-placeholder__label { font-size: 14px; font-weight: 600; color: #5f6368; letter-spacing: 0.01em; }
-        .builder-menu { width: 100%; }
-        .builder-menu-shell { width: 100%; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; }
-        .builder-menu-left { justify-self: start; min-width: 0; }
-        .builder-menu-right { justify-self: end; min-width: 0; }
-        .builder-menu-center { min-width: 0; justify-self: center; }
-        .builder-menu-list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; }
-        .builder-menu-link { text-decoration: none; text-underline-offset: 3px; font: inherit; }
+        .builder-menu { width: 100%; position: relative; z-index: 5; }
+        /* When the menu bar has an explicit height (canvas resize or settings), fill it so the logo is not clipped. */
+        .builder-menu--has-height {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            box-sizing: border-box;
+            min-height: 0;
+            overflow: hidden;
+        }
+        /* One horizontal row; center all columns — stretch was pinning links/logo to the top while the CTA looked centered. */
+        .builder-menu--has-height .builder-menu-shell {
+            flex: 1 1 auto;
+            min-height: 0;
+            height: 100%;
+            width: 100%;
+            align-items: center;
+            overflow: hidden;
+        }
+        .builder-menu--has-height .builder-menu-logo {
+            width: auto !important;
+            max-width: min(180px, 45vw) !important;
+            height: auto !important;
+            max-height: 42px !important;
+            object-fit: contain !important;
+            object-position: left center !important;
+            flex: 0 0 auto !important;
+            flex-shrink: 0;
+            align-self: center !important;
+            min-width: 0 !important;
+        }
+        /* Match builder (#canvas menu): flex row — logo | flex-grow nav | CTA. Grid (1fr auto 1fr) made the
+           center column shrink-to-fit so links looked off-center vs the builder. */
+        .builder-menu-shell { width: 100%; display: flex; align-items: center; gap: 12px; box-sizing: border-box; }
+        .builder-menu--has-height .builder-menu-left,
+        .builder-menu--has-height .builder-menu-right {
+            display: flex;
+            align-items: center;
+            align-self: center;
+        }
+        .builder-menu--has-height .builder-menu-center {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            align-self: center;
+            flex: 1 1 auto;
+            min-width: 0;
+            min-height: 0;
+        }
+        .builder-menu--has-height .builder-menu-list {
+            flex: 1 1 auto;
+            min-width: 0;
+            max-width: 100%;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .builder-menu-left {
+            flex: 0 0 auto;
+            min-width: 0;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            max-width: min(200px, 48vw);
+        }
+        .builder-menu-center { flex: 1 1 auto; min-width: 0; }
+        .builder-menu-right { flex: 0 0 auto; min-width: 0; flex-shrink: 0; }
+        /* overflow-x:auto makes overflow-y compute to auto in many browsers — tiny bar + nav = vertical scrollbar + clipped text. */
+        .builder-menu-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-wrap: nowrap;
+            white-space: nowrap;
+            align-items: center;
+            justify-content: flex-start;
+            overflow-x: auto;
+            overflow-y: hidden;
+            scrollbar-width: thin;
+        }
+        .builder-menu-list::-webkit-scrollbar {
+            height: 5px;
+        }
+        .builder-menu-list::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.55);
+            border-radius: 999px;
+        }
+        .builder-menu-link { text-decoration: none; text-underline-offset: 3px; font: inherit; line-height: 1.25; }
         .builder-menu-edit-btn { display: inline-block; padding: 8px 14px; border-radius: 999px; text-decoration: none; font-weight: 600; }
-        .builder-menu-logo { display: block; max-height: 42px; width: auto; max-width: 180px; object-fit: contain; }
+        /* Keep intrinsic aspect ratio in preview/published — match builder (max ~42px tall, never fill bar height). */
+        .builder-menu-logo {
+            display: block;
+            width: auto !important;
+            max-width: min(180px, 45vw) !important;
+            height: auto !important;
+            max-height: 42px !important;
+            object-fit: contain !important;
+            object-position: left center;
+            flex: 0 0 auto !important;
+            flex-grow: 0 !important;
+            flex-shrink: 0 !important;
+            align-self: center !important;
+            min-width: 0 !important;
+        }
+        /* Beat stray global/legacy rules on published pages */
+        .builder-el[data-element-type="menu"] .builder-menu .builder-menu-logo {
+            width: auto !important;
+            max-width: min(180px, 45vw) !important;
+            height: auto !important;
+            max-height: 42px !important;
+            object-fit: contain !important;
+            object-position: left center !important;
+        }
         .builder-menu-logo-placeholder { padding: 8px 12px; border: 1px dashed #cbd5e1; border-radius: 10px; font-size: 12px; color: #64748b; }
         .builder-menu-toggle { display: none; width: 42px; height: 42px; border: 1px solid #cbd5e1; background: #fff; border-radius: 10px; align-items: center; justify-content: center; cursor: pointer; color: #0f172a; }
         .builder-menu-toggle i { font-size: 16px; }
@@ -295,9 +625,46 @@
             45% { transform: scale(1.16); }
             100% { transform: scale(1); }
         }
-        .builder-product-media { position: relative; border-radius: 14px; overflow: hidden; background: #f8fafc; border: 1px solid #e2e8f0; }
-        .builder-product-media .builder-carousel-wrap { min-height: 88px; border-radius: 0; }
-        .builder-product-media .builder-carousel-slide { background: #ffffff !important; }
+        .builder-product-media { position: relative; border-radius: 14px; overflow: hidden; background: #f8fafc; border: 1px solid #e2e8f0; width: 100%; box-sizing: border-box; }
+        /* Slightly taller than square (4:5) — more height for the same column width so images feel less cramped. */
+        .builder-product-media .builder-carousel-wrap { min-height: 100px; border-radius: 0; aspect-ratio: 4 / 5; width: 100% !important; box-sizing: border-box; }
+        .builder-product-media .builder-carousel-track,
+        .product-quick-view-media .builder-carousel-track { height: 100%; width: 100%; box-sizing: border-box; }
+        .builder-product-media .builder-carousel-slide,
+        .product-quick-view-media .builder-carousel-slide { background: #ffffff !important; height: 100%; width: 100% !important; min-width: 100% !important; box-sizing: border-box; }
+        /* Fill the frame like desktop preview: crop with cover (no non-uniform stretch). */
+        /* Inline markup used display:flex; with position:absolute imgs — no in-flow flex items, so the box could size wrong on mobile. */
+        .builder-product-media .builder-carousel-slide > div,
+        .product-quick-view-media .builder-carousel-slide > div {
+            position: relative !important;
+            width: 100% !important;
+            height: 100% !important;
+            box-sizing: border-box !important;
+            min-height: 0 !important;
+            overflow: hidden !important;
+            display: block !important;
+        }
+        .builder-product-media .builder-carousel-slide > div video,
+        .product-quick-view-media .builder-carousel-slide > div video {
+            position: absolute !important;
+            inset: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: cover !important;
+            display: block !important;
+        }
+        .builder-product-media .builder-img,
+        .product-quick-view-media .builder-img {
+            position: absolute !important;
+            inset: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            max-width: none !important;
+            object-fit: cover !important;
+            object-position: center !important;
+            display: block !important;
+        }
+        .product-quick-view-media .builder-carousel-wrap { width: 100% !important; box-sizing: border-box; }
         .builder-product-media .builder-carousel-dots { padding-bottom: 6px; }
         .builder-product-media .builder-carousel-arrow { width: 24px !important; height: 24px !important; min-width: 24px; min-height: 24px; }
         .builder-product-media .builder-carousel-arrow i { font-size: 10px !important; }
@@ -398,7 +765,8 @@
         .builder-checkout-summary--physical .builder-pricing-features { gap: var(--checkout-physical-features-gap, 5px); }
         .builder-checkout-summary--physical .builder-pricing-features li { font-size: var(--checkout-physical-feature-size, 11px); }
         .builder-checkout-summary--physical .builder-pricing-cta { width:100%; padding: var(--checkout-physical-cta-pad-y, 10px) var(--checkout-physical-cta-pad-x, 14px); border-radius: var(--checkout-physical-cta-radius, 12px); }
-        .checkout-shipping-modal-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.54); z-index: 1950; display: none; align-items: flex-start; justify-content: center; overflow-y: auto; padding: 18px; }
+        /* Keep shipping modal above scaled/absolute canvas layers. */
+        .checkout-shipping-modal-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.54); z-index: 999999; display: none; align-items: flex-start; justify-content: center; overflow-y: auto; padding: 18px; isolation: isolate; }
         .checkout-shipping-modal-backdrop.is-open { display: flex; }
         .checkout-shipping-modal { width: min(500px, 100%); max-height: calc(100vh - 36px); overflow: auto; margin: auto 0; background: #ffffff; border-radius: 22px; box-shadow: 0 28px 70px rgba(15, 23, 42, 0.28); padding: 18px; display: grid; gap: 12px; }
         .checkout-shipping-modal-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
@@ -413,8 +781,8 @@
         .checkout-shipping-modal-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:4px; }
         .checkout-shipping-modal-cancel { display:inline-flex; align-items:center; justify-content:center; min-width:120px; padding:11px 16px; border-radius:999px; border:1px solid #d7cdea; background:#ffffff; color:#240E35; font-weight:700; cursor:pointer; }
         .checkout-shipping-modal-submit { min-width:160px; }
-        /* Must be above portal loading overlay (z-index:2100) */
-        .coupon-prompt-modal-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.54); z-index: 2210; display: none; align-items: center; justify-content: center; padding: 18px; pointer-events: auto; }
+        /* Keep coupon modal above scaled/absolute canvas layers. */
+        .coupon-prompt-modal-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.54); z-index: 999999; display: none; align-items: center; justify-content: center; padding: 18px; pointer-events: auto; isolation: isolate; }
         .coupon-prompt-modal-backdrop.is-open { display: flex; }
         .coupon-prompt-modal { width:min(460px,100%); background:#ffffff; border-radius:22px; box-shadow:0 28px 70px rgba(15,23,42,.28); padding:20px; display:grid; gap:14px; position:relative; z-index: 2211; pointer-events: auto; }
         .coupon-prompt-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
@@ -546,9 +914,10 @@
             .builder-carousel-arrow.is-right { right: 10px; }
         }
         .builder-video-wrap { position: relative; width: 100%; padding-top: 56.25%; min-height: 200px; border-radius: 10px; overflow: hidden; background: #0f172a; box-sizing: border-box; }
-        .builder-video-wrap iframe, .builder-video-wrap video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; object-fit: contain; }
-        .builder-video-wrap .video-fallback-link { position: absolute; top: 8px; right: 8px; z-index: 2; font-size: 11px; color: rgba(255,255,255,0.8); background: rgba(0,0,0,0.5); padding: 4px 8px; border-radius: 6px; text-decoration: none; }
-        .builder-video-wrap video { z-index: 1; }
+        .builder-video-wrap iframe, .builder-video-wrap video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; object-fit: contain; pointer-events: auto; }
+        .builder-video-wrap iframe { z-index: 3; }
+        .builder-video-wrap .video-fallback-link { position: absolute; top: 8px; right: 8px; z-index: 4; font-size: 11px; color: rgba(255,255,255,0.8); background: rgba(0,0,0,0.5); padding: 4px 8px; border-radius: 6px; text-decoration: none; }
+        .builder-video-wrap video { z-index: 3; }
         .preview-toolbar-left{
             display:flex;
             align-items:center;
@@ -665,9 +1034,13 @@
         .preview-iframe-shell iframe{
             height:900px;
             width:100%;
+            max-width:100%;
             border:1px solid #e2e8f0;
             border-radius:12px;
             background:#ffffff;
+            display:block;
+            margin-left:auto;
+            margin-right:auto;
         }
         /* Preview device buttons should emulate viewport width only.
            Structural layout must stay on the same render path as publish mode. */
@@ -677,85 +1050,42 @@
            regardless of the actual browser viewport width.
            ═══════════════════════════════════════════════════════════ */
 
-        /* ── TABLET (768px viewport) ── */
-        body[data-preview-device="tablet"] .builder-row-inner{
-            flex-wrap: wrap !important;
-        }
-        body[data-preview-device="tablet"] .builder-col{
-            flex: 1 1 45% !important;
-            min-width: 200px !important;
-            min-height: 0 !important;
-            height: auto !important;
-        }
-        body[data-preview-device="tablet"] .builder-el{
-            position: static !important;
-            left: auto !important;
-            top: auto !important;
-            max-width: 100% !important;
-        }
-        body[data-preview-device="tablet"] .builder-col-inner--section-elements > .builder-el,
+        /* ── MOBILE (375px viewport) ── */
         body[data-preview-device="mobile"] .builder-col-inner--section-elements > .builder-el{
             width: 100% !important;
             text-align: center !important;
         }
-        body[data-preview-device="tablet"] .builder-carousel-content-row{
-            flex-direction: column !important;
-        }
-        body[data-preview-device="tablet"] .builder-carousel-content-col{
-            min-width: 0 !important;
-            width: 100% !important;
-        }
-        body[data-preview-device="tablet"] .step-content--full{
-            padding: 10px 1rem 24px !important;
-        }
-        body[data-preview-device="tablet"] .builder-section{
-            padding: 0 !important;
-            min-height: 0 !important;
-            height: auto !important;
-        }
-        body[data-preview-device="tablet"] .builder-section-inner{
-            min-height: 0 !important;
-            height: auto !important;
-        }
-        body[data-preview-device="tablet"] .builder-heading{
-            font-size: clamp(18px, 4vw, 28px) !important;
-        }
-        body[data-preview-device="tablet"] .builder-pricing{
-            max-width: 100% !important;
-        }
-        body[data-preview-device="tablet"] .builder-pricing-grid{
-            grid-template-columns: 1fr !important;
-        }
-        body[data-preview-device="tablet"] .builder-el[data-element-type="image"]{
-            max-width: 100% !important;
-            height: auto !important;
-        }
-        body[data-preview-device="tablet"] .builder-el[data-element-type="image"] img{
-            max-width: 100% !important;
-            height: auto !important;
-            object-fit: contain !important;
-        }
-        body[data-preview-device="tablet"] .builder-video-wrap{
-            max-width: 100% !important;
-        }
-        body[data-preview-device="tablet"] .builder-video-wrap iframe,
-        body[data-preview-device="tablet"] .builder-video-wrap video{
-            max-width: 100% !important;
-        }
-        body[data-preview-device="tablet"] .builder-section--freeform{
-            width: 100% !important;
-            margin-left: 0 !important;
-            margin-right: 0 !important;
-            overflow-x: auto !important;
-        }
-        body[data-preview-device="tablet"] .builder-menu-list{
-            flex-wrap: wrap !important;
-            gap: 6px !important;
-        }
-
-        /* ── MOBILE (375px viewport) ── */
+        /* Stack every row: columns AND hoisted .builder-el (display:contents) share one vertical column */
         body[data-preview-device="mobile"] .builder-row-inner{
             flex-direction: column !important;
+            flex-wrap: nowrap !important;
+            align-items: stretch !important;
+            gap: 12px !important;
+        }
+        body[data-preview-device="mobile"] .builder-row-inner > .builder-el{
+            flex: 0 0 auto !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+            align-self: stretch !important;
+        }
+        /* Product offers inside a column: single column grid (2-col grid broke single-card width) */
+        body[data-preview-device="mobile"] .builder-col-inner:has(> .builder-el[data-element-type="product_offer"]):not(:has(> .builder-el:not([data-element-type="product_offer"]))) {
+            display: grid !important;
+            grid-template-columns: minmax(0, 1fr) !important;
+            gap: 12px !important;
+            align-items: stretch !important;
+            justify-items: stretch !important;
+            width: 100% !important;
+        }
+        body[data-preview-device="mobile"] .builder-col-inner:has(> .builder-el[data-element-type="product_offer"]):not(:has(> .builder-el:not([data-element-type="product_offer"]))) > .builder-el[data-element-type="product_offer"] {
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+            grid-column: 1 / -1 !important;
+        }
+        body[data-preview-device="mobile"] .builder-col-inner:has(> .builder-el[data-element-type="product_offer"]):not(:has(> .builder-el:not([data-element-type="product_offer"]))) > .builder-el + .builder-el {
+            margin-top: 0 !important;
         }
         body[data-preview-device="mobile"] .builder-col{
             flex: 0 0 auto !important;
@@ -843,6 +1173,14 @@
             max-width: 100% !important;
             height: auto !important;
         }
+        /* Hero / split rows: keep video embed readable when stacked under image */
+        body[data-preview-device="mobile"] .builder-el[data-element-type="video"] .builder-video-wrap{
+            max-height: min(52vw, 220px) !important;
+        }
+        body[data-preview-device="mobile"] .builder-el[data-element-type="image"] .builder-img{
+            max-height: min(70vw, 320px) !important;
+            object-fit: contain !important;
+        }
         body[data-preview-device="mobile"] .builder-section--freeform{
             width: 100% !important;
             margin-left: 0 !important;
@@ -895,12 +1233,15 @@
             flex-shrink: 0 !important;
         }
         body[data-preview-device="mobile"] .builder-menu-left{
-            flex: 1 !important;
+            flex: 0 0 auto !important;
             min-width: 0 !important;
+            max-width: min(200px, 55vw) !important;
         }
         body[data-preview-device="mobile"] .builder-menu-left .builder-menu-logo{
+            width: auto !important;
             max-height: 36px !important;
-            max-width: 140px !important;
+            max-width: min(140px, 42vw) !important;
+            object-fit: contain !important;
         }
         body[data-preview-device="mobile"] .builder-menu-left .builder-menu-logo-placeholder{
             min-height: 36px !important;
@@ -927,18 +1268,155 @@
         body[data-preview-device="mobile"] .builder-review-card-text{
             font-size: 12px !important;
         }
+        body[data-preview-device="mobile"] .builder-col-inner .builder-product-offer{
+            text-align: center !important;
+        }
+        body[data-preview-device="mobile"] .builder-col-inner .builder-pricing-features{
+            text-align: left !important;
+        }
         body[data-preview-device="mobile"] .builder-product-offer{
             gap: 3px !important;
+            /* Builder may set 2-column grid on the card (media | copy); on mobile stack one column */
+            grid-template-columns: minmax(0, 1fr) !important;
+        }
+        body[data-preview-device="mobile"] .builder-product-media .builder-carousel-wrap{
+            min-height: 0 !important;
+            aspect-ratio: 4 / 5 !important;
+        }
+        body[data-preview-device="mobile"] .builder-product-media .builder-carousel-slide > div {
+            width: 100% !important;
+            height: 100% !important;
+            min-height: 0 !important;
+            display: block !important;
+        }
+        body[data-preview-device="mobile"] .builder-product-offer .builder-product-utility {
+            grid-template-columns: minmax(0, 1fr) 28px !important;
+            gap: 4px !important;
+        }
+        body[data-preview-device="mobile"] .builder-product-offer .builder-product-cart {
+            width: 28px !important;
+            height: 28px !important;
+            min-width: 28px !important;
+            font-size: 11px !important;
+        }
+        body[data-preview-device="mobile"] .builder-product-offer .builder-pricing-title[style]{
+            font-size: clamp(11px, 3.2vw, 14px) !important;
+            line-height: 1.2 !important;
+        }
+        body[data-preview-device="mobile"] .builder-product-offer .builder-pricing-price[style]{
+            font-size: clamp(13px, 4vw, 18px) !important;
+        }
+        body[data-preview-device="mobile"] .builder-product-offer .builder-pricing-subtitle[style]{
+            font-size: clamp(9px, 2.4vw, 11px) !important;
+        }
+        body[data-preview-device="mobile"] .builder-product-offer .builder-pricing-features li[style]{
+            font-size: clamp(8px, 2.2vw, 10px) !important;
+        }
+        body[data-preview-device="mobile"] .builder-product-offer .builder-pricing-cta[style]{
+            font-size: clamp(10px, 2.8vw, 12px) !important;
+            padding: 6px 8px !important;
+        }
+        body[data-preview-device="mobile"] .builder-product-offer .builder-product-secondary {
+            font-size: 9px !important;
+            padding: 5px 6px !important;
         }
 
         /* ── REAL VIEWPORT responsive (published mode) ── */
+        @media (max-width: 1024px) {
+            body.is-published .builder-product-media .builder-carousel-wrap{
+                min-height: 0 !important;
+                aspect-ratio: 4 / 5 !important;
+                max-height: min(62vw, 440px) !important;
+            }
+            /* 2-up when multiple product_offer in one column; single card spans full grid width */
+            body.is-published .builder-col-inner:has(> .builder-el[data-element-type="product_offer"]):not(:has(> .builder-el:not([data-element-type="product_offer"]))) {
+                display: grid !important;
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                gap: 12px !important;
+                align-items: start !important;
+            }
+            body.is-published .builder-col-inner:has(> .builder-el[data-element-type="product_offer"]):not(:has(> .builder-el:not([data-element-type="product_offer"]))) > .builder-el[data-element-type="product_offer"]:only-child {
+                grid-column: 1 / -1 !important;
+            }
+            body.is-published .builder-row-inner > .builder-el[data-element-type="product_offer"] {
+                flex: 0 0 auto !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                min-width: 0 !important;
+            }
+            body.is-published .builder-col-inner:has(> .builder-el[data-element-type="product_offer"]):not(:has(> .builder-el:not([data-element-type="product_offer"]))) > .builder-el[data-element-type="product_offer"] {
+                width: 100% !important;
+                max-width: 100% !important;
+                min-width: 0 !important;
+            }
+            body.is-published .builder-product-offer .builder-pricing-title[style]{
+                font-size: clamp(14px, 2.6vw, 18px) !important;
+            }
+            body.is-published .builder-product-offer .builder-pricing-price[style]{
+                font-size: clamp(18px, 3.8vw, 26px) !important;
+            }
+            body.is-published .builder-product-offer .builder-pricing-features li[style]{
+                font-size: clamp(10px, 2vw, 12px) !important;
+            }
+            /* Tablet / narrow desktop: flex columns + embeds (same idea as preview tablet) */
+            body.is-published .builder-col-inner{
+                min-width: 0;
+                max-width: 100%;
+            }
+            body.is-published .builder-el[data-element-type="video"]{
+                min-width: 0;
+                width: 100%;
+                max-width: 100%;
+                overflow: hidden;
+                box-sizing: border-box;
+            }
+            body.is-published .builder-video-wrap{
+                width: 100%;
+                max-width: 100%;
+                min-width: 0;
+                min-height: 0;
+                padding-top: 0;
+                aspect-ratio: 16 / 9;
+                height: auto;
+                overflow: hidden;
+                box-sizing: border-box;
+            }
+            body.is-published .builder-video-wrap iframe{
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                border: 0;
+            }
+            body.is-published .builder-video-wrap video{
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                border: 0;
+                object-fit: cover;
+            }
+        }
         @media (max-width: 768px) {
             body.is-published .builder-row-inner{
-                flex-wrap: wrap;
+                flex-wrap: nowrap !important;
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 12px !important;
+            }
+            body.is-published .builder-row-inner > .builder-el{
+                flex: 0 0 auto !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                min-width: 0 !important;
+                align-self: stretch !important;
             }
             body.is-published .builder-col{
-                flex: 1 1 45%;
-                min-width: 200px;
+                flex: 0 0 auto !important;
+                width: 100% !important;
+                min-width: 0;
                 min-height: 0 !important;
                 height: auto !important;
             }
@@ -946,6 +1424,7 @@
                 position: static !important;
                 left: auto !important;
                 top: auto !important;
+                width: 100% !important;
                 max-width: 100% !important;
             }
             body.is-published .builder-col-inner--section-elements > .builder-el{
@@ -977,6 +1456,24 @@
             body.is-published .builder-pricing-grid{
                 grid-template-columns: 1fr;
             }
+            body.is-published .builder-product-media .builder-carousel-wrap{
+                min-height: 0 !important;
+                aspect-ratio: 4 / 5 !important;
+                max-height: min(62vw, 440px) !important;
+            }
+            body.is-published .builder-product-offer .builder-pricing-title[style]{
+                font-size: clamp(14px, 3vw, 18px) !important;
+            }
+            body.is-published .builder-product-offer .builder-pricing-price[style]{
+                font-size: clamp(18px, 4.2vw, 26px) !important;
+            }
+            body.is-published .builder-product-offer .builder-pricing-features li[style]{
+                font-size: clamp(10px, 2.4vw, 12px) !important;
+            }
+            body.is-published .builder-product-offer .builder-pricing-cta[style]{
+                font-size: clamp(11px, 2.6vw, 13px) !important;
+                padding: 8px 10px !important;
+            }
             body.is-published .builder-section--freeform{
                 width: 100% !important;
                 margin-left: 0;
@@ -999,7 +1496,17 @@
         }
         @media (max-width: 480px) {
             body.is-published .builder-row-inner{
-                flex-direction: column;
+                flex-direction: column !important;
+                flex-wrap: nowrap !important;
+                align-items: stretch !important;
+                gap: 12px !important;
+            }
+            body.is-published .builder-row-inner > .builder-el{
+                flex: 0 0 auto !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                min-width: 0 !important;
+                align-self: stretch !important;
             }
             body.is-published .builder-col{
                 flex: 0 0 auto;
@@ -1015,6 +1522,71 @@
                 width: 100% !important;
                 max-width: 100% !important;
                 height: auto !important;
+            }
+            /* Phone: same vertical stack as mobile preview (no 2-up row overrides) */
+            body.is-published .builder-col-inner:has(> .builder-el[data-element-type="product_offer"]):not(:has(> .builder-el:not([data-element-type="product_offer"]))) {
+                display: grid !important;
+                grid-template-columns: minmax(0, 1fr) !important;
+                gap: 12px !important;
+                justify-items: stretch !important;
+            }
+            body.is-published .builder-col-inner:has(> .builder-el[data-element-type="product_offer"]):not(:has(> .builder-el:not([data-element-type="product_offer"]))) > .builder-el[data-element-type="product_offer"] {
+                grid-column: 1 / -1 !important;
+            }
+            body.is-published .builder-row-inner > .builder-el[data-element-type="product_offer"] {
+                flex: 0 0 auto !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                min-width: 0 !important;
+            }
+            body.is-published .builder-col-inner:has(> .builder-el[data-element-type="product_offer"]):not(:has(> .builder-el:not([data-element-type="product_offer"]))) > .builder-el + .builder-el {
+                margin-top: 0 !important;
+            }
+            body.is-published .builder-product-media .builder-carousel-wrap {
+                aspect-ratio: 4 / 5 !important;
+            }
+            body.is-published .builder-product-media .builder-carousel-slide > div {
+                position: relative !important;
+                width: 100% !important;
+                height: 100% !important;
+                min-height: 0 !important;
+                overflow: hidden !important;
+                display: block !important;
+            }
+            body.is-published .builder-product-media .builder-img {
+                position: absolute !important;
+                inset: 0 !important;
+                width: 100% !important;
+                height: 100% !important;
+                max-width: none !important;
+                object-fit: cover !important;
+                object-position: center !important;
+            }
+            body.is-published .builder-product-offer {
+                grid-template-columns: minmax(0, 1fr) !important;
+            }
+            body.is-published .builder-col-inner .builder-product-offer{
+                text-align: center !important;
+            }
+            body.is-published .builder-col-inner .builder-pricing-features{
+                text-align: left !important;
+            }
+            body.is-published .builder-product-offer .builder-product-utility {
+                grid-template-columns: minmax(0, 1fr) 28px !important;
+                gap: 4px !important;
+            }
+            body.is-published .builder-product-offer .builder-product-cart {
+                width: 28px !important;
+                height: 28px !important;
+                min-width: 28px !important;
+                font-size: 11px !important;
+            }
+            body.is-published .builder-el[data-element-type="video"] .builder-video-wrap {
+                max-height: min(52vw, 220px) !important;
+            }
+            body.is-published .builder-el[data-element-type="image"] .builder-img {
+                max-height: min(70vw, 320px) !important;
+                object-fit: contain !important;
             }
             body.is-published .builder-col-inner--section-elements > .builder-el{
                 text-align: center !important;
@@ -1068,6 +1640,27 @@
             body.is-published .builder-pricing-price{
                 font-size: clamp(22px, 6vw, 32px);
             }
+            body.is-published .builder-product-offer .builder-pricing-title[style]{
+                font-size: clamp(11px, 3.2vw, 14px) !important;
+                line-height: 1.2 !important;
+            }
+            body.is-published .builder-product-offer .builder-pricing-price[style]{
+                font-size: clamp(13px, 4vw, 18px) !important;
+            }
+            body.is-published .builder-product-offer .builder-pricing-subtitle[style]{
+                font-size: clamp(9px, 2.4vw, 11px) !important;
+            }
+            body.is-published .builder-product-offer .builder-pricing-features li[style]{
+                font-size: clamp(8px, 2.2vw, 10px) !important;
+            }
+            body.is-published .builder-product-offer .builder-pricing-cta[style]{
+                font-size: clamp(10px, 2.8vw, 12px) !important;
+                padding: 6px 8px !important;
+            }
+            body.is-published .builder-product-offer .builder-product-secondary{
+                font-size: 9px !important;
+                padding: 5px 6px !important;
+            }
             body.is-published .builder-faq-question{
                 font-size: 14px;
             }
@@ -1114,12 +1707,15 @@
                 flex-shrink: 0;
             }
             body.is-published .builder-menu-left{
-                flex: 1;
+                flex: 0 0 auto;
                 min-width: 0;
+                max-width: min(200px, 55vw);
             }
             body.is-published .builder-menu-left .builder-menu-logo{
+                width: auto !important;
                 max-height: 36px;
-                max-width: 140px;
+                max-width: min(140px, 42vw);
+                object-fit: contain !important;
             }
             body.is-published .builder-menu-left .builder-menu-logo-placeholder{
                 min-height: 36px;
@@ -1150,7 +1746,7 @@
         .preview-device-switcher{ pointer-events:auto; }
     </style>
 </head>
-<body class="{{ ($isPreview ?? false) ? 'is-preview' : 'is-published' }}{{ ($portalHasFreeformCanvas ?? false) ? ' portal-has-freeform-canvas' : '' }}" data-funnel-slug="{{ $funnel->slug }}">
+<body class="{{ ($isPreview ?? false) ? 'is-preview' : 'is-published' }}{{ ($portalHasFreeformCanvas ?? false) ? ' portal-has-freeform-canvas' : '' }}{{ ($previewIframeMode ?? false) ? ' preview-iframe-doc' : '' }}" data-funnel-slug="{{ $funnel->slug }}">
     <div class="portal-loading-overlay" id="portalLoadingOverlay" aria-hidden="true">
         <div class="portal-loading-card" role="status" aria-live="polite" aria-label="Loading next page">
             <div class="portal-loading-spinner" aria-hidden="true"></div>
@@ -1160,7 +1756,7 @@
     </div>
     @php
         $isPreview = $isPreview ?? false;
-        $layout = is_array($step->layout_json ?? null) ? $step->layout_json : [];
+        $layout = $step->effectiveLayoutForBreakpoint($portalLayoutBreakpoint ?? 'desktop');
         $rootItems = is_array($layout['root'] ?? null) ? $layout['root'] : [];
         if (count($rootItems) === 0 && is_array($layout['sections'] ?? null)) {
             foreach ($layout['sections'] as $legacySection) {
@@ -1347,12 +1943,58 @@
             return $optInStep ?: $salesStep ?: $checkoutStep ?: $thankYouStep ?: $homeStep ?: $nextStep ?: $activeSteps->first(fn ($candidate) => (int) $candidate->id !== (int) $step->id);
         };
         $isAdminTemplatePreview = request()->routeIs('admin.funnel-templates.preview');
-        $stepRoute = function ($targetStep) use ($funnel, $isPreview, $isTemplateTest, $isAdminTemplatePreview) {
+        $appendQueryParams = function (string $url, array $params): string {
+            $url = trim($url);
+            if ($url === '' || $url === '#') return $url;
+            $parsed = parse_url($url);
+            if (!is_array($parsed) || !isset($parsed['path'])) {
+                return $url;
+            }
+            $existing = [];
+            if (!empty($parsed['query'])) {
+                parse_str($parsed['query'], $existing);
+            }
+            foreach ($params as $k => $v) {
+                if ($v === null) continue;
+                $existing[$k] = (string) $v;
+            }
+            $query = http_build_query($existing);
+            $rebuilt =
+                (isset($parsed['scheme']) ? ($parsed['scheme'] . '://') : '')
+                . ($parsed['host'] ?? '')
+                . (isset($parsed['port']) ? (':' . $parsed['port']) : '')
+                . ($parsed['path'] ?? '');
+            if ($query !== '') $rebuilt .= '?' . $query;
+            if (!empty($parsed['fragment'])) $rebuilt .= '#' . $parsed['fragment'];
+            return $rebuilt;
+        };
+        $previewDeviceParam = (string) request()->query('preview_device', request()->query('previewDevice', ''));
+        $previewDebugLayout = (string) request()->query('debug_layout', '');
+        $previewDebugAlign = (string) request()->query('debug_align', '');
+        $stepRoute = function ($targetStep) use ($funnel, $isPreview, $isTemplateTest, $isAdminTemplatePreview, $previewIframeMode, $appendQueryParams, $previewDeviceParam, $previewDebugLayout, $previewDebugAlign) {
             if ($isPreview) {
                 if ($isAdminTemplatePreview || $isTemplateTest) {
-                    return route('admin.funnel-templates.preview', ['funnel_template' => $funnel, 'step' => $targetStep]);
+                    $url = route('admin.funnel-templates.preview', ['funnel_template' => $funnel, 'step' => $targetStep]);
+                    if ($previewIframeMode) {
+                        $url = $appendQueryParams($url, [
+                            'preview_iframe' => '1',
+                            'preview_device' => $previewDeviceParam !== '' ? $previewDeviceParam : null,
+                            'debug_layout' => $previewDebugLayout !== '' ? $previewDebugLayout : null,
+                            'debug_align' => $previewDebugAlign !== '' ? $previewDebugAlign : null,
+                        ]);
+                    }
+                    return $url;
                 }
-                return route('funnels.preview', ['funnel' => $funnel, 'step' => $targetStep]);
+                $url = route('funnels.preview', ['funnel' => $funnel, 'step' => $targetStep]);
+                if ($previewIframeMode) {
+                    $url = $appendQueryParams($url, [
+                        'preview_iframe' => '1',
+                        'preview_device' => $previewDeviceParam !== '' ? $previewDeviceParam : null,
+                        'debug_layout' => $previewDebugLayout !== '' ? $previewDebugLayout : null,
+                        'debug_align' => $previewDebugAlign !== '' ? $previewDebugAlign : null,
+                    ]);
+                }
+                return $url;
             }
             if ($isTemplateTest) {
                 return route('admin.funnel-templates.test', ['funnel_template' => $funnel, 'step' => $targetStep]);
@@ -1423,6 +2065,24 @@
             }
 
             return ['kind' => 'link', 'href' => ($link !== '' ? $link : '#')];
+        };
+        $resolveMenuCtaUrl = function (array $settings) use ($nextStep, $activeStepsBySlug, $stepRoute) {
+            $mode = strtolower(trim((string) ($settings['leftButtonActionType'] ?? 'link')));
+            if ($mode === 'next_step') {
+                return $nextStep ? $stepRoute($nextStep) : '#';
+            }
+            if ($mode === 'step') {
+                $slug = strtolower(trim((string) ($settings['leftButtonStepSlug'] ?? '')));
+                if ($slug === '') {
+                    return '#';
+                }
+                $target = $activeStepsBySlug->get($slug);
+
+                return $target ? $stepRoute($target) : '#';
+            }
+            $url = trim((string) ($settings['leftButtonUrl'] ?? '#'));
+
+            return $url !== '' ? $url : '#';
         };
         $resolvePricingCtaAction = function (array $settings) use ($choosePricingTarget, $resolveButtonAction, $activeStepsBySlug, $step) {
             $stepType = strtolower(trim((string) ($step->type ?? '')));
@@ -1544,7 +2204,7 @@
             if (preg_match('#^(https?:)?//#i', $src) === 1) {
                 return str_starts_with($src, '//') ? ('https:' . $src) : $src;
             }
-            if (preg_match('#^(www\.)?(youtube\.com|youtu\.be|vimeo\.com)/#i', $src) === 1) {
+            if (preg_match('#^(www\.)?(youtube\.com|youtube-nocookie\.com|youtu\.be|vimeo\.com)/#i', $src) === 1) {
                 return 'https://' . ltrim($src, '/');
             }
             return $src;
@@ -1632,7 +2292,14 @@
                     continue;
                 }
                 if ($key === 'backgroundImage') {
-                    if (!preg_match('/^url\(((https?:\/\/|\/)[^\s)]+)\)$/i', $value)) {
+                    // Allow background images and our safe overlay form:
+                    // `linear-gradient(rgba(...),rgba(...)),url(...)`
+                    $isPlainUrl = preg_match('/^url\(((https?:\/\/|\/)[^\s)]+)\)$/i', $value);
+                    $isOverlay = preg_match(
+                        '/^linear-gradient\(\s*rgba\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*(0(\.\d+)?|1(\.0+)?)\s*\)\s*,\s*rgba\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*(0(\.\d+)?|1(\.0+)?)\s*\)\s*\)\s*,\s*url\(((https?:\/\/|\/)[^\s)]+)\)\s*$/i',
+                        $value
+                    );
+                    if (!$isPlainUrl && !$isOverlay) {
                         continue;
                     }
                     $out[] = $cssProp . ':' . $value;
@@ -1714,7 +2381,6 @@
             </div>
             <div class="preview-device-switcher" role="group" aria-label="Preview device">
                 <button type="button" class="preview-device-btn is-active" data-preview-device="desktop" title="Desktop"><i class="fas fa-desktop" aria-hidden="true"></i><span style="position:absolute;left:-9999px;">Desktop</span></button>
-                <button type="button" class="preview-device-btn" data-preview-device="tablet" title="Tablet"><i class="fas fa-tablet-alt" aria-hidden="true"></i><span style="position:absolute;left:-9999px;">Tablet</span></button>
                 <button type="button" class="preview-device-btn" data-preview-device="mobile" title="Mobile"><i class="fas fa-mobile-alt" aria-hidden="true"></i><span style="position:absolute;left:-9999px;">Mobile</span></button>
             </div>
         </div>
@@ -1776,6 +2442,36 @@
                 @foreach($renderSections as $section)
                     @php
                         $sectionStyleArr = is_array($section['style'] ?? null) ? $section['style'] : [];
+                        // Background overlay (color + opacity) for readability over background images.
+                        $overlayColor = trim((string) ($sectionStyleArr['overlayColor'] ?? ($sectionStyleArr['overlay_color'] ?? '#000000')));
+                        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $overlayColor)) {
+                            $overlayColor = '#000000';
+                        }
+                        $overlayOpacityRaw = $sectionStyleArr['overlayOpacity'] ?? ($sectionStyleArr['overlay_opacity'] ?? 0);
+                        $overlayOpacity = is_numeric($overlayOpacityRaw) ? (float) $overlayOpacityRaw : 0.0;
+                        if ($overlayOpacity > 1.0) {
+                            $overlayOpacity = $overlayOpacity / 100.0;
+                        }
+                        $overlayOpacity = max(0.0, min(1.0, $overlayOpacity));
+                        $bgImg = trim((string) ($sectionStyleArr['backgroundImage'] ?? ($sectionStyleArr['background-image'] ?? '')));
+                        if ($bgImg !== '') {
+                            if (!isset($sectionStyleArr['backgroundSize']) || trim((string) $sectionStyleArr['backgroundSize']) === '') {
+                                $sectionStyleArr['backgroundSize'] = 'cover';
+                            }
+                            if (!isset($sectionStyleArr['backgroundPosition']) || trim((string) $sectionStyleArr['backgroundPosition']) === '') {
+                                $sectionStyleArr['backgroundPosition'] = 'center center';
+                            }
+                            if (!isset($sectionStyleArr['backgroundRepeat']) || trim((string) $sectionStyleArr['backgroundRepeat']) === '') {
+                                $sectionStyleArr['backgroundRepeat'] = 'no-repeat';
+                            }
+                        }
+                        if ($bgImg !== '' && $overlayOpacity > 0) {
+                            $r = hexdec(substr($overlayColor, 1, 2));
+                            $g = hexdec(substr($overlayColor, 3, 2));
+                            $b = hexdec(substr($overlayColor, 5, 2));
+                            $rgba = 'rgba(' . $r . ',' . $g . ',' . $b . ',' . $overlayOpacity . ')';
+                            $sectionStyleArr['backgroundImage'] = 'linear-gradient(' . $rgba . ',' . $rgba . '),' . $bgImg;
+                        }
                         $sectionRows = is_array($section['rows'] ?? null) ? $section['rows'] : [];
                         $sectionElsRaw = is_array($section['elements'] ?? null) ? $section['elements'] : [];
                         $sectionHasSectionElements = count($sectionElsRaw) > 0;
@@ -1804,10 +2500,23 @@
                         $innerMax = $widthMap[$contentWidth] ?? '';
                         $sectionElements = is_array($section['elements'] ?? null) ? $section['elements'] : [];
                         $hasAbsoluteSectionElement = false;
+                        $hasNonZeroCssPos = function ($v): bool {
+                            $s = strtolower(trim((string) $v));
+                            if ($s === '') return false;
+                            if ($s === '0' || $s === '0px') return false;
+                            return true;
+                        };
                         foreach ($sectionElements as $_sectionEl) {
                             $_sectionElStyle = is_array($_sectionEl['style'] ?? null) ? $_sectionEl['style'] : [];
                             $_sectionElSettings = is_array($_sectionEl['settings'] ?? null) ? $_sectionEl['settings'] : [];
-                            if (trim((string) ($_sectionElSettings['positionMode'] ?? '')) === 'absolute' || trim((string) ($_sectionElStyle['position'] ?? '')) === 'absolute') {
+                            $_secHasAbsCoords =
+                                (int) ($_sectionElSettings['freeX'] ?? 0) !== 0
+                                || (int) ($_sectionElSettings['freeY'] ?? 0) !== 0
+                                || $hasNonZeroCssPos($_sectionElStyle['left'] ?? '')
+                                || $hasNonZeroCssPos($_sectionElStyle['top'] ?? '')
+                                || $hasNonZeroCssPos($_sectionElStyle['right'] ?? '')
+                                || $hasNonZeroCssPos($_sectionElStyle['bottom'] ?? '');
+                            if ((trim((string) ($_sectionElSettings['positionMode'] ?? '')) === 'absolute' || trim((string) ($_sectionElStyle['position'] ?? '')) === 'absolute') && $_secHasAbsCoords) {
                                 $hasAbsoluteSectionElement = true;
                                 break;
                             }
@@ -1819,21 +2528,93 @@
                                 $isBareCarouselWrap = true;
                             }
                         }
+                        $estimateElementHeight = function (array $style, array $settings, string $type): int {
+                            $explicitHeight = (int) str_replace('px', '', (string) ($style['height'] ?? '0'));
+                            if ($explicitHeight > 0) {
+                                return $explicitHeight;
+                            }
+                            $fixedHeight = (int) ($settings['fixedHeight'] ?? 0);
+                            if ($fixedHeight > 0) {
+                                return $fixedHeight;
+                            }
+
+                            $fontSize = (int) str_replace('px', '', (string) ($style['fontSize'] ?? ($style['font-size'] ?? '16')));
+                            if ($fontSize <= 0) {
+                                $fontSize = 16;
+                            }
+
+                            $paddingTop = 0;
+                            $paddingBottom = 0;
+                            $padding = trim((string) ($style['padding'] ?? ''));
+                            if ($padding !== '') {
+                                $parts = preg_split('/\s+/', $padding) ?: [];
+                                $toPx = function (?string $value): int {
+                                    return (int) str_replace('px', '', (string) $value);
+                                };
+                                if (count($parts) === 1) {
+                                    $paddingTop = $paddingBottom = $toPx($parts[0]);
+                                } elseif (count($parts) >= 2) {
+                                    $paddingTop = $toPx($parts[0]);
+                                    $paddingBottom = $toPx($parts[0]);
+                                    if (count($parts) >= 3) {
+                                        $paddingBottom = $toPx($parts[2]);
+                                    }
+                                }
+                            }
+
+                            $lineHeight = (int) ceil($fontSize * 1.2);
+                            return match ($type) {
+                                'button' => max(40, $lineHeight + $paddingTop + $paddingBottom),
+                                'heading' => max(56, (int) ceil($fontSize * 2.2)),
+                                'text' => max(28, (int) ceil($fontSize * 2.4)),
+                                default => 80,
+                            };
+                        };
                         $carrierMinHeight = 0;
+                        $carrierUsesAbsoluteLayout = false;
                         if (count($sectionElements) > 0) {
                             $carrierHasAbsElements = false;
                             $carrierMaxRight = 0;
-                            foreach ($sectionElements as $_cEl) {
+                            $hasNonZeroCssPos = function ($v): bool {
+                                $s = strtolower(trim((string) $v));
+                                if ($s === '') return false;
+                                // Treat 0 / 0px as "not positioned" for our layout detection.
+                                if ($s === '0' || $s === '0px') return false;
+                                return true;
+                            };
+                            foreach ($sectionElements as $_cIx => $_cEl) {
                                 $_cElS = is_array($_cEl['settings'] ?? null) ? $_cEl['settings'] : [];
                                 $_cElSt = is_array($_cEl['style'] ?? null) ? $_cEl['style'] : [];
-                                $_cIsAbs = (trim((string) ($_cElS['positionMode'] ?? '')) === 'absolute') || (trim((string) ($_cElSt['position'] ?? '')) === 'absolute');
+                                $_cHasAbsCoords =
+                                    (int) ($_cElS['freeX'] ?? 0) !== 0
+                                    || (int) ($_cElS['freeY'] ?? 0) !== 0
+                                    || $hasNonZeroCssPos($_cElSt['left'] ?? '')
+                                    || $hasNonZeroCssPos($_cElSt['top'] ?? '')
+                                    || $hasNonZeroCssPos($_cElSt['right'] ?? '')
+                                    || $hasNonZeroCssPos($_cElSt['bottom'] ?? '');
+                                $_cIsAbs = ((trim((string) ($_cElS['positionMode'] ?? '')) === 'absolute') || (trim((string) ($_cElSt['position'] ?? '')) === 'absolute')) && $_cHasAbsCoords;
                                 if ($_cIsAbs) {
                                     $carrierHasAbsElements = true;
                                     $_cY = (int) ($_cElS['freeY'] ?? 0);
                                     if ($_cY <= 0) $_cY = (int) str_replace('px', '', (string) ($_cElSt['top'] ?? '0'));
-                                    $_cH = (int) str_replace('px', '', (string) ($_cElSt['height'] ?? '0'));
-                                    if ($_cH <= 0) $_cH = 80;
-                                    $_cBot = $_cY + $_cH + 20;
+                                    if ($isFreeformCanvas) {
+                                        $_priorMenuH = 0;
+                                        for ($_pi = 0; $_pi < $_cIx; $_pi++) {
+                                            $_pel = $sectionElements[$_pi] ?? [];
+                                            if (strtolower((string) ($_pel['type'] ?? '')) === 'menu') {
+                                                $_pmst = is_array($_pel['style'] ?? null) ? $_pel['style'] : [];
+                                                $_pmh = (int) str_replace('px', '', (string) ($_pmst['height'] ?? '0'));
+                                                if ($_pmh < 72) {
+                                                    $_pmh = 72;
+                                                }
+                                                $_priorMenuH += $_pmh;
+                                            }
+                                        }
+                                        $_cY += $_priorMenuH;
+                                    }
+                                    $_cType = strtolower((string) ($_cEl['type'] ?? ''));
+                                    $_cH = $estimateElementHeight($_cElSt, $_cElS, $_cType);
+                                    $_cBot = $_cY + $_cH + 8;
                                     if ($_cBot > $carrierMinHeight) $carrierMinHeight = $_cBot;
                                     $_cX = (int) ($_cElS['freeX'] ?? 0);
                                     if ($_cX <= 0) $_cX = (int) str_replace('px', '', (string) ($_cElSt['left'] ?? '0'));
@@ -1843,9 +2624,16 @@
                                     if ($_cRight > $carrierMaxRight) $carrierMaxRight = $_cRight;
                                 }
                             }
-                            $carrierColStyle = ['flex' => '1 1 auto', 'backgroundColor' => 'transparent', 'padding' => '0', 'minHeight' => '0'];
+                            // Only use the "absolute carrier" rendering when we can anchor it to a real stage width
+                            // (or when the section itself is a freeform canvas). Otherwise, treating legacy section-level
+                            // flow elements as absolute causes inflated min-heights and extra blank space.
+                            $carrierUsesAbsoluteLayout = $carrierHasAbsElements && ($sectionStageWidth > 0 || $isFreeformCanvas);
+                            $carrierColStyle = ['flex' => '1 1 auto', 'backgroundColor' => 'transparent', 'padding' => '0'];
+                            if ($carrierUsesAbsoluteLayout) {
+                                $carrierColStyle['minHeight'] = '0';
+                            }
                             $carrierConstrainWidth = 0;
-                            if ($carrierHasAbsElements) {
+                            if ($carrierUsesAbsoluteLayout) {
                                 if ($sectionStageWidth > 0) {
                                     $carrierConstrainWidth = $sectionStageWidth;
                                 } elseif ($editorCanvasWidth > 0) {
@@ -1864,17 +2652,23 @@
                                 'id' => 'sec_el_row_' . md5((string) ($section['id'] ?? uniqid('', true))),
                                 'style' => $carrierRowStyle,
                                 'settings' => ['contentWidth' => 'full'],
-                                'isSectionElementCarrier' => true,
+                                'isSectionElementCarrier' => $carrierUsesAbsoluteLayout,
                                 'columns' => [[
                                     'id' => 'sec_el_col_' . md5((string) ($section['id'] ?? uniqid('', true))),
                                     'style' => $carrierColStyle,
                                     'settings' => [],
                                     'elements' => $sectionElements,
-                                    'isSectionElementCarrier' => true,
+                                    'isSectionElementCarrier' => $carrierUsesAbsoluteLayout,
                                 ]],
                             ]);
                         }
                         $sectionInlineStyle = $sectionStyle;
+                        // Absolute-layout sections in the builder already "bake in" spacing via
+                        // element coordinates. Re-applying section padding in portal preview/published
+                        // adds extra empty space above/below the absolute canvas.
+                        if ($hasAbsoluteSectionElement && !$isBareCarouselWrap && !$isFreeformCanvas) {
+                            $sectionInlineStyle .= ($sectionInlineStyle !== '' ? '; ' : '') . 'padding:0;';
+                        }
                         if ($isFreeformCanvas && $editorCanvasWidth > 0) {
                             $sectionInlineStyle .= ($sectionInlineStyle !== '' ? '; ' : '') . 'width:' . $editorCanvasWidth . 'px;max-width:none;margin-left:auto;margin-right:auto;';
                         }
@@ -1882,15 +2676,17 @@
                             $sectionInlineStyle .= ($sectionInlineStyle !== '' ? '; ' : '') . 'border:none;';
                         }
                         $sectionInnerStyle = [];
-                        if ($carrierMinHeight > 0) {
+                        // Only enforce carrier min-height when the section-level elements truly use absolute positioning.
+                        // Otherwise we can create unnecessary blank space below the section in preview/published.
+                        if ($carrierMinHeight > 0 && $carrierUsesAbsoluteLayout) {
                             $sectionInnerStyle[] = 'min-height:' . $carrierMinHeight . 'px';
                         }
                         if ($sectionStageWidth > 0 && $hasAbsoluteSectionElement && !$isBareCarouselWrap && !$isFreeformCanvas) {
                             $sectionInnerStyle[] = 'width:100%';
                             $sectionInnerStyle[] = 'max-width:' . $sectionStageWidth . 'px';
-                            if ($innerMax !== '') {
-                                $sectionInnerStyle[] = 'margin: 0 auto';
-                            }
+                            // Always center when we constrain with max-width.
+                            // Otherwise, sections like "full page" can look slightly shifted in preview/published.
+                            $sectionInnerStyle[] = 'margin: 0 auto';
                         } elseif ($innerMax !== '' && !$isBareCarouselWrap) {
                             $sectionInnerStyle[] = 'max-width: ' . $innerMax;
                             $sectionInnerStyle[] = 'margin: 0 auto';
@@ -1927,6 +2723,36 @@
                                 @foreach($columns as $column)
                                     @php
                                         $colStyleArr = is_array($column['style'] ?? null) ? $column['style'] : [];
+                                        $colBgImg = trim((string) ($colStyleArr['backgroundImage'] ?? ($colStyleArr['background-image'] ?? '')));
+                                        if ($colBgImg !== '') {
+                                            if (!isset($colStyleArr['backgroundSize']) || trim((string) $colStyleArr['backgroundSize']) === '') {
+                                                $colStyleArr['backgroundSize'] = 'cover';
+                                            }
+                                            if (!isset($colStyleArr['backgroundPosition']) || trim((string) $colStyleArr['backgroundPosition']) === '') {
+                                                $colStyleArr['backgroundPosition'] = 'center center';
+                                            }
+                                            if (!isset($colStyleArr['backgroundRepeat']) || trim((string) $colStyleArr['backgroundRepeat']) === '') {
+                                                $colStyleArr['backgroundRepeat'] = 'no-repeat';
+                                            }
+                                        }
+                                        // Background overlay (color + opacity) for readability over column background images.
+                                        $colOverlayColor = trim((string) ($colStyleArr['overlayColor'] ?? ($colStyleArr['overlay_color'] ?? '#000000')));
+                                        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $colOverlayColor)) {
+                                            $colOverlayColor = '#000000';
+                                        }
+                                        $colOverlayOpacityRaw = $colStyleArr['overlayOpacity'] ?? ($colStyleArr['overlay_opacity'] ?? 0);
+                                        $colOverlayOpacity = is_numeric($colOverlayOpacityRaw) ? (float) $colOverlayOpacityRaw : 0.0;
+                                        if ($colOverlayOpacity > 1.0) {
+                                            $colOverlayOpacity = $colOverlayOpacity / 100.0;
+                                        }
+                                        $colOverlayOpacity = max(0.0, min(1.0, $colOverlayOpacity));
+                                        if ($colBgImg !== '' && $colOverlayOpacity > 0) {
+                                            $r = hexdec(substr($colOverlayColor, 1, 2));
+                                            $g = hexdec(substr($colOverlayColor, 3, 2));
+                                            $b = hexdec(substr($colOverlayColor, 5, 2));
+                                            $rgba = 'rgba(' . $r . ',' . $g . ',' . $b . ',' . $colOverlayOpacity . ')';
+                                            $colStyleArr['backgroundImage'] = 'linear-gradient(' . $rgba . ',' . $rgba . '),' . $colBgImg;
+                                        }
                                         $legacyColBg = strtolower(trim((string) ($colStyleArr['backgroundColor'] ?? '')));
                                         if ($legacyColBg === '#f8fafc' || $legacyColBg === 'rgb(248, 250, 252)' || $legacyColBg === 'rgba(248, 250, 252, 1)') {
                                             $colStyleArr['backgroundColor'] = '#ffffff';
@@ -1952,13 +2778,20 @@
                                         foreach ($elements as $_el) {
                                             $_elSettings = is_array($_el['settings'] ?? null) ? $_el['settings'] : [];
                                             $_elStyle = is_array($_el['style'] ?? null) ? $_el['style'] : [];
-                                            if (trim((string) ($_elSettings['positionMode'] ?? '')) === 'absolute' || trim((string) ($_elStyle['position'] ?? '')) === 'absolute') {
+                                            $_elHasAbsCoords =
+                                                (int) ($_elSettings['freeX'] ?? 0) !== 0
+                                                || (int) ($_elSettings['freeY'] ?? 0) !== 0
+                                                || trim((string) ($_elStyle['left'] ?? '')) !== ''
+                                                || trim((string) ($_elStyle['top'] ?? '')) !== ''
+                                                || trim((string) ($_elStyle['right'] ?? '')) !== ''
+                                                || trim((string) ($_elStyle['bottom'] ?? '')) !== '';
+                                            if ((trim((string) ($_elSettings['positionMode'] ?? '')) === 'absolute' || trim((string) ($_elStyle['position'] ?? '')) === 'absolute') && $_elHasAbsCoords) {
                                                 $hasAbsEl = true;
                                                 $_ey = (int) ($_elSettings['freeY'] ?? 0);
                                                 if ($_ey <= 0) $_ey = (int) str_replace('px', '', (string) ($_elStyle['top'] ?? '0'));
-                                                $_eh = (int) str_replace('px', '', (string) ($_elStyle['height'] ?? '0'));
-                                                if ($_eh <= 0) $_eh = (int) ($_elSettings['fixedHeight'] ?? 80);
-                                                $_colBot = $_ey + max(40, $_eh) + 20;
+                                                $_elType = strtolower((string) ($_el['type'] ?? ''));
+                                                $_eh = $estimateElementHeight($_elStyle, $_elSettings, $_elType);
+                                                $_colBot = $_ey + max(40, $_eh) + 8;
                                                 if ($_colBot > $colMinHeight) $colMinHeight = $_colBot;
                                                 $_ex = (int) ($_elSettings['freeX'] ?? 0);
                                                 if ($_ex <= 0) $_ex = (int) str_replace('px', '', (string) ($_elStyle['left'] ?? '0'));
@@ -1985,10 +2818,25 @@
                                                 return $aY <=> $bY;
                                             });
                                         }
+                                        $freeformFlowYOffsetByIndex = [];
+                                        if ($isFreeformCanvas && $isSectionElementCarrierCol) {
+                                            $accFlow = 0;
+                                            foreach ($elements as $fi => $_fe) {
+                                                $freeformFlowYOffsetByIndex[$fi] = $accFlow;
+                                                if (strtolower((string) ($_fe['type'] ?? '')) === 'menu') {
+                                                    $_mst = is_array($_fe['style'] ?? null) ? $_fe['style'] : [];
+                                                    $_mh = (int) str_replace('px', '', (string) ($_mst['height'] ?? '0'));
+                                                    if ($_mh < 72) {
+                                                        $_mh = 72;
+                                                    }
+                                                    $accFlow += $_mh;
+                                                }
+                                            }
+                                        }
                                     @endphp
                                     <div class="builder-col{{ $hasAbsEl ? ' builder-col--abs' : '' }}{{ $isSectionElementCarrierCol ? ' builder-col--section-elements' : '' }}" style="{{ $colStyle }}{{ $colHeightStyle }}{{ $colWidthStyle }}">
                                         <div class="builder-col-inner{{ $isSectionElementCarrierCol ? ' builder-col-inner--section-elements' : '' }}" @if($colInnerMax !== '') style="max-width: {{ $colInnerMax }}; margin: 0 auto;" @endif>
-                                        @foreach($elements as $element)
+                                        @foreach($elements as $elLoopIndex => $element)
                                             @php
                                                 $elId = trim((string) ($element['id'] ?? ''));
                                                 $type = $element['type'] ?? 'text';
@@ -2013,6 +2861,40 @@
                                                         unset($flowStyle['width'], $flowStyle['height'], $flowStyle['margin']);
                                                     }
                                                 }
+                                                /* Video: percentage width/maxWidth in the builder mean "share of the row". They become
+                                                   inline rules that beat CSS — on stacked/tablet columns the parent is full width but
+                                                   e.g. max-width:50% keeps the embed half-width vs a full-width image. Drop % sizing for flow layout. */
+                                                if ($type === 'video' && !$allowAbsPos) {
+                                                    foreach (['width', 'maxWidth', 'max-width'] as $_vwk) {
+                                                        if (! array_key_exists($_vwk, $flowStyle)) {
+                                                            continue;
+                                                        }
+                                                        $_vv = trim((string) $flowStyle[$_vwk]);
+                                                        if ($_vv !== '' && str_contains($_vv, '%')) {
+                                                            unset($flowStyle[$_vwk]);
+                                                        }
+                                                    }
+                                                }
+                                                if ($isFreeformCanvas && $isSectionElementCarrierCol && $type === 'menu') {
+                                                    foreach (['position', 'left', 'top', 'right', 'bottom', 'zIndex', 'z-index'] as $_mk) {
+                                                        if (array_key_exists($_mk, $flowStyle)) {
+                                                            unset($flowStyle[$_mk]);
+                                                        }
+                                                    }
+                                                }
+                                                /* Menu: never pass flex/width/align from saved JSON to <nav> — they fight .builder-menu-shell
+                                                   and can stretch the logo (e.g. align-items:stretch + width:100%). Colors/fonts/border/height stay. */
+                                                if ($type === 'menu') {
+                                                    foreach ([
+                                                        'width', 'maxWidth', 'max-width', 'minWidth', 'min-width',
+                                                        'flex', 'alignItems', 'align-items', 'justifyContent', 'justify-content',
+                                                        'gap',
+                                                    ] as $_mk) {
+                                                        if (array_key_exists($_mk, $flowStyle)) {
+                                                            unset($flowStyle[$_mk]);
+                                                        }
+                                                    }
+                                                }
                                                 $style = $styleToString($flowStyle);
                                                 $contentStyle = $contentStyleToString($flowStyle);
                                                 $link = trim((string) ($settings['link'] ?? '#'));
@@ -2026,7 +2908,20 @@
                                                         ? $fallbackAlign
                                                         : $defaultAlign;
                                                 }
-                                                $alignStyle = 'display:flex;justify-content:' . ($alignment === 'right' ? 'flex-end' : ($alignment === 'center' ? 'center' : 'flex-start')) . ';margin-left:' . ($alignment === 'left' ? '0' : 'auto') . ';margin-right:' . ($alignment === 'right' ? '0' : 'auto') . ';';
+                                                if ($type === 'heading' || $type === 'text') {
+                                                    // Match builder behavior: for text content, alignment should be done via `text-align`,
+                                                    // not flex-justify (flex can look slightly offset after scaling/rounding in preview).
+                                                    $textAlignCss = ($alignment === 'right' ? 'right' : ($alignment === 'left' ? 'left' : 'center'));
+                                                    $alignStyle = 'width:100%;text-align:' . $textAlignCss . ';margin-left:0;margin-right:0;';
+                                                } else {
+                                                    $alignStyle = 'display:flex;justify-content:' . ($alignment === 'right' ? 'flex-end' : ($alignment === 'center' ? 'center' : 'flex-start')) . ';margin-left:' . ($alignment === 'left' ? '0' : 'auto') . ';margin-right:' . ($alignment === 'right' ? '0' : 'auto') . ';';
+                                                }
+                                                // Portal previously did not apply `settings.alignment` to heading/text elements reliably.
+                                                // Force text-align here so builder "Center/Left/Right" behaves the same in preview/published.
+                                                $textAlignForHeadingText = '';
+                                                if ($type === 'heading' || $type === 'text') {
+                                                    $textAlignForHeadingText = 'text-align:' . ($alignment === 'right' ? 'right' : ($alignment === 'left' ? 'left' : 'center')) . ';';
+                                                }
                                                 $menuAlign = $settings['menuAlign'] ?? 'left';
                                                 $menuAlignStyle = 'width:100%;';
                                                 $widthBehavior = $settings['widthBehavior'] ?? 'fluid';
@@ -2066,7 +2961,9 @@
                                                     if (!$btnHasPadding) { $btnInnerStyle .= ($btnInnerStyle !== '' ? ';' : '') . 'padding:10px 18px'; }
                                                     if (!$btnHasRadius) { $btnInnerStyle .= ($btnInnerStyle !== '' ? ';' : '') . 'border-radius:999px'; }
                                                 }
-                                                if ($type === 'button' && ($widthBehavior === 'fill' || $hasButtonBoxSizing)) {
+                                                // Only stretch button width when explicitly requested via `widthBehavior=fill`.
+                                                // Otherwise, keep buttons auto-sized so "Center" alignment doesn't turn them into full-width bars.
+                                                if ($type === 'button' && ($widthBehavior === 'fill')) {
                                                     $btnInnerStyle .= ($btnInnerStyle !== '' ? ';' : '') . 'width:100%;display:flex;align-items:center;justify-content:center;box-sizing:border-box;text-align:center;';
                                                 }
                                                 if ($type === 'button' && $hasButtonBoxSizing) {
@@ -2085,21 +2982,52 @@
                                                     : '';
                                                 $hasFixedWidth = !empty(trim((string) ($rawStyle['width'] ?? '')));
                                                 $hasFixedHeight = !empty(trim((string) ($rawStyle['height'] ?? '')));
-                                                $hasSizedImageBox = $type === 'image' && $hasFixedHeight && $isAbsPos;
                                                 $isAbsPos = $allowAbsPos && (
                                                     (trim((string) ($settings['positionMode'] ?? '')) === 'absolute')
                                                     || (trim((string) ($rawStyle['position'] ?? '')) === 'absolute')
                                                 );
+                                                if ($isFreeformCanvas && $isSectionElementCarrierCol && $type === 'menu') {
+                                                    $isAbsPos = false;
+                                                }
+                                                $hasSizedImageBox = $type === 'image' && $hasFixedHeight && $isAbsPos;
                                                 $absPosStyle = '';
                                                 if ($isAbsPos) {
                                                     $absFreeX = (int) ($settings['freeX'] ?? 0);
                                                     $absFreeY = (int) ($settings['freeY'] ?? 0);
+                                                    if ($isFreeformCanvas && $isSectionElementCarrierCol) {
+                                                        $absFreeY += (int) ($freeformFlowYOffsetByIndex[$elLoopIndex] ?? 0);
+                                                    }
                                                     $absLeft = trim((string) ($rawStyle['left'] ?? ''));
                                                     $absTop = trim((string) ($rawStyle['top'] ?? ''));
-                                                    if ($absLeft === '' && $absFreeX > 0) $absLeft = $absFreeX . 'px';
-                                                    if ($absTop === '' && $absFreeY > 0) $absTop = $absFreeY . 'px';
+                                                    if ($isFreeformCanvas && $isSectionElementCarrierCol) {
+                                                        if ($absLeft === '' && $absFreeX > 0) {
+                                                            $absLeft = $absFreeX . 'px';
+                                                        }
+                                                        $absTop = $absFreeY . 'px';
+                                                    } else {
+                                                        if ($absLeft === '' && $absFreeX > 0) {
+                                                            $absLeft = $absFreeX . 'px';
+                                                        }
+                                                        if ($absTop === '' && $absFreeY > 0) {
+                                                            $absTop = $absFreeY . 'px';
+                                                        }
+                                                    }
                                                     $absWidth = trim((string) ($rawStyle['width'] ?? ''));
                                                     $absHeight = trim((string) ($rawStyle['height'] ?? ''));
+                                                    // If an absolute element is intended to be centered (builder "Center"),
+                                                    // auto-center it within the section stage width. This prevents drift
+                                                    // between builder canvas vs preview/published scaling.
+                                                    if (
+                                                        $sectionStageWidth > 0
+                                                        && in_array($type, ['heading', 'text', 'button'], true)
+                                                        && ($alignment === 'center' || strtolower(trim((string) ($rawStyle['textAlign'] ?? ''))) === 'center')
+                                                        && preg_match('/^\s*(\d+)\s*px\s*$/i', $absWidth, $mW)
+                                                    ) {
+                                                        $wPx = (int) $mW[1];
+                                                        if ($wPx > 0 && $wPx < ($sectionStageWidth + 200)) {
+                                                            $absLeft = max(0, (int) round(($sectionStageWidth - $wPx) / 2)) . 'px';
+                                                        }
+                                                    }
                                                     $absPosStyle = 'position:absolute;left:' . ($absLeft !== '' ? $absLeft : '0px') . ';top:' . ($absTop !== '' ? $absTop : '0px') . ';margin:0;box-sizing:border-box;';
                                                     if ($absWidth !== '') $absPosStyle .= 'width:' . preg_replace('/[^#(),.%\-\sA-Za-z0-9]/', '', $absWidth) . ';';
                                                     if ($absHeight !== '') $absPosStyle .= 'height:' . preg_replace('/[^#(),.%\-\sA-Za-z0-9]/', '', $absHeight) . ';';
@@ -2136,15 +3064,45 @@
                                                         $elWrapStyle .= $formWrapLayoutStyle . $alignStyle;
                                                     }
                                                     elseif (in_array($type, ['heading', 'text', 'spacer', 'divider', 'testimonial', 'faq', 'pricing', 'countdown', 'product_offer', 'review_form', 'review_list', 'reviews', 'carousel', 'menu', 'checkout_summary', 'physical_checkout_summary', 'shipping_details'], true)) {
-                                                        $elWrapStyle .= $style;
+                                                        if ($type === 'menu') {
+                                                            // Builder applies `item.style` once on the outer `.el` only; inner shell is layout.
+                                                            // Portal was putting the same bar chrome on `.builder-el` and `<nav>` → double background /
+                                                            // double rounded corners in preview & published. Keep painting on `<nav>` only.
+                                                            $menuWrapFlow = $flowStyle;
+                                                            foreach ([
+                                                                'background', 'backgroundColor', 'background-color',
+                                                                'border', 'borderTop', 'borderRight', 'borderBottom', 'borderLeft',
+                                                                'borderWidth', 'borderStyle', 'borderColor',
+                                                                'borderRadius', 'border-radius',
+                                                                'boxShadow', 'box-shadow',
+                                                                'padding', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft',
+                                                                'height', 'minHeight', 'min-height', 'maxHeight', 'max-height',
+                                                            ] as $_mwk) {
+                                                                if (array_key_exists($_mwk, $menuWrapFlow)) {
+                                                                    unset($menuWrapFlow[$_mwk]);
+                                                                }
+                                                            }
+                                                            $elWrapStyle .= $styleToString($menuWrapFlow);
+                                                        } else {
+                                                            $elWrapStyle .= $style;
+                                                        }
+                                                        // For heading/text, ensure the element wrapper takes full width so "center"
+                                                        // is computed inside the whole section column (not only inside content box).
+                                                        if ($type === 'heading' || $type === 'text') {
+                                                            $elWrapStyle .= $alignStyle;
+                                                        } elseif (in_array($type, ['pricing', 'product_offer', 'testimonial', 'faq', 'countdown', 'review_form', 'review_list', 'reviews', 'checkout_summary', 'physical_checkout_summary', 'shipping_details'], true)) {
+                                                            // Same idea as form/image: flex-align the card inside the column so
+                                                            // settings.alignment (center/left/right) matches the builder canvas.
+                                                            $elWrapStyle .= $alignStyle;
+                                                        }
                                                     }
                                                 }
                                             @endphp
-                                            <div class="builder-el" data-element-type="{{ $type }}" @if($elWrapStyle !== '') style="{{ $elWrapStyle }}" @endif>
+                                            <div class="builder-el{{ $isAbsPos ? ' builder-el--abs' : '' }}" data-element-type="{{ $type }}" @if($elWrapStyle !== '') style="{{ $elWrapStyle }}" @endif>
                                                 @if($type === 'heading')
-                                                    <h2 class="builder-heading" style="{{ $contentStyle }}">{!! $content !!}</h2>
+                                                        <h2 class="builder-heading" style="{{ $contentStyle }}{{ $textAlignForHeadingText }}">{!! $content !!}</h2>
                                                 @elseif($type === 'text')
-                                                    <div class="builder-text" style="{{ $contentStyle }}">{!! $content !!}</div>
+                                                        <div class="builder-text" style="{{ $contentStyle }}{{ $textAlignForHeadingText }}">{!! $content !!}</div>
                                                 @elseif($type === 'image')
                                                     @if($src !== '')
                                                         @php
@@ -2214,14 +3172,22 @@
                                                         $videoWrapStyle = $contentStyle;
                                                         $widthVal = !empty($elStyle['width']) ? trim((string) $elStyle['width']) : (!empty($elSettings['width']) ? trim((string) $elSettings['width']) : '');
                                                         if ($widthVal !== '' && preg_match('/^[#(),.%\-\sA-Za-z0-9]+$/u', $widthVal)) {
-                                                            $videoWrapStyle .= ($videoWrapStyle !== '' ? '; ' : '') . 'width: ' . $widthVal . ' !important';
+                                                            /* px/rem: cap width; %: row-fraction in builder — do not cap stacked column (inline !important beats CSS). */
+                                                            if (str_contains($widthVal, '%')) {
+                                                                $videoWrapStyle .= ($videoWrapStyle !== '' ? '; ' : '') . 'width: 100% !important; max-width: 100% !important';
+                                                            } else {
+                                                                $videoWrapStyle .= ($videoWrapStyle !== '' ? '; ' : '') . 'width: 100% !important; max-width: ' . $widthVal . ' !important';
+                                                            }
                                                         }
                                                         if (!empty($elStyle['height']) && preg_match('/^[#(),.%\-\sA-Za-z0-9]+$/u', trim((string) $elStyle['height']))) {
                                                             $videoWrapStyle .= ($videoWrapStyle !== '' ? '; ' : '') . 'height: ' . trim((string) $elStyle['height']) . ' !important';
                                                             $videoWrapStyle .= '; padding-top: 0 !important; min-height: 0 !important';
                                                         }
                                                         if (!empty($elStyle['maxWidth']) && preg_match('/^[#(),.%\-\sA-Za-z0-9]+$/u', trim((string) $elStyle['maxWidth']))) {
-                                                            $videoWrapStyle .= ($videoWrapStyle !== '' ? '; ' : '') . 'max-width: ' . trim((string) $elStyle['maxWidth']) . ' !important';
+                                                            $_maw = trim((string) $elStyle['maxWidth']);
+                                                            if (! str_contains($_maw, '%')) {
+                                                                $videoWrapStyle .= ($videoWrapStyle !== '' ? '; ' : '') . 'max-width: ' . $_maw . ' !important';
+                                                            }
                                                         }
                                                         if ($mediaClipStyle !== '') {
                                                             $videoWrapStyle .= ($videoWrapStyle !== '' ? '; ' : '') . $mediaClipStyle;
@@ -2230,15 +3196,31 @@
                                                     @if($videoSrcRaw !== '')
                                                         @php
                                                             $vSrc = $normalizeVideoSource($videoSrcRaw);
+                                                            $vLower = strtolower($vSrc);
+                                                            // Host checks must be case-insensitive (saved URLs may be uppercase). Include privacy/nocookie host.
+                                                            $isYoutubeVimeo = str_contains($vLower, 'youtube.com')
+                                                                || str_contains($vLower, 'youtu.be')
+                                                                || str_contains($vLower, 'youtube-nocookie.com')
+                                                                || str_contains($vLower, 'vimeo.com');
                                                             $videoEmbedUrl = $vSrc;
-                                                            $isYoutubeVimeo = str_contains($vSrc, 'youtube.com') || str_contains($vSrc, 'youtu.be') || str_contains($vSrc, 'vimeo.com');
-                                                            if (str_contains($vSrc, 'youtube.com/watch')) {
-                                                                parse_str(parse_url($vSrc, PHP_URL_QUERY) ?: '', $yt);
-                                                                $videoEmbedUrl = isset($yt['v']) ? 'https://www.youtube.com/embed/' . $yt['v'] : $vSrc;
-                                                            } elseif (preg_match('#youtu\.be/([a-zA-Z0-9_-]+)#', $vSrc, $m)) {
-                                                                $videoEmbedUrl = 'https://www.youtube.com/embed/' . $m[1];
-                                                            } elseif (preg_match('#vimeo\.com/(?:video/)?(\d+)#', $vSrc, $m)) {
-                                                                $videoEmbedUrl = 'https://player.vimeo.com/video/' . $m[1];
+                                                            if ($isYoutubeVimeo) {
+                                                                if (preg_match('#(?:youtube\.com|youtube-nocookie\.com)/embed/#i', $vSrc)) {
+                                                                    $videoEmbedUrl = $vSrc;
+                                                                } elseif (preg_match('#(?:youtube\.com|youtube-nocookie\.com)/watch#i', $vSrc)) {
+                                                                    parse_str(parse_url($vSrc, PHP_URL_QUERY) ?: '', $yt);
+                                                                    $vid = $yt['v'] ?? $yt['V'] ?? null;
+                                                                    if (is_string($vid) && $vid !== '') {
+                                                                        $videoEmbedUrl = str_contains($vLower, 'youtube-nocookie.com')
+                                                                            ? ('https://www.youtube-nocookie.com/embed/' . $vid)
+                                                                            : ('https://www.youtube.com/embed/' . $vid);
+                                                                    }
+                                                                } elseif (preg_match('#youtu\.be/([a-zA-Z0-9_-]+)#i', $vSrc, $m)) {
+                                                                    $videoEmbedUrl = 'https://www.youtube.com/embed/' . $m[1];
+                                                                } elseif (preg_match('#youtube\.com/(?:shorts|live)/([a-zA-Z0-9_-]+)#i', $vSrc, $m)) {
+                                                                    $videoEmbedUrl = 'https://www.youtube.com/embed/' . $m[1];
+                                                                } elseif (preg_match('#vimeo\.com/(?:video/)?(\d+)#i', $vSrc, $m)) {
+                                                                    $videoEmbedUrl = 'https://player.vimeo.com/video/' . $m[1];
+                                                                }
                                                             }
                                                             $videoFinalSrc = $isYoutubeVimeo ? $videoEmbedUrl : $resolveMediaUrl($videoSrcRaw);
                                                         @endphp
@@ -2255,7 +3237,7 @@
                                                                     $embedSrc = $videoEmbedUrl . (str_contains($videoEmbedUrl, '?') ? '&' : '?') . implode('&', $qs);
                                                                     $embedSrc = rtrim($embedSrc, '?&');
                                                                 @endphp
-                                                                <iframe src="{{ $embedSrc }}" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" loading="lazy"></iframe>
+                                                                <iframe src="{{ $embedSrc }}" title="Embedded video" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" loading="lazy"></iframe>
                                                             @else
                                                                 <video src="{{ $videoFinalSrc }}" @if(($settings['controls'] ?? true) !== false) controls @endif @if(($settings['autoplay'] ?? false) === true) autoplay muted @endif playsinline preload="metadata"></video>
                                                             @endif
@@ -2279,12 +3261,11 @@
                                                             ];
                                                         }
                                                         $itemGap = max(0, min(300, (int) ($settings['itemGap'] ?? 13)));
-                                                        $menuText = trim((string) ($settings['textColor'] ?? '#374151'));
+                                                        $menuText = $portalResolveMenuLinkColor(trim((string) ($settings['textColor'] ?? '#374151')), $rawStyle);
                                                         $menuUnderline = trim((string) ($settings['underlineColor'] ?? ''));
                                                         $ctaButtonLabel = trim((string) ($settings['leftButtonLabel'] ?? 'Get Started'));
                                                         if ($ctaButtonLabel === '') $ctaButtonLabel = 'Get Started';
-                                                        $ctaButtonUrl = trim((string) ($settings['leftButtonUrl'] ?? '#'));
-                                                        if ($ctaButtonUrl === '') $ctaButtonUrl = '#';
+                                                        $ctaButtonUrl = $resolveMenuCtaUrl($settings);
                                                         $ctaButtonBg = trim((string) ($settings['leftButtonBgColor'] ?? '#240E35'));
                                                         if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $ctaButtonBg)) $ctaButtonBg = '#240E35';
                                                         $ctaButtonText = trim((string) ($settings['leftButtonTextColor'] ?? '#ffffff'));
@@ -2303,18 +3284,25 @@
                                                         $menuLogoAlt = trim((string) ($settings['rightLogoAlt'] ?? 'Logo'));
                                                         if ($menuLogoAlt === '') $menuLogoAlt = 'Logo';
                                                         $menuUid = $elId !== '' ? $elId : ('menu_' . mt_rand(1000, 999999));
+                                                        $menuAlignNav = strtolower(trim((string) ($settings['menuAlign'] ?? 'left')));
+                                                        if (! in_array($menuAlignNav, ['left', 'center', 'right'], true)) {
+                                                            $menuAlignNav = 'left';
+                                                        }
+                                                        $menuListJustify = $menuAlignNav === 'center' ? 'center' : ($menuAlignNav === 'right' ? 'flex-end' : 'flex-start');
+                                                        $menuHasHeight = trim((string) ($rawStyle['height'] ?? '')) !== '';
+                                                        $menuLogoImgStyle = 'width:auto;max-width:min(180px,45vw);height:auto;max-height:42px;object-fit:contain;object-position:left center;flex:0 0 auto;align-self:center;';
                                                     @endphp
-                                                    <nav class="builder-menu" style="{{ $menuAlignStyle }}{{ $style !== '' ? $style : '' }}">
+                                                    <nav class="builder-menu{{ $menuHasHeight ? ' builder-menu--has-height' : '' }}" style="{{ $menuAlignStyle }}{{ $style !== '' ? $style : '' }}">
                                                         <div class="builder-menu-shell">
                                                             <div class="builder-menu-left">
                                                                 @if($menuLogoUrl !== '')
-                                                                    <img class="builder-menu-logo" src="{{ $menuLogoUrl }}" alt="{{ $menuLogoAlt }}">
+                                                                    <img class="builder-menu-logo" src="{{ $menuLogoUrl }}" alt="{{ $menuLogoAlt }}" style="{{ $menuLogoImgStyle }}">
                                                                 @else
                                                                     <div class="builder-menu-logo-placeholder">Logo</div>
                                                                 @endif
                                                             </div>
                                                             <div class="builder-menu-center">
-                                                                <ul class="builder-menu-list" style="gap: {{ $itemGap }}px;">
+                                                                <ul class="builder-menu-list" style="gap: {{ $itemGap }}px; justify-content: {{ $menuListJustify }};">
                                                                     @foreach($menuItems as $i => $menuItem)
                                                                         @php
                                                                             $menuLabel = trim((string) ($menuItem['label'] ?? 'Menu item ' . ($i + 1)));
@@ -2587,12 +3575,12 @@
                                                                                                         $itemGap = max(0, min(64, $itemGap));
                                                                                                         $menuAlign = $ssc['menuAlign'] ?? 'left';
                                                                                                         $menuAlignStyle = 'width:100%;';
-                                                                                                        $menuText = trim((string) ($ssc['textColor'] ?? '#374151'));
+                                                                                                        $selStyleArrMenuFull = is_array($sel['style'] ?? null) ? $sel['style'] : [];
+                                                                                                        $menuText = $portalResolveMenuLinkColor(trim((string) ($ssc['textColor'] ?? '#374151')), $selStyleArrMenuFull);
                                                                                                         $menuUnderline = trim((string) ($ssc['underlineColor'] ?? ''));
                                                                                                         $ctaButtonLabel = trim((string) ($ssc['leftButtonLabel'] ?? 'Get Started'));
                                                                                                         if ($ctaButtonLabel === '') $ctaButtonLabel = 'Get Started';
-                                                                                                        $ctaButtonUrl = trim((string) ($ssc['leftButtonUrl'] ?? '#'));
-                                                                                                        if ($ctaButtonUrl === '') $ctaButtonUrl = '#';
+                                                                                                        $ctaButtonUrl = $resolveMenuCtaUrl($ssc);
                                                                                                         $ctaButtonBg = trim((string) ($ssc['leftButtonBgColor'] ?? '#240E35'));
                                                                                                         if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $ctaButtonBg)) $ctaButtonBg = '#240E35';
                                                                                                         $ctaButtonText = trim((string) ($ssc['leftButtonTextColor'] ?? '#ffffff'));
@@ -2611,18 +3599,37 @@
                                                                                                         $menuLogoAlt = trim((string) ($ssc['rightLogoAlt'] ?? 'Logo'));
                                                                                                         if ($menuLogoAlt === '') $menuLogoAlt = 'Logo';
                                                                                                         $menuUid = trim((string) ($sel['id'] ?? '')) !== '' ? trim((string) $sel['id']) : ('menu_' . mt_rand(1000, 999999));
+                                                                                                        $menuAlignNavSec = strtolower(trim((string) ($ssc['menuAlign'] ?? 'left')));
+                                                                                                        if (! in_array($menuAlignNavSec, ['left', 'center', 'right'], true)) {
+                                                                                                            $menuAlignNavSec = 'left';
+                                                                                                        }
+                                                                                                        $menuListJustifySec = $menuAlignNavSec === 'center' ? 'center' : ($menuAlignNavSec === 'right' ? 'flex-end' : 'flex-start');
+                                                                                                        $selStyleArrMenu = is_array($sel['style'] ?? null) ? $sel['style'] : [];
+                                                                                                        $menuHasHeightSec = trim((string) ($selStyleArrMenu['height'] ?? '')) !== '';
+                                                                                                        $menuNavStyleArrSec = $selStyleArrMenu;
+                                                                                                        foreach ([
+                                                                                                            'width', 'maxWidth', 'max-width', 'minWidth', 'min-width',
+                                                                                                            'flex', 'alignItems', 'align-items', 'justifyContent', 'justify-content',
+                                                                                                            'gap', 'position', 'left', 'top', 'right', 'bottom', 'zIndex', 'z-index',
+                                                                                                        ] as $_mnsk) {
+                                                                                                            if (array_key_exists($_mnsk, $menuNavStyleArrSec)) {
+                                                                                                                unset($menuNavStyleArrSec[$_mnsk]);
+                                                                                                            }
+                                                                                                        }
+                                                                                                        $ssMenuNav = $styleToString($menuNavStyleArrSec);
+                                                                                                        $menuLogoImgStyleSec = 'width:auto;max-width:min(180px,45vw);height:auto;max-height:42px;object-fit:contain;object-position:left center;flex:0 0 auto;align-self:center;';
                                                                                                     @endphp
-                                                                                                    <nav class="builder-menu" style="{{ $menuAlignStyle }}{{ $ss !== '' ? $ss : '' }}">
+                                                                                                    <nav class="builder-menu{{ $menuHasHeightSec ? ' builder-menu--has-height' : '' }}" style="{{ $menuAlignStyle }}{{ $ssMenuNav !== '' ? $ssMenuNav : '' }}">
                                                                                                         <div class="builder-menu-shell">
                                                                                                             <div class="builder-menu-left">
                                                                                                                 @if($menuLogoUrl !== '')
-                                                                                                                    <img class="builder-menu-logo" src="{{ $menuLogoUrl }}" alt="{{ $menuLogoAlt }}">
+                                                                                                                    <img class="builder-menu-logo" src="{{ $menuLogoUrl }}" alt="{{ $menuLogoAlt }}" style="{{ $menuLogoImgStyleSec }}">
                                                                                                                 @else
                                                                                                                     <div class="builder-menu-logo-placeholder">Logo</div>
                                                                                                                 @endif
                                                                                                             </div>
                                                                                                             <div class="builder-menu-center">
-                                                                                                                <ul class="builder-menu-list" style="gap: {{ $itemGap }}px;">
+                                                                                                                <ul class="builder-menu-list" style="gap: {{ $itemGap }}px; justify-content: {{ $menuListJustifySec }};">
                                                                                                                     @foreach($menuItems as $i => $menuItem)
                                                                                                                         @php
                                                                                                                             $menuLabel = trim((string) ($menuItem['label'] ?? 'Menu item ' . ($i + 1)));
@@ -3215,14 +4222,14 @@
                                                                             <div class="builder-carousel-slide" style="justify-content:center;background:#ffffff !important;">
                                                                                 @if(trim((string) ($media['src'] ?? '')) !== '')
                                                                                     @if(($media['type'] ?? 'image') === 'video')
-                                                                                        <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#ffffff;">
+                                                                                        <div style="width:100%;height:100%;position:relative;background:#ffffff;">
                                                                                             <video controls preload="metadata" playsinline @if(trim((string) ($media['poster'] ?? '')) !== '') poster="{{ $media['poster'] }}" @endif style="width:100%;height:100%;object-fit:cover;display:block;background:#ffffff;">
                                                                                                 <source src="{{ $media['src'] }}">
                                                                                             </video>
                                                                                         </div>
                                                                                     @else
-                                                                                        <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#ffffff;">
-                                                                                            <img class="builder-img" src="{{ $media['src'] }}" alt="{{ trim((string) ($media['alt'] ?? 'Product media')) }}" style="width:100%;height:100%;object-fit:cover;display:block;border-radius:0;">
+                                                                                        <div style="width:100%;height:100%;position:relative;background:#ffffff;">
+                                                                                            <img class="builder-img" src="{{ $media['src'] }}" alt="{{ trim((string) ($media['alt'] ?? 'Product media')) }}" style="width:100%;height:100%;object-fit:cover;object-position:center;display:block;border-radius:0;">
                                                                                         </div>
                                                                                     @endif
                                                                                 @else
@@ -3342,14 +4349,14 @@
                                                                                 <div class="builder-carousel-slide" style="justify-content:center;background:#ffffff !important;">
                                                                                     @if(trim((string) ($media['src'] ?? '')) !== '')
                                                                                         @if(($media['type'] ?? 'image') === 'video')
-                                                                                            <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#ffffff;">
+                                                                                            <div style="width:100%;height:100%;position:relative;background:#ffffff;">
                                                                                                 <video controls preload="metadata" playsinline @if(trim((string) ($media['poster'] ?? '')) !== '') poster="{{ $media['poster'] }}" @endif style="width:100%;height:100%;object-fit:cover;display:block;background:#ffffff;">
                                                                                                     <source src="{{ $media['src'] }}">
                                                                                                 </video>
                                                                                             </div>
                                                                                         @else
-                                                                                            <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#ffffff;">
-                                                                                                <img class="builder-img" src="{{ $media['src'] }}" alt="{{ trim((string) ($media['alt'] ?? 'Product media')) }}" style="width:100%;height:100%;object-fit:cover;display:block;border-radius:0;">
+                                                                                            <div style="width:100%;height:100%;position:relative;background:#ffffff;">
+                                                                                                <img class="builder-img" src="{{ $media['src'] }}" alt="{{ trim((string) ($media['alt'] ?? 'Product media')) }}" style="width:100%;height:100%;object-fit:cover;object-position:center;display:block;border-radius:0;">
                                                                                             </div>
                                                                                         @endif
                                                                                     @else
@@ -3404,7 +4411,7 @@
                                                 @elseif($type === 'checkout_summary' || $type === 'physical_checkout_summary')
                                                     @php
                                                         $isPhysicalCheckoutSummary = $type === 'physical_checkout_summary';
-                                                        $stepLayoutForShippingCheck = is_array($step->layout_json ?? null) ? $step->layout_json : [];
+                                                        $stepLayoutForShippingCheck = $step->effectiveLayoutForBreakpoint($portalLayoutBreakpoint ?? 'desktop');
                                                         $hideLegacyCheckoutSummary = false;
                                                         $hideDuplicatePhysicalCheckoutSummary = false;
                                                         $physicalCheckoutSummaryIds = [];
@@ -3668,7 +4675,7 @@
                                                             @else
                                                                 <form method="POST" action="{{ $checkoutActionUrl }}" data-checkout-summary-form style="margin:0;">
                                                                     @csrf
-                                                                    <input type="hidden" name="amount" value="{{ $summaryAmount > 0 ? $summaryAmount : (float) ($step->price ?? 0) }}">
+                                                                    <input type="hidden" name="amount" value="{{ $summaryAmount > 0 ? $summaryAmount : (($resolvedCheckoutAmount ?? 0) > 0 ? $resolvedCheckoutAmount : (float) ($step->price ?? 0)) }}">
                                                                     <input type="hidden" name="website" value="">
                                                                     <input type="hidden" name="checkout_pricing_id" value="{{ $summaryPricingId }}">
                                                                     <input type="hidden" name="checkout_pricing_source_step" value="{{ $summarySourceStep }}">
@@ -3771,8 +4778,11 @@
                                                                                 </div>
                                                                                 @if(count($checkoutCouponOptions) > 0)
                                                                                 <div class="coupon-prompt-available" data-coupon-available>
-                                                                                    <div class="coupon-prompt-available-title">Available coupons</div>
-                                                                                    <div class="coupon-prompt-available-list">
+                                                                                    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+                                                                                        <div class="coupon-prompt-available-title">Available coupons</div>
+                                                                                        <button type="button" class="coupon-prompt-available-btn" data-coupon-available-toggle aria-expanded="false">View</button>
+                                                                                    </div>
+                                                                                    <div class="coupon-prompt-available-list" data-coupon-available-list style="display:none;">
                                                                                         @foreach($checkoutCouponOptions as $couponOpt)
                                                                                             @php
                                                                                                 $optCode = strtoupper(trim((string) ($couponOpt['code'] ?? '')));
@@ -3817,10 +4827,11 @@
                                                                                 <div class="coupon-prompt-message" data-coupon-prompt-message></div>
                                                                                 <div class="coupon-prompt-actions">
                                                                                     <button type="button" class="coupon-prompt-skip" data-coupon-skip>Skip for now</button>
-                                                                                    <button type="button" class="builder-pricing-cta" data-coupon-apply style="{{ $ctaStyle }}background: {{ $ctaBg }}; color: {{ $ctaText }};" data-coupon-options='@json($checkoutCouponOptions)'>Apply & Continue</button>
+                                                                                    <button type="button" class="builder-pricing-cta" data-coupon-apply style="{{ $ctaStyle }}background: {{ $ctaBg }}; color: {{ $ctaText }};" data-coupon-options='@json($checkoutCouponOptions)'>Apply coupon & continue</button>
                                                                                 </div>
                                                                             </div>
                                                                         </div>
+                                                                        <button type="submit" data-checkout-native-submit formnovalidate tabindex="-1" aria-hidden="true" style="position:fixed;left:-9999px;width:1px;height:1px;opacity:0;overflow:hidden;">Continue to payment</button>
                                                                     @else
                                                                         <button type="submit" class="builder-pricing-cta" style="{{ $ctaStyle }}background: {{ $ctaBg }}; color: {{ $ctaText }};">{{ $ctaLabel }}</button>
                                                                     @endif
@@ -4103,7 +5114,7 @@
                                                     @php
                                                         $hideLegacyShippingBlock = false;
                                                         if ($currentStepType === 'checkout' && in_array($effectiveFunnelPurpose, ['physical_product', 'hybrid'], true)) {
-                                                            $stepLayoutForPhysicalSummaryCheck = is_array($step->layout_json ?? null) ? $step->layout_json : [];
+                                                            $stepLayoutForPhysicalSummaryCheck = $step->effectiveLayoutForBreakpoint($portalLayoutBreakpoint ?? 'desktop');
                                                             $hasPhysicalCheckoutSummary = false;
                                                             $walkPhysicalCheckoutSummary = function ($node) use (&$walkPhysicalCheckoutSummary, &$hasPhysicalCheckoutSummary) {
                                                                 if ($hasPhysicalCheckoutSummary || ! is_array($node)) {
@@ -5373,7 +6384,42 @@
             if(!target)return null;
             var priceEl=target.querySelector("[data-pricing-price]");
             if(!priceEl)return null;
-            return parseMoneyToNumber(priceEl.textContent||"");
+            var n=parseCartMoney(priceEl.textContent||"");
+            return n>0?n:null;
+        }
+        function findCheckoutSummaryAmount(form){
+            var summary=form&&form.closest?form.closest("[data-checkout-summary]"):null;
+            if(!summary)summary=document.querySelector("[data-checkout-summary]");
+            if(!summary)return null;
+            var totalEl=summary.querySelector("[data-checkout-row-total]")||summary.querySelector("[data-checkout-price]");
+            if(!totalEl)return null;
+            var n=parseCartMoney(totalEl.textContent||"");
+            return n>0?n:null;
+        }
+        // When checkout is its own step there is often no [data-pricing-id] card — only [data-checkout-summary].
+        // Never bail out before syncing amount from hidden fields or visible totals.
+        function applyCheckoutAmountFallback(form){
+            if(!form||!form.querySelector)return;
+            var amountInput=form.querySelector('input[name="amount"]');
+            if(!amountInput)return;
+            var cur=parseFloat(String(amountInput.value||"0"));
+            if(isFinite(cur)&&cur>0)return;
+            var priceField=form.querySelector('input[name="checkout_pricing_price"]');
+            var fromPrice=priceField?parseCartMoney(priceField.value||""):0;
+            if(fromPrice>0){
+                amountInput.value=String(fromPrice);
+                return;
+            }
+            var regField=form.querySelector('input[name="checkout_pricing_regular_price"]');
+            var fromReg=regField?parseCartMoney(regField.value||""):0;
+            if(fromReg>0){
+                amountInput.value=String(fromReg);
+                return;
+            }
+            var fromSummary=findCheckoutSummaryAmount(form);
+            if(fromSummary!==null&&fromSummary>0){
+                amountInput.value=String(fromSummary);
+            }
         }
         function syncCheckoutPricingForm(form){
             if(!form||!form.querySelector)return;
@@ -5404,48 +6450,51 @@
                         if(cartAmountInput && cartSummary.total>0){
                             cartAmountInput.value=String(cartSummary.total);
                         }
+                        applyCheckoutAmountFallback(form);
                         return;
                     }
                 }
             }
             var card=findVisiblePricingCard();
-            if(!card)return;
-            var selection=extractPricingSelection(card)||{};
-            var priceEl=card.querySelector("[data-pricing-price]");
-            var titleEl=card.querySelector(".builder-pricing-title");
-            var periodEl=card.querySelector(".builder-pricing-period");
-            var subtitleEl=card.querySelector(".builder-pricing-subtitle");
-            var badgeEl=card.querySelector(".builder-pricing-badge");
-            var featureEls=Array.from(card.querySelectorAll(".builder-pricing-features li")||[]);
-            if(titleEl)selection.plan=String(titleEl.textContent||selection.plan||"").trim();
-            if(priceEl)selection.price=String(priceEl.textContent||selection.price||"").trim();
-            selection.regularPrice=String(card.getAttribute("data-pricing-regular")||selection.regularPrice||"").trim();
-            selection.period=periodEl&&String(periodEl.style.display||"").toLowerCase()!=="none"?String(periodEl.textContent||"").trim():"";
-            selection.subtitle=subtitleEl&&String(subtitleEl.style.display||"").toLowerCase()!=="none"?String(subtitleEl.textContent||"").trim():"";
-            selection.badge=badgeEl&&String(badgeEl.style.display||"").toLowerCase()!=="none"?String(badgeEl.textContent||"").trim():"";
-            selection.features=featureEls.map(function(li){return String(li.textContent||"").trim();}).filter(Boolean);
-            var amount=findVisiblePricingAmount();
-            var fieldMap={
-                checkout_pricing_id:String(selection.pricingId||"").trim(),
-                checkout_pricing_source_step:String(selection.sourceStepSlug||"").trim(),
-                checkout_pricing_plan:String(selection.plan||"").trim(),
-                checkout_pricing_price:String(selection.price||"").trim(),
-                checkout_pricing_regular_price:String(selection.regularPrice||"").trim(),
-                checkout_pricing_period:String(selection.period||"").trim(),
-                checkout_pricing_subtitle:String(selection.subtitle||"").trim(),
-                checkout_pricing_badge:String(selection.badge||"").trim(),
-                checkout_pricing_image:String(selection.image||"").trim(),
-                checkout_pricing_features:JSON.stringify(Array.isArray(selection.features)?selection.features:[]),
-                checkout_cart_items:JSON.stringify(serializeSelectionAsCheckoutItems(selection))
-            };
-            Object.keys(fieldMap).forEach(function(name){
-                var input=form.querySelector('input[name="'+name+'"]');
-                if(input)input.value=fieldMap[name];
-            });
-            var amountInput=form.querySelector('input[name="amount"]');
-            if(amountInput && typeof amount==="number" && amount>0){
-                amountInput.value=String(amount);
+            if(card){
+                var selection=extractPricingSelection(card)||{};
+                var priceEl=card.querySelector("[data-pricing-price]");
+                var titleEl=card.querySelector(".builder-pricing-title");
+                var periodEl=card.querySelector(".builder-pricing-period");
+                var subtitleEl=card.querySelector(".builder-pricing-subtitle");
+                var badgeEl=card.querySelector(".builder-pricing-badge");
+                var featureEls=Array.from(card.querySelectorAll(".builder-pricing-features li")||[]);
+                if(titleEl)selection.plan=String(titleEl.textContent||selection.plan||"").trim();
+                if(priceEl)selection.price=String(priceEl.textContent||selection.price||"").trim();
+                selection.regularPrice=String(card.getAttribute("data-pricing-regular")||selection.regularPrice||"").trim();
+                selection.period=periodEl&&String(periodEl.style.display||"").toLowerCase()!=="none"?String(periodEl.textContent||"").trim():"";
+                selection.subtitle=subtitleEl&&String(subtitleEl.style.display||"").toLowerCase()!=="none"?String(subtitleEl.textContent||"").trim():"";
+                selection.badge=badgeEl&&String(badgeEl.style.display||"").toLowerCase()!=="none"?String(badgeEl.textContent||"").trim():"";
+                selection.features=featureEls.map(function(li){return String(li.textContent||"").trim();}).filter(Boolean);
+                var amount=findVisiblePricingAmount();
+                var fieldMap={
+                    checkout_pricing_id:String(selection.pricingId||"").trim(),
+                    checkout_pricing_source_step:String(selection.sourceStepSlug||"").trim(),
+                    checkout_pricing_plan:String(selection.plan||"").trim(),
+                    checkout_pricing_price:String(selection.price||"").trim(),
+                    checkout_pricing_regular_price:String(selection.regularPrice||"").trim(),
+                    checkout_pricing_period:String(selection.period||"").trim(),
+                    checkout_pricing_subtitle:String(selection.subtitle||"").trim(),
+                    checkout_pricing_badge:String(selection.badge||"").trim(),
+                    checkout_pricing_image:String(selection.image||"").trim(),
+                    checkout_pricing_features:JSON.stringify(Array.isArray(selection.features)?selection.features:[]),
+                    checkout_cart_items:JSON.stringify(serializeSelectionAsCheckoutItems(selection))
+                };
+                Object.keys(fieldMap).forEach(function(name){
+                    var input=form.querySelector('input[name="'+name+'"]');
+                    if(input)input.value=fieldMap[name];
+                });
+                var amountInput=form.querySelector('input[name="amount"]');
+                if(amountInput && typeof amount==="number" && amount>0){
+                    amountInput.value=String(amount);
+                }
             }
+            applyCheckoutAmountFallback(form);
         }
         function collectCheckoutCustomerInputs(summaryForm){
             if(!summaryForm)return [];
@@ -5516,6 +6565,23 @@
             }
             return {ok:true};
         }
+        window.__submitCheckoutSummaryForm=function(form){
+            if(!form)return;
+            var btn=form.querySelector("[data-checkout-native-submit]");
+            if(btn&&String(btn.getAttribute("type")||"").toLowerCase()==="submit"){
+                try{
+                    btn.click();
+                    return;
+                }catch(_e){}
+            }
+            try{
+                HTMLFormElement.prototype.submit.call(form);
+            }catch(_e){
+                try{
+                    form.submit();
+                }catch(_e2){}
+            }
+        };
         document.addEventListener("submit",function(e){
             var form=e.target;
             if(!form||form.tagName!=="FORM")return;
@@ -5523,11 +6589,15 @@
             if(method!=="post")return;
             if(form.hasAttribute("data-checkout-summary-form")){
                 syncCheckoutPricingForm(form);
-                var syncedCustomer=syncCheckoutCustomerForm(form);
-                if(!syncedCustomer.ok){
-                    e.preventDefault();
-                    if(typeof portalHideLoading==="function")portalHideLoading();
-                    return;
+                // Physical checkout already synced customer fields while the shipping modal was open.
+                // Re-running validation after modals close can fail (hidden fields / browsers) and block PayMongo.
+                if(form.getAttribute("data-coupon-confirmed")!=="1"){
+                    var syncedCustomer=syncCheckoutCustomerForm(form);
+                    if(!syncedCustomer.ok){
+                        e.preventDefault();
+                        if(typeof portalHideLoading==="function")portalHideLoading();
+                        return;
+                    }
                 }
             }
             if(form.getAttribute("data-submitting")==="1"){
@@ -5552,6 +6622,26 @@
         },true);
         function setShippingModalOpen(backdrop,open){
             if(!backdrop)return;
+            // If the funnel canvas is scaled/transformed, fixed overlays inside it can fall behind.
+            // Portal the backdrop to <body> while open so it always overlays the whole page.
+            if(open){
+                try{
+                    if(!backdrop.__fbPortal){
+                        backdrop.__fbPortal={parent:backdrop.parentNode,next:backdrop.nextSibling};
+                    }
+                    if(backdrop.parentNode!==document.body){
+                        document.body.appendChild(backdrop);
+                    }
+                }catch(_e){}
+            }else{
+                try{
+                    var p=backdrop.__fbPortal;
+                    if(p&&p.parent){
+                        if(p.next&&p.next.parentNode===p.parent)p.parent.insertBefore(backdrop,p.next);
+                        else p.parent.appendChild(backdrop);
+                    }
+                }catch(_e){}
+            }
             backdrop.classList.toggle("is-open",!!open);
             backdrop.setAttribute("aria-hidden",open?"false":"true");
             if(open){
@@ -5593,21 +6683,13 @@
                                 if(prompt && !prompt.classList.contains("is-open") && form.getAttribute("data-coupon-prompt-open")!=="1"){
                                     form.setAttribute("data-coupon-confirmed","1");
                                     if(typeof portalShowLoading==="function")portalShowLoading();
-                                    try{
-                                        HTMLFormElement.prototype.submit.call(form);
-                                    }catch(_e){
-                                        form.submit();
-                                    }
+                                    window.__submitCheckoutSummaryForm(form);
                                 }
                             },350);
                         }else{
                             form.setAttribute("data-coupon-confirmed","1");
                             if(typeof portalShowLoading==="function")portalShowLoading();
-                            try{
-                                HTMLFormElement.prototype.submit.call(form);
-                            }catch(_e){
-                                form.submit();
-                            }
+                            window.__submitCheckoutSummaryForm(form);
                         }
                     });
                 }
@@ -5627,6 +6709,9 @@
                 });
             });
         }
+        window.syncCheckoutPricingForm=syncCheckoutPricingForm;
+        window.syncCheckoutCustomerForm=syncCheckoutCustomerForm;
+        window.setShippingModalOpen=setShippingModalOpen;
         bindShippingModals();
         document.addEventListener("click",function(e){
             var openBtn=e.target&&e.target.closest?e.target.closest("[data-open-shipping-modal]"):null;
@@ -5665,6 +6750,13 @@
             return 0;
         }
         function syncAbsoluteColumnHeights(){
+            Array.from(document.querySelectorAll(".builder-col, .builder-section")).forEach(function(node){
+                if(!node || !node.dataset)return;
+                if(typeof node.dataset.fbBaseMinHeight==="undefined"){
+                    node.dataset.fbBaseMinHeight=String(node.style.minHeight||"");
+                }
+                node.style.minHeight=node.dataset.fbBaseMinHeight||"";
+            });
             var absNodes=Array.from(document.querySelectorAll(".builder-el")).filter(function(node){
                 if(!node||!node.classList||!node.classList.contains("builder-el"))return false;
                 try{
@@ -5756,22 +6848,25 @@
         setTimeout(function(){scaleSectionElementCarriers();},200);
         var isPreview={{ ($isPreview ?? false) ? 'true' : 'false' }};
         var editorCanvasWidth={{ (int) (($editorCanvasWidth ?? 0) + (($isPreview ?? false) ? $previewFreeformRightInset : 0)) }};
-        var previewDeviceWidths={desktop:null,tablet:768,mobile:375};
+        try { window.__fbEditorCanvasWidth = editorCanvasWidth; } catch (_e) {}
+        var previewDeviceWidths={desktop:null,mobile:390};
         var previewDevice="desktop";
         if(isPreview){
             var hasDeviceParam=false;
             try{
-                var allowed={desktop:1,tablet:1,mobile:1};
+                var allowed={desktop:1,mobile:1};
                 var sp=new URLSearchParams(window.location.search||"");
                 var q=sp.get("preview_device")||sp.get("previewDevice")||sp.get("device")||"";
                 q=String(q||"").toLowerCase();
+                if(q==="tablet")q="mobile";
                 if(allowed[q]){previewDevice=q;hasDeviceParam=true;}
             }catch(_e){}
             if(!hasDeviceParam){
                 try{
                     var stored=localStorage.getItem("fbPreviewDevice");
                     stored=String(stored||"").toLowerCase();
-                    if(stored==="tablet"||stored==="mobile"||stored==="desktop")previewDevice=stored;
+                    if(stored==="tablet")stored="mobile";
+                    if(stored==="mobile"||stored==="desktop")previewDevice=stored;
                 }catch(_e){}
             }
             if(!hasDeviceParam){
@@ -5781,10 +6876,12 @@
 
             document.body.setAttribute("data-preview-device", previewDevice);
             // Outer-mode only: keep the iframe synced with the selected device.
+            // Mobile used to be a fixed 375px strip — the inner doc viewport stayed narrow, so preview
+            // looked tiny with large side gutters. Full-width lets applyCanvasScale use the real width.
+            var previewShellDeviceWidths={desktop:"100%",mobile:"100%"};
             var maybeIframe=document.getElementById("previewDeviceFrame");
             if(maybeIframe){
-                var deviceWidthMap={desktop:"100%",tablet:"768px",mobile:"375px"};
-                maybeIframe.style.width=deviceWidthMap[previewDevice]||"100%";
+                maybeIframe.style.width=previewShellDeviceWidths[previewDevice]||"100%";
                 var frameParams=new URLSearchParams(window.location.search||"");
                 frameParams.set("preview_iframe","1");
                 frameParams.set("preview_device",previewDevice);
@@ -5804,15 +6901,16 @@
                 deviceBtns.forEach(function(btn){
                     btn.addEventListener("click",function(){
                         var d=String(btn.getAttribute("data-preview-device")||"desktop").toLowerCase();
-                        if(!(d==="desktop"||d==="tablet"||d==="mobile"))d="desktop";
+                        if(d==="tablet")d="mobile";
+                        if(!(d==="desktop"||d==="mobile"))d="desktop";
                         previewDevice=d;
                         try{localStorage.setItem("fbPreviewDevice",previewDevice);}catch(_e){}
                         document.body.setAttribute("data-preview-device", previewDevice);
                         setActiveDeviceUI();
                         var iframe=document.getElementById("previewDeviceFrame");
                         if(iframe){
-                            var deviceWidthMap={desktop:"100%",tablet:"768px",mobile:"375px"};
-                            iframe.style.width=deviceWidthMap[previewDevice]||"100%";
+                            var previewShellDeviceWidths={desktop:"100%",mobile:"100%"};
+                            iframe.style.width=previewShellDeviceWidths[previewDevice]||"100%";
                             var frameParams=new URLSearchParams(window.location.search||"");
                             frameParams.set("preview_iframe","1");
                             frameParams.set("preview_device",previewDevice);
@@ -5944,17 +7042,35 @@
             content.style.zoom="";
             content.style.transform="none";
             content.style.height="auto";
+            var targetPad=10;
+            var viewportW=document.documentElement?document.documentElement.clientWidth:window.innerWidth;
+            /* Shrinking a 1200px-wide canvas to fit a ~390px phone made scale ~0.3 and illegible type.
+               Published mode already has @media (max-width: 768px/1024px) rules — zoom was defeating them. */
+            var publishedFluidMaxVp=1024;
+            if(viewportW<=publishedFluidMaxVp){
+                content.style.width="100%";
+                content.style.maxWidth="100%";
+                content.style.boxSizing="border-box";
+                content.style.marginLeft="auto";
+                content.style.marginRight="auto";
+                content.style.display="block";
+                content.style.position="relative";
+                content.style.left="0";
+                content.style.padding=targetPad+"px";
+                document.body.style.overflowX="hidden";
+                content.classList.add("is-scale-ready");
+                return;
+            }
             content.style.width=editorCanvasWidth+"px";
             content.style.maxWidth="none";
             content.style.boxSizing="border-box";
-            content.style.marginLeft="0";
-            content.style.marginRight="0";
+            // Center scaled canvas horizontally to keep section text aligned.
+            content.style.marginLeft="auto";
+            content.style.marginRight="auto";
             content.style.display="block";
             content.style.position="relative";
             content.style.left="0";
-            var targetPad=10;
             content.style.padding=targetPad+"px";
-            var viewportW=document.documentElement?document.documentElement.clientWidth:window.innerWidth;
             var measuredW=measurePreviewContentWidth(content);
             var baseCanvasWidth=Math.max(editorCanvasWidth||0,measuredW||0);
             if(baseCanvasWidth>0){
@@ -5993,8 +7109,10 @@
                 content.style.height="auto";
                 content.style.width=editorCanvasWidth+"px";
                 content.style.maxWidth="none";
-                content.style.marginLeft="0";
-                content.style.marginRight="0";
+                /* Center the scaled canvas for every device. Tablet/mobile used margin 0 before, which
+                   left-aligned the fixed-width canvas in a wide browser window (empty gutter on the right). */
+                content.style.marginLeft="auto";
+                content.style.marginRight="auto";
                 content.style.display="block";
                 content.style.position="relative";
                 content.style.left="0";
@@ -6002,18 +7120,23 @@
                 content.style.padding=targetPad+"px";
                 var viewportW=document.documentElement?document.documentElement.clientWidth:window.innerWidth;
                 var deviceW=previewDeviceWidths[previewDevice];
-                var baseW=(deviceW&&deviceW>0)?deviceW:viewportW;
                 var measuredW=measurePreviewContentWidth(content);
                 var baseCanvasWidth=Math.max(editorCanvasWidth||0,measuredW||0);
-                if(previewDevice==="tablet"||previewDevice==="mobile"){
+                if(previewDevice==="mobile"){
                     baseCanvasWidth=(deviceW&&deviceW>0)?deviceW:baseCanvasWidth;
                 }
                 if(baseCanvasWidth>0){
                     content.style.width=baseCanvasWidth+"px";
                 }
-                var availW=baseW-(targetPad*2);
-                if(availW<200)availW=viewportW-(targetPad*2);
-                if(availW<200)availW=viewportW;
+                /* Fit to the real preview viewport. Using device width here left mobile stuck at ~375px
+                   in a wide browser (tiny column, huge gutters). */
+                var availW=Math.max(viewportW-(targetPad*2),1);
+                /* Mobile: cap the width used for scale. Full viewport × 390px canvas hit the 3× zoom cap and
+                   looked comically large; we only need ~large-phone width (~480px) for readable preview. */
+                var mobilePreviewMaxScaleWidth=480;
+                if(previewDevice==="mobile"){
+                    availW=Math.min(availW,mobilePreviewMaxScaleWidth);
+                }
                 var scale=availW/baseCanvasWidth;
                 if(scale<=0)scale=1;
                 // Let desktop preview/test fill the available viewport again so
@@ -6021,7 +7144,7 @@
                 if(scale>3.0)scale=3.0;
                 content.style.padding=(targetPad/scale)+"px";
                 // Using `zoom` makes the browser reflow based on scaled layout, which is
-                // what we need for tablet/mobile "layout adjustment" in preview.
+                // what we need for mobile "layout adjustment" in preview.
                 // Fallback to `transform` when zoom is not supported.
                 if(useZoom){
                     content.style.zoom=String(scale);
@@ -6226,6 +7349,25 @@
 
         var setPromptOpen=function(backdrop,open){
             if(!backdrop)return;
+            // Portal the coupon prompt to <body> while open so it always overlays the scaled canvas.
+            if(open){
+                try{
+                    if(!backdrop.__fbPortal){
+                        backdrop.__fbPortal={parent:backdrop.parentNode,next:backdrop.nextSibling};
+                    }
+                    if(backdrop.parentNode!==document.body){
+                        document.body.appendChild(backdrop);
+                    }
+                }catch(_e){}
+            }else{
+                try{
+                    var p=backdrop.__fbPortal;
+                    if(p&&p.parent){
+                        if(p.next&&p.next.parentNode===p.parent)p.parent.insertBefore(backdrop,p.next);
+                        else p.parent.appendChild(backdrop);
+                    }
+                }catch(_e){}
+            }
             backdrop.classList.toggle("is-open",!!open);
             backdrop.setAttribute("aria-hidden",open?"false":"true");
             document.body.style.overflow=open?"hidden":"";
@@ -6237,7 +7379,6 @@
             if(open){
                 var input=backdrop.querySelector("[data-coupon-prompt-input]");
                 if(input){
-                    if(sanitize(input.value)==="" && copiedCouponCode!=="")input.value=copiedCouponCode;
                     try{ input.focus(); }catch(_e){}
                 }
             }
@@ -6246,18 +7387,16 @@
             if(!form)return;
             var prompt=form.querySelector("[data-coupon-prompt]");
             if(!prompt){
-                try{
-                    HTMLFormElement.prototype.submit.call(form);
-                }catch(_e){
-                    form.submit();
-                }
+                window.__submitCheckoutSummaryForm(form);
                 return;
             }
             // Always open the modal first; never auto-submit on JS errors.
             setPromptOpen(prompt,true);
             form.setAttribute("data-coupon-prompt-open","1");
             try{
-                syncCheckoutPricingForm(form);
+                if(typeof window.syncCheckoutPricingForm==="function"){
+                    window.syncCheckoutPricingForm(form);
+                }
                 var amountInput=form.querySelector('input[name="amount"]');
                 var subtotal=parseMoney(amountInput?amountInput.value:"0");
                 prompt.setAttribute("data-coupon-subtotal-value",String(subtotal));
@@ -6265,17 +7404,9 @@
                 var hidden=form.querySelector('input[name="coupon_code"]');
                 if(input){
                     applyClaimFilter(prompt);
-                    var claimed=getClaimedCoupon();
-                    var nextValue=sanitize((hidden&&hidden.value)||claimed||copiedCouponCode||input.value);
-                    if(nextValue===""){
-                        var applyBtn0=prompt.querySelector("[data-coupon-apply]");
-                        var opts0=[];
-                        try{ opts0=JSON.parse(applyBtn0&&applyBtn0.getAttribute("data-coupon-options")||"[]"); }catch(_e){}
-                        if(Array.isArray(opts0) && opts0.length && opts0[0] && opts0[0].code){
-                            nextValue=sanitize(opts0[0].code);
-                        }
-                    }
-                    input.value=nextValue;
+                    // Professional UX: never auto-fill a coupon code (no "premade" behavior).
+                    // Keep whatever the user typed / what the form already has.
+                    input.value=sanitize((hidden&&hidden.value)||input.value);
                 }
                 var previewBtn=prompt.querySelector("[data-coupon-apply]");
                 var options=[];
@@ -6289,14 +7420,50 @@
                 if(discountNode)discountNode.textContent=moneyText(preview.discount);
                 if(totalNode)totalNode.textContent=moneyText(preview.total);
                 if(messageNode){
-                    messageNode.className="coupon-prompt-message";
-                    messageNode.textContent=preview.match ? (preview.match.title||"Coupon detected. Discount will be applied at payment.") : "No coupon applied yet. You can continue without one.";
+                    if(preview.match){
+                        messageNode.className="coupon-prompt-message is-success";
+                        messageNode.textContent="Coupon applied: "+String(preview.match.title||preview.match.code||"Discount")+".";
+                    }else if(sanitize(input?input.value:"")!==""){
+                        messageNode.className="coupon-prompt-message is-error";
+                        messageNode.textContent="Coupon code not recognized. You can edit it or continue without one.";
+                    }else{
+                        messageNode.className="coupon-prompt-message";
+                        messageNode.textContent="Enter a coupon code (optional), then continue to payment.";
+                    }
                 }
             }catch(_e){}
         };
         window.__openCouponPrompt=openCouponPrompt;
 
+        // Optional "Available coupons" disclosure
+        document.querySelectorAll("[data-coupon-available-toggle]").forEach(function(btn){
+            if(btn.getAttribute("data-bound")==="1")return;
+            btn.setAttribute("data-bound","1");
+            btn.addEventListener("click",function(){
+                var prompt=btn.closest("[data-coupon-prompt]");
+                if(!prompt)return;
+                var list=prompt.querySelector("[data-coupon-available-list]");
+                if(!list)return;
+                var isOpen=String(list.style.display||"").toLowerCase()!=="none" && list.style.display!=="";
+                isOpen=!isOpen;
+                list.style.display=isOpen?"":"none";
+                btn.textContent=isOpen?"Hide":"View";
+                btn.setAttribute("aria-expanded",isOpen?"true":"false");
+            });
+        });
+
         // Coupon quick actions inside the prompt (Copy/Use)
+        var setSelectedCouponButtonState=function(prompt,selectedCode){
+            if(!prompt)return;
+            var active=sanitize(selectedCode||"");
+            prompt.querySelectorAll("[data-coupon-use]").forEach(function(b){
+                var code=sanitize(b.getAttribute("data-coupon-use")||"");
+                var isActive=active!=="" && code===active;
+                b.textContent=isActive?"Applied":"Use";
+                b.disabled=!!isActive;
+                b.classList.toggle("is-applied",!!isActive);
+            });
+        };
         document.querySelectorAll("[data-coupon-prompt]").forEach(function(prompt){
             if(prompt.getAttribute("data-coupon-actions-bound")==="1")return;
             prompt.setAttribute("data-coupon-actions-bound","1");
@@ -6308,6 +7475,7 @@
                     if(code==="")return;
                     if(input)input.value=code;
                     copiedCouponCode=code;
+                    setSelectedCouponButtonState(prompt, code);
                     // trigger preview refresh quickly
                     try{
                         if(applyBtn){
@@ -6321,13 +7489,25 @@
                             if(discountNode)discountNode.textContent=moneyText(preview.discount);
                             if(totalNode)totalNode.textContent=moneyText(preview.total);
                             if(messageNode){
-                                messageNode.className="coupon-prompt-message"+(preview.match?" is-success":"");
-                                messageNode.textContent=preview.match ? ((preview.match.title||"Coupon applied.")+" Discount will be applied at payment.") : "Coupon selected.";
+                                if(preview.match){
+                                    messageNode.className="coupon-prompt-message is-success";
+                                    messageNode.textContent="Coupon applied: "+String(preview.match.title||preview.match.code||"Discount")+".";
+                                }else{
+                                    messageNode.className="coupon-prompt-message is-error";
+                                    messageNode.textContent="Coupon code not recognized.";
+                                }
                             }
                         }
                     }catch(_e){}
                 });
             });
+            // If user manually typed a code, keep buttons in sync.
+            if(input){
+                input.addEventListener("input",function(){
+                    setSelectedCouponButtonState(prompt, input.value);
+                });
+                setSelectedCouponButtonState(prompt, input.value);
+            }
         });
         var bindPromptPreview=function(prompt,form){
             if(!prompt||!form||prompt.getAttribute("data-coupon-prompt-bound")==="1")return;
@@ -6339,39 +7519,56 @@
             var discountNode=prompt.querySelector("[data-coupon-discount]");
             var totalNode=prompt.querySelector("[data-coupon-total]");
             var forceCheckoutSubmit=function(){
-                syncCheckoutPricingForm(form);
-                var syncedCustomer=syncCheckoutCustomerForm(form);
+                if(typeof window.syncCheckoutPricingForm==="function"){
+                    window.syncCheckoutPricingForm(form);
+                }
+                var syncedCustomer=typeof window.syncCheckoutCustomerForm==="function"
+                    ? window.syncCheckoutCustomerForm(form)
+                    : {ok:true};
                 if(!syncedCustomer.ok){
                     if(messageNode){
                         messageNode.className="coupon-prompt-message is-error";
                         messageNode.textContent="Please complete your shipping details before continuing.";
                     }
                     var shippingModal=form.querySelector("[data-shipping-modal]");
-                    if(shippingModal)setShippingModalOpen(shippingModal,true);
+                    if(shippingModal&&typeof window.setShippingModalOpen==="function"){
+                        window.setShippingModalOpen(shippingModal,true);
+                    }
                     return;
                 }
                 form.setAttribute("data-coupon-confirmed","1");
                 if(typeof portalShowLoading==="function")portalShowLoading();
-                // Submit immediately; also keep a 0ms fallback in case browser blocks sync submit.
-                try{ HTMLFormElement.prototype.submit.call(form); }catch(_e){ try{ form.submit(); }catch(_e2){} }
-                window.setTimeout(function(){
-                    if(form.getAttribute("data-submitting")==="1")return;
-                    try{ HTMLFormElement.prototype.submit.call(form); }catch(_e){ try{ form.submit(); }catch(_e2){} }
-                },0);
+                window.__submitCheckoutSummaryForm(form);
             };
             var recalc=function(){
                 var subtotal=parseMoney(prompt.getAttribute("data-coupon-subtotal-value")||"0");
                 var options=[];
                 try{ options=JSON.parse(applyBtn&&applyBtn.getAttribute("data-coupon-options")||"[]"); }catch(_e){}
                 var preview=previewCoupon(options,input?input.value:"",subtotal);
+                var enteredCode=sanitize(input?input.value:"");
                 if(subtotalNode)subtotalNode.textContent=moneyText(subtotal);
                 if(discountNode)discountNode.textContent=moneyText(preview.discount);
                 if(totalNode)totalNode.textContent=moneyText(preview.total);
+                if(applyBtn){
+                    if(enteredCode===""){
+                        applyBtn.textContent="Continue to payment";
+                    }else if(preview.match){
+                        applyBtn.textContent="Apply coupon & continue";
+                    }else{
+                        applyBtn.textContent="Continue without coupon";
+                    }
+                }
                 if(messageNode){
-                    messageNode.className="coupon-prompt-message"+(preview.match?" is-success":"");
-                    messageNode.textContent=preview.match
-                        ? "Coupon found: "+String(preview.match.title||preview.match.code||"Discount")+""
-                        : "We will still verify the code securely before payment.";
+                    if(preview.match){
+                        messageNode.className="coupon-prompt-message is-success";
+                        messageNode.textContent="Coupon applied: "+String(preview.match.title||preview.match.code||"Discount")+".";
+                    }else if(enteredCode!==""){
+                        messageNode.className="coupon-prompt-message is-error";
+                        messageNode.textContent="Coupon code not recognized.";
+                    }else{
+                        messageNode.className="coupon-prompt-message";
+                        messageNode.textContent="Enter a coupon code (optional), then continue to payment.";
+                    }
                 }
             };
             if(input){
@@ -6422,16 +7619,22 @@
                 setCouponCodeOnForm(form,input?input.value:"");
             }
             setPromptOpen(prompt,false);
-            syncCheckoutPricingForm(form);
-            var syncedCustomer=syncCheckoutCustomerForm(form);
+            if(typeof window.syncCheckoutPricingForm==="function"){
+                window.syncCheckoutPricingForm(form);
+            }
+            var syncedCustomer=typeof window.syncCheckoutCustomerForm==="function"
+                ? window.syncCheckoutCustomerForm(form)
+                : {ok:true};
             if(!syncedCustomer.ok){
                 var shippingModal=form.querySelector("[data-shipping-modal]");
-                if(shippingModal)setShippingModalOpen(shippingModal,true);
+                if(shippingModal&&typeof window.setShippingModalOpen==="function"){
+                    window.setShippingModalOpen(shippingModal,true);
+                }
                 return;
             }
             form.setAttribute("data-coupon-confirmed","1");
             if(typeof portalShowLoading==="function")portalShowLoading();
-            try{ HTMLFormElement.prototype.submit.call(form); }catch(_e){ try{ form.submit(); }catch(_e2){} }
+            window.__submitCheckoutSummaryForm(form);
         },true);
 
         document.querySelectorAll("[data-checkout-summary-form]").forEach(function(form){
@@ -6439,9 +7642,490 @@
             var prompt=form.querySelector("[data-coupon-prompt]");
             bindPromptPreview(prompt,form);
         });
-
-        bindShippingModals();
     })();
     </script>
+    @if((string) request()->query('debug_align') === '1' || (string) request()->query('debug_layout') === '1')
+        <script>
+            (function () {
+                try {
+                    const supportedTypes = new Set(['heading', 'text', 'button']);
+                    const debugAlign = "{{ (string) request()->query('debug_align') }}" === '1';
+                    const debugLayout = "{{ (string) request()->query('debug_layout') }}" === '1';
+
+                    function roundPx(n) {
+                        return Math.round((n || 0) * 10) / 10;
+                    }
+
+                    function computeCenters(el, sec, inner) {
+                        const rEl = el.getBoundingClientRect();
+                        const rSec = sec ? sec.getBoundingClientRect() : null;
+                        const rInner = inner ? inner.getBoundingClientRect() : null;
+
+                        const cEl = rEl.left + rEl.width / 2;
+                        const cSec = rSec ? (rSec.left + rSec.width / 2) : null;
+                        const cInner = rInner ? (rInner.left + rInner.width / 2) : null;
+
+                        return {
+                            rEl,
+                            cEl,
+                            cSec,
+                            cInner,
+                            rSec,
+                            rInner
+                        };
+                    }
+
+                    function clearDebug() {
+                        Array.from(document.querySelectorAll('[data-fb-debug-align-node="1"]')).forEach(n => n.remove());
+                        Array.from(document.querySelectorAll('[data-fb-debug-layout-node="1"]')).forEach(n => n.remove());
+                        // Do not wipe all inline styles globally; only clear our boxShadow hints.
+                        Array.from(document.querySelectorAll('.builder-el[data-element-type][data-fb-debug-align="1"]')).forEach(el => {
+                            el.style.boxShadow = '';
+                            el.removeAttribute('data-fb-debug-align');
+                        });
+                        Array.from(document.querySelectorAll('[data-fb-debug-sec="1"],[data-fb-debug-inner="1"]')).forEach(n => {
+                            n.style.outline = '';
+                            n.removeAttribute('data-fb-debug-sec');
+                            n.removeAttribute('data-fb-debug-inner');
+                        });
+                    }
+
+                    function getScaleInfo(content) {
+                        const info = {
+                            method: 'none',
+                            scale: 1
+                        };
+                        if (!content) return info;
+                        const zoomVal = parseFloat(content.style.zoom || '');
+                        if (Number.isFinite(zoomVal) && zoomVal > 0) {
+                            info.method = 'zoom';
+                            info.scale = zoomVal;
+                            return info;
+                        }
+                        const transformVal = String(content.style.transform || '');
+                        const match = transformVal.match(/scale\(([^)]+)\)/);
+                        if (match) {
+                            const scaleVal = parseFloat(match[1]);
+                            if (Number.isFinite(scaleVal) && scaleVal > 0) {
+                                info.method = 'transform';
+                                info.scale = scaleVal;
+                            }
+                        }
+                        return info;
+                    }
+
+                    function renderLayoutDebug() {
+                        const sections = Array.from(document.querySelectorAll('.builder-section'));
+                        const targetIndex = 1; // 2nd section (0-based)
+                        const targetSection = sections[targetIndex] || sections[0] || null;
+                        if (!targetSection) return;
+
+                        const content = document.querySelector('.step-content--full');
+                        const scaleInfo = getScaleInfo(content);
+
+                        function describeSection(sec, idx) {
+                            const inner = sec.querySelector('.builder-section-inner');
+                            const row = sec.querySelector('.builder-row');
+                            const rowInner = sec.querySelector('.builder-row-inner');
+                            const col = sec.querySelector('.builder-col');
+                            const colInner = sec.querySelector('.builder-col-inner');
+                            const firstEl = sec.querySelector('.builder-el[data-element-type]');
+                            const lastEl = Array.from(sec.querySelectorAll('.builder-el[data-element-type]')).slice(-1)[0] || null;
+
+                            const secRect = sec.getBoundingClientRect();
+                            const innerRect = inner ? inner.getBoundingClientRect() : null;
+                            const rowRect = row ? row.getBoundingClientRect() : null;
+                            const colRect = col ? col.getBoundingClientRect() : null;
+                            const firstElRect = firstEl ? firstEl.getBoundingClientRect() : null;
+                            const lastElRect = lastEl ? lastEl.getBoundingClientRect() : null;
+
+                            const secStyle = window.getComputedStyle(sec);
+                            const rowStyle = row ? window.getComputedStyle(row) : null;
+                            const colStyle = col ? window.getComputedStyle(col) : null;
+
+                            const bottomGap = lastElRect ? roundPx(secRect.bottom - lastElRect.bottom) : null;
+                            const topGap = firstElRect ? roundPx(firstElRect.top - secRect.top) : null;
+
+                            return [
+                                'Section #' + (idx + 1),
+                                '  height: ' + roundPx(secRect.height) + 'px',
+                                '  paddingTop/Bottom: ' + secStyle.paddingTop + ' / ' + secStyle.paddingBottom,
+                                '  minHeight(inline): ' + (sec.style.minHeight || '(none)'),
+                                '  innerMaxWidth(inline): ' + (inner ? (inner.style.maxWidth || '(none)') : '(none)'),
+                                '  rowPaddingTop/Bottom: ' + (rowStyle ? (rowStyle.paddingTop + ' / ' + rowStyle.paddingBottom) : '(none)'),
+                                '  colPaddingTop/Bottom: ' + (colStyle ? (colStyle.paddingTop + ' / ' + colStyle.paddingBottom) : '(none)'),
+                                '  isCarrierRow: ' + (row && row.classList.contains('builder-row--section-elements') ? 'yes' : 'no'),
+                                '  isCarrierCol: ' + (col && col.classList.contains('builder-col--section-elements') ? 'yes' : 'no'),
+                                '  firstElType: ' + (firstEl ? (firstEl.getAttribute('data-element-type') || '(none)') : '(none)'),
+                                '  lastElType: ' + (lastEl ? (lastEl.getAttribute('data-element-type') || '(none)') : '(none)'),
+                                '  topGap(sec->firstEl): ' + (topGap != null ? topGap + 'px' : '(none)'),
+                                '  bottomGap(lastEl->sec): ' + (bottomGap != null ? bottomGap + 'px' : '(none)')
+                            ].join('\n');
+                        }
+
+                        // Outline target section group for quick visual inspection
+                        const tInner = targetSection.querySelector('.builder-section-inner');
+                        const tRow = targetSection.querySelector('.builder-row');
+                        const tRowInner = targetSection.querySelector('.builder-row-inner');
+                        const tCol = targetSection.querySelector('.builder-col');
+                        const tColInner = targetSection.querySelector('.builder-col-inner');
+                        [
+                            [targetSection, 'rgba(245, 158, 11, .95)'],
+                            [tInner, 'rgba(34, 197, 94, .95)'],
+                            [tRow, 'rgba(59, 130, 246, .95)'],
+                            [tRowInner, 'rgba(236, 72, 153, .95)'],
+                            [tCol, 'rgba(168, 85, 247, .95)'],
+                            [tColInner, 'rgba(14, 165, 233, .95)']
+                        ].forEach(function(entry){
+                            var node = entry[0];
+                            var color = entry[1];
+                            if (node) node.style.outline = '2px solid ' + color;
+                        });
+
+                        const panel = document.createElement('div');
+                        panel.setAttribute('data-fb-debug-layout-node', '1');
+                        panel.style.position = 'fixed';
+                        panel.style.right = '12px';
+                        panel.style.top = '12px';
+                        panel.style.zIndex = '999999';
+                        panel.style.width = 'min(420px, calc(100vw - 24px))';
+                        panel.style.maxHeight = '80vh';
+                        panel.style.overflow = 'auto';
+                        panel.style.background = 'rgba(15, 23, 42, 0.92)';
+                        panel.style.color = '#fff';
+                        panel.style.border = '1px solid rgba(148, 163, 184, 0.45)';
+                        panel.style.borderRadius = '12px';
+                        panel.style.padding = '12px';
+                        panel.style.fontSize = '12px';
+                        panel.style.lineHeight = '1.45';
+                        panel.style.fontFamily = 'Consolas, Monaco, monospace';
+                        panel.style.whiteSpace = 'pre-wrap';
+                        const lines = [];
+                        lines.push('Layout Debug');
+                        lines.push('scaleMethod: ' + scaleInfo.method);
+                        lines.push('scale: ' + roundPx(scaleInfo.scale));
+                        lines.push('');
+                        lines.push(describeSection(targetSection, targetIndex));
+                        lines.push('');
+                        if (sections.length >= 1) {
+                            lines.push('---');
+                            lines.push('Quick compare (first 3 sections):');
+                            sections.slice(0, 3).forEach(function(sec, i){
+                                lines.push('');
+                                lines.push(describeSection(sec, i));
+                            });
+                        }
+                        panel.textContent = lines.join('\n');
+                        document.body.appendChild(panel);
+                    }
+
+                    function renderOnce() {
+                        clearDebug();
+
+                        if (debugAlign) {
+                            const debugEls = Array.from(document.querySelectorAll('.builder-el[data-element-type]'));
+                            debugEls.forEach(el => {
+                                const type = String(el.getAttribute('data-element-type') || '').trim();
+                                if (!supportedTypes.has(type)) return;
+
+                                const sec = el.closest('.builder-section') || el.closest('.builder-col') || document.body;
+                                const inner = sec ? sec.querySelector('.builder-section-inner') : null;
+
+                                const {rEl, cEl, cSec, cInner, rSec} = computeCenters(el, sec, inner);
+                                if (cSec === null || cInner === null) return;
+
+                                const dxSec = cEl - cSec;
+                                const dxInner = cEl - cInner;
+                                const dxInnerVsSec = cInner - cSec;
+                                const dyTop = rSec ? (rEl.top - rSec.top) : 0;
+                                const dyBottom = rSec ? (rSec.bottom - rEl.bottom) : 0;
+
+                                el.style.boxShadow = 'inset 0 0 0 2px rgba(99, 102, 241, .95) !important';
+                                el.setAttribute('data-fb-debug-align', '1');
+
+                                if (sec && !sec.getAttribute('data-fb-debug-sec')) {
+                                    sec.style.outline = '2px solid rgba(245, 158, 11, .95)';
+                                    sec.setAttribute('data-fb-debug-sec', '1');
+                                }
+                                if (inner && !inner.getAttribute('data-fb-debug-inner')) {
+                                    inner.style.outline = '2px solid rgba(34, 197, 94, .95)';
+                                    inner.setAttribute('data-fb-debug-inner', '1');
+                                }
+
+                                const label = document.createElement('div');
+                                label.setAttribute('data-fb-debug-align-node', '1');
+                                label.style.position = 'fixed';
+                                label.style.left = (rEl.left + 6) + 'px';
+                                label.style.top = (rEl.top + 6) + 'px';
+                                label.style.zIndex = '99999';
+                                label.style.background = 'rgba(2, 6, 23, .82)';
+                                label.style.color = '#fff';
+                                label.style.fontSize = '11px';
+                                label.style.fontWeight = '800';
+                                label.style.padding = '3px 6px';
+                                label.style.borderRadius = '8px';
+                                label.style.pointerEvents = 'none';
+
+                                label.textContent =
+                                    type +
+                                    ' dxSec:' + roundPx(dxSec) + 'px' +
+                                    ' dxInner:' + roundPx(dxInner) + 'px' +
+                                    ' innerDx:' + roundPx(dxInnerVsSec) + 'px' +
+                                    ' top:' + roundPx(dyTop) + 'px' +
+                                    ' bottom:' + roundPx(dyBottom) + 'px';
+
+                                document.body.appendChild(label);
+                            });
+                        }
+
+                        if (debugLayout) {
+                            renderLayoutDebug();
+                        }
+                    }
+
+                    // Wait for preview/published scaling & images to settle.
+                    // Then measure again on resize.
+                    window.addEventListener('load', function () {
+                        setTimeout(function () {
+                            renderOnce();
+                            setTimeout(renderOnce, 250);
+                        }, 50);
+                    });
+                    window.addEventListener('resize', function () {
+                        renderOnce();
+                    });
+
+                    // Initial best-effort render
+                    renderOnce();
+                } catch (e) {
+                    // Fail silently so production isn't affected
+                }
+            })();
+        </script>
+    @endif
+    @if((string) request()->query('debug_product_offer') === '1')
+        <script>
+            (function () {
+                function logProductOfferMetrics() {
+                    var wraps = document.querySelectorAll('.builder-product-media .builder-carousel-wrap');
+                    if (!wraps.length) {
+                        console.info('[debug_product_offer] No .builder-product-media .builder-carousel-wrap nodes found.');
+                        return;
+                    }
+                    var rows = [];
+                    wraps.forEach(function (n, i) {
+                        var r = n.getBoundingClientRect();
+                        var cs = window.getComputedStyle(n);
+                        rows.push({
+                            idx: i,
+                            widthPx: Math.round(r.width),
+                            heightPx: Math.round(r.height),
+                            aspectRatio: cs.aspectRatio,
+                            maxHeight: cs.maxHeight,
+                            previewDevice: document.body.getAttribute('data-preview-device') || '(none)'
+                        });
+                    });
+                    console.table(rows);
+                }
+                window.addEventListener('load', function () {
+                    setTimeout(logProductOfferMetrics, 400);
+                });
+                window.addEventListener('resize', function () {
+                    logProductOfferMetrics();
+                });
+                logProductOfferMetrics();
+            })();
+        </script>
+    @endif
+    @if((string) request()->query('debug_responsive') === '1')
+        <script>
+            (function () {
+                function logResponsiveLayout() {
+                    var device = document.body.getAttribute('data-preview-device') || '(published / no data-preview-device)';
+                    var vw = Math.round(window.innerWidth || 0);
+                    var preview = document.body.classList && document.body.classList.contains('is-preview');
+                    var inners = document.querySelectorAll('.builder-row-inner');
+                    var rows = [];
+                    inners.forEach(function (inner, ri) {
+                        var cs = window.getComputedStyle(inner);
+                        var kids = Array.prototype.slice.call(inner.children || []);
+                        var cols = kids.filter(function (n) { return n.classList && n.classList.contains('builder-col'); });
+                        var directEls = kids.filter(function (n) { return n.classList && n.classList.contains('builder-el'); });
+                        var r = inner.getBoundingClientRect();
+                        var colWidths = cols.map(function (c) {
+                            return Math.round(c.getBoundingClientRect().width);
+                        });
+                        rows.push({
+                            rowIdx: ri,
+                            viewportPx: vw,
+                            isPreview: preview,
+                            rowInnerW: Math.round(r.width),
+                            flexDir: cs.flexDirection,
+                            flexWrap: cs.flexWrap,
+                            gap: cs.gap,
+                            colCount: cols.length,
+                            colWidthsPx: colWidths.join(','),
+                            directBuilderElCount: directEls.length,
+                            previewDevice: device
+                        });
+                    });
+                    if (rows.length) {
+                        console.info('[debug_responsive] Funnel step layout. window.innerWidth=viewportPx. isPreview=' + preview + '. data-preview-device=' + device + '.');
+                        console.info('[debug_responsive] colCount = .builder-col children of .builder-row-inner. directBuilderElCount>0 => section uses display:contents (elements hoist to row-inner).');
+                        console.table(rows);
+                    } else {
+                        console.info('[debug_responsive] No .builder-row-inner found.');
+                    }
+                    try {
+                        var mc = document.querySelectorAll('.builder-row-inner:has(> .builder-col:nth-child(2))');
+                        var ho = document.querySelectorAll('.builder-row-inner:has(> .builder-el[data-element-type="product_offer"] ~ .builder-el[data-element-type="product_offer"])');
+                        console.info('[debug_responsive] Preview mobile multicol CSS applies to rows: 2+ .builder-col=' + mc.length + ', 2+ hoisted product_offer=' + ho.length + '.');
+                    } catch (e) {
+                        console.info('[debug_responsive] :has() selector not supported in this browser; skip multicol count.');
+                    }
+                    var vids = document.querySelectorAll('.builder-video-wrap');
+                    var vidRows = [];
+                    vids.forEach(function (w, i) {
+                        var br = w.getBoundingClientRect();
+                        var cs = window.getComputedStyle(w);
+                        vidRows.push({
+                            idx: i,
+                            wPx: Math.round(br.width),
+                            hPx: Math.round(br.height),
+                            aspectRatio: cs.aspectRatio,
+                            maxW: cs.maxWidth,
+                            previewDevice: device
+                        });
+                    });
+                    if (vidRows.length) {
+                        console.info('[debug_responsive] .builder-video-wrap boxes (embed containers).');
+                        console.table(vidRows);
+                    }
+                }
+                window.addEventListener('load', function () {
+                    setTimeout(logResponsiveLayout, 400);
+                });
+                window.addEventListener('resize', logResponsiveLayout);
+                logResponsiveLayout();
+            })();
+        </script>
+    @endif
+    @if((string) request()->query('debug_preview_canvas') === '1')
+        <script>
+            (function () {
+                function logPreviewCanvas() {
+                    var el = document.querySelector('.step-content--full');
+                    var device = document.body.getAttribute('data-preview-device') || '(none)';
+                    var ecw = typeof window.__fbEditorCanvasWidth !== 'undefined' ? window.__fbEditorCanvasWidth : '(unset)';
+                    if (!el) {
+                        console.info('[debug_preview_canvas] No .step-content--full. editorCanvasWidthPx=' + ecw + ' data-preview-device=' + device);
+                        return;
+                    }
+                    var cs = window.getComputedStyle(el);
+                    var br = el.getBoundingClientRect();
+                    console.info('[debug_preview_canvas] Portal scales .step-content--full when editorCanvasWidth>0. Empty right gutter often meant marginLeft/Right was 0 on tablet/mobile (fixed: both auto).');
+                    console.table([{
+                        editorCanvasWidthPx: ecw,
+                        previewDevice: device,
+                        clientWidth: el.clientWidth,
+                        offsetWidth: el.offsetWidth,
+                        rectWidth: Math.round(br.width),
+                        inlineWidth: el.style.width || '(none)',
+                        marginLeft: cs.marginLeft,
+                        marginRight: cs.marginRight,
+                        transform: cs.transform && cs.transform !== 'none' ? cs.transform : '(none)',
+                        zoom: cs.zoom || '(none)',
+                        windowInnerWidth: window.innerWidth
+                    }]);
+                }
+                window.addEventListener('load', function () { setTimeout(logPreviewCanvas, 600); });
+                window.addEventListener('resize', logPreviewCanvas);
+                logPreviewCanvas();
+            })();
+        </script>
+    @endif
+    @if((string) request()->query('debug_columns') === '1')
+        <script>
+            (function () {
+                function logColumnComponents() {
+                    var vw = Math.round(window.innerWidth || 0);
+                    var preview = document.body.classList && document.body.classList.contains('is-preview');
+                    var published = document.body.classList && document.body.classList.contains('is-published');
+                    var device = document.body.getAttribute('data-preview-device') || '';
+                    var mode = preview ? 'preview' : (published ? 'published' : 'unknown');
+                    console.groupCollapsed('[fb debug_columns] column layout (preview + published) — add ?debug_columns=1 to URL');
+                    console.log('Funnel step column trace. Works in browser DevTools only (not Laravel terminal). Switch tablet/mobile in preview to compare.');
+                    console.log({ mode: mode, dataPreviewDevice: device || '(use real viewport when published)', windowInnerWidth: vw });
+                    var step = document.querySelector('.step-content--full');
+                    if (step) {
+                        var sbr = step.getBoundingClientRect();
+                        var scs = window.getComputedStyle(step);
+                        console.table([{
+                            stepContentRectW_px: Math.round(sbr.width),
+                            maxWidth: scs.maxWidth,
+                            marginLeft: scs.marginLeft,
+                            marginRight: scs.marginRight,
+                            hasTransform: scs.transform && scs.transform !== 'none',
+                            zoom: scs.zoom || '1'
+                        }]);
+                    } else {
+                        console.warn('[fb debug_columns] .step-content--full missing');
+                    }
+                    var colRows = [];
+                    var allCols = document.querySelectorAll('.builder-col');
+                    allCols.forEach(function (col, idx) {
+                        var rowInner = col.closest('.builder-row-inner');
+                        var secInner = col.closest('.builder-section-inner');
+                        var rw = rowInner ? rowInner.getBoundingClientRect().width : 0;
+                        var cr = col.getBoundingClientRect();
+                        var cw = cr.width;
+                        var ccs = window.getComputedStyle(col);
+                        colRows.push({
+                            idx: idx,
+                            rowInnerW_px: rw ? Math.round(rw) : '—',
+                            colW_px: Math.round(cw),
+                            pctOfRowInner: rw > 0 ? (Math.round((cw / rw) * 1000) / 10 + '%') : '—',
+                            flex: ccs.flex,
+                            flexBasis: ccs.flexBasis,
+                            minWidth: ccs.minWidth,
+                            maxWidth: ccs.maxWidth,
+                            hasRowInner: !!rowInner
+                        });
+                    });
+                    if (colRows.length) {
+                        console.info('[fb debug_columns] Every .builder-col (N=' + colRows.length + ')');
+                        console.table(colRows);
+                    } else {
+                        console.info('[fb debug_columns] No .builder-col nodes (freeform or display:contents layout).');
+                    }
+                    var innerRows = [];
+                    document.querySelectorAll('.builder-row-inner').forEach(function (inner, ri) {
+                        var kids = Array.prototype.slice.call(inner.children || []);
+                        var nCol = kids.filter(function (n) { return n.classList && n.classList.contains('builder-col'); }).length;
+                        var nEl = kids.filter(function (n) { return n.classList && n.classList.contains('builder-el'); }).length;
+                        var ir = inner.getBoundingClientRect();
+                        var ics = window.getComputedStyle(inner);
+                        innerRows.push({
+                            rowInnerIdx: ri,
+                            width_px: Math.round(ir.width),
+                            flexDir: ics.flexDirection,
+                            flexWrap: ics.flexWrap,
+                            gap: ics.gap,
+                            childCols: nCol,
+                            directBuilderEls: nEl
+                        });
+                    });
+                    if (innerRows.length) {
+                        console.info('[fb debug_columns] Each .builder-row-inner');
+                        console.table(innerRows);
+                    }
+                    console.groupEnd();
+                }
+                window.addEventListener('load', function () { setTimeout(logColumnComponents, 450); });
+                window.addEventListener('resize', logColumnComponents);
+                logColumnComponents();
+            })();
+        </script>
+    @endif
 </body>
 </html>

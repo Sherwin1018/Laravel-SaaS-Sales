@@ -9,6 +9,9 @@
             <a href="{{ route('admin.funnel-templates.edit', $template) }}" style="color: var(--theme-primary, #240E35); text-decoration: none; font-weight: 600;">
                 <i class="fas fa-pen"></i> Edit
             </a>
+            <a href="{{ route('admin.funnel-templates.replace-json', $template) }}" style="color: #0F766E; text-decoration: none; font-weight: 600;">
+                <i class="fas fa-file-code"></i> Replace JSON
+            </a>
             <form method="POST" action="{{ route('admin.funnel-templates.destroy', $template) }}" style="display:inline;" data-delete-template-form data-template-name="{{ $template->name }}">
                 @csrf
                 @method('DELETE')

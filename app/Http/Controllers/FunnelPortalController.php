@@ -48,6 +48,7 @@ class FunnelPortalController extends Controller
             'allSteps' => $steps,
             'isFirstStep' => $isFirstStep,
             'selectedPricing' => $selectedPricing,
+            'resolvedCheckoutAmount' => $this->resolvePortalCheckoutAmountForStep($step, $selectedPricing),
             'productInventory' => $this->productInventorySummary($funnel),
             'approvedReviews' => $this->approvedReviewsForFunnel($funnel),
             // Used by the coupon popup (any step) and the checkout coupon prompt (checkout/offer steps only).
@@ -545,7 +546,7 @@ class FunnelPortalController extends Controller
         float $amount,
         ?array $selectedPricing = null,
         array $checkoutTrackingMeta = [],
-    ): \Illuminate\Http\RedirectResponse {
+    ): \Symfony\Component\HttpFoundation\Response {
         $centavos = (int) round($amount * 100);
         abort_if($centavos < 1, 422, 'Checkout amount is not configured.');
 
@@ -921,7 +922,15 @@ class FunnelPortalController extends Controller
         foreach ($products as $productId => $row) {
             $stockQuantity = (int) ($row['stock_quantity'] ?? 0);
             $soldUnits = (int) ($row['sold_units'] ?? 0);
-            $products[$productId]['remaining_stock'] = max(0, $stockQuantity - $soldUnits);
+            $soldOffset = (int) ($row['sold_offset'] ?? 0);
+            // Restock-friendly fallback:
+            // If the merchant sets stock to a small number AFTER many sales, but the UI didn't
+            // capture a sold offset, assume they meant "new remaining stock" and start counting from now.
+            if ($soldOffset <= 0 && $soldUnits > $stockQuantity) {
+                $soldOffset = $soldUnits;
+            }
+            $effectiveSold = max(0, $soldUnits - $soldOffset);
+            $products[$productId]['remaining_stock'] = max(0, $stockQuantity - $effectiveSold);
             $products[$productId]['is_out_of_stock'] = $products[$productId]['remaining_stock'] <= 0;
         }
 
@@ -938,12 +947,14 @@ class FunnelPortalController extends Controller
             $productId = trim((string) ($node['id'] ?? ''));
             $settings = is_array($node['settings'] ?? null) ? $node['settings'] : [];
             $stockQuantity = max(0, (int) ($settings['stockQuantity'] ?? 0));
+            $soldOffset = max(0, (int) ($settings['stockSoldOffset'] ?? 0));
 
             if ($productId !== '' && $stockQuantity > 0) {
                 $products[$productId] = [
                     'name' => trim((string) ($settings['plan'] ?? '')) ?: 'Product',
                     'stock_quantity' => $stockQuantity,
                     'sold_units' => (int) ($products[$productId]['sold_units'] ?? 0),
+                    'sold_offset' => $soldOffset,
                     'remaining_stock' => $stockQuantity,
                     'is_out_of_stock' => false,
                 ];
@@ -1576,6 +1587,25 @@ class FunnelPortalController extends Controller
 
         return $this->parseMoneyString($selection['price'] ?? null)
             ?? $this->parseMoneyString($selection['regularPrice'] ?? null);
+    }
+
+    /**
+     * Same amount resolution as checkout(), without a posted amount — used so the portal
+     * hidden checkout field and coupon modal never stay at zero when pricing exists in session or layout.
+     */
+    private function resolvePortalCheckoutAmountForStep(FunnelStep $step, ?array $selectedPricing): float
+    {
+        $selectedAmount = $this->amountFromSelectedPricing($selectedPricing);
+        $layoutAmount = $this->primaryPricingAmountFromLayout($step);
+        $stepAmount = (float) ($step->price ?? 0);
+
+        $preferredAmount = ($selectedAmount !== null && $selectedAmount > 0)
+            ? $selectedAmount
+            : (($layoutAmount !== null && $layoutAmount > 0) ? $layoutAmount : null);
+
+        $amount = $preferredAmount ?? $stepAmount;
+
+        return $amount > 0 ? $amount : 0.0;
     }
 
     private function nullableCouponIdFromRequest(): ?int

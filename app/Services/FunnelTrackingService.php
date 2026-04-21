@@ -223,6 +223,7 @@ class FunnelTrackingService
                 'customer_name' => (string) ($orderRow['customer'] ?? ''),
                 'delivery_status' => (string) ($meta['delivery_status'] ?? ''),
                 'tracking_url' => (string) ($meta['tracking_url'] ?? ''),
+                'tracking_number' => (string) ($meta['tracking_number'] ?? ''),
                 'courier_name' => (string) ($meta['courier_name'] ?? ''),
                 'custom_message' => (string) ($meta['custom_message'] ?? ''),
                 'source' => 'manual_delivery_update',
@@ -267,7 +268,7 @@ class FunnelTrackingService
         $perPage = max(1, min((int) ($filters['per_page'] ?? 50), 100));
 
         return $this->baseFunnelQuery($funnel, $filters)
-            ->with(['step:id,funnel_id,title,slug,type', 'lead:id,name,email,phone', 'payment:id,amount,status,payment_date'])
+            ->with(['step:id,funnel_id,title,slug,type', 'lead:id,name,email,phone', 'payment:id,amount,status,payment_date,coupon_code,subtotal_amount,discount_amount'])
             ->orderByDesc('occurred_at')
             ->paginate($perPage);
     }
@@ -277,7 +278,7 @@ class FunnelTrackingService
         $this->syncAbandonedCheckoutEvents($funnel);
 
         return $this->baseFunnelQuery($funnel, $filters)
-            ->with(['step:id,funnel_id,title,slug,type', 'lead:id,name,email,phone', 'payment:id,amount,status,payment_date'])
+            ->with(['step:id,funnel_id,title,slug,type', 'lead:id,name,email,phone', 'payment:id,amount,status,payment_date,coupon_code,subtotal_amount,discount_amount'])
             ->orderByDesc('occurred_at')
             ->get();
     }
@@ -291,7 +292,7 @@ class FunnelTrackingService
             ->with([
                 'step:id,funnel_id,title,slug,type',
                 'lead:id,name,email,phone',
-                'payment:id,amount,status,payment_date',
+                'payment:id,amount,status,payment_date,coupon_code,subtotal_amount,discount_amount',
             ])
             ->get();
         $activeSteps = $funnel->steps->where('is_active', true)->sortBy('position')->values();
@@ -616,6 +617,10 @@ class FunnelTrackingService
                 $paymentCarrier = $ordered->reverse()->first(function (FunnelEvent $event) {
                     return $event->payment !== null || trim((string) data_get($event->meta, 'payment_status')) !== '';
                 });
+                $paymentModel = $paymentPaid?->payment
+                    ?? $checkoutStarted?->payment
+                    ?? $paymentCarrier?->payment
+                    ?? null;
                 $paymentStatus = strtolower(trim((string) (
                     $paymentPaid?->payment?->status
                     ?? data_get($paymentPaid?->meta, 'payment_status')
@@ -647,11 +652,17 @@ class FunnelTrackingService
                     data_get($deliveryUpdate?->meta, 'delivery_status')
                     ?: ($orderStatus === 'paid' ? 'paid' : ($orderStatus === 'pending' ? 'pending_payment' : $orderStatus))
                 ));
-                $trackingUrl = trim((string) data_get($deliveryUpdate?->meta, 'tracking_url'));
+                $trackingUrl = trim((string) (
+                    data_get($deliveryUpdate?->meta, 'tracking_number')
+                    ?: data_get($deliveryUpdate?->meta, 'tracking_url')
+                ));
                 $courierName = trim((string) data_get($deliveryUpdate?->meta, 'courier_name'));
                 $deliveryMessage = trim((string) data_get($deliveryUpdate?->meta, 'custom_message'));
                 $deliveryUpdatedAt = optional($deliveryUpdate?->occurred_at)?->toIso8601String();
                 $deliveryUpdatedLabel = optional($deliveryUpdate?->occurred_at)?->format('M j, Y g:i A');
+                $couponCode = trim((string) ($paymentModel?->coupon_code ?? ''));
+                $subtotalAmount = is_numeric($paymentModel?->subtotal_amount) ? (float) $paymentModel->subtotal_amount : null;
+                $discountAmount = is_numeric($paymentModel?->discount_amount) ? (float) $paymentModel->discount_amount : null;
 
                 return [
                     'order_key' => $orderKey,
@@ -669,6 +680,9 @@ class FunnelTrackingService
                     'order_items_label' => $orderItemsLabel !== '' ? $orderItemsLabel : ($selectedOffer !== '' ? $selectedOffer : null),
                     'order_quantity' => $orderQuantity > 0 ? $orderQuantity : ($selectedOffer !== '' ? 1 : 0),
                     'checkout_amount' => round($checkoutAmount, 2),
+                    'coupon_code' => $couponCode !== '' ? $couponCode : null,
+                    'subtotal_amount' => $subtotalAmount,
+                    'discount_amount' => $discountAmount,
                     'street' => $street !== '' ? $street : null,
                     'barangay' => $barangay !== '' ? $barangay : null,
                     'city_municipality' => $cityMunicipality !== '' ? $cityMunicipality : null,

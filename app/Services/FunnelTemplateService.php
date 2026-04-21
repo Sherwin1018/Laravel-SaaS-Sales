@@ -202,6 +202,60 @@ class FunnelTemplateService
         });
     }
 
+    public function replaceTemplateFromJson(FunnelTemplate $template, array $payload, array $overrides = []): FunnelTemplate
+    {
+        return DB::transaction(function () use ($template, $payload, $overrides) {
+            $steps = $this->extractImportedSteps($payload);
+            if ($steps === []) {
+                throw new \InvalidArgumentException('Imported template JSON must include at least one step.');
+            }
+
+            $name = trim((string) ($overrides['name'] ?? $template->name));
+            $description = array_key_exists('description', $overrides)
+                ? $overrides['description']
+                : ($payload['description'] ?? $template->description);
+            $templateTags = $overrides['template_tags'] ?? ($payload['template_tags'] ?? $template->template_tags ?? []);
+            $publish = array_key_exists('publish', $overrides) ? (bool) $overrides['publish'] : ($template->status === 'published');
+
+            $template->update([
+                'name' => $name !== '' ? $name : $template->name,
+                'description' => is_string($description) ? trim($description) : $description,
+                'template_type' => $overrides['template_type'] ?? ($payload['template_type'] ?? $template->template_type),
+                'template_tags' => is_array($templateTags) ? $templateTags : [],
+                'status' => $publish ? 'published' : 'draft',
+                'published_at' => $publish ? ($template->published_at ?? now()) : null,
+            ]);
+
+            $template->steps()->delete();
+
+            foreach (array_values($steps) as $index => $step) {
+                $title = trim((string) ($step['title'] ?? $step['name'] ?? ('Step ' . ($index + 1))));
+                $type = $this->normalizeImportedStepType($step['type'] ?? null);
+                $template->steps()->create([
+                    'title' => $title !== '' ? $title : ('Step ' . ($index + 1)),
+                    'subtitle' => $this->nullableString($step['subtitle'] ?? null),
+                    'slug' => $this->generateUniqueImportedTemplateStepSlug($template, (string) ($step['slug'] ?? $title), $index + 1),
+                    'type' => $type,
+                    'content' => $this->nullableString($step['content'] ?? null),
+                    'cta_label' => $this->nullableString($step['cta_label'] ?? ($step['ctaLabel'] ?? null)),
+                    'price' => $this->normalizeImportedPrice($step['price'] ?? null),
+                    'position' => $index + 1,
+                    'is_active' => array_key_exists('is_active', $step) ? (bool) $step['is_active'] : true,
+                    'hero_image_url' => $this->nullableString($step['hero_image_url'] ?? null),
+                    'layout_style' => $this->normalizeImportedLayoutStyle($step['layout_style'] ?? null),
+                    'template' => $this->normalizeImportedTemplateKey($step['template'] ?? null),
+                    'template_data' => is_array($step['template_data'] ?? null) ? $step['template_data'] : [],
+                    'step_tags' => $this->normalizeStringArray($step['step_tags'] ?? []),
+                    'background_color' => $this->nullableString($step['background_color'] ?? null),
+                    'button_color' => $this->nullableString($step['button_color'] ?? null),
+                    'layout_json' => $this->normalizeImportedLayoutJson($step['layout_json'] ?? ($step['layout'] ?? null)),
+                ]);
+            }
+
+            return $template->fresh('steps');
+        });
+    }
+
     public function generateUniqueTemplateSlug(string $name, ?int $ignoreId = null): string
     {
         $base = Str::slug($name);

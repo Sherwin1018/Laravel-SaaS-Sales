@@ -5,10 +5,12 @@ namespace App\Http\Controllers;
 use App\Mail\FunnelOrderDeliveryUpdateMail;
 use App\Models\Funnel;
 use App\Models\FunnelBuilderAsset;
+use App\Models\FunnelEvent;
 use App\Models\Lead;
 use App\Models\FunnelStep;
 use App\Models\FunnelStepRevision;
 use App\Models\FunnelTemplate;
+use Illuminate\Support\Facades\DB;
 use App\Services\FunnelTrackingService;
 use App\Support\TenantPlanEnforcer;
 use App\Support\XlsxWorkbookBuilder;
@@ -194,6 +196,101 @@ class FunnelController extends Controller
         }
         $defaultStep = $funnel->steps->sortBy('position')->first();
 
+        // Best-effort inventory snapshot for the builder sidebar (used for restocking UX).
+        $builderProductInventory = [];
+        try {
+            $products = [];
+
+            foreach ($funnel->steps()->where('is_active', true)->get(['layout_json']) as $step) {
+                $layout = is_array($step->layout_json ?? null) ? $step->layout_json : [];
+                $roots = is_array($layout['root'] ?? null)
+                    ? $layout['root']
+                    : (is_array($layout['sections'] ?? null) ? $layout['sections'] : []);
+
+                $walk = function ($node) use (&$walk, &$products) {
+                    if (! is_array($node)) {
+                        return;
+                    }
+
+                    if (strtolower(trim((string) ($node['type'] ?? ''))) === 'product_offer') {
+                        $id = trim((string) ($node['id'] ?? ''));
+                        $settings = is_array($node['settings'] ?? null) ? $node['settings'] : [];
+                        $qtyRaw = $settings['stockQuantity'] ?? null;
+                        $qty = is_numeric($qtyRaw) ? max(0, (int) $qtyRaw) : 0;
+
+                        if ($id !== '' && $qty > 0) {
+                            $products[$id] = [
+                                'stock_quantity' => $qty,
+                                'sold_units' => (int) ($products[$id]['sold_units'] ?? 0),
+                                'sold_offset' => max(0, (int) ($settings['stockSoldOffset'] ?? 0)),
+                                'remaining_stock' => $qty,
+                                'is_out_of_stock' => false,
+                            ];
+                        }
+                    }
+
+                    foreach (['root', 'sections', 'rows', 'columns', 'elements'] as $k) {
+                        $children = $node[$k] ?? null;
+                        if (! is_array($children)) {
+                            continue;
+                        }
+                        foreach ($children as $child) {
+                            $walk($child);
+                        }
+                    }
+                };
+
+                foreach ($roots as $node) {
+                    $walk($node);
+                }
+            }
+
+            if ($products !== []) {
+                $paidEvents = FunnelEvent::query()
+                    ->where('tenant_id', $funnel->tenant_id)
+                    ->where('funnel_id', $funnel->id)
+                    ->where('event_name', FunnelTrackingService::EVENT_PAYMENT_PAID)
+                    ->get(['meta']);
+
+                foreach ($paidEvents as $event) {
+                    $items = data_get($event->meta, 'order_items');
+                    if (! is_array($items)) {
+                        continue;
+                    }
+                    foreach ($items as $item) {
+                        if (! is_array($item)) {
+                            continue;
+                        }
+                        $productId = trim((string) ($item['id'] ?? ''));
+                        if ($productId === '' || ! isset($products[$productId])) {
+                            continue;
+                        }
+                        $products[$productId]['sold_units'] += max(1, (int) ($item['quantity'] ?? 1));
+                    }
+                }
+
+                foreach ($products as $id => $product) {
+                    $stockQuantity = (int) ($product['stock_quantity'] ?? 0);
+                    $soldUnits = (int) ($product['sold_units'] ?? 0);
+                    $soldOffset = (int) ($product['sold_offset'] ?? 0);
+
+                    if ($soldOffset <= 0 && $soldUnits > $stockQuantity) {
+                        $soldOffset = $soldUnits;
+                    }
+
+                    $effectiveSold = max(0, $soldUnits - $soldOffset);
+                    $products[$id]['sold_offset'] = $soldOffset;
+                    $products[$id]['remaining_stock'] = max(0, $stockQuantity - $effectiveSold);
+                    $products[$id]['is_out_of_stock'] = $products[$id]['remaining_stock'] <= 0;
+                }
+
+                $builderProductInventory = $products;
+            }
+        } catch (\Throwable $e) {
+            report($e);
+            $builderProductInventory = [];
+        }
+
         return view('funnels.edit', [
             'funnel' => $funnel,
             'stepTypes' => FunnelStep::TYPES,
@@ -204,6 +301,7 @@ class FunnelController extends Controller
             'builderSharedTemplatesUrl' => route('funnels.shared-templates'),
             'builderSingleScrollMode' => $this->singleScrollModeEnabledForFunnel(auth()->user(), $funnel),
             'builderPurpose' => $funnel->purpose ?? 'service',
+            'builderProductInventory' => $builderProductInventory,
         ]);
     }
 
@@ -249,6 +347,123 @@ class FunnelController extends Controller
 
         return response()->json([
             'message' => 'Template card updated successfully.',
+        ]);
+    }
+
+    public function applySharedTemplateAllPages(Request $request, Funnel $funnel, FunnelTemplate $funnelTemplate)
+    {
+        $this->ensureTenantFunnelAccess($funnel);
+        $user = auth()->user();
+
+        $accessible = $this->findAccessiblePublishedTemplateForUser($user, (int) $funnelTemplate->id);
+        if (! $accessible) {
+            abort(404);
+        }
+
+        $templateSteps = $accessible->steps()->orderBy('position')->get();
+        if ($templateSteps->isEmpty()) {
+            return response()->json(['message' => 'Template has no steps.'], 422);
+        }
+
+        DB::transaction(function () use ($funnel, $templateSteps) {
+            $existingSteps = $funnel->steps()->orderBy('position')->get()->values();
+            $keepIds = [];
+            $usedSlugs = [];
+
+            $slugify = function (string $raw): string {
+                $raw = mb_strtolower(trim($raw));
+                $raw = str_replace(['_', ' '], '-', $raw);
+                $raw = preg_replace('/[^a-z0-9\-]/', '', $raw) ?? '';
+                $raw = preg_replace('/-+/', '-', $raw) ?? '';
+                $raw = trim($raw, '-');
+                return mb_substr($raw, 0, 120);
+            };
+
+            $uniqueSlug = function (string $base) use (&$usedSlugs): string {
+                $base = mb_substr($base, 0, 120);
+                if ($base === '') {
+                    $base = 'page';
+                }
+                $slug = $base;
+                $i = 2;
+                while (isset($usedSlugs[$slug])) {
+                    $suffix = '-' . $i;
+                    $maxBaseLen = max(1, 120 - mb_strlen($suffix));
+                    $slug = mb_substr($base, 0, $maxBaseLen) . $suffix;
+                    $i++;
+                }
+                $usedSlugs[$slug] = true;
+                return $slug;
+            };
+
+            foreach ($templateSteps as $index => $tplStep) {
+                $position = $index + 1;
+                $target = $existingSteps->get($index);
+
+                $title = trim((string) ($tplStep->title ?? ''));
+                if ($title === '') {
+                    $title = ucfirst(str_replace('_', ' ', (string) ($tplStep->type ?? 'custom')));
+                }
+                $title = mb_substr($title, 0, 120);
+                $subtitle = trim((string) ($tplStep->subtitle ?? ''));
+                $subtitle = $subtitle !== '' ? mb_substr($subtitle, 0, 160) : null;
+
+                $baseSlug = trim((string) ($tplStep->slug ?? ''));
+                if ($baseSlug === '') {
+                    $baseSlug = $title;
+                }
+                $baseSlug = $slugify($baseSlug);
+                if ($baseSlug === '') {
+                    $baseSlug = 'page-' . $position;
+                }
+                $slug = $uniqueSlug($baseSlug);
+
+                $payload = [
+                    'title' => $title,
+                    'subtitle' => $subtitle,
+                    'slug' => $slug,
+                    'type' => $tplStep->type,
+                    'template' => $tplStep->template ?? 'simple',
+                    'template_data' => $tplStep->template_data,
+                    'step_tags' => $tplStep->step_tags,
+                    'content' => $tplStep->content,
+                    'hero_image_url' => $tplStep->hero_image_url,
+                    'layout_style' => $tplStep->layout_style ?? 'centered',
+                    'background_color' => $tplStep->background_color,
+                    'button_color' => $tplStep->button_color,
+                    'cta_label' => $tplStep->cta_label,
+                    'price' => $tplStep->price,
+                    'layout_json' => $tplStep->layout_json ?? ['root' => [], 'sections' => []],
+                    'layout_json_tablet' => $tplStep->layout_json_tablet,
+                    'layout_json_mobile' => $tplStep->layout_json_mobile,
+                    'position' => $position,
+                    'is_active' => (bool) $tplStep->is_active,
+                ];
+
+                if ($target) {
+                    $target->update($payload);
+                    $this->ensureStepHasInitialRevision($target);
+                    $keepIds[] = (int) $target->id;
+                } else {
+                    $created = $funnel->steps()->create(array_merge($payload, [
+                        'position' => $position,
+                    ]));
+                    $this->ensureStepHasInitialRevision($created);
+                    $keepIds[] = (int) $created->id;
+                }
+            }
+
+            // Remove any extra steps from the funnel so it exactly matches the template.
+            $funnel->steps()
+                ->whereNotIn('id', $keepIds)
+                ->delete();
+        });
+
+        $freshSteps = $funnel->steps()->orderBy('position')->get();
+
+        return response()->json([
+            'message' => 'Template applied to all pages.',
+            'steps' => $freshSteps->map(fn ($s) => $this->builderStepPayload($s))->values()->all(),
         ]);
     }
 
@@ -345,7 +560,9 @@ class FunnelController extends Controller
             return true;
         }
 
-        return ! (bool) $user->hasAnyRole(['super-admin']);
+        // Allow funnel builders (AO/marketing) to access step-by-step templates too.
+        // Only restrict viewers without builder roles to single-page templates.
+        return ! (bool) $user->hasAnyRole(['super-admin', 'account-owner', 'marketing-manager']);
     }
 
     private function templateLibraryLimitForUser($user): ?int
@@ -401,7 +618,9 @@ class FunnelController extends Controller
 
     private function canEditSharedTemplates($user): bool
     {
-        return (bool) ($user && $user->hasAnyRole(['super-admin', 'account-owner', 'marketing-manager']));
+        // Shared template cards represent super-admin curated templates.
+        // Only super-admin can edit card metadata (name/description/tags/status).
+        return (bool) ($user && $user->hasRole('super-admin'));
     }
 
     private function templateCardTags(FunnelTemplate $template, int $stepCount, array $fallbackStepTypeTags): array
@@ -708,7 +927,9 @@ class FunnelController extends Controller
             'order_key' => 'required|string|max:191',
             'recipient_email' => 'nullable|email|max:150',
             'delivery_status' => ['required', Rule::in(['processing', 'shipped', 'out_for_delivery', 'delivered'])],
-            'tracking_url' => 'nullable|url|max:2000',
+            // Couriers like LBC often give a tracking NUMBER, not a URL.
+            // Accept either a URL or a plain tracking number/reference.
+            'tracking_number' => 'nullable|string|max:120',
             'courier_name' => 'nullable|string|max:80',
             'custom_message' => 'nullable|string|max:600',
         ]);
@@ -732,11 +953,14 @@ class FunnelController extends Controller
         }
 
         try {
+            $trackingRaw = trim((string) ($validated['tracking_number'] ?? ''));
+            // Treat full URLs as links, otherwise store as tracking number.
+            $trackingValue = $trackingRaw !== '' ? $trackingRaw : null;
             Mail::to($recipientEmail)->send(new FunnelOrderDeliveryUpdateMail(
                 (string) $funnel->name,
                 (string) ($order['customer'] ?? 'Customer'),
                 (string) $validated['delivery_status'],
-                trim((string) ($validated['tracking_url'] ?? '')) ?: null,
+                $trackingValue,
                 $courierName,
                 is_array($order['order_items'] ?? null) ? $order['order_items'] : [],
                 (int) ($order['order_quantity'] ?? 0),
@@ -746,10 +970,13 @@ class FunnelController extends Controller
             return redirect()->back()->with('error', 'Delivery update email failed to send.');
         }
 
+        $trackingRaw = trim((string) ($validated['tracking_number'] ?? ''));
+        $trackingIsUrl = $trackingRaw !== '' && preg_match('/^https?:\\/\\//i', $trackingRaw) === 1;
         $tracking->trackOrderDeliveryUpdate($funnel, $order, [
             'recipient_email' => $recipientEmail,
             'delivery_status' => (string) $validated['delivery_status'],
-            'tracking_url' => trim((string) ($validated['tracking_url'] ?? '')),
+            'tracking_url' => $trackingIsUrl ? $trackingRaw : '',
+            'tracking_number' => $trackingIsUrl ? '' : $trackingRaw,
             'courier_name' => $courierName,
             'custom_message' => trim((string) ($validated['custom_message'] ?? '')),
         ]);
@@ -793,9 +1020,18 @@ class FunnelController extends Controller
                 Rule::exists('funnel_steps', 'id')->where(fn ($q) => $q->where('funnel_id', $funnel->id)),
             ],
             'layout_json' => 'required',
+            'layout_breakpoint' => ['nullable', 'string', Rule::in(['desktop', 'mobile', 'tablet'])],
             'background_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'skip_revision' => ['nullable', 'boolean'],
         ]);
+
+        $layoutBreakpoint = strtolower((string) ($validated['layout_breakpoint'] ?? 'desktop'));
+        if ($layoutBreakpoint === 'tablet') {
+            $layoutBreakpoint = 'mobile';
+        }
+        if (! in_array($layoutBreakpoint, ['desktop', 'mobile'], true)) {
+            $layoutBreakpoint = 'desktop';
+        }
 
         $rawLayout = $validated['layout_json'];
         if (is_string($rawLayout)) {
@@ -811,7 +1047,7 @@ class FunnelController extends Controller
 
         $step = $funnel->steps()->where('id', $validated['step_id'])->firstOrFail();
         $skipRevision = (bool) ($validated['skip_revision'] ?? false);
-        if (! $skipRevision) {
+        if (! $skipRevision && $layoutBreakpoint === 'desktop') {
             $this->rememberStepRevision(
                 $step,
                 $this->normalizeRevisionLayout($step->layout_json),
@@ -822,15 +1058,20 @@ class FunnelController extends Controller
         $layout = $this->sanitizeLayoutJson($rawLayout);
         $this->mergeElementSizeFromRaw($layout, $rawLayout);
 
-        $step->update([
-            'layout_json' => $layout,
+        $update = [
             'background_color' => $validated['background_color'] ?? null,
-        ]);
+        ];
+        if ($layoutBreakpoint === 'desktop') {
+            $update['layout_json'] = $layout;
+        } else {
+            $update['layout_json_mobile'] = $layout;
+        }
+        $step->update($update);
 
-        if (! $skipRevision) {
+        if (! $skipRevision && $layoutBreakpoint === 'desktop') {
             $this->rememberStepRevision(
                 $step,
-                $layout,
+                $this->normalizeRevisionLayout($step->layout_json),
                 $this->normalizeRevisionBackground($step->background_color)
             );
         }
@@ -839,7 +1080,10 @@ class FunnelController extends Controller
         return response()->json([
             'message' => 'Layout saved successfully.',
             'step_id' => $step->id,
-            'layout_json' => $layout,
+            'layout_json' => $step->layout_json,
+            'layout_json_tablet' => $step->layout_json_tablet,
+            'layout_json_mobile' => $step->layout_json_mobile,
+            'layout_breakpoint' => $layoutBreakpoint,
             'background_color' => $step->background_color,
             'revision_history' => $this->revisionHistoryPayload($step),
         ]);
@@ -2104,6 +2348,8 @@ class FunnelController extends Controller
 
         $allowedKeys = [
             'backgroundColor',
+            'overlayColor',
+            'overlayOpacity',
             'color',
             'fontSize',
             'fontWeight',
@@ -2157,6 +2403,24 @@ class FunnelController extends Controller
             if ($key === 'backgroundImage') {
                 if (preg_match('/^url\(((https?:\/\/|\/)[^\s)]+)\)$/i', $value)) {
                     $safe[$key] = $value;
+                }
+                continue;
+            }
+
+            if ($key === 'overlayColor') {
+                if (preg_match('/^#[0-9A-Fa-f]{6}$/', $value)) {
+                    $safe[$key] = $value;
+                }
+                continue;
+            }
+
+            if ($key === 'overlayOpacity') {
+                if (is_numeric($value)) {
+                    $n = (float) $value;
+                    // Accept either 0..1 or 0..100 (percent). Store as given to preserve UI intent.
+                    if (($n >= 0.0 && $n <= 1.0) || ($n >= 0.0 && $n <= 100.0)) {
+                        $safe[$key] = rtrim(rtrim((string) $n, '0'), '.');
+                    }
                 }
                 continue;
             }

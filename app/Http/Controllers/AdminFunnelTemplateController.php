@@ -202,6 +202,81 @@ class AdminFunnelTemplateController extends Controller
         ]);
     }
 
+    public function replaceJson(FunnelTemplate $funnelTemplate)
+    {
+        $funnelTemplate->loadMissing('steps');
+
+        $payload = [
+            'name' => $funnelTemplate->name,
+            'slug' => $funnelTemplate->slug,
+            'description' => $funnelTemplate->description,
+            'template_type' => $funnelTemplate->template_type,
+            'template_tags' => $funnelTemplate->template_tags ?? [],
+            'steps' => $funnelTemplate->steps->sortBy('position')->values()->map(function ($step) {
+                return [
+                    'title' => $step->title,
+                    'slug' => $step->slug,
+                    'type' => $step->type,
+                    'subtitle' => $step->subtitle,
+                    'content' => $step->content,
+                    'cta_label' => $step->cta_label,
+                    'price' => $step->price,
+                    'is_active' => (bool) $step->is_active,
+                    'template' => $step->template,
+                    'template_data' => $step->template_data,
+                    'step_tags' => $step->step_tags,
+                    'background_color' => $step->background_color,
+                    'button_color' => $step->button_color,
+                    'layout_style' => $step->layout_style,
+                    'layout_json' => $step->layout_json,
+                ];
+            })->all(),
+        ];
+
+        return view('admin.funnel-templates.replace-json', [
+            'template' => $funnelTemplate,
+            'templateTypeOptions' => FunnelTemplate::selectableTemplateTypes(),
+            'templateFunnelPurposeOptions' => FunnelTemplate::FUNNEL_PURPOSE_OPTIONS,
+            'defaultJson' => json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES),
+        ]);
+    }
+
+    public function replaceJsonStore(Request $request, FunnelTemplate $funnelTemplate, FunnelTemplateService $templateService)
+    {
+        $validated = $request->validate([
+            'name' => 'nullable|string|max:120',
+            'description' => 'nullable|string|max:2000',
+            'template_type' => ['required', Rule::in(array_keys(FunnelTemplate::selectableTemplateTypes()))],
+            'funnel_purpose' => ['required', Rule::in(array_keys(FunnelTemplate::FUNNEL_PURPOSE_OPTIONS))],
+            'template_tags' => 'nullable|string|max:500',
+            'import_json' => 'required|string',
+            'publish_now' => 'nullable|boolean',
+        ]);
+
+        try {
+            $decoded = json_decode((string) $validated['import_json'], true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException $e) {
+            return redirect()->back()->withInput()->with('error', 'Import JSON is invalid. Please paste valid JSON.');
+        }
+
+        try {
+            $templateService->replaceTemplateFromJson($funnelTemplate, $decoded, [
+                'name' => trim((string) ($validated['name'] ?? '')) !== '' ? $validated['name'] : $funnelTemplate->name,
+                'description' => array_key_exists('description', $validated) ? $validated['description'] : $funnelTemplate->description,
+                'template_type' => $validated['template_type'],
+                'template_tags' => $this->attachFunnelPurposeTag(
+                    $this->normalizeTemplateTags($validated['template_tags'] ?? ''),
+                    (string) ($validated['funnel_purpose'] ?? 'service')
+                ),
+                'publish' => (bool) $request->boolean('publish_now'),
+            ]);
+
+            return redirect()->route('admin.funnel-templates.edit', $funnelTemplate)->with('success', 'Template JSON replaced successfully.');
+        } catch (\Throwable $e) {
+            return redirect()->back()->withInput()->with('error', 'Template replace failed. Make sure the JSON includes at least one valid step or layout.');
+        }
+    }
+
     private function singleScrollModeEnabledForTemplate($user, FunnelTemplate $template): bool
     {
         $activeStepCount = $template->relationLoaded('steps')
@@ -411,7 +486,7 @@ class AdminFunnelTemplateController extends Controller
     {
         $issues = $this->validatePublishReadiness(
             $funnelTemplate->steps()->where('is_active', true)->orderBy('position')->get(),
-            (string) $funnelTemplate->template_type
+            $funnelTemplate
         );
         if ($issues !== []) {
             return redirect()->back()->with('error', implode(' ', $issues));
@@ -558,9 +633,18 @@ class AdminFunnelTemplateController extends Controller
                 Rule::exists('funnel_template_steps', 'id')->where(fn ($q) => $q->where('funnel_template_id', $funnelTemplate->id)),
             ],
             'layout_json' => 'required',
+            'layout_breakpoint' => ['nullable', 'string', Rule::in(['desktop', 'mobile', 'tablet'])],
             'background_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'skip_revision' => ['nullable', 'boolean'],
         ]);
+
+        $layoutBreakpoint = strtolower((string) ($validated['layout_breakpoint'] ?? 'desktop'));
+        if ($layoutBreakpoint === 'tablet') {
+            $layoutBreakpoint = 'mobile';
+        }
+        if (! in_array($layoutBreakpoint, ['desktop', 'mobile'], true)) {
+            $layoutBreakpoint = 'desktop';
+        }
 
         $rawLayout = $validated['layout_json'];
         if (is_string($rawLayout)) {
@@ -576,19 +660,24 @@ class AdminFunnelTemplateController extends Controller
 
         $step = $funnelTemplate->steps()->where('id', $validated['step_id'])->firstOrFail();
         $skipRevision = (bool) ($validated['skip_revision'] ?? false);
-        if (! $skipRevision) {
+        if (! $skipRevision && $layoutBreakpoint === 'desktop') {
             $this->rememberStepRevision($step, $this->normalizeRevisionLayout($step->layout_json), $this->normalizeRevisionBackground($step->background_color));
         }
 
         $layout = $this->enforceBuilderStructureRules($rawLayout);
         $this->mergeElementSizeFromRaw($layout, $rawLayout);
 
-        $step->update([
-            'layout_json' => $layout,
+        $update = [
             'background_color' => $validated['background_color'] ?? null,
-        ]);
+        ];
+        if ($layoutBreakpoint === 'desktop') {
+            $update['layout_json'] = $layout;
+        } else {
+            $update['layout_json_mobile'] = $layout;
+        }
+        $step->update($update);
 
-        if (! $skipRevision) {
+        if (! $skipRevision && $layoutBreakpoint === 'desktop') {
             $this->rememberStepRevision($step, $layout, $this->normalizeRevisionBackground($step->background_color));
         }
 
@@ -597,7 +686,10 @@ class AdminFunnelTemplateController extends Controller
         return response()->json([
             'message' => 'Layout saved successfully.',
             'step_id' => $step->id,
-            'layout_json' => $layout,
+            'layout_json' => $step->layout_json,
+            'layout_json_tablet' => $step->layout_json_tablet,
+            'layout_json_mobile' => $step->layout_json_mobile,
+            'layout_breakpoint' => $layoutBreakpoint,
             'background_color' => $step->background_color,
             'revision_history' => $this->revisionHistoryPayload($step),
         ]);
@@ -1101,6 +1193,8 @@ class AdminFunnelTemplateController extends Controller
             'slug' => $step->slug,
             'type' => $step->type,
             'layout_json' => $step->layout_json,
+            'layout_json_tablet' => $step->layout_json_tablet,
+            'layout_json_mobile' => $step->layout_json_mobile,
             'background_color' => $step->background_color,
             'position' => (int) $step->position,
             'is_active' => (bool) $step->is_active,
@@ -1493,9 +1587,20 @@ class AdminFunnelTemplateController extends Controller
             ->all();
     }
 
-    private function requiredStepTypesForTemplateType(string $templateType): array
+    private function requiredStepTypesForTemplate(FunnelTemplate $template): array
     {
-        return match (FunnelTemplate::normalizeTemplateType($templateType)) {
+        $templateType = FunnelTemplate::normalizeTemplateType($template->template_type);
+        $purpose = $template->resolvedFunnelPurpose();
+
+        // Step-by-step templates follow funnel purpose rules.
+        // Physical products do not require an Opt-in step.
+        if ($templateType === 'step_by_step') {
+            return $purpose === 'physical_product'
+                ? ['landing', 'sales', 'checkout', 'thank_you']
+                : ['landing', 'opt_in', 'sales', 'checkout', 'thank_you'];
+        }
+
+        return match ($templateType) {
             'single_page' => [],
             'digital_product', 'physical_product' => ['sales', 'checkout', 'thank_you'],
             'hybrid' => ['landing', 'sales', 'checkout', 'thank_you'],
@@ -1503,12 +1608,12 @@ class AdminFunnelTemplateController extends Controller
         };
     }
 
-    private function validatePublishReadiness($steps, string $templateType = 'service'): array
+    private function validatePublishReadiness($steps, FunnelTemplate $template): array
     {
         $ordered = collect($steps)->values();
         $issues = [];
-        $normalizedTemplateType = FunnelTemplate::normalizeTemplateType($templateType);
-        $requiredTypes = $this->requiredStepTypesForTemplateType($templateType);
+        $normalizedTemplateType = FunnelTemplate::normalizeTemplateType($template->template_type);
+        $requiredTypes = $this->requiredStepTypesForTemplate($template);
 
         foreach ($requiredTypes as $requiredType) {
             if (! $ordered->contains(fn ($step) => strtolower(trim((string) ($step->type ?? ''))) === $requiredType)) {

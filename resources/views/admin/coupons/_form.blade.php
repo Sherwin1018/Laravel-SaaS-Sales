@@ -63,24 +63,29 @@
             <option value="single_use" {{ old('usage_mode', $coupon->usage_mode ?? 'single_use') === 'single_use' ? 'selected' : '' }}>Single Use</option>
             <option value="multi_use" {{ old('usage_mode', $coupon->usage_mode ?? 'single_use') === 'multi_use' ? 'selected' : '' }}>Multi Use</option>
         </select>
+        <p style="margin:6px 0 0;color:#475569;font-size:12px;">
+            <strong>Single Use</strong> = redeemable once total (and once per customer). <strong>Multi Use</strong> = set limits below.
+        </p>
         @error('usage_mode')<span style="color:red;font-size:12px;">{{ $message }}</span>@enderror
     </div>
 </div>
 
 <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;">
     <div style="margin-bottom:20px;">
-        <label for="max_total_uses" style="display:block;margin-bottom:8px;font-weight:bold;">Max Total Uses</label>
+        <label for="max_total_uses" style="display:block;margin-bottom:8px;font-weight:bold;">Total redemptions (all customers)</label>
         <input type="number" min="1" name="max_total_uses" id="max_total_uses"
             style="width:100%;padding:10px;border:1px solid var(--theme-border, #E6E1EF);border-radius:6px;"
             value="{{ old('max_total_uses', $coupon->max_total_uses ?? '') }}">
+        <p style="margin:6px 0 0;color:#475569;font-size:12px;">How many times this coupon can be redeemed <strong>in total</strong>. Leave blank for unlimited.</p>
         @error('max_total_uses')<span style="color:red;font-size:12px;">{{ $message }}</span>@enderror
     </div>
 
     <div style="margin-bottom:20px;">
-        <label for="max_uses_per_user" style="display:block;margin-bottom:8px;font-weight:bold;">Max Uses Per User</label>
+        <label for="max_uses_per_user" style="display:block;margin-bottom:8px;font-weight:bold;">Redemptions per customer</label>
         <input type="number" min="1" name="max_uses_per_user" id="max_uses_per_user"
             style="width:100%;padding:10px;border:1px solid var(--theme-border, #E6E1EF);border-radius:6px;"
             value="{{ old('max_uses_per_user', $coupon->max_uses_per_user ?? '') }}">
+        <p style="margin:6px 0 0;color:#475569;font-size:12px;">How many times <strong>one customer</strong> can redeem this coupon. Leave blank for unlimited.</p>
         @error('max_uses_per_user')<span style="color:red;font-size:12px;">{{ $message }}</span>@enderror
     </div>
 </div>
@@ -136,6 +141,9 @@
         const generateBtn = document.getElementById('generateCouponCodeBtn');
         const hint = document.getElementById('couponCodeModeHint');
         const modeInputs = document.querySelectorAll('input[name="code_mode"]');
+        const usageMode = document.getElementById('usage_mode');
+        const totalUses = document.getElementById('max_total_uses');
+        const usesPerUser = document.getElementById('max_uses_per_user');
 
         if (!codeInput || !generateBtn || !hint || !modeInputs.length) {
             return;
@@ -173,6 +181,22 @@
             });
         });
 
+        const syncUsageFields = () => {
+            if (!usageMode || !totalUses || !usesPerUser) return;
+            const mode = String(usageMode.value || '');
+            const isSingle = mode === 'single_use';
+            if (isSingle) {
+                totalUses.value = '1';
+                usesPerUser.value = '1';
+            }
+            totalUses.disabled = isSingle;
+            usesPerUser.disabled = isSingle;
+            totalUses.style.backgroundColor = isSingle ? '#f8fafc' : '#ffffff';
+            usesPerUser.style.backgroundColor = isSingle ? '#f8fafc' : '#ffffff';
+        };
+
         syncState();
+        syncUsageFields();
+        if (usageMode) usageMode.addEventListener('change', syncUsageFields);
     });
 </script>

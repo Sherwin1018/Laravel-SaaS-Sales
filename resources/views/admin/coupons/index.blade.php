@@ -157,20 +157,25 @@
                                 <option value="single_use" {{ old('usage_mode', 'single_use') === 'single_use' ? 'selected' : '' }}>Single Use</option>
                                 <option value="multi_use" {{ old('usage_mode') === 'multi_use' ? 'selected' : '' }}>Multi Use</option>
                             </select>
+                            <div style="margin-top:6px;color:#475569;font-size:12px;">
+                                <strong>Single Use</strong> = redeemable once total (and once per customer). <strong>Multi Use</strong> = set limits below.
+                            </div>
                             @error('usage_mode')<div style="margin-top:6px;color:#b91c1c;font-size:12px;">{{ $message }}</div>@enderror
                         </div>
                     </div>
                     <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:16px;">
                         <div>
-                            <label for="admin_max_total_uses" style="display:block;margin-bottom:8px;font-weight:bold;">Max Total Uses</label>
+                            <label for="admin_max_total_uses" style="display:block;margin-bottom:8px;font-weight:bold;">Total redemptions (all customers)</label>
                             <input type="number" min="1" name="max_total_uses" id="admin_max_total_uses" value="{{ old('max_total_uses') }}"
                                 style="width:100%;padding:12px 14px;border:1px solid #dbe2ea;border-radius:10px;">
+                            <div style="margin-top:6px;color:#475569;font-size:12px;">How many times this coupon can be redeemed <strong>in total</strong>. Leave blank for unlimited.</div>
                             @error('max_total_uses')<div style="margin-top:6px;color:#b91c1c;font-size:12px;">{{ $message }}</div>@enderror
                         </div>
                         <div>
-                            <label for="admin_max_uses_per_user" style="display:block;margin-bottom:8px;font-weight:bold;">Max Uses Per User</label>
+                            <label for="admin_max_uses_per_user" style="display:block;margin-bottom:8px;font-weight:bold;">Redemptions per customer</label>
                             <input type="number" min="1" name="max_uses_per_user" id="admin_max_uses_per_user" value="{{ old('max_uses_per_user') }}"
                                 style="width:100%;padding:12px 14px;border:1px solid #dbe2ea;border-radius:10px;">
+                            <div style="margin-top:6px;color:#475569;font-size:12px;">How many times <strong>one customer</strong> can redeem this coupon. Leave blank for unlimited.</div>
                             @error('max_uses_per_user')<div style="margin-top:6px;color:#b91c1c;font-size:12px;">{{ $message }}</div>@enderror
                         </div>
                         <div>
@@ -241,6 +246,9 @@
             const closeModal = () => backdrop.style.display = 'none';
             const sanitize = (value) => String(value || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 40);
             const randomCode = () => 'CPN' + Math.random().toString(36).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
+            const usageMode = document.getElementById('admin_usage_mode');
+            const totalUses = document.getElementById('admin_max_total_uses');
+            const usesPerUser = document.getElementById('admin_max_uses_per_user');
             const currentMode = () => (Array.from(modeInputs).find((input) => input.checked) || {}).value || 'manual';
             const validateCurrentStep = () => {
                 const activeStep = steps[currentStep - 1];
@@ -333,10 +341,24 @@
             }
 
             syncCodeMode();
+            const syncUsageFields = () => {
+                if (!usageMode || !totalUses || !usesPerUser) return;
+                const isSingle = String(usageMode.value || '') === 'single_use';
+                if (isSingle) {
+                    totalUses.value = '1';
+                    usesPerUser.value = '1';
+                }
+                totalUses.disabled = isSingle;
+                usesPerUser.disabled = isSingle;
+                totalUses.style.backgroundColor = isSingle ? '#f8fafc' : '#ffffff';
+                usesPerUser.style.backgroundColor = isSingle ? '#f8fafc' : '#ffffff';
+            };
+            syncUsageFields();
             renderStep();
             @if($openCreateModal)
                 openModal();
             @endif
+            if (usageMode) usageMode.addEventListener('change', syncUsageFields);
         });
     </script>
 @endsection

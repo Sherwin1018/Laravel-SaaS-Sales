@@ -52,11 +52,19 @@
             @endif
 
             @if($trackingUrl)
-                <div style="margin:0 0 18px;">
-                    <a href="{{ $trackingUrl }}" style="display:inline-block;padding:12px 18px;border-radius:999px;background:#240E35;color:#ffffff;text-decoration:none;font-weight:800;">Track Delivery</a>
-                </div>
-                <p style="margin:0 0 10px;font-size:13px;line-height:1.6;color:#64748b;">If the button doesn’t work, use this link:</p>
-                <p style="margin:0;font-size:13px;line-height:1.6;word-break:break-all;color:#1d4ed8;">{{ $trackingUrl }}</p>
+                @php $isUrl = preg_match('/^https?:\\/\\//i', (string) $trackingUrl) === 1; @endphp
+                @if($isUrl)
+                    <div style="margin:0 0 18px;">
+                        <a href="{{ $trackingUrl }}" style="display:inline-block;padding:12px 18px;border-radius:999px;background:#240E35;color:#ffffff;text-decoration:none;font-weight:800;">Track Delivery</a>
+                    </div>
+                    <p style="margin:0 0 10px;font-size:13px;line-height:1.6;color:#64748b;">If the button doesn’t work, use this link:</p>
+                    <p style="margin:0;font-size:13px;line-height:1.6;word-break:break-all;color:#1d4ed8;">{{ $trackingUrl }}</p>
+                @else
+                    <div style="margin:0 0 18px;padding:16px 18px;border-radius:14px;background:#f8fafc;border:1px solid #e2e8f0;">
+                        <div style="font-size:13px;color:#64748b;text-transform:uppercase;letter-spacing:.05em;font-weight:700;">Tracking Number</div>
+                        <div style="margin-top:8px;font-size:20px;font-weight:900;letter-spacing:.06em;color:#240E35;">{{ $trackingUrl }}</div>
+                    </div>
+                @endif
             @endif
         </div>
     </div>

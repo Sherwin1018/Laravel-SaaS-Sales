@@ -1,4 +1,4 @@
-﻿@extends('layouts.admin')
+@extends('layouts.admin')
 
 @section('title', 'Funnel Analytics')
 
@@ -593,12 +593,39 @@
                                         </td>
                                         <td>
                                             <strong>PHP {{ number_format((float) ($row['checkout_amount'] ?? 0), 2) }}</strong><br>
+                                            @if(!empty($row['coupon_code']))
+                                                @php
+                                                    $couponCode = (string) $row['coupon_code'];
+                                                    $subtotal = is_numeric($row['subtotal_amount'] ?? null) ? (float) $row['subtotal_amount'] : null;
+                                                    $discount = is_numeric($row['discount_amount'] ?? null) ? (float) $row['discount_amount'] : null;
+                                                    $couponLabel = 'Coupon: '.$couponCode;
+                                                    if ($discount !== null && $discount > 0) {
+                                                        $couponLabel .= ' (−PHP '.number_format($discount, 2).')';
+                                                    } elseif ($subtotal !== null && $subtotal > 0) {
+                                                        $computed = max(0, $subtotal - (float) ($row['checkout_amount'] ?? 0));
+                                                        if ($computed > 0.00001) {
+                                                            $couponLabel .= ' (−PHP '.number_format($computed, 2).')';
+                                                        }
+                                                    }
+                                                @endphp
+                                                <div style="margin-top:8px;">
+                                                    <span class="analytics-pill" style="background:#f1f5f9;color:#0f172a;">{{ $couponLabel }}</span>
+                                                </div>
+                                            @endif
                                             <span class="analytics-pill" style="margin-top:8px;">{{ ucwords(str_replace('_', ' ', (string) ($row['delivery_status'] ?? 'processing'))) }}</span>
                                             @if(!empty($row['delivery_updated_label']))
                                                 <div style="margin-top:8px;font-size:12px;color:var(--theme-muted, #6B7280);">Last email: {{ $row['delivery_updated_label'] }}</div>
                                             @endif
-                                            @if(!empty($row['tracking_url']))
-                                                <div style="margin-top:6px;"><a class="analytics-link" href="{{ $row['tracking_url'] }}" target="_blank" rel="noopener">Open tracking link</a></div>
+                                            @php
+                                                $trackingRef = trim((string) ($row['tracking_url'] ?? ''));
+                                                $trackingIsUrl = $trackingRef !== '' && preg_match('/^https?:\\/\\//i', $trackingRef) === 1;
+                                            @endphp
+                                            @if($trackingRef !== '')
+                                                @if($trackingIsUrl)
+                                                    <div style="margin-top:6px;"><a class="analytics-link" href="{{ $trackingRef }}" target="_blank" rel="noopener">Open tracking link</a></div>
+                                                @else
+                                                    <div style="margin-top:6px;font-size:12px;color:var(--theme-muted, #6B7280);">Tracking no.: <strong>{{ $trackingRef }}</strong></div>
+                                                @endif
                                             @endif
                                         </td>
                                         <td>
@@ -611,7 +638,7 @@
                                                     data-recipient-email="{{ $row['email'] ?? '' }}"
                                                     data-delivery-status="{{ $row['delivery_status'] ?? 'processing' }}"
                                                     data-courier-name="{{ $row['courier_name'] ?? 'LBC' }}"
-                                                    data-tracking-url="{{ $row['tracking_url'] ?? '' }}"
+                                                    data-tracking-number="{{ $row['tracking_url'] ?? '' }}"
                                                     data-custom-message="{{ $row['delivery_message'] ?? '' }}"
                                                     data-customer="{{ $row['customer'] ?? 'Anonymous visitor' }}"
                                                 >
@@ -931,8 +958,8 @@
                     </select>
                     <label style="font-size:12px;font-weight:800;color:var(--theme-muted, #6B7280);">Courier</label>
                     <input type="text" name="courier_name" id="deliveryUpdateCourier" value="" placeholder="LBC">
-                    <label style="font-size:12px;font-weight:800;color:var(--theme-muted, #6B7280);">Tracking link</label>
-                    <input type="url" name="tracking_url" id="deliveryUpdateTracking" value="" placeholder="https://www.lbcexpress.com/...">
+                    <label style="font-size:12px;font-weight:800;color:var(--theme-muted, #6B7280);">Tracking number</label>
+                    <input type="text" name="tracking_number" id="deliveryUpdateTracking" value="" placeholder="e.g. LBC123456789PH">
                     <label style="font-size:12px;font-weight:800;color:var(--theme-muted, #6B7280);">Extra message</label>
                     <textarea name="custom_message" id="deliveryUpdateMessage" placeholder="Optional note for the customer"></textarea>
                     <div class="analytics-inline-form-actions analytics-inline-form-actions--right">
@@ -1200,7 +1227,7 @@
             const recipientEmail = String(button.getAttribute('data-recipient-email') || '').trim();
             const deliveryStatus = String(button.getAttribute('data-delivery-status') || 'processing').trim();
             const courierName = String(button.getAttribute('data-courier-name') || 'LBC').trim();
-            const trackingUrl = String(button.getAttribute('data-tracking-url') || '').trim();
+            const trackingNumber = String(button.getAttribute('data-tracking-number') || '').trim();
             const customMessage = String(button.getAttribute('data-custom-message') || '').trim();
             const customer = String(button.getAttribute('data-customer') || 'Anonymous visitor').trim();
 
@@ -1217,7 +1244,7 @@
                 deliveryUpdateCourier.value = courierName || 'LBC';
             }
             if (deliveryUpdateTracking) {
-                deliveryUpdateTracking.value = trackingUrl;
+                deliveryUpdateTracking.value = trackingNumber;
             }
             if (deliveryUpdateMessage) {
                 deliveryUpdateMessage.value = customMessage;

@@ -1,0 +1,1068 @@
+{
+  "name": "Premium Physical Product Funnel",
+  "slug": "premium-physical-product-funnel",
+  "description": "A ready-to-use premium 4-step physical product funnel with a polished landing page, a real catalog-style sales page, a clean trust-building checkout, and a reassuring post-purchase thank-you page.",
+  "template_type": "physical_product",
+  "template_tags": ["Step-by-Step", "Physical Product", "Premium", "Catalog", "Conversion"],
+  "status": "draft",
+  "steps": [
+    {
+      "title": "Landing",
+      "slug": "landing",
+      "type": "landing",
+      "content": "Premium hero page for a physical product launch.",
+      "cta_label": "Explore Collection",
+      "layout_json": {
+        "root": [
+          {
+            "kind": "el",
+            "id": "landing_menu_main",
+            "type": "menu",
+            "style": {
+              "padding": "16px 28px",
+              "backgroundColor": "#0f172a",
+              "color": "#f8fafc",
+              "fontSize": "15px",
+              "fontWeight": "600",
+              "borderRadius": "18px"
+            },
+            "settings": {
+              "menuAlign": "center",
+              "itemGap": 18,
+              "items": [
+                { "label": "Highlights", "url": "#highlights", "newWindow": false, "hasSubmenu": false },
+                { "label": "Why It Works", "url": "#benefits", "newWindow": false, "hasSubmenu": false },
+                { "label": "Order", "url": "#offer", "newWindow": false, "hasSubmenu": false }
+              ],
+              "leftButtonLabel": "Order Now",
+              "leftButtonUrl": "#offer",
+              "leftButtonBgColor": "#ffffff",
+              "leftButtonTextColor": "#0f172a",
+              "rightLogoUrl": "https://images.unsplash.com/photo-1523381210434-271e8be1f52b?auto=format&fit=crop&w=320&q=80",
+              "rightLogoAlt": "Brand logo"
+            }
+          },
+          {
+            "kind": "section",
+            "id": "landing_hero_section",
+            "style": {
+              "padding": "72px 52px",
+              "backgroundColor": "#f8fafc",
+              "backgroundImage": "linear-gradient(135deg, rgba(255,255,255,.88), rgba(248,250,252,.94)), url(https://images.unsplash.com/photo-1523381210434-271e8be1f52b?auto=format&fit=crop&w=1600&q=80)",
+              "backgroundSize": "cover",
+              "backgroundPosition": "center",
+              "borderRadius": "28px"
+            },
+            "settings": {
+              "contentWidth": "full",
+              "anchorId": "highlights"
+            },
+            "elements": [
+              {
+                "id": "landing_kicker",
+                "type": "text",
+                "content": "LIMITED RELEASE",
+                "style": {
+                  "fontSize": "13px",
+                  "fontWeight": "800",
+                  "letterSpacing": "0.12em",
+                  "textTransform": "uppercase",
+                  "color": "#7c3aed"
+                },
+                "settings": {}
+              },
+              {
+                "id": "landing_heading",
+                "type": "heading",
+                "content": "The Everyday Essential, Elevated",
+                "style": {
+                  "fontSize": "56px",
+                  "fontWeight": "800",
+                  "color": "#0f172a"
+                },
+                "settings": {}
+              },
+              {
+                "id": "landing_subheading",
+                "type": "text",
+                "content": "Showcase your hero product with a clean premium look, clear value messaging, and a natural path into the sales and checkout flow.",
+                "style": {
+                  "fontSize": "19px",
+                  "color": "#475569",
+                  "maxWidth": "760px"
+                },
+                "settings": {}
+              },
+              {
+                "id": "landing_primary_cta",
+                "type": "button",
+                "content": "View The Offer",
+                "style": {
+                  "backgroundColor": "#240E35",
+                  "color": "#ffffff",
+                  "fontSize": "16px",
+                  "fontWeight": "800",
+                  "padding": "14px 24px",
+                  "borderRadius": "14px"
+                },
+                "settings": {
+                  "actionType": "next_step"
+                }
+              },
+              {
+                "id": "landing_hero_image",
+                "type": "image",
+                "content": "",
+                "style": {
+                  "width": "460px",
+                  "borderRadius": "22px",
+                  "boxShadow": "0 28px 60px rgba(15,23,42,.18)"
+                },
+                "settings": {
+                  "src": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=1000&q=80",
+                  "alt": "Premium product hero image",
+                  "alignment": "left"
+                }
+              }
+            ],
+            "rows": []
+          },
+          {
+            "kind": "section",
+            "id": "landing_trust_bar",
+            "style": {
+              "padding": "28px 30px",
+              "backgroundColor": "#ffffff",
+              "border": "1px solid #e5e7eb",
+              "borderRadius": "22px"
+            },
+            "settings": {
+              "contentWidth": "full",
+              "anchorId": "benefits"
+            },
+            "elements": [
+              {
+                "id": "trust_heading",
+                "type": "heading",
+                "content": "Built for modern buyers who want quality, style, and convenience.",
+                "style": {
+                  "fontSize": "30px",
+                  "fontWeight": "800",
+                  "color": "#240E35"
+                },
+                "settings": {}
+              },
+              {
+                "id": "trust_text",
+                "type": "text",
+                "content": "Use this step to build premium first impressions before the buyer sees your full sales offer. Add a polished hero image, trust points, and your strongest promise.",
+                "style": {
+                  "fontSize": "16px",
+                  "color": "#64748b",
+                  "maxWidth": "820px"
+                },
+                "settings": {}
+              }
+            ],
+            "rows": []
+          }
+        ],
+        "sections": []
+      }
+    },
+    {
+      "title": "Sales",
+      "slug": "sales",
+      "type": "sales",
+      "content": "Catalog-style premium sales page with multiple product offers and buyer reassurance.",
+      "cta_label": "Shop The Collection",
+      "layout_json": {
+        "root": [
+          {
+            "kind": "section",
+            "id": "sales_intro_section",
+            "style": {
+              "padding": "60px 42px",
+              "backgroundColor": "#ffffff",
+              "border": "1px solid #e5e7eb",
+              "borderRadius": "28px"
+            },
+            "settings": {
+              "contentWidth": "full"
+            },
+            "elements": [
+              {
+                "id": "sales_intro_kicker",
+                "type": "text",
+                "content": "CURATED COLLECTION",
+                "style": {
+                  "fontSize": "13px",
+                  "fontWeight": "800",
+                  "letterSpacing": "0.14em",
+                  "textTransform": "uppercase",
+                  "color": "#7c3aed"
+                },
+                "settings": {}
+              },
+              {
+                "id": "sales_intro_heading",
+                "type": "heading",
+                "content": "A sales page that actually looks ready to sell physical products.",
+                "style": {
+                  "fontSize": "48px",
+                  "fontWeight": "800",
+                  "color": "#0f172a"
+                },
+                "settings": {}
+              },
+              {
+                "id": "sales_intro_text",
+                "type": "text",
+                "content": "This version is built like a premium product catalog. It gives buyers multiple offers to choose from, strong product descriptions, clear price anchoring, and a direct path to checkout.",
+                "style": {
+                  "fontSize": "18px",
+                  "color": "#475569",
+                  "maxWidth": "860px"
+                },
+                "settings": {}
+              },
+              {
+                "id": "sales_intro_button",
+                "type": "button",
+                "content": "Jump to Featured Offers",
+                "style": {
+                  "backgroundColor": "#240E35",
+                  "color": "#ffffff",
+                  "fontSize": "16px",
+                  "fontWeight": "800",
+                  "padding": "14px 24px",
+                  "borderRadius": "14px"
+                },
+                "settings": {
+                  "actionType": "scroll_to",
+                  "targetId": "collection_grid"
+                }
+              }
+            ],
+            "rows": []
+          },
+          {
+            "kind": "section",
+            "id": "sales_collection_header",
+            "style": {
+              "padding": "34px 30px",
+              "backgroundColor": "#f8fafc",
+              "borderRadius": "24px"
+            },
+            "settings": {
+              "contentWidth": "full",
+              "anchorId": "offer"
+            },
+            "elements": [
+              {
+                "id": "collection_heading",
+                "type": "heading",
+                "content": "12 ready-to-use product offers",
+                "style": {
+                  "fontSize": "34px",
+                  "fontWeight": "800",
+                  "color": "#240E35"
+                },
+                "settings": {}
+              },
+              {
+                "id": "collection_text",
+                "type": "text",
+                "content": "Keep this as a multi-product collection or swap each card with your own physical products. Every card already has pricing, stock, media, quick view, and checkout-ready CTA settings.",
+                "style": {
+                  "fontSize": "16px",
+                  "color": "#64748b",
+                  "maxWidth": "900px"
+                },
+                "settings": {}
+              }
+            ],
+            "rows": []
+          },
+          {
+            "kind": "section",
+            "id": "collection_grid",
+            "style": {
+              "padding": "36px 28px",
+              "backgroundColor": "#fcfbfe",
+              "borderRadius": "28px"
+            },
+            "settings": {
+              "contentWidth": "full"
+            },
+            "elements": [
+              {
+                "id": "offer_city_tote",
+                "type": "product_offer",
+                "content": "",
+                "style": { "width": "220px" },
+                "settings": {
+                  "plan": "City Carry Tote",
+                  "price": "PHP 1,299",
+                  "regularPrice": "PHP 1,699",
+                  "subtitle": "Premium tote for workdays and daily carry.",
+                  "badge": "Best Seller",
+                  "description": "A structured all-day tote designed for people who want a clean premium look without sacrificing space. Fits essentials, documents, and small gadgets comfortably.",
+                  "features": ["Fits essentials", "Premium finish", "Fast delivery"],
+                  "ctaLabel": "Buy Now",
+                  "ctaActionType": "checkout",
+                  "quickViewEnabled": true,
+                  "quickViewLabel": "See Details",
+                  "cartEnabled": true,
+                  "stockQuantity": "45",
+                  "media": [
+                    {
+                      "type": "image",
+                      "src": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=900&q=80",
+                      "alt": "City Carry Tote"
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "offer_daily_bottle",
+                "type": "product_offer",
+                "content": "",
+                "style": { "width": "220px" },
+                "settings": {
+                  "plan": "Daily Steel Bottle",
+                  "price": "PHP 899",
+                  "regularPrice": "PHP 1,190",
+                  "subtitle": "Insulated bottle for commuting and gym days.",
+                  "badge": "Hot Pick",
+                  "description": "A sleek insulated bottle with a modern matte finish and leak-resistant cap. Perfect for buyers who want utility and premium shelf appeal.",
+                  "features": ["Cold for longer", "Leak-resistant", "Gift-ready"],
+                  "ctaLabel": "Add To Cart",
+                  "ctaActionType": "checkout",
+                  "quickViewEnabled": true,
+                  "quickViewLabel": "Quick View",
+                  "cartEnabled": true,
+                  "stockQuantity": "60",
+                  "media": [
+                    {
+                      "type": "image",
+                      "src": "https://images.unsplash.com/photo-1602143407151-7111542de6e8?auto=format&fit=crop&w=900&q=80",
+                      "alt": "Daily Steel Bottle"
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "offer_weekend_cap",
+                "type": "product_offer",
+                "content": "",
+                "style": { "width": "220px" },
+                "settings": {
+                  "plan": "Weekend Club Cap",
+                  "price": "PHP 749",
+                  "regularPrice": "PHP 990",
+                  "subtitle": "Everyday cap with a premium casual feel.",
+                  "badge": "New Arrival",
+                  "description": "Structured silhouette, easy everyday colorway, and an elevated casual feel that works with most outfits. Great as an entry-level hero product.",
+                  "features": ["Unisex fit", "All-day wear", "Premium detail"],
+                  "ctaLabel": "Shop Now",
+                  "ctaActionType": "checkout",
+                  "quickViewEnabled": true,
+                  "quickViewLabel": "See Style",
+                  "cartEnabled": true,
+                  "stockQuantity": "50",
+                  "media": [
+                    {
+                      "type": "image",
+                      "src": "https://images.unsplash.com/photo-1521369909029-2afed882baee?auto=format&fit=crop&w=900&q=80",
+                      "alt": "Weekend Club Cap"
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "offer_travel_pouch",
+                "type": "product_offer",
+                "content": "",
+                "style": { "width": "220px" },
+                "settings": {
+                  "plan": "Travel Utility Pouch",
+                  "price": "PHP 699",
+                  "regularPrice": "PHP 950",
+                  "subtitle": "Compact organizer for daily small essentials.",
+                  "badge": "Easy Add-On",
+                  "description": "A flexible organizer pouch that helps buyers keep small items neat and easy to access. Perfect as a lower-ticket item or bundle booster.",
+                  "features": ["Smart organization", "Lightweight", "Great add-on"],
+                  "ctaLabel": "Get This",
+                  "ctaActionType": "checkout",
+                  "quickViewEnabled": true,
+                  "quickViewLabel": "More Info",
+                  "cartEnabled": true,
+                  "stockQuantity": "80",
+                  "media": [
+                    {
+                      "type": "image",
+                      "src": "https://images.unsplash.com/photo-1523381210434-271e8be1f52b?auto=format&fit=crop&w=900&q=80",
+                      "alt": "Travel Utility Pouch"
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "offer_classic_wallet",
+                "type": "product_offer",
+                "content": "",
+                "style": { "width": "220px" },
+                "settings": {
+                  "plan": "Classic Slim Wallet",
+                  "price": "PHP 1,099",
+                  "regularPrice": "PHP 1,490",
+                  "subtitle": "Refined slim wallet for cleaner everyday carry.",
+                  "badge": "Premium Pick",
+                  "description": "Slim enough for comfort, polished enough to feel premium, and practical enough for daily use. Strong choice for gifting, lifestyle, and men’s accessories niches.",
+                  "features": ["Slim profile", "Gift-friendly", "Premium feel"],
+                  "ctaLabel": "Buy Wallet",
+                  "ctaActionType": "checkout",
+                  "quickViewEnabled": true,
+                  "quickViewLabel": "Open Details",
+                  "cartEnabled": true,
+                  "stockQuantity": "38",
+                  "media": [
+                    {
+                      "type": "image",
+                      "src": "https://images.unsplash.com/photo-1627123424574-724758594e93?auto=format&fit=crop&w=900&q=80",
+                      "alt": "Classic Slim Wallet"
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "offer_desk_lamp",
+                "type": "product_offer",
+                "content": "",
+                "style": { "width": "220px" },
+                "settings": {
+                  "plan": "Focus Desk Lamp",
+                  "price": "PHP 1,899",
+                  "regularPrice": "PHP 2,450",
+                  "subtitle": "Modern desk lighting with a clean silhouette.",
+                  "badge": "Home Upgrade",
+                  "description": "Built for modern workspaces and content desks, this product gives the page a more aspirational feel and works well for home lifestyle brands.",
+                  "features": ["Minimal design", "Workspace-ready", "Looks premium"],
+                  "ctaLabel": "Order Lamp",
+                  "ctaActionType": "checkout",
+                  "quickViewEnabled": true,
+                  "quickViewLabel": "View Lamp",
+                  "cartEnabled": true,
+                  "stockQuantity": "25",
+                  "media": [
+                    {
+                      "type": "image",
+                      "src": "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=900&q=80",
+                      "alt": "Focus Desk Lamp"
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "offer_everyday_sneaker",
+                "type": "product_offer",
+                "content": "",
+                "style": { "width": "220px" },
+                "settings": {
+                  "plan": "Everyday White Sneaker",
+                  "price": "PHP 2,299",
+                  "regularPrice": "PHP 2,990",
+                  "subtitle": "Clean low-profile sneaker with fashion appeal.",
+                  "badge": "Editor Pick",
+                  "description": "A polished lifestyle sneaker with mass-market appeal. Great for fashion, footwear, and trend-focused physical product funnels.",
+                  "features": ["Versatile style", "Trend-friendly", "Visual standout"],
+                  "ctaLabel": "Buy Sneaker",
+                  "ctaActionType": "checkout",
+                  "quickViewEnabled": true,
+                  "quickViewLabel": "See Pair",
+                  "cartEnabled": true,
+                  "stockQuantity": "35",
+                  "media": [
+                    {
+                      "type": "image",
+                      "src": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=900&q=80",
+                      "alt": "Everyday White Sneaker"
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "offer_signature_watch",
+                "type": "product_offer",
+                "content": "",
+                "style": { "width": "220px" },
+                "settings": {
+                  "plan": "Signature Strap Watch",
+                  "price": "PHP 2,799",
+                  "regularPrice": "PHP 3,490",
+                  "subtitle": "Statement watch for gifting and everyday style.",
+                  "badge": "Gift Favorite",
+                  "description": "Strong gift appeal, polished visuals, and a premium perceived value make this a useful template item for higher-ticket accessories.",
+                  "features": ["Gift-ready", "Premium look", "Higher value feel"],
+                  "ctaLabel": "Order Watch",
+                  "ctaActionType": "checkout",
+                  "quickViewEnabled": true,
+                  "quickViewLabel": "Preview Watch",
+                  "cartEnabled": true,
+                  "stockQuantity": "20",
+                  "media": [
+                    {
+                      "type": "image",
+                      "src": "https://images.unsplash.com/photo-1523170335258-f5ed11844a49?auto=format&fit=crop&w=900&q=80",
+                      "alt": "Signature Strap Watch"
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "offer_skin_set",
+                "type": "product_offer",
+                "content": "",
+                "style": { "width": "220px" },
+                "settings": {
+                  "plan": "Radiance Skin Set",
+                  "price": "PHP 1,499",
+                  "regularPrice": "PHP 1,950",
+                  "subtitle": "Beauty starter kit with strong bundle appeal.",
+                  "badge": "Bundle Ready",
+                  "description": "Ideal for skincare and beauty funnels, with pricing that feels accessible while still creating a premium brand vibe.",
+                  "features": ["Bundle-ready", "Skincare fit", "Easy hero offer"],
+                  "ctaLabel": "Get The Set",
+                  "ctaActionType": "checkout",
+                  "quickViewEnabled": true,
+                  "quickViewLabel": "Open Set",
+                  "cartEnabled": true,
+                  "stockQuantity": "42",
+                  "media": [
+                    {
+                      "type": "image",
+                      "src": "https://images.unsplash.com/photo-1571781926291-c477ebfd024b?auto=format&fit=crop&w=900&q=80",
+                      "alt": "Radiance Skin Set"
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "offer_candle_duo",
+                "type": "product_offer",
+                "content": "",
+                "style": { "width": "220px" },
+                "settings": {
+                  "plan": "Calm Home Candle Duo",
+                  "price": "PHP 1,150",
+                  "regularPrice": "PHP 1,520",
+                  "subtitle": "Home scent duo for gifting and styling.",
+                  "badge": "Relaxing Gift",
+                  "description": "Useful for home decor, gifting, and cozy lifestyle brands. The visuals help make the whole template feel more curated and elevated.",
+                  "features": ["Gift-ready", "Home decor fit", "Premium scent"],
+                  "ctaLabel": "Buy Duo",
+                  "ctaActionType": "checkout",
+                  "quickViewEnabled": true,
+                  "quickViewLabel": "See Candle Set",
+                  "cartEnabled": true,
+                  "stockQuantity": "28",
+                  "media": [
+                    {
+                      "type": "image",
+                      "src": "https://images.unsplash.com/photo-1603006905003-be475563bc59?auto=format&fit=crop&w=900&q=80",
+                      "alt": "Calm Home Candle Duo"
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "offer_wireless_speaker",
+                "type": "product_offer",
+                "content": "",
+                "style": { "width": "220px" },
+                "settings": {
+                  "plan": "Studio Wireless Speaker",
+                  "price": "PHP 2,199",
+                  "regularPrice": "PHP 2,850",
+                  "subtitle": "Compact speaker with premium lifestyle appeal.",
+                  "badge": "Lifestyle Tech",
+                  "description": "Good choice for tech-accessory sellers who want a better-looking sales page than a basic checkout grid. Adds category variety and stronger merchandising.",
+                  "features": ["Lifestyle appeal", "Tech-ready", "Visual anchor"],
+                  "ctaLabel": "Shop Speaker",
+                  "ctaActionType": "checkout",
+                  "quickViewEnabled": true,
+                  "quickViewLabel": "Play Preview",
+                  "cartEnabled": true,
+                  "stockQuantity": "32",
+                  "media": [
+                    {
+                      "type": "image",
+                      "src": "https://images.unsplash.com/photo-1545454675-3531b543be5d?auto=format&fit=crop&w=900&q=80",
+                      "alt": "Studio Wireless Speaker"
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "offer_travel_bundle",
+                "type": "product_offer",
+                "content": "",
+                "style": { "width": "220px" },
+                "settings": {
+                  "plan": "Travel Starter Bundle",
+                  "price": "PHP 2,499",
+                  "regularPrice": "PHP 3,290",
+                  "subtitle": "Higher-value bundle built to lift order value.",
+                  "badge": "Bundle Saver",
+                  "description": "This is the kind of offer that makes the page feel more strategic. Use it as the value-maximizing bundle for buyers who want the best deal.",
+                  "features": ["AOV booster", "Strong savings", "Main offer ready"],
+                  "ctaLabel": "Get Bundle",
+                  "ctaActionType": "checkout",
+                  "quickViewEnabled": true,
+                  "quickViewLabel": "View Bundle",
+                  "cartEnabled": true,
+                  "stockQuantity": "22",
+                  "media": [
+                    {
+                      "type": "image",
+                      "src": "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80",
+                      "alt": "Travel Starter Bundle"
+                    }
+                  ]
+                }
+              }
+            ],
+            "rows": []
+          },
+          {
+            "kind": "section",
+            "id": "sales_proof_section",
+            "style": {
+              "padding": "38px 32px",
+              "backgroundColor": "#240E35",
+              "borderRadius": "26px"
+            },
+            "settings": {
+              "contentWidth": "full"
+            },
+            "elements": [
+              {
+                "id": "sales_proof_heading",
+                "type": "heading",
+                "content": "Why this template converts better than a plain list of products",
+                "style": {
+                  "fontSize": "34px",
+                  "fontWeight": "800",
+                  "color": "#ffffff"
+                },
+                "settings": {}
+              },
+              {
+                "id": "sales_proof_text",
+                "type": "text",
+                "content": "It already combines product choice, price comparison, buyer reassurance, limited stock, quick-view capability, and direct checkout CTA behavior. That makes it feel like a real branded shopping page, not a rough builder draft.",
+                "style": {
+                  "fontSize": "16px",
+                  "color": "#ddd6fe",
+                  "maxWidth": "900px"
+                },
+                "settings": {}
+              },
+              {
+                "id": "sales_proof_cta",
+                "type": "button",
+                "content": "Proceed To Checkout",
+                "style": {
+                  "backgroundColor": "#ffffff",
+                  "color": "#240E35",
+                  "fontSize": "16px",
+                  "fontWeight": "800",
+                  "padding": "14px 24px",
+                  "borderRadius": "14px"
+                },
+                "settings": {
+                  "actionType": "next_step"
+                }
+              }
+            ],
+            "rows": []
+          }
+        ],
+        "sections": []
+      }
+    },
+    {
+      "title": "Checkout",
+      "slug": "checkout",
+      "type": "checkout",
+      "content": "Polished physical-product checkout page with trust, delivery details, and final order review.",
+      "cta_label": "Place Order",
+      "price": 2499,
+      "layout_json": {
+        "root": [
+          {
+            "kind": "section",
+            "id": "checkout_header",
+            "style": {
+              "padding": "42px 34px",
+              "backgroundColor": "#ffffff",
+              "border": "1px solid #e5e7eb",
+              "borderRadius": "24px"
+            },
+            "settings": {
+              "contentWidth": "full"
+            },
+            "elements": [
+              {
+                "id": "checkout_kicker",
+                "type": "text",
+                "content": "SECURE ORDER PAGE",
+                "style": {
+                  "fontSize": "13px",
+                  "fontWeight": "800",
+                  "letterSpacing": "0.14em",
+                  "textTransform": "uppercase",
+                  "color": "#7c3aed"
+                },
+                "settings": {}
+              },
+              {
+                "id": "checkout_header_heading",
+                "type": "heading",
+                "content": "Complete your order in one clean step",
+                "style": {
+                  "fontSize": "40px",
+                  "fontWeight": "800",
+                  "color": "#240E35"
+                },
+                "settings": {}
+              },
+              {
+                "id": "checkout_header_text",
+                "type": "text",
+                "content": "This page is ready for physical-product selling: product summary, shipping form, coupon support, and final payment review are already positioned for a professional buying experience.",
+                "style": {
+                  "fontSize": "16px",
+                  "color": "#64748b",
+                  "maxWidth": "900px"
+                },
+                "settings": {}
+              }
+            ],
+            "rows": []
+          },
+          {
+            "kind": "section",
+            "id": "checkout_reassurance_strip",
+            "style": {
+              "padding": "28px 28px",
+              "backgroundColor": "#f8fafc",
+              "border": "1px solid #e2e8f0",
+              "borderRadius": "22px"
+            },
+            "settings": {
+              "contentWidth": "full"
+            },
+            "elements": [
+              {
+                "id": "checkout_reassurance_heading",
+                "type": "heading",
+                "content": "What buyers want to know before paying",
+                "style": {
+                  "fontSize": "26px",
+                  "fontWeight": "800",
+                  "color": "#0f172a"
+                },
+                "settings": {}
+              },
+              {
+                "id": "checkout_reassurance_text",
+                "type": "text",
+                "content": "Fast order confirmation. Shipping updates by email. Clear final totals. Coupon support. Perfect for GCash, card, COD, or PayMongo-led payment flows.",
+                "style": {
+                  "fontSize": "15px",
+                  "color": "#475569",
+                  "maxWidth": "920px"
+                },
+                "settings": {}
+              }
+            ],
+            "rows": []
+          },
+          {
+            "kind": "section",
+            "id": "checkout_main_section",
+            "style": {
+              "padding": "40px 30px",
+              "backgroundColor": "#fcfbfe",
+              "borderRadius": "24px"
+            },
+            "settings": {
+              "contentWidth": "full"
+            },
+            "elements": [
+              {
+                "id": "checkout_offer_card",
+                "type": "product_offer",
+                "content": "",
+                "style": {
+                  "width": "340px"
+                },
+                "settings": {
+                  "plan": "Travel Starter Bundle",
+                  "price": "PHP 2,499",
+                  "regularPrice": "PHP 3,290",
+                  "subtitle": "Premium curated bundle selected as the default checkout offer.",
+                  "badge": "Order Summary",
+                  "description": "Use this card as your fallback checkout product. It already looks more complete and trustworthy than a blank summary card.",
+                  "features": [
+                    "Strong value bundle",
+                    "Visible price savings",
+                    "Built for physical delivery"
+                  ],
+                  "ctaLabel": "Place Order",
+                  "ctaActionType": "checkout",
+                  "quickViewEnabled": true,
+                  "quickViewLabel": "Review Item",
+                  "cartEnabled": true,
+                  "stockQuantity": "22",
+                  "media": [
+                    {
+                      "type": "image",
+                      "src": "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80",
+                      "alt": "Travel Starter Bundle"
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "checkout_shipping_block",
+                "type": "shipping_details",
+                "content": "",
+                "style": {
+                  "width": "390px"
+                },
+                "settings": {
+                  "heading": "Delivery Information",
+                  "subtitle": "Collect full name, address, contact details, city, and shipping notes so fulfillment can start immediately after payment."
+                }
+              },
+              {
+                "id": "checkout_summary_block",
+                "type": "physical_checkout_summary",
+                "content": "",
+                "style": {
+                  "width": "390px"
+                },
+                "settings": {
+                  "heading": "Review & Pay",
+                  "plan": "Travel Starter Bundle",
+                  "price": "PHP 2,499",
+                  "subtitle": "Coupons, subtotal, discount, shipping details, and the final payment trigger live here.",
+                  "badge": "Ready To Complete",
+                  "ctaLabel": "Place Order"
+                }
+              }
+            ],
+            "rows": []
+          },
+          {
+            "kind": "section",
+            "id": "checkout_policy_section",
+            "style": {
+              "padding": "32px 28px",
+              "backgroundColor": "#ffffff",
+              "border": "1px solid #e5e7eb",
+              "borderRadius": "22px"
+            },
+            "settings": {
+              "contentWidth": "full"
+            },
+            "elements": [
+              {
+                "id": "checkout_policy_heading",
+                "type": "heading",
+                "content": "Post-purchase expectations are already explained",
+                "style": {
+                  "fontSize": "28px",
+                  "fontWeight": "800",
+                  "color": "#240E35"
+                },
+                "settings": {}
+              },
+              {
+                "id": "checkout_policy_text",
+                "type": "text",
+                "content": "Customize this section with your dispatch window, COD rules, return policy, warranty, and delivery timeline. It helps reduce hesitation and makes the checkout feel safer and more premium.",
+                "style": {
+                  "fontSize": "15px",
+                  "color": "#64748b",
+                  "maxWidth": "940px"
+                },
+                "settings": {}
+              }
+            ],
+            "rows": []
+          }
+        ],
+        "sections": []
+      }
+    },
+    {
+      "title": "Thank You",
+      "slug": "thank-you",
+      "type": "thank_you",
+      "content": "Premium thank-you page with next-step reassurance, support messaging, and a polished confirmation layout.",
+      "cta_label": null,
+      "layout_json": {
+        "root": [
+          {
+            "kind": "section",
+            "id": "thank_you_hero",
+            "style": {
+              "padding": "74px 48px",
+              "backgroundColor": "#f8fafc",
+              "borderRadius": "28px",
+              "textAlign": "center"
+            },
+            "settings": {
+              "contentWidth": "full"
+            },
+            "elements": [
+              {
+                "id": "thank_you_kicker",
+                "type": "text",
+                "content": "ORDER CONFIRMED",
+                "style": {
+                  "fontSize": "13px",
+                  "fontWeight": "800",
+                  "letterSpacing": "0.12em",
+                  "textTransform": "uppercase",
+                  "color": "#7c3aed"
+                },
+                "settings": {}
+              },
+              {
+                "id": "thank_you_heading",
+                "type": "heading",
+                "content": "Thank you. Your order has been received successfully.",
+                "style": {
+                  "fontSize": "46px",
+                  "fontWeight": "800",
+                  "color": "#240E35"
+                },
+                "settings": {}
+              },
+              {
+                "id": "thank_you_text",
+                "type": "text",
+                "content": "This page is designed to reassure buyers immediately after payment. It confirms the order, reduces anxiety, and sets expectations for confirmation, processing, shipping, and tracking updates.",
+                "style": {
+                  "fontSize": "17px",
+                  "color": "#64748b",
+                  "maxWidth": "860px"
+                },
+                "settings": {}
+              },
+              {
+                "id": "thank_you_button",
+                "type": "button",
+                "content": "Back To Store",
+                "style": {
+                  "backgroundColor": "#240E35",
+                  "color": "#ffffff",
+                  "fontSize": "16px",
+                  "fontWeight": "800",
+                  "padding": "14px 24px",
+                  "borderRadius": "14px"
+                },
+                "settings": {
+                  "actionType": "restart"
+                }
+              }
+            ],
+            "rows": []
+          },
+          {
+            "kind": "section",
+            "id": "thank_you_steps",
+            "style": {
+              "padding": "36px 30px",
+              "backgroundColor": "#ffffff",
+              "border": "1px solid #e5e7eb",
+              "borderRadius": "24px"
+            },
+            "settings": {
+              "contentWidth": "full"
+            },
+            "elements": [
+              {
+                "id": "thank_you_steps_heading",
+                "type": "heading",
+                "content": "What happens next",
+                "style": {
+                  "fontSize": "32px",
+                  "fontWeight": "800",
+                  "color": "#0f172a"
+                },
+                "settings": {}
+              },
+              {
+                "id": "thank_you_steps_text",
+                "type": "text",
+                "content": "1. The buyer receives an order confirmation. 2. Your team prepares and verifies the item. 3. Delivery or tracking details are sent when ready. 4. The buyer can contact support if they need help before arrival.",
+                "style": {
+                  "fontSize": "16px",
+                  "color": "#475569",
+                  "maxWidth": "940px"
+                },
+                "settings": {}
+              }
+            ],
+            "rows": []
+          },
+          {
+            "kind": "section",
+            "id": "thank_you_support",
+            "style": {
+              "padding": "34px 30px",
+              "backgroundColor": "#240E35",
+              "borderRadius": "24px",
+              "textAlign": "center"
+            },
+            "settings": {
+              "contentWidth": "full"
+            },
+            "elements": [
+              {
+                "id": "thank_you_support_heading",
+                "type": "heading",
+                "content": "A premium thank-you page keeps trust high after the sale",
+                "style": {
+                  "fontSize": "30px",
+                  "fontWeight": "800",
+                  "color": "#ffffff"
+                },
+                "settings": {}
+              },
+              {
+                "id": "thank_you_support_text",
+                "type": "text",
+                "content": "Use this area for customer support contact details, delivery reminders, warranty coverage, aftercare instructions, or an invitation to follow your brand on social media.",
+                "style": {
+                  "fontSize": "15px",
+                  "color": "#ddd6fe",
+                  "maxWidth": "900px"
+                },
+                "settings": {}
+              }
+            ],
+            "rows": []
+          }
+        ],
+        "sections": []
+      }
+    }
+  ]
+}

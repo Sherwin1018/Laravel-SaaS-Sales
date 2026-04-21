@@ -101,6 +101,81 @@ class FunnelTemplateManagementTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_super_admin_can_replace_existing_template_from_json(): void
+    {
+        $admin = $this->createUserWithRole('super-admin', null);
+
+        $template = FunnelTemplate::create([
+            'created_by' => $admin->id,
+            'name' => 'Old Template',
+            'slug' => 'old-template',
+            'description' => 'Before replace',
+            'template_type' => 'step_by_step',
+            'template_tags' => ['Legacy'],
+            'status' => 'draft',
+        ]);
+
+        $template->steps()->createMany([
+            ['title' => 'Old Landing', 'slug' => 'old-landing', 'type' => 'landing', 'position' => 1, 'is_active' => true, 'template' => 'simple', 'step_tags' => [], 'layout_json' => ['root' => [], 'sections' => []]],
+            ['title' => 'Old Checkout', 'slug' => 'old-checkout', 'type' => 'checkout', 'position' => 2, 'is_active' => true, 'template' => 'simple', 'step_tags' => [], 'price' => 999, 'layout_json' => ['root' => [], 'sections' => []]],
+        ]);
+
+        $payload = [
+            'name' => 'Imported Physical Template',
+            'description' => 'After replace',
+            'steps' => [
+                [
+                    'title' => 'Landing',
+                    'slug' => 'landing',
+                    'type' => 'landing',
+                    'layout_json' => ['root' => [], 'sections' => []],
+                ],
+                [
+                    'title' => 'Checkout',
+                    'slug' => 'checkout',
+                    'type' => 'checkout',
+                    'price' => 299,
+                    'layout_json' => ['root' => [], 'sections' => []],
+                ],
+                [
+                    'title' => 'Thank You',
+                    'slug' => 'thank-you',
+                    'type' => 'thank_you',
+                    'layout_json' => ['root' => [], 'sections' => []],
+                ],
+            ],
+        ];
+
+        $response = $this->actingAs($admin)->post(route('admin.funnel-templates.replace-json.store', $template), [
+            'name' => 'Updated Template',
+            'description' => 'Updated from JSON',
+            'template_type' => 'step_by_step',
+            'funnel_purpose' => 'physical_product',
+            'template_tags' => 'Premium, Physical Product',
+            'import_json' => json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES),
+            'publish_now' => '1',
+        ]);
+
+        $response->assertRedirect(route('admin.funnel-templates.edit', $template));
+
+        $template->refresh();
+        $this->assertSame('Updated Template', $template->name);
+        $this->assertSame('Updated from JSON', $template->description);
+        $this->assertSame('published', $template->status);
+        $this->assertSame('old-template', $template->slug);
+        $this->assertContains(FunnelTemplate::PURPOSE_TAG_PREFIX . 'physical_product', $template->template_tags ?? []);
+        $this->assertDatabaseMissing('funnel_template_steps', [
+            'funnel_template_id' => $template->id,
+            'slug' => 'old-landing',
+        ]);
+        $this->assertDatabaseHas('funnel_template_steps', [
+            'funnel_template_id' => $template->id,
+            'slug' => 'checkout',
+            'price' => 299.00,
+        ]);
+        $this->assertSame(3, $template->steps()->count());
+    }
+
     private function createUserWithRole(string $roleSlug, ?Tenant $tenant): User
     {
         $user = User::factory()->create([

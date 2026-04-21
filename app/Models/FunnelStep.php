@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\ResolvesBreakpointLayouts;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class FunnelStep extends Model
 {
+    use ResolvesBreakpointLayouts;
+
     public const TYPES = [
         'landing' => 'Landing Page',
         'opt_in' => 'Opt-in Page',
@@ -52,6 +55,8 @@ class FunnelStep extends Model
         'background_color',
         'button_color',
         'layout_json',
+        'layout_json_tablet',
+        'layout_json_mobile',
     ];
 
     protected $casts = [
@@ -60,6 +65,8 @@ class FunnelStep extends Model
         'template_data' => 'array',
         'step_tags' => 'array',
         'layout_json' => 'array',
+        'layout_json_tablet' => 'array',
+        'layout_json_mobile' => 'array',
     ];
 
     public function funnel(): BelongsTo
