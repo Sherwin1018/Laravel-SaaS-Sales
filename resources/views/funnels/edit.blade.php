@@ -993,6 +993,7 @@ const stepVersionTpl=@json($builderStepVersionUrlTemplate ?? route('funnels.step
 const stepStoreUrl=@json($builderStepStoreUrl ?? route('funnels.steps.store',$funnel));
 const stepUpdateTpl=@json($builderStepUpdateUrlTemplate ?? route('funnels.steps.update',['funnel'=>$funnel,'step'=>'__STEP__']));
 const stepDeleteTpl=@json($builderStepDeleteUrlTemplate ?? route('funnels.steps.destroy',['funnel'=>$funnel,'step'=>'__STEP__']));
+const applySharedTemplateAllTpl=@json(route('funnels.shared-templates.apply-all',['funnel'=>$funnel,'funnel_template'=>'__TEMPLATE__']));
 const stepReorderUrl=@json($builderStepReorderUrl ?? route('funnels.steps.reorder',$funnel));
 const funnelUpdateUrl=@json($builderUpdateUrl ?? route('funnels.update', $funnel));
 const csrf="{{ csrf_token() }}";
@@ -3717,85 +3718,42 @@ function applySharedFunnelTemplate(template){
             showBuilderToast("This saved template has no pages to apply.","error");
             return Promise.resolve(false);
         }
-        var msg='Apply the saved template "'+String(template.name||"template")+'" to this funnel? This will replace the layouts of the first '+tplSteps.length+' page'+(tplSteps.length===1?"":"s")+' and save them to the server.';
-        if(steps.length>tplSteps.length){
-            msg+=' Extra pages in the current funnel will stay after the applied template pages.';
-        }
+        var msg='Apply the saved template "'+String(template.name||"template")+'" to this funnel? This will replace ALL pages in this funnel with the template and remove any existing pages not in the template.';
         return confirmTemplateApply(msg).then(function(ok){
             if(!ok)return Promise.resolve(false);
             saveToHistory();
-            return ensureSharedTemplateStepCount(template).then(function(createdTypes){
+            var url=String(applySharedTemplateAllTpl||"").replace("__TEMPLATE__",String(template.template_id||""));
+            return requestJson(url,"POST",{}).then(function(resp){
+                var nextSteps=(resp&&Array.isArray(resp.steps))?resp.steps:[];
+                if(!nextSteps.length){
+                    throw new Error("Template applied but no steps were returned.");
+                }
+                // Replace local steps array in-place (it is a const reference).
+                steps.length=0;
+                nextSteps.forEach(function(s){steps.push(s);});
                 sortStepsByPosition();
+                renderStepOptions();
+                syncPageManagerList();
                 var ordered=steps.slice().sort(function(a,b){return Number(a.position||0)-Number(b.position||0);});
-                var currentStepId=cur()?+cur().id:null;
-                var nextStateLayout=null;
-                var appliedIds={};
-                tplSteps.forEach(function(sourceStep,idx){
-                    var targetStep=ordered[idx]||null;
-                    if(!targetStep)return;
-                    appliedIds[String(targetStep.id||"")]=true;
-                    targetStep.position=idx+1;
-                    targetStep.title=String(sourceStep.title||defaultStepTitleForType(sourceStep.type)||"Untitled");
-                    targetStep.subtitle=String(sourceStep.subtitle||"");
-                    targetStep.slug=uniqueStepSlug(sourceStep.slug||targetStep.title,targetStep.id);
-                    targetStep.type=String(sourceStep.type||"custom");
-                    targetStep.template=String(sourceStep.template||"simple");
-                    targetStep.template_data=clone(sourceStep.template_data||null);
-                    targetStep.layout_style=String(sourceStep.layout_style||"centered");
-                    targetStep.content=String(sourceStep.content||"");
-                    targetStep.cta_label=String(sourceStep.cta_label||"");
-                    targetStep.price=(sourceStep.price==null||String(sourceStep.price)==="")?"":String(sourceStep.price);
-                    targetStep.background_color=String(sourceStep.background_color||"");
-                    targetStep.button_color=String(sourceStep.button_color||"");
-                    targetStep.is_active=!(sourceStep.is_active===false||String(sourceStep.is_active)==="0");
-                    targetStep.step_tags=Array.isArray(sourceStep.step_tags)?clone(sourceStep.step_tags):[];
-                    targetStep.layout_json=clone(sourceStep.layout_json||{root:[],sections:[]});
-                });
-                var extraPosition=tplSteps.length+1;
-                ordered.forEach(function(step,idx){
-                    if(appliedIds[String(step&&step.id||"")])return;
-                    step.position=extraPosition;
-                    extraPosition++;
-                });
-                sortStepsByPosition();
-                steps.forEach(function(step){
-                    step.layout_json=wireTemplateLayoutForStep(
-                        clone(step.layout_json||{root:[],sections:[]}),
-                        step,
-                        steps
-                    );
-                    if(currentStepId!==null&&+step.id===currentStepId){
-                        nextStateLayout=clone(step.layout_json||{root:[],sections:[]});
+                var first=ordered[0]||null;
+                if(first){
+                    state.sid=first.id;
+                    state.layout=clone(first.layout_json||{root:[],sections:[]});
+                }
+                state.sel=null;
+                state.carouselSel=null;
+                state.editingEl=null;
+                state.linkPick=null;
+                renderTemplateLibrary();
+                render();
+                return syncBuilderPurposeFromTemplate(template).catch(function(err){
+                    showBuilderToast((err&&err.message)||"Template applied, but funnel purpose could not be updated.","error");
+                    return builderPurpose;
+                }).then(function(){
+                    if(saveMsg){
+                        saveMsg.textContent='Saved template applied to all '+ordered.length+' page(s).';
                     }
-                });
-                var appliedSteps=ordered.filter(function(step){
-                    return !!appliedIds[String(step&&step.id||"")];
-                });
-                return persistStepDefinitions(ordered).then(function(){
-                    return persistStepOrder(orderedStepIdsWithPositions());
-                }).then(function(){
-                    return persistLayoutsForSteps(ordered,true);
-                }).then(function(){
-                    renderStepOptions();
-                    syncPageManagerList();
-                    if(nextStateLayout)state.layout=nextStateLayout;
-                    state.sel=null;
-                    state.carouselSel=null;
-                    state.editingEl=null;
-                    state.linkPick=null;
-                    renderTemplateLibrary();
-                    render();
-                    return syncBuilderPurposeFromTemplate(template).catch(function(err){
-                        showBuilderToast((err&&err.message)||"Template applied, but funnel purpose could not be updated.","error");
-                        return builderPurpose;
-                    }).then(function(){
-                        if(saveMsg){
-                            saveMsg.textContent=createdTypes.length
-                                ? 'Saved template applied to '+appliedSteps.length+' page(s); created: '+createdTypes.map(pageTypeLabel).join(", ")+'.'
-                                : 'Saved template applied to all '+appliedSteps.length+' page(s).';
-                        }
-                        return true;
-                    });
+                    return true;
                 });
             }).catch(function(err){
                 showBuilderToast((err&&err.message)||"Failed to apply saved template.","error");

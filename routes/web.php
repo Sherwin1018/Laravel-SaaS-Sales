@@ -206,6 +206,8 @@ Route::middleware(['auth', 'tenant.subscription', 'role:sales-agent,marketing-ma
         Route::delete('/funnels/{funnel}/steps/{step}', [FunnelController::class, 'destroyStep'])->name('funnels.steps.destroy');
         Route::post('/funnels/{funnel}/steps/{step}/versions', [FunnelController::class, 'storeVersion'])->name('funnels.steps.versions.store');
         Route::post('/funnels/{funnel}/steps/reorder', [FunnelController::class, 'reorderSteps'])->name('funnels.steps.reorder');
+        Route::post('/funnels/{funnel}/shared-templates/{funnel_template}/apply-all', [FunnelController::class, 'applySharedTemplateAllPages'])
+            ->name('funnels.shared-templates.apply-all');
 
     });
 

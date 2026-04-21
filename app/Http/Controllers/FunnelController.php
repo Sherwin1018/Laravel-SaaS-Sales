@@ -10,6 +10,7 @@ use App\Models\Lead;
 use App\Models\FunnelStep;
 use App\Models\FunnelStepRevision;
 use App\Models\FunnelTemplate;
+use Illuminate\Support\Facades\DB;
 use App\Services\FunnelTrackingService;
 use App\Support\TenantPlanEnforcer;
 use Illuminate\Http\Request;
@@ -345,6 +346,123 @@ class FunnelController extends Controller
 
         return response()->json([
             'message' => 'Template card updated successfully.',
+        ]);
+    }
+
+    public function applySharedTemplateAllPages(Request $request, Funnel $funnel, FunnelTemplate $funnelTemplate)
+    {
+        $this->ensureTenantFunnelAccess($funnel);
+        $user = auth()->user();
+
+        $accessible = $this->findAccessiblePublishedTemplateForUser($user, (int) $funnelTemplate->id);
+        if (! $accessible) {
+            abort(404);
+        }
+
+        $templateSteps = $accessible->steps()->orderBy('position')->get();
+        if ($templateSteps->isEmpty()) {
+            return response()->json(['message' => 'Template has no steps.'], 422);
+        }
+
+        DB::transaction(function () use ($funnel, $templateSteps) {
+            $existingSteps = $funnel->steps()->orderBy('position')->get()->values();
+            $keepIds = [];
+            $usedSlugs = [];
+
+            $slugify = function (string $raw): string {
+                $raw = mb_strtolower(trim($raw));
+                $raw = str_replace(['_', ' '], '-', $raw);
+                $raw = preg_replace('/[^a-z0-9\-]/', '', $raw) ?? '';
+                $raw = preg_replace('/-+/', '-', $raw) ?? '';
+                $raw = trim($raw, '-');
+                return mb_substr($raw, 0, 120);
+            };
+
+            $uniqueSlug = function (string $base) use (&$usedSlugs): string {
+                $base = mb_substr($base, 0, 120);
+                if ($base === '') {
+                    $base = 'page';
+                }
+                $slug = $base;
+                $i = 2;
+                while (isset($usedSlugs[$slug])) {
+                    $suffix = '-' . $i;
+                    $maxBaseLen = max(1, 120 - mb_strlen($suffix));
+                    $slug = mb_substr($base, 0, $maxBaseLen) . $suffix;
+                    $i++;
+                }
+                $usedSlugs[$slug] = true;
+                return $slug;
+            };
+
+            foreach ($templateSteps as $index => $tplStep) {
+                $position = $index + 1;
+                $target = $existingSteps->get($index);
+
+                $title = trim((string) ($tplStep->title ?? ''));
+                if ($title === '') {
+                    $title = ucfirst(str_replace('_', ' ', (string) ($tplStep->type ?? 'custom')));
+                }
+                $title = mb_substr($title, 0, 120);
+                $subtitle = trim((string) ($tplStep->subtitle ?? ''));
+                $subtitle = $subtitle !== '' ? mb_substr($subtitle, 0, 160) : null;
+
+                $baseSlug = trim((string) ($tplStep->slug ?? ''));
+                if ($baseSlug === '') {
+                    $baseSlug = $title;
+                }
+                $baseSlug = $slugify($baseSlug);
+                if ($baseSlug === '') {
+                    $baseSlug = 'page-' . $position;
+                }
+                $slug = $uniqueSlug($baseSlug);
+
+                $payload = [
+                    'title' => $title,
+                    'subtitle' => $subtitle,
+                    'slug' => $slug,
+                    'type' => $tplStep->type,
+                    'template' => $tplStep->template ?? 'simple',
+                    'template_data' => $tplStep->template_data,
+                    'step_tags' => $tplStep->step_tags,
+                    'content' => $tplStep->content,
+                    'hero_image_url' => $tplStep->hero_image_url,
+                    'layout_style' => $tplStep->layout_style ?? 'centered',
+                    'background_color' => $tplStep->background_color,
+                    'button_color' => $tplStep->button_color,
+                    'cta_label' => $tplStep->cta_label,
+                    'price' => $tplStep->price,
+                    'layout_json' => $tplStep->layout_json ?? ['root' => [], 'sections' => []],
+                    'layout_json_tablet' => $tplStep->layout_json_tablet,
+                    'layout_json_mobile' => $tplStep->layout_json_mobile,
+                    'position' => $position,
+                    'is_active' => (bool) $tplStep->is_active,
+                ];
+
+                if ($target) {
+                    $target->update($payload);
+                    $this->ensureStepHasInitialRevision($target);
+                    $keepIds[] = (int) $target->id;
+                } else {
+                    $created = $funnel->steps()->create(array_merge($payload, [
+                        'position' => $position,
+                    ]));
+                    $this->ensureStepHasInitialRevision($created);
+                    $keepIds[] = (int) $created->id;
+                }
+            }
+
+            // Remove any extra steps from the funnel so it exactly matches the template.
+            $funnel->steps()
+                ->whereNotIn('id', $keepIds)
+                ->delete();
+        });
+
+        $freshSteps = $funnel->steps()->orderBy('position')->get();
+
+        return response()->json([
+            'message' => 'Template applied to all pages.',
+            'steps' => $freshSteps->map(fn ($s) => $this->builderStepPayload($s))->values()->all(),
         ]);
     }
 
