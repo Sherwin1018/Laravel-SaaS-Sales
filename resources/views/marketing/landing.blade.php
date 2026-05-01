@@ -353,6 +353,33 @@
             </div>
         </div>
 
+        <div id="contactTeamModal" style="position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); display: none; align-items: center; justify-content: center; padding: 18px; z-index: 9999;">
+            <div role="dialog" aria-modal="true" aria-labelledby="contactTeamModalTitle" style="width: min(100%, 460px); max-height: 92vh; overflow: auto; background: #ffffff; border-radius: 18px; box-shadow: 0 25px 80px rgba(15, 23, 42, 0.25); padding: 22px;">
+                <div style="display: flex; justify-content: space-between; align-items: start; gap: 12px; margin-bottom: 16px;">
+                    <div>
+                        <h3 id="contactTeamModalTitle" style="margin: 0 0 6px; font-size: 1.3rem;">Contact Team</h3>
+                        <p style="margin: 0; color: #475569;">Reach our sales team through the contact details below.</p>
+                    </div>
+                    <button type="button" id="contactTeamModalClose" aria-label="Close contact modal" style="width: 38px; height: 38px; border: none; border-radius: 999px; background: #E2E8F0; color: #0F172A; font-size: 22px; cursor: pointer;">&times;</button>
+                </div>
+
+                <div style="display:grid;gap:12px;">
+                    <div style="padding:14px 16px;border:1px solid #CBD5E1;border-radius:12px;background:#F8FAFC;">
+                        <div style="font-size:0.82rem;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:#64748B;">Email</div>
+                        <a href="mailto:sales.marketing.funnel@gmail.com" style="display:inline-block;margin-top:6px;font-size:1rem;font-weight:700;color:#240E35;text-decoration:none;">sales.marketing.funnel@gmail.com</a>
+                    </div>
+                    <div style="padding:14px 16px;border:1px solid #CBD5E1;border-radius:12px;background:#F8FAFC;">
+                        <div style="font-size:0.82rem;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:#64748B;">Mobile Number</div>
+                        <a href="tel:09560329747" style="display:inline-block;margin-top:6px;font-size:1rem;font-weight:700;color:#240E35;text-decoration:none;">09560329747</a>
+                    </div>
+                </div>
+
+                <div style="display:flex;justify-content:flex-end;margin-top:16px;">
+                    <button type="button" id="contactTeamModalDone" style="padding:10px 16px;border:none;border-radius:10px;background:#240E35;color:#ffffff;font-weight:700;cursor:pointer;">Close</button>
+                </div>
+            </div>
+        </div>
+
         <footer class="landing-footer">
             <div class="landing-footer__top" data-aos="fade-up">
                 <div class="landing-footer__brand">
@@ -382,7 +409,7 @@
                         <h4>Support</h4>
                         <a href="#faq">FAQ</a>
                         <a href="#pricing">Plans</a>
-                        <a href="#" data-open-onboarding data-plan-code="{{ request('plan', 'growth') }}">Contact Team</a>
+                        <a href="#" data-open-contact-team>Contact Team</a>
                     </div>
                 </div>
             </div>
@@ -433,6 +460,10 @@
         const onboardingForm = document.getElementById('landingOnboardingForm');
         const onboardingGoogleButton = document.getElementById('onboardingGoogleButton');
         const landingGoogleSignupForm = document.getElementById('landingGoogleSignupForm');
+        const contactTeamModal = document.getElementById('contactTeamModal');
+        const contactTeamOpeners = document.querySelectorAll('[data-open-contact-team]');
+        const contactTeamModalClose = document.getElementById('contactTeamModalClose');
+        const contactTeamModalDone = document.getElementById('contactTeamModalDone');
 
         const openOnboardingModal = (planCode) => {
             if (!onboardingModal) return;
@@ -449,6 +480,18 @@
         const closeOnboardingModal = () => {
             if (!onboardingModal) return;
             onboardingModal.style.display = 'none';
+            document.body.style.overflow = '';
+        };
+
+        const openContactTeamModal = () => {
+            if (!contactTeamModal) return;
+            contactTeamModal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        };
+
+        const closeContactTeamModal = () => {
+            if (!contactTeamModal) return;
+            contactTeamModal.style.display = 'none';
             document.body.style.overflow = '';
         };
 
@@ -477,6 +520,12 @@
                 openOnboardingModal(opener.dataset.planCode || 'growth');
             });
         });
+        contactTeamOpeners.forEach((opener) => {
+            opener.addEventListener('click', (event) => {
+                event.preventDefault();
+                openContactTeamModal();
+            });
+        });
 
         if (onboardingModalClose) {
             onboardingModalClose.addEventListener('click', closeOnboardingModal);
@@ -488,6 +537,19 @@
             onboardingModal.addEventListener('click', (event) => {
                 if (event.target === onboardingModal) {
                     closeOnboardingModal();
+                }
+            });
+        }
+        if (contactTeamModalClose) {
+            contactTeamModalClose.addEventListener('click', closeContactTeamModal);
+        }
+        if (contactTeamModalDone) {
+            contactTeamModalDone.addEventListener('click', closeContactTeamModal);
+        }
+        if (contactTeamModal) {
+            contactTeamModal.addEventListener('click', (event) => {
+                if (event.target === contactTeamModal) {
+                    closeContactTeamModal();
                 }
             });
         }
@@ -510,6 +572,7 @@
         document.addEventListener('keydown', (event) => {
             if (event.key === 'Escape') {
                 closeOnboardingModal();
+                closeContactTeamModal();
             }
         });
 

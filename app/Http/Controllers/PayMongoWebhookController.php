@@ -4,11 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\Payment;
 use App\Models\SignupIntent;
+use App\Models\WebhookReceipt;
 use App\Services\CommissionService;
 use App\Services\FunnelTrackingService;
 use App\Services\SignupOnboardingService;
 use App\Services\SubscriptionLifecycleService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class PayMongoWebhookController extends Controller
@@ -27,16 +29,90 @@ class PayMongoWebhookController extends Controller
             return response()->json(['ok' => true]);
         }
 
-        $eventData = data_get($payload, 'data.attributes.data');
-        if ($eventType === 'checkout_session.payment.paid') {
-            $this->handleCheckoutSessionPaid(is_array($eventData) ? $eventData : []);
-        } elseif ($eventType === 'payment.paid') {
-            $this->handlePaymentPaid(is_array($eventData) ? $eventData : []);
-        } elseif ($eventType === 'payment.failed') {
-            $this->handlePaymentFailed(is_array($eventData) ? $eventData : []);
+        $eventId = trim((string) data_get($payload, 'data.id'));
+        if ($eventId === '') {
+            $eventId = sha1($request->getContent());
         }
 
-        return response()->json(['ok' => true]);
+        $payloadHash = sha1($request->getContent());
+
+        try {
+            $duplicate = DB::transaction(function () use ($eventId, $eventType, $payloadHash, $payload) {
+                $receipt = WebhookReceipt::query()
+                    ->where('provider', 'paymongo')
+                    ->where('event_id', $eventId)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($receipt && $receipt->status === 'processed') {
+                    $receipt->increment('attempts');
+
+                    return true;
+                }
+
+                if ($receipt) {
+                    $receipt->update([
+                        'event_type' => $eventType,
+                        'payload_hash' => $payloadHash,
+                        'status' => 'processing',
+                        'attempts' => (int) $receipt->attempts + 1,
+                        'last_error' => null,
+                        'meta' => ['payload' => $payload],
+                    ]);
+                } else {
+                    $receipt = WebhookReceipt::query()->create([
+                        'provider' => 'paymongo',
+                        'event_id' => $eventId,
+                        'event_type' => $eventType,
+                        'payload_hash' => $payloadHash,
+                        'status' => 'processing',
+                        'attempts' => 1,
+                        'meta' => ['payload' => $payload],
+                    ]);
+                }
+
+                $eventData = data_get($payload, 'data.attributes.data');
+                if ($eventType === 'checkout_session.payment.paid') {
+                    $this->handleCheckoutSessionPaid(is_array($eventData) ? $eventData : []);
+                } elseif ($eventType === 'payment.paid') {
+                    $this->handlePaymentPaid(is_array($eventData) ? $eventData : []);
+                } elseif ($eventType === 'payment.failed') {
+                    $this->handlePaymentFailed(is_array($eventData) ? $eventData : []);
+                }
+
+                $receipt->update([
+                    'status' => 'processed',
+                    'processed_at' => now(),
+                    'last_error' => null,
+                ]);
+
+                return false;
+            });
+
+            return response()->json(['ok' => true, 'duplicate' => $duplicate]);
+        } catch (\Throwable $e) {
+            Log::warning('PayMongo webhook processing failed.', [
+                'event_id' => $eventId,
+                'event_type' => $eventType,
+                'message' => $e->getMessage(),
+            ]);
+
+            WebhookReceipt::query()->updateOrCreate(
+                [
+                    'provider' => 'paymongo',
+                    'event_id' => $eventId,
+                ],
+                [
+                    'event_type' => $eventType,
+                    'payload_hash' => $payloadHash,
+                    'status' => 'failed',
+                    'last_error' => $e->getMessage(),
+                    'meta' => ['payload' => $payload],
+                ]
+            );
+
+            return response()->json(['ok' => false], 500);
+        }
     }
 
     private function signatureValid(Request $request): bool

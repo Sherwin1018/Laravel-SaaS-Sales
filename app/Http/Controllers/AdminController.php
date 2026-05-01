@@ -38,6 +38,9 @@ class AdminController extends Controller
         $churnRate = $platformSummary['churn_rate'];
         $arpu = $platformSummary['arpu'];
         $payingTenantCount = $platformSummary['paying_tenants'];
+        $mrrBreakdown = $platformSummary['mrr_breakdown'];
+        $churnBreakdown = $platformSummary['churn_breakdown'];
+        $arpuBreakdown = $platformSummary['arpu_breakdown'];
         $usageMetrics = $platformSummary['usage_metrics'];
         $tenantGrowth = $platformSummary['tenant_growth'];
 
@@ -90,6 +93,9 @@ class AdminController extends Controller
             'churnRate',
             'arpu',
             'payingTenantCount',
+            'mrrBreakdown',
+            'churnBreakdown',
+            'arpuBreakdown',
             'usageMetrics',
             'tenantGrowth',
             'paymentStatusTotals',

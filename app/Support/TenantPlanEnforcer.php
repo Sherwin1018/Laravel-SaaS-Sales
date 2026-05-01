@@ -7,7 +7,7 @@ use App\Models\Funnel;
 use App\Models\Plan;
 use App\Models\Tenant;
 use App\Models\User;
-use Illuminate\Support\Arr;
+use App\Services\DeliveryLogService;
 
 class TenantPlanEnforcer
 {
@@ -31,8 +31,8 @@ class TenantPlanEnforcer
             'users' => $this->limitEntry($plan, self::LIMIT_USERS, User::where('tenant_id', $tenant->id)->count(), 'users'),
             'leads' => $this->limitEntry($plan, self::LIMIT_LEADS, Lead::where('tenant_id', $tenant->id)->count(), 'leads'),
             'funnels' => $this->limitEntry($plan, self::LIMIT_FUNNELS, Funnel::where('tenant_id', $tenant->id)->count(), 'funnels'),
-            'workflows' => $this->limitEntry($plan, self::LIMIT_WORKFLOWS, 0, 'automation workflows'),
-            'messages' => $this->limitEntry($plan, self::LIMIT_MESSAGES, 0, 'outbound messages'),
+            'workflows' => $this->limitEntry($plan, self::LIMIT_WORKFLOWS, $this->currentWorkflowUsage($tenant), 'automation workflows'),
+            'messages' => $this->limitEntry($plan, self::LIMIT_MESSAGES, $this->currentMessageUsage($tenant), 'outbound messages'),
             'automation_enabled' => $plan?->automation_enabled ?? true,
         ];
     }
@@ -57,6 +57,37 @@ class TenantPlanEnforcer
         $plan = $this->resolvePlan($tenant);
         if ($plan && ! $plan->automation_enabled) {
             abort(403, 'Automation is not available on your current plan.');
+        }
+    }
+
+    public function ensureCanUseWorkflow(Tenant $tenant): void
+    {
+        $plan = $this->resolvePlan($tenant);
+        if (! $plan || ! $plan->automation_enabled) {
+            return;
+        }
+
+        $this->ensureWithinLimit($tenant, self::LIMIT_WORKFLOWS, $this->currentWorkflowUsage($tenant), 'automation workflow');
+    }
+
+    public function ensureCanSendOutboundMessages(Tenant $tenant, int $messageCount = 1): void
+    {
+        $plan = $this->resolvePlan($tenant);
+        if (! $plan) {
+            return;
+        }
+
+        $limit = $plan->{self::LIMIT_MESSAGES};
+        if ($limit === null) {
+            return;
+        }
+
+        $currentUsage = $this->currentMessageUsage($tenant);
+        if (($currentUsage + max(0, $messageCount)) > (int) $limit) {
+            abort(422, sprintf(
+                'You have reached your monthly outbound messages limit for the %s plan. Upgrade your subscription to continue sending messages.',
+                $plan->name
+            ));
         }
     }
 
@@ -93,5 +124,23 @@ class TenantPlanEnforcer
             'is_unlimited' => $limit === null,
             'remaining' => $limit === null ? null : max(0, (int) $limit - $used),
         ];
+    }
+
+    private function currentWorkflowUsage(Tenant $tenant): int
+    {
+        $plan = $this->resolvePlan($tenant);
+        if (! $plan?->automation_enabled) {
+            return 0;
+        }
+
+        return Funnel::query()
+            ->where('tenant_id', $tenant->id)
+            ->where('status', 'published')
+            ->count();
+    }
+
+    private function currentMessageUsage(Tenant $tenant): int
+    {
+        return app(DeliveryLogService::class)->currentMonthBillableUsage($tenant);
     }
 }

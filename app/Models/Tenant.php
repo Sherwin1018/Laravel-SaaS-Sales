@@ -85,7 +85,7 @@ class Tenant extends Model
 
     public function defaultPayoutAccount(): HasOne
     {
-        return $this->hasOne(TenantPayoutAccount::class)->where('is_default', true);
+        return $this->hasOne(TenantPayoutAccount::class)->where('is_default', true)->latestOfMany();
     }
 
     public function leads()

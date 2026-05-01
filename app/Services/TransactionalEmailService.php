@@ -10,13 +10,14 @@ class TransactionalEmailService
 {
     /**
      * @param  array<string, mixed>  $meta
-     * @return array{sent: bool, provider: string}
+     * @return array{sent: bool, provider: string, error_message: string|null}
      */
     public function sendPlainText(string $recipient, string $subject, string $body, array $meta = []): array
     {
         $apiKey = ltrim(trim((string) config('services.brevo.api_key')), '=');
         $senderEmail = trim((string) config('mail.from.address'));
         $senderName = trim((string) config('mail.from.name'));
+        $lastError = null;
 
         if ($apiKey !== '' && $senderEmail !== '') {
             try {
@@ -38,9 +39,22 @@ class TransactionalEmailService
                     ]);
 
                 if ($response->successful()) {
-                    return ['sent' => true, 'provider' => 'brevo'];
+                    app(DeliveryLogService::class)->record('email', [
+                        'tenant_id' => $meta['tenant_id'] ?? null,
+                        'user_id' => $meta['user_id'] ?? null,
+                        'lead_id' => $meta['lead_id'] ?? null,
+                        'event_name' => $meta['template'] ?? $meta['event_name'] ?? null,
+                        'recipient' => $recipient,
+                        'provider' => 'brevo',
+                        'status' => 'sent',
+                        'is_billable' => (bool) ($meta['is_billable'] ?? false),
+                        'meta' => $meta,
+                    ]);
+
+                    return ['sent' => true, 'provider' => 'brevo', 'error_message' => null];
                 }
 
+                $lastError = 'Brevo returned HTTP ' . $response->status() . '.';
                 Log::warning('Brevo transactional email send failed.', [
                     'recipient' => $recipient,
                     'status' => $response->status(),
@@ -48,6 +62,7 @@ class TransactionalEmailService
                     'meta' => $meta,
                 ]);
             } catch (\Throwable $e) {
+                $lastError = $e->getMessage();
                 Log::warning('Brevo transactional email send exception.', [
                     'recipient' => $recipient,
                     'error' => $e->getMessage(),
@@ -61,8 +76,21 @@ class TransactionalEmailService
                 $message->to($recipient)->subject($subject);
             });
 
-            return ['sent' => true, 'provider' => (string) config('mail.default', 'log')];
+            app(DeliveryLogService::class)->record('email', [
+                'tenant_id' => $meta['tenant_id'] ?? null,
+                'user_id' => $meta['user_id'] ?? null,
+                'lead_id' => $meta['lead_id'] ?? null,
+                'event_name' => $meta['template'] ?? $meta['event_name'] ?? null,
+                'recipient' => $recipient,
+                'provider' => (string) config('mail.default', 'log'),
+                'status' => 'sent',
+                'is_billable' => (bool) ($meta['is_billable'] ?? false),
+                'meta' => $meta,
+            ]);
+
+            return ['sent' => true, 'provider' => (string) config('mail.default', 'log'), 'error_message' => null];
         } catch (\Throwable $e) {
+            $lastError = $e->getMessage();
             Log::warning('Transactional email fallback mail send failed.', [
                 'recipient' => $recipient,
                 'error' => $e->getMessage(),
@@ -70,6 +98,19 @@ class TransactionalEmailService
             ]);
         }
 
-        return ['sent' => false, 'provider' => (string) config('mail.default', 'log')];
+        app(DeliveryLogService::class)->record('email', [
+            'tenant_id' => $meta['tenant_id'] ?? null,
+            'user_id' => $meta['user_id'] ?? null,
+            'lead_id' => $meta['lead_id'] ?? null,
+            'event_name' => $meta['template'] ?? $meta['event_name'] ?? null,
+            'recipient' => $recipient,
+            'provider' => (string) config('mail.default', 'log'),
+            'status' => 'failed',
+            'error_message' => $lastError,
+            'is_billable' => (bool) ($meta['is_billable'] ?? false),
+            'meta' => $meta,
+        ]);
+
+        return ['sent' => false, 'provider' => (string) config('mail.default', 'log'), 'error_message' => $lastError];
     }
 }

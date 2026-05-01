@@ -7,15 +7,16 @@ use App\Models\Payment;
 use App\Models\Tenant;
 use App\Models\TenantPayoutAccount;
 use App\Models\User;
+use App\Services\DeliveryLogService;
 use App\Services\InAppNotificationService;
 use App\Services\N8nEmailOrchestrator;
 use App\Services\SubscriptionLifecycleService;
 use App\Services\TransactionalEmailService;
+use App\Support\TenantPlanEnforcer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 
 class N8nAutomationController extends Controller
@@ -131,6 +132,9 @@ class N8nAutomationController extends Controller
             ]);
         }
 
+        $tenant = Tenant::query()->findOrFail($tenantId);
+        app(TenantPlanEnforcer::class)->ensureCanSendOutboundMessages($tenant);
+
         $template = (string) $validated['template'];
         ['subject' => $subject, 'body' => $body] = $this->buildEmailContent(
             $template,
@@ -145,6 +149,7 @@ class N8nAutomationController extends Controller
             'tenant_id' => $tenantId,
             'lead_id' => $lead?->id,
             'invoice_id' => $validated['invoice_id'] ?? null,
+            'is_billable' => true,
         ]);
 
         if ($lead) {
@@ -586,6 +591,8 @@ class N8nAutomationController extends Controller
         ]);
 
         $tenantId = (int) $validated['tenant_id'];
+        $tenant = Tenant::query()->findOrFail($tenantId);
+        app(TenantPlanEnforcer::class)->ensureCanSendOutboundMessages($tenant);
         $phone = null;
         $lead = null;
 
@@ -603,6 +610,20 @@ class N8nAutomationController extends Controller
             'phone' => $phone,
             'template' => $validated['template'],
             'invoice_id' => $validated['invoice_id'] ?? null,
+        ]);
+
+        app(DeliveryLogService::class)->record('sms', [
+            'tenant_id' => $tenantId,
+            'lead_id' => $lead?->id,
+            'event_name' => (string) $validated['template'],
+            'recipient' => $phone,
+            'provider' => 'simulated',
+            'status' => 'sent',
+            'is_billable' => true,
+            'meta' => [
+                'invoice_id' => $validated['invoice_id'] ?? null,
+                'simulated' => true,
+            ],
         ]);
 
         if ($lead) {
@@ -808,23 +829,32 @@ class N8nAutomationController extends Controller
         }
 
         $sent = 0;
-        foreach ($users->get(['email']) as $user) {
+        foreach ($users->get(['email', 'tenant_id', 'id']) as $user) {
             if (! $user->email) {
                 continue;
             }
-            try {
-                Mail::raw(
-                    'Owner digest generated for ' . ($validated['date'] ?? now()->toDateString()),
-                    function ($message) use ($user) {
-                        $message->to($user->email)->subject('Owner Digest');
-                    }
-                );
-            } catch (\Throwable $e) {
-                Log::warning('Owner digest email fallback logging due to mail failure.', [
+
+            $sendResult = app(TransactionalEmailService::class)->sendPlainText(
+                $user->email,
+                'Owner Digest',
+                'Owner digest generated for ' . ($validated['date'] ?? now()->toDateString()),
+                [
+                    'event_name' => 'owner_digest',
+                    'tenant_id' => $user->tenant_id,
+                    'user_id' => $user->id,
+                    'is_billable' => false,
+                    'audience' => $audience,
+                ]
+            );
+
+            if (! $sendResult['sent']) {
+                Log::warning('Owner digest email dispatch failed.', [
                     'email' => $user->email,
-                    'error' => $e->getMessage(),
+                    'error' => $sendResult['error_message'] ?? 'unknown',
                 ]);
+                continue;
             }
+
             $sent++;
         }
 

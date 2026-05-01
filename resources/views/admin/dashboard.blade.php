@@ -298,6 +298,38 @@
         </div>
     </div>
 
+    <div class="card" style="margin-bottom: 20px;">
+        <h3>Metric Calculation Basis</h3>
+        <div class="sa-table-scroll">
+            <table class="sa-table">
+                <thead>
+                    <tr>
+                        <th>Metric</th>
+                        <th>Inputs</th>
+                        <th>Formula</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>MRR</td>
+                        <td>{{ (int) data_get($mrrBreakdown, 'current_month_paid_subscriptions', 0) }} paid subscription payments this month</td>
+                        <td>Current month paid platform subscriptions total = PHP {{ number_format((float) data_get($mrrBreakdown, 'current_month_mrr', 0), 2) }}</td>
+                    </tr>
+                    <tr>
+                        <td>Churn</td>
+                        <td>{{ (int) data_get($churnBreakdown, 'cancelled_this_month', 0) }} cancelled tenants, {{ (int) data_get($churnBreakdown, 'previous_active_tenants', 0) }} previous active tenants</td>
+                        <td>{{ data_get($churnBreakdown, 'formula', '-') }}</td>
+                    </tr>
+                    <tr>
+                        <td>ARPU</td>
+                        <td>MRR PHP {{ number_format((float) data_get($arpuBreakdown, 'current_month_mrr', 0), 2) }}, {{ (int) data_get($arpuBreakdown, 'paying_tenants', 0) }} paying tenants</td>
+                        <td>{{ data_get($arpuBreakdown, 'formula', '-') }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
     <div class="card">
         <h3>Needs Action Now</h3>
         <div class="sa-table-scroll">

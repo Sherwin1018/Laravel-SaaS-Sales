@@ -14,7 +14,7 @@ class InAppNotificationService
     /**
      * @param  array<string, mixed>  $payload
      */
-    public function ingestAutomationEvent(int $tenantId, string $eventName, array $payload = []): void
+    public function ingestAutomationEvent(int $tenantId, string $eventName, array $payload = [], string $source = 'n8n'): void
     {
         try {
             $tenant = Tenant::query()->find($tenantId);
@@ -37,13 +37,13 @@ class InAppNotificationService
                     'idempotency_key' => $idempotencyKey,
                 ]);
 
-                if ($notification->exists && $notification->read_at) {
+                if ($notification->exists) {
                     continue;
                 }
 
                 $notification->fill([
                     'tenant_id' => $tenantId,
-                    'source' => 'n8n',
+                    'source' => trim($source) !== '' ? $source : 'n8n',
                     'event_name' => $eventName,
                     'level' => $content['level'],
                     'title' => $content['title'],

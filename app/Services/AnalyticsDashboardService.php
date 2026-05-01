@@ -21,11 +21,13 @@ class AnalyticsDashboardService
         $inactiveTenantCount = Tenant::where('status', 'inactive')->count();
 
         $currentMonthPaid = Payment::query()
+            ->platformSubscriptions()
             ->where('status', 'paid')
             ->whereYear('payment_date', now()->year)
             ->whereMonth('payment_date', now()->month);
 
         $previousMonthPaid = Payment::query()
+            ->platformSubscriptions()
             ->where('status', 'paid')
             ->whereYear('payment_date', now()->copy()->subMonth()->year)
             ->whereMonth('payment_date', now()->copy()->subMonth()->month);
@@ -48,6 +50,7 @@ class AnalyticsDashboardService
             : 0.0;
 
         $payingTenants = Payment::query()
+            ->platformSubscriptions()
             ->where('status', 'paid')
             ->whereYear('payment_date', now()->year)
             ->whereMonth('payment_date', now()->month)
@@ -67,6 +70,22 @@ class AnalyticsDashboardService
             'churn_rate' => $churnRate,
             'paying_tenants' => $payingTenants,
             'arpu' => $arpu,
+            'mrr_breakdown' => [
+                'current_month_paid_subscriptions' => (clone $currentMonthPaid)->count(),
+                'current_month_mrr' => $mrr,
+                'previous_month_paid_subscriptions' => (clone $previousMonthPaid)->count(),
+                'previous_month_mrr' => $previousMonthMrr,
+            ],
+            'churn_breakdown' => [
+                'cancelled_this_month' => $cancelledThisMonth,
+                'previous_active_tenants' => $previousActiveTenants,
+                'formula' => 'cancelled_this_month / previous_active_tenants * 100',
+            ],
+            'arpu_breakdown' => [
+                'current_month_mrr' => $mrr,
+                'paying_tenants' => $payingTenants,
+                'formula' => 'current_month_mrr / paying_tenants',
+            ],
             'usage_metrics' => $this->platformUsageMetrics(),
             'tenant_growth' => $this->tenantGrowthSeries(),
         ];
@@ -100,6 +119,15 @@ class AnalyticsDashboardService
             'usage' => $usage,
             'revenue_trend_labels' => $labels,
             'revenue_trend_values' => $values,
+            'revenue_trend_breakdown' => [
+                'window_months' => 6,
+                'paid_payments_considered' => Payment::query()
+                    ->where('tenant_id', $tenant->id)
+                    ->where('status', 'paid')
+                    ->where('payment_date', '>=', now()->copy()->subMonths(5)->startOfMonth())
+                    ->count(),
+                'formula' => 'sum of paid payments grouped by payment month',
+            ],
             'physical_sales' => $this->tenantPhysicalSalesSummary($tenant),
         ];
     }
@@ -111,6 +139,7 @@ class AnalyticsDashboardService
             'leads' => Lead::withoutGlobalScope('tenant')->count(),
             'funnels' => DB::table('funnels')->count(),
             'payments' => Payment::count(),
+            'subscription_payments' => Payment::query()->platformSubscriptions()->count(),
         ];
     }
 

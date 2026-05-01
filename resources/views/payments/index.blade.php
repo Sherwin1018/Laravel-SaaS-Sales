@@ -78,7 +78,7 @@
         <div class="card" style="margin-bottom: 20px;">
             <h3>Plan Limits</h3>
             <div class="app-grid app-grid--4" style="gap:12px;">
-                @foreach(['users' => 'Users', 'funnels' => 'Funnels', 'leads' => 'Leads', 'messages' => 'Messages'] as $key => $label)
+                @foreach(['users' => 'Users', 'funnels' => 'Funnels', 'workflows' => 'Workflows', 'leads' => 'Leads', 'messages' => 'Messages'] as $key => $label)
                     <div style="padding:14px;border:1px solid var(--theme-border, #E6E1EF);border-radius:12px;background:var(--theme-surface-softer, #F7F7FB);">
                         <div style="font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--theme-muted, #6B7280);">{{ $label }}</div>
                         <div style="margin-top:8px;font-size:22px;font-weight:800;color:var(--theme-primary, #240E35);">

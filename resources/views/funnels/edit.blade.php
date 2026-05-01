@@ -4958,32 +4958,45 @@ function sectionRootContext(sectionId){
 const undoHistory=[];const redoHistory=[];const maxUndo=40;
 var realLayoutData=null;
 var previewState=null;
+var MANILA_TIMEZONE='Asia/Manila';
+function isSameManilaDay(a,b){
+    var fmt=new Intl.DateTimeFormat('en-CA',{timeZone:MANILA_TIMEZONE,year:'numeric',month:'2-digit',day:'2-digit'});
+    return fmt.format(a)===fmt.format(b);
+}
+function formatManilaDate(date){
+    return date.toLocaleDateString([],{timeZone:MANILA_TIMEZONE,month:'short',day:'numeric'});
+}
+function formatManilaTime(date,withSeconds){
+    var options={timeZone:MANILA_TIMEZONE,hour:'numeric',minute:'2-digit'};
+    if(withSeconds)options.second='2-digit';
+    return date.toLocaleTimeString([],options);
+}
 function formatHistoryTime(ts){
     var d=new Date(ts);
     if(isNaN(d.getTime()))return "Saved earlier";
     var t=new Date();
-    var isToday=d.getDate()===t.getDate()&&d.getMonth()===t.getMonth()&&d.getFullYear()===t.getFullYear();
-    var hm=d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit',second:'2-digit'});
+    var isToday=isSameManilaDay(d,t);
+    var hm=formatManilaTime(d,true);
     if(isToday)return "Today, "+hm;
-    return d.toLocaleDateString([],{month:'short',day:'numeric'})+", "+hm;
+    return formatManilaDate(d)+", "+hm;
 }
 function formatHistoryMinuteLabel(ts){
     var d=new Date(ts);
     if(isNaN(d.getTime()))return "Earlier";
     var t=new Date();
-    var isToday=d.getDate()===t.getDate()&&d.getMonth()===t.getMonth()&&d.getFullYear()===t.getFullYear();
-    var hm=d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
+    var isToday=isSameManilaDay(d,t);
+    var hm=formatManilaTime(d,false);
     if(isToday)return "Today, "+hm;
-    return d.toLocaleDateString([],{month:'short',day:'numeric'})+", "+hm;
+    return formatManilaDate(d)+", "+hm;
 }
 function formatHistorySecondLabel(ts){
     var d=new Date(ts);
     if(isNaN(d.getTime()))return "Saved earlier";
     var t=new Date();
-    var isToday=d.getDate()===t.getDate()&&d.getMonth()===t.getMonth()&&d.getFullYear()===t.getFullYear();
-    var hms=d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit',second:'2-digit'});
+    var isToday=isSameManilaDay(d,t);
+    var hms=formatManilaTime(d,true);
     if(isToday)return hms;
-    return d.toLocaleDateString([],{month:'short',day:'numeric'})+", "+hms;
+    return formatManilaDate(d)+", "+hms;
 }
 function historyMinuteKey(ts){
     var d=new Date(ts);
@@ -5157,7 +5170,7 @@ function submitManualVersion(){
             s.revision_history=normalizeRevisionHistory((s&&s.revision_history||[]).concat((resp&&resp.manual_versions)||[]));
             closeVersionModal();
             renderHistoryDrawer();
-            saveMsg.textContent="Version saved "+new Date().toLocaleTimeString();
+            saveMsg.textContent="Version saved "+formatManilaTime(new Date(),true);
             showBuilderToast("Version saved for this page.","success");
         })
         .catch(function(err){
@@ -11921,7 +11934,7 @@ const assetLibraryCtx={modal:null,title:null,sub:null,uploadInput:null,status:nu
 function formatAssetLibraryDate(raw){
     var d=new Date(String(raw||""));
     if(isNaN(d.getTime()))return "Saved earlier";
-    return d.toLocaleDateString([],{month:"short",day:"numeric"})+" "+d.toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});
+    return formatManilaDate(d)+" "+formatManilaTime(d,false);
 }
 function assetLibraryAcceptForKind(kind){
     var k=String(kind||"image").toLowerCase();
@@ -14844,7 +14857,7 @@ function persistCurrentStep(){
             return Promise.all(jobs);
         })
         .then(function(){
-            saveMsg.textContent=(_autoSaveMode?"Autosaved ":"Saved all pages ")+new Date().toLocaleTimeString();
+            saveMsg.textContent=(_autoSaveMode?"Autosaved ":"Saved all pages ")+formatManilaTime(new Date(),true);
             if(typeof renderHistoryDrawer==="function")renderHistoryDrawer();
         });
 }

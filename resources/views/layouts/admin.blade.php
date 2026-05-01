@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Super Admin Dashboard')</title>
     <link rel="stylesheet" href="{{ asset('css/admin-dashboard.css') }}">
     @php
@@ -411,6 +412,7 @@
                             <strong>Notifications</strong>
                             <p><span id="notificationUnreadText">{{ (int) ($layoutNotificationUnreadCount ?? 0) }}</span> unread</p>
                         </div>
+                        <button type="button" id="notificationBrowserAlertsButton" class="notification-dropdown__action" hidden>Enable alerts</button>
                         <form method="POST" action="{{ route('notifications.mark-all-read') }}">
                             @csrf
                             <button type="submit" class="notification-dropdown__action">Mark all read</button>
@@ -420,7 +422,9 @@
                     <div id="notificationDropdownList" class="notification-dropdown__list">
                         @forelse(($layoutRecentNotifications ?? collect()) as $notification)
                             <a href="{{ $notification->action_url ?: route('notifications.index') }}"
-                                class="notification-dropdown__item {{ $notification->read_at ? '' : 'is-unread' }}" data-notification-id="{{ $notification->id }}">
+                                class="notification-dropdown__item {{ $notification->read_at ? '' : 'is-unread' }}"
+                                data-notification-id="{{ $notification->id }}"
+                                data-notification-read-url="{{ route('notifications.read', $notification) }}">
                                 <div class="notification-dropdown__item-top">
                                     <span class="notification-dropdown__title">{{ $notification->title }}</span>
                                     <span class="notification-dropdown__time">{{ optional($notification->occurred_at)->diffForHumans() }}</span>
@@ -518,6 +522,7 @@
         const notificationDropdownList = document.getElementById('notificationDropdownList');
         const notificationUnreadText = document.getElementById('notificationUnreadText');
         const notificationToastStack = document.getElementById('notificationToastStack');
+        const notificationBrowserAlertsButton = document.getElementById('notificationBrowserAlertsButton');
 
         (function () {
             const header = document.querySelector('.main-content .top-header');
@@ -673,9 +678,14 @@
             const initialUnread = parseInt(notificationShell.getAttribute('data-initial-unread') || '0', 10) || 0;
             const initialLatestId = parseInt(notificationShell.getAttribute('data-initial-latest-id') || '0', 10) || 0;
             const storageKey = 'notifications.lastSeen.' + (document.body.getAttribute('data-auth-email') || 'user');
+            const alertsPreferenceKey = storageKey + '.alerts-enabled';
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
             const originalTitle = document.title;
+            const supportsBrowserAlerts = typeof window.Notification !== 'undefined';
+            const supportsAudioAlerts = typeof window.AudioContext !== 'undefined' || typeof window.webkitAudioContext !== 'undefined';
             let pollTimer = null;
             let isFetching = false;
+            let audioContext = null;
 
             const readLastSeen = () => {
                 try {
@@ -689,6 +699,20 @@
             const writeLastSeen = (value) => {
                 try {
                     localStorage.setItem(storageKey, String(value));
+                } catch (_e) {}
+            };
+
+            const readAlertsEnabled = () => {
+                try {
+                    return localStorage.getItem(alertsPreferenceKey) === '1';
+                } catch (_e) {
+                    return false;
+                }
+            };
+
+            const writeAlertsEnabled = (enabled) => {
+                try {
+                    localStorage.setItem(alertsPreferenceKey, enabled ? '1' : '0');
                 } catch (_e) {}
             };
 
@@ -714,8 +738,70 @@
                 return map[value] || 'Notice';
             };
 
+            const ensureAudioContext = () => {
+                if (!supportsAudioAlerts) {
+                    return null;
+                }
+
+                if (!audioContext) {
+                    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                    audioContext = AudioContextClass ? new AudioContextClass() : null;
+                }
+
+                if (audioContext && audioContext.state === 'suspended' && typeof audioContext.resume === 'function') {
+                    audioContext.resume().catch(function () {});
+                }
+
+                return audioContext;
+            };
+
+            const playAlertTone = () => {
+                if (!readAlertsEnabled() || !supportsAudioAlerts) {
+                    return;
+                }
+
+                const context = ensureAudioContext();
+                if (!context) {
+                    return;
+                }
+
+                const oscillator = context.createOscillator();
+                const gainNode = context.createGain();
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(880, context.currentTime);
+                gainNode.gain.setValueAtTime(0.0001, context.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.03, context.currentTime + 0.02);
+                gainNode.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.26);
+                oscillator.connect(gainNode);
+                gainNode.connect(context.destination);
+                oscillator.start();
+                oscillator.stop(context.currentTime + 0.28);
+            };
+
             const updateDocumentTitle = (unreadCount) => {
                 document.title = unreadCount > 0 ? '(' + unreadCount + ') ' + originalTitle : originalTitle;
+            };
+
+            const updateAlertsButton = () => {
+                if (!notificationBrowserAlertsButton) {
+                    return;
+                }
+
+                if (!supportsBrowserAlerts && !supportsAudioAlerts) {
+                    notificationBrowserAlertsButton.hidden = true;
+                    return;
+                }
+
+                notificationBrowserAlertsButton.hidden = false;
+
+                if (supportsBrowserAlerts && Notification.permission === 'denied') {
+                    notificationBrowserAlertsButton.disabled = false;
+                    notificationBrowserAlertsButton.textContent = readAlertsEnabled() ? 'Disable sound alerts' : 'Enable sound alerts';
+                    return;
+                }
+
+                notificationBrowserAlertsButton.disabled = false;
+                notificationBrowserAlertsButton.textContent = readAlertsEnabled() ? 'Disable alerts' : 'Enable alerts';
             };
 
             const updateBellState = (unreadCount, shouldPulse = false) => {
@@ -748,7 +834,7 @@
                 const markup = notifications.slice().reverse().map(function (notification) {
                     const unreadClass = notification.read_at ? '' : ' is-unread';
                     return '' +
-                        '<a href="' + escapeHtml(notification.action_url || notificationsIndexUrl) + '" class="notification-dropdown__item' + unreadClass + '" data-notification-id="' + notification.id + '">' +
+                        '<a href="' + escapeHtml(notification.action_url || notificationsIndexUrl) + '" class="notification-dropdown__item' + unreadClass + '" data-notification-id="' + notification.id + '" data-notification-read-url="' + escapeHtml(notification.read_url || '') + '">' +
                             '<div class="notification-dropdown__item-top">' +
                                 '<span class="notification-dropdown__title">' + escapeHtml(notification.title) + '</span>' +
                                 '<span class="notification-dropdown__time">' + escapeHtml(notification.occurred_at_human || 'Just now') + '</span>' +
@@ -806,6 +892,75 @@
                 }
             };
 
+            const pushBrowserNotification = (notification) => {
+                if (!readAlertsEnabled()) {
+                    return;
+                }
+
+                if (supportsBrowserAlerts && Notification.permission === 'granted' && (document.hidden || !document.hasFocus())) {
+                    try {
+                        const desktopNotification = new Notification(notification.title, {
+                            body: notification.message,
+                            tag: 'app-notification-' + notification.id,
+                        });
+                        desktopNotification.onclick = function () {
+                            window.focus();
+                            window.location.href = notification.action_url || notificationsIndexUrl;
+                            desktopNotification.close();
+                        };
+                    } catch (_e) {}
+                }
+
+                playAlertTone();
+            };
+
+            const parseUnreadCount = () => parseInt(notificationUnreadText.textContent || '0', 10) || 0;
+
+            const markNotificationAsRead = (notificationLink) => {
+                if (!notificationLink || !notificationLink.classList.contains('is-unread')) {
+                    return Promise.resolve();
+                }
+
+                const readUrl = notificationLink.getAttribute('data-notification-read-url');
+                if (!readUrl || !csrfToken) {
+                    return Promise.resolve();
+                }
+
+                if (notificationLink.dataset.readState === 'pending' || notificationLink.dataset.readState === 'done') {
+                    return Promise.resolve();
+                }
+
+                notificationLink.dataset.readState = 'pending';
+
+                return fetch(readUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    credentials: 'same-origin',
+                    keepalive: true,
+                    body: JSON.stringify({})
+                })
+                    .then(function (response) {
+                        if (!response.ok) {
+                            throw new Error('Failed to mark notification as read.');
+                        }
+
+                        return response.json();
+                    })
+                    .then(function (data) {
+                        notificationLink.classList.remove('is-unread');
+                        notificationLink.dataset.readState = 'done';
+                        updateBellState(typeof data.unread_count === 'number' ? data.unread_count : Math.max(0, parseUnreadCount() - 1), false);
+                    })
+                    .catch(function () {
+                        delete notificationLink.dataset.readState;
+                    });
+            };
+
             const syncFeed = (data, shouldToastNew) => {
                 const unreadCount = parseInt(data.unread_count || 0, 10) || 0;
                 const latestId = parseInt(data.latest_id || 0, 10) || 0;
@@ -819,7 +974,10 @@
                 updateBellState(unreadCount, shouldToastNew && freshNotifications.length > 0);
 
                 if (shouldToastNew && freshNotifications.length > 0) {
-                    freshNotifications.forEach(pushToast);
+                    freshNotifications.forEach(function (notification) {
+                        pushToast(notification);
+                        pushBrowserNotification(notification);
+                    });
                 }
 
                 if (latestId > lastSeenId) {
@@ -858,7 +1016,62 @@
                     });
             };
 
+            notificationDropdownList.addEventListener('click', function (event) {
+                const notificationLink = event.target.closest('.notification-dropdown__item');
+                if (!notificationLink) {
+                    return;
+                }
+
+                if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+                    return;
+                }
+
+                const href = notificationLink.getAttribute('href');
+                if (!href) {
+                    return;
+                }
+
+                event.preventDefault();
+                markNotificationAsRead(notificationLink).finally(function () {
+                    window.location.href = href;
+                });
+            });
+
+            if (notificationBrowserAlertsButton) {
+                notificationBrowserAlertsButton.addEventListener('click', function () {
+                    if (readAlertsEnabled()) {
+                        writeAlertsEnabled(false);
+                        updateAlertsButton();
+                        return;
+                    }
+
+                    ensureAudioContext();
+
+                    if (supportsBrowserAlerts && Notification.permission === 'default') {
+                        Notification.requestPermission().then(function (permission) {
+                            if (permission === 'granted') {
+                                writeAlertsEnabled(true);
+                            } else if (permission === 'denied' && supportsAudioAlerts) {
+                                writeAlertsEnabled(true);
+                            }
+                            updateAlertsButton();
+                        }).catch(function () {
+                            updateAlertsButton();
+                        });
+
+                        return;
+                    }
+
+                    if (!supportsBrowserAlerts || Notification.permission === 'granted' || (Notification.permission === 'denied' && supportsAudioAlerts)) {
+                        writeAlertsEnabled(true);
+                    }
+
+                    updateAlertsButton();
+                });
+            }
+
             updateBellState(initialUnread, false);
+            updateAlertsButton();
             pollTimer = window.setInterval(function () {
                 fetchFeed(true);
             }, 15000);

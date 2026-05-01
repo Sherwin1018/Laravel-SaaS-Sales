@@ -44,6 +44,14 @@ class NotificationController extends Controller
             $notification->update(['read_at' => now()]);
         }
 
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'ok' => true,
+                'notification_id' => $notification->id,
+                'unread_count' => $this->unreadCountForUser($request->user()->id),
+            ]);
+        }
+
         return back()->with('success', 'Notification marked as read.');
     }
 
@@ -53,6 +61,13 @@ class NotificationController extends Controller
             ->where('user_id', $request->user()->id)
             ->whereNull('read_at')
             ->update(['read_at' => now()]);
+
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'ok' => true,
+                'unread_count' => 0,
+            ]);
+        }
 
         return back()->with('success', 'All notifications marked as read.');
     }
@@ -84,11 +99,20 @@ class NotificationController extends Controller
                         'level' => $notification->level,
                         'event_name' => $notification->event_name,
                         'action_url' => $notification->action_url ?: route('notifications.index'),
+                        'read_url' => route('notifications.read', $notification),
                         'read_at' => optional($notification->read_at)?->toIso8601String(),
                         'occurred_at_human' => optional($notification->occurred_at)?->diffForHumans(),
                     ];
                 })
                 ->all(),
         ]);
+    }
+
+    private function unreadCountForUser(int $userId): int
+    {
+        return InAppNotification::query()
+            ->where('user_id', $userId)
+            ->whereNull('read_at')
+            ->count();
     }
 }

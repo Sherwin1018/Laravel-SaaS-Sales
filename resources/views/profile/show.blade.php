@@ -276,6 +276,7 @@
             <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
                 <h3 style="margin:0;">Payout Account</h3>
                 <button type="button" id="openPayoutPreviewModal"
+                    data-default-preview-target="{{ $payoutAccount?->destination_type === 'gcash' ? 'payoutPreviewGcash' : 'payoutPreviewCard' }}"
                     style="padding:10px 16px;border:1px solid var(--theme-border, #E6E1EF);border-radius:8px;background:#fff;color:var(--theme-primary, #240E35);cursor:pointer;font-weight:700;">
                     View
                 </button>
@@ -284,7 +285,7 @@
                 Funnel earnings settle to this verified destination. We only store masked or provider-managed payout details for display and operations.
             </p>
 
-            <form action="{{ route('profile.payout.update') }}" method="POST" style="margin-top: 14px;">
+            <form id="payoutAccountForm" action="{{ route('profile.payout.update') }}" method="POST" style="margin-top: 14px;">
                 @csrf
                 @method('PUT')
 
@@ -309,7 +310,7 @@
                     </div>
 
                     <div>
-                        <label for="destination_value" style="display:block;margin-bottom:6px;font-weight:800;color:#0F172A;">GCash / bank identifier</label>
+                        <label for="destination_value" style="display:block;margin-bottom:6px;font-weight:800;color:#0F172A;">GCash / bank number </label>
                         <input type="text" id="destination_value" name="destination_value"
                             value="{{ old('destination_value', '') }}"
                             placeholder="Enter a new destination only when updating"
@@ -340,7 +341,7 @@
                     }};">
                         Status: {{ $payoutAccount?->reviewStatusLabel() ?? 'Missing setup' }}
                     </div>
-                    <button type="submit"
+                    <button type="submit" id="savePayoutAccountButton"
                         style="padding:10px 16px;border:none;border-radius:6px;background:var(--theme-primary, #240E35);color:#fff;cursor:pointer;font-weight:600;">
                         Save Payout Account
                     </button>
@@ -669,6 +670,8 @@
         var closePayoutPreviewModal = document.getElementById('closePayoutPreviewModal');
         var payoutPreviewTabs = Array.from(document.querySelectorAll('.payout-preview-tab'));
         var payoutPreviewPanels = Array.from(document.querySelectorAll('.payout-preview-panel'));
+        var payoutAccountForm = document.getElementById('payoutAccountForm');
+        var savePayoutAccountButton = document.getElementById('savePayoutAccountButton');
 
         function setActivePayoutPreviewTab(targetId) {
             payoutPreviewTabs.forEach(function (tab) {
@@ -697,7 +700,7 @@
         if (openPayoutPreviewModal && payoutPreviewModal) {
             openPayoutPreviewModal.addEventListener('click', function () {
                 payoutPreviewModal.style.display = 'flex';
-                setActivePayoutPreviewTab('payoutPreviewGcash');
+                setActivePayoutPreviewTab(openPayoutPreviewModal.getAttribute('data-default-preview-target') || 'payoutPreviewGcash');
             });
         }
 
@@ -710,6 +713,13 @@
                 if (e.target === payoutPreviewModal) {
                     closePayoutPreviewModalFunc();
                 }
+            });
+        }
+
+        if (payoutAccountForm && savePayoutAccountButton) {
+            payoutAccountForm.addEventListener('submit', function () {
+                savePayoutAccountButton.disabled = true;
+                savePayoutAccountButton.textContent = 'Saving...';
             });
         }
 
@@ -863,4 +873,3 @@
         }
     </script>
 @endsection
-

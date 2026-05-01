@@ -37,7 +37,7 @@ class AppServiceProvider extends ServiceProvider
             $recentNotifications = (clone $baseQuery)
                 ->orderByDesc('occurred_at')
                 ->orderByDesc('id')
-                ->limit(5)
+                ->limit(6)
                 ->get();
 
             $view->with('layoutNotificationUnreadCount', (clone $baseQuery)->whereNull('read_at')->count());

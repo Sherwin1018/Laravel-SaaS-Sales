@@ -14,8 +14,38 @@ class N8nEmailOrchestrator
     public function dispatch(string $eventName, array $payload): bool
     {
         $url = (string) config('services.n8n.webhook_url');
+        $eventId = trim((string) ($payload['event_id'] ?? ''));
+        if ($eventId === '') {
+            $eventId = (string) Str::uuid();
+        }
+
+        $occurredAt = $payload['occurred_at'] ?? now()->toIso8601String();
+        $idempotencyKey = trim((string) ($payload['idempotency_key'] ?? ''));
+        if ($idempotencyKey === '') {
+            $idempotencyKey = $eventName . ':' . $eventId;
+        }
+
+        $dispatchPayload = array_merge($payload, [
+            'event_id' => $eventId,
+            'event_name' => $eventName,
+            'occurred_at' => $occurredAt,
+            'idempotency_key' => $idempotencyKey,
+        ]);
+
+        $this->ingestInAppNotification($eventName, $dispatchPayload);
+
         if ($url === '') {
             Log::warning('N8N webhook URL is not configured.', ['event_name' => $eventName]);
+            app(DeliveryLogService::class)->record('webhook', [
+                'tenant_id' => $payload['tenant_id'] ?? null,
+                'event_name' => $eventName,
+                'recipient' => $url,
+                'provider' => 'n8n',
+                'status' => 'failed',
+                'error_message' => 'N8N webhook URL is not configured.',
+                'idempotency_key' => $idempotencyKey,
+                'meta' => $dispatchPayload,
+            ]);
 
             return false;
         }
@@ -27,17 +57,6 @@ class N8nEmailOrchestrator
         }
 
         try {
-            $eventId = trim((string) ($payload['event_id'] ?? ''));
-            if ($eventId === '') {
-                $eventId = (string) Str::uuid();
-            }
-
-            $occurredAt = $payload['occurred_at'] ?? now()->toIso8601String();
-            $idempotencyKey = trim((string) ($payload['idempotency_key'] ?? ''));
-            if ($idempotencyKey === '') {
-                $idempotencyKey = $eventName . ':' . $eventId;
-            }
-
             $retryTimes = max(1, (int) config('services.n8n.webhook_retry_times', 1));
             $retryDelayMs = max(0, (int) config('services.n8n.webhook_retry_delay_ms', 200));
             $connectTimeoutSeconds = max(1, (int) config('services.n8n.webhook_connect_timeout_seconds', 2));
@@ -48,14 +67,20 @@ class N8nEmailOrchestrator
                 ->timeout($timeoutSeconds)
                 ->acceptJson()
                 ->withHeaders($headers)
-                ->post($url, array_merge($payload, [
-                    'event_id' => $eventId,
-                    'event_name' => $eventName,
-                    'occurred_at' => $occurredAt,
-                    'idempotency_key' => $idempotencyKey,
-                ]));
+                ->post($url, $dispatchPayload);
 
             if ($response->successful()) {
+                app(DeliveryLogService::class)->record('webhook', [
+                    'tenant_id' => $payload['tenant_id'] ?? null,
+                    'event_name' => $eventName,
+                    'recipient' => $url,
+                    'provider' => 'n8n',
+                    'status' => 'sent',
+                    'response_code' => $response->status(),
+                    'idempotency_key' => $idempotencyKey,
+                    'meta' => $dispatchPayload,
+                ]);
+
                 return true;
             }
 
@@ -64,14 +89,56 @@ class N8nEmailOrchestrator
                 'status' => $response->status(),
                 'body' => $response->json(),
             ]);
+            app(DeliveryLogService::class)->record('webhook', [
+                'tenant_id' => $payload['tenant_id'] ?? null,
+                'event_name' => $eventName,
+                'recipient' => $url,
+                'provider' => 'n8n',
+                'status' => 'failed',
+                'response_code' => $response->status(),
+                'error_message' => 'N8N webhook returned an unsuccessful response.',
+                'idempotency_key' => $idempotencyKey,
+                'meta' => $dispatchPayload,
+            ]);
         } catch (\Throwable $e) {
             Log::warning('N8N webhook dispatch exception.', [
                 'event_name' => $eventName,
                 'message' => $e->getMessage(),
                 'url' => $url,
             ]);
+            app(DeliveryLogService::class)->record('webhook', [
+                'tenant_id' => $payload['tenant_id'] ?? null,
+                'event_name' => $eventName,
+                'recipient' => $url,
+                'provider' => 'n8n',
+                'status' => 'failed',
+                'error_message' => $e->getMessage(),
+                'idempotency_key' => $idempotencyKey,
+                'meta' => $dispatchPayload,
+            ]);
         }
 
         return false;
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function ingestInAppNotification(string $eventName, array $payload): void
+    {
+        $tenantId = isset($payload['tenant_id']) ? (int) $payload['tenant_id'] : 0;
+        if ($tenantId <= 0) {
+            return;
+        }
+
+        try {
+            app(InAppNotificationService::class)->ingestAutomationEvent($tenantId, $eventName, $payload, 'laravel');
+        } catch (\Throwable $e) {
+            Log::warning('Failed to create in-app notification before n8n dispatch.', [
+                'tenant_id' => $tenantId,
+                'event_name' => $eventName,
+                'message' => $e->getMessage(),
+            ]);
+        }
     }
 }

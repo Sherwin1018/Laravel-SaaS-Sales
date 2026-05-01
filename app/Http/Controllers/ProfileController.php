@@ -6,6 +6,7 @@ use App\Models\TenantPayoutAccount;
 use App\Services\FinanceAuditService;
 use App\Services\N8nEmailOrchestrator;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 
@@ -184,7 +185,7 @@ class ProfileController extends Controller
 
     public function updatePayoutAccount(Request $request)
     {
-        $user = auth()->user()->load('tenant.defaultPayoutAccount');
+        $user = auth()->user()->load('tenant');
 
         if (! $user->hasRole('account-owner') || ! $user->tenant) {
             return redirect()->route('profile.show')->with('error', 'Edited Failed');
@@ -198,69 +199,105 @@ class ProfileController extends Controller
             'notes' => 'nullable|string|max:500',
         ]);
 
-        $existing = $user->tenant->defaultPayoutAccount;
-        $destinationValue = trim((string) ($validated['destination_value'] ?? ''));
-        $providerReference = trim((string) ($validated['provider_destination_reference'] ?? ''));
-        $resolvedDestinationValue = $destinationValue !== '' ? $destinationValue : (string) ($existing?->destination_value ?? '');
-        $resolvedProviderReference = $providerReference !== '' ? $providerReference : (string) ($existing?->provider_destination_reference ?? '');
-        $maskedDestination = $this->maskPayoutDestination($validated['destination_type'], $resolvedDestinationValue, $resolvedProviderReference);
-        $meta = is_array($existing?->meta) ? $existing->meta : [];
-        $meta['notes'] = trim((string) ($validated['notes'] ?? ''));
+        $result = DB::transaction(function () use ($user, $validated) {
+            $existingAccounts = TenantPayoutAccount::query()
+                ->where('tenant_id', $user->tenant->id)
+                ->orderByDesc('is_default')
+                ->orderByDesc('updated_at')
+                ->orderByDesc('id')
+                ->lockForUpdate()
+                ->get();
 
-        if ($validated['destination_type'] === 'gcash') {
-            $meta['gcash'] = [
+            $existing = $existingAccounts->first();
+            $deduplicatedCount = max(0, $existingAccounts->count() - 1);
+
+            if ($deduplicatedCount > 0) {
+                TenantPayoutAccount::query()
+                    ->whereIn('id', $existingAccounts->skip(1)->pluck('id'))
+                    ->delete();
+            }
+
+            $destinationValue = trim((string) ($validated['destination_value'] ?? ''));
+            $providerReference = trim((string) ($validated['provider_destination_reference'] ?? ''));
+            $resolvedDestinationValue = $destinationValue !== '' ? $destinationValue : (string) ($existing?->destination_value ?? '');
+            $resolvedProviderReference = $providerReference !== '' ? $providerReference : (string) ($existing?->provider_destination_reference ?? '');
+            $maskedDestination = $this->maskPayoutDestination($validated['destination_type'], $resolvedDestinationValue, $resolvedProviderReference);
+            $meta = is_array($existing?->meta) ? $existing->meta : [];
+            $meta['notes'] = trim((string) ($validated['notes'] ?? ''));
+
+            if ($validated['destination_type'] === 'gcash') {
+                unset($meta['card']);
+                $meta['gcash'] = [
+                    'account_name' => trim((string) $validated['account_name']),
+                    'masked_destination' => $maskedDestination,
+                    'reference' => $resolvedProviderReference !== '' ? $resolvedProviderReference : null,
+                ];
+            } else {
+                unset($meta['gcash']);
+                $meta['card'] = [
+                    'account_name' => trim((string) $validated['account_name']),
+                    'masked_destination' => $maskedDestination,
+                    'reference' => $resolvedProviderReference !== '' ? $resolvedProviderReference : null,
+                ];
+            }
+
+            $attributes = [
+                'tenant_id' => $user->tenant->id,
+                'destination_type' => $validated['destination_type'],
                 'account_name' => trim((string) $validated['account_name']),
+                'destination_value' => $resolvedDestinationValue !== '' ? $resolvedDestinationValue : null,
                 'masked_destination' => $maskedDestination,
-                'reference' => $resolvedProviderReference !== '' ? $resolvedProviderReference : null,
+                'provider_destination_reference' => $resolvedProviderReference !== '' ? $resolvedProviderReference : null,
+                'meta' => $meta,
+                'is_default' => true,
             ];
-        } else {
-            $meta['card'] = [
-                'account_name' => trim((string) $validated['account_name']),
-                'masked_destination' => $maskedDestination,
-                'reference' => $resolvedProviderReference !== '' ? $resolvedProviderReference : null,
+
+            $statusReset = [
+                'is_verified' => false,
+                'verified_at' => null,
+                'verified_by' => null,
+                'verification_status' => TenantPayoutAccount::STATUS_PENDING_PLATFORM_REVIEW,
+                'reviewed_at' => null,
+                'reviewed_by' => null,
+                'review_notes' => null,
             ];
-        }
 
-        $attributes = [
-            'destination_type' => $validated['destination_type'],
-            'account_name' => trim((string) $validated['account_name']),
-            'destination_value' => $resolvedDestinationValue !== '' ? $resolvedDestinationValue : null,
-            'masked_destination' => $maskedDestination,
-            'provider_destination_reference' => $resolvedProviderReference !== '' ? $resolvedProviderReference : null,
-            'meta' => $meta,
-            'is_default' => true,
-        ];
+            $dispatchReviewEvent = false;
+            $verificationReset = false;
 
-        $statusReset = [
-            'is_verified' => false,
-            'verified_at' => null,
-            'verified_by' => null,
-            'verification_status' => TenantPayoutAccount::STATUS_PENDING_PLATFORM_REVIEW,
-            'reviewed_at' => null,
-            'reviewed_by' => null,
-            'review_notes' => null,
-        ];
+            if ($existing) {
+                $wasVerified = (bool) $existing->is_verified;
+                $hasChanged = $existing->destination_type !== $attributes['destination_type']
+                    || (string) $existing->destination_value !== (string) $attributes['destination_value']
+                    || (string) $existing->provider_destination_reference !== (string) $attributes['provider_destination_reference']
+                    || $existing->account_name !== $attributes['account_name'];
 
-        $dispatchReviewEvent = false;
-        if ($existing) {
-            $hasChanged = $existing->destination_type !== $attributes['destination_type']
-                || (string) $existing->destination_value !== (string) $attributes['destination_value']
-                || (string) $existing->provider_destination_reference !== (string) $attributes['provider_destination_reference']
-                || $existing->account_name !== $attributes['account_name'];
+                if ($hasChanged) {
+                    $attributes = array_merge($attributes, $statusReset);
+                    $dispatchReviewEvent = true;
+                    $verificationReset = $wasVerified;
+                }
 
-            if ($hasChanged) {
-                $attributes = array_merge($attributes, $statusReset);
+                $existing->update($attributes);
+                $payoutAccount = $existing->fresh();
+            } else {
+                $payoutAccount = TenantPayoutAccount::create(array_merge($attributes, $statusReset));
                 $dispatchReviewEvent = true;
             }
 
-            $existing->update($attributes);
-            $payoutAccount = $existing->fresh();
-        } else {
-            $payoutAccount = TenantPayoutAccount::create(array_merge($attributes, $statusReset, [
-                'tenant_id' => $user->tenant->id,
-            ]));
-            $dispatchReviewEvent = true;
-        }
+            return [
+                'payoutAccount' => $payoutAccount,
+                'attributes' => $attributes,
+                'dispatchReviewEvent' => $dispatchReviewEvent,
+                'verificationReset' => $verificationReset,
+                'deduplicatedCount' => $deduplicatedCount,
+            ];
+        });
+
+        /** @var TenantPayoutAccount $payoutAccount */
+        $payoutAccount = $result['payoutAccount'];
+        $attributes = $result['attributes'];
+        $dispatchReviewEvent = $result['dispatchReviewEvent'];
 
         app(FinanceAuditService::class)->record(
             'payout_account_updated',
@@ -272,9 +309,10 @@ class ProfileController extends Controller
             [
                 'destination_type' => $attributes['destination_type'],
                 'masked_destination' => $attributes['masked_destination'],
-                'verification_reset' => ($existing?->is_verified ?? false) && (($attributes['is_verified'] ?? null) === false),
+                'verification_reset' => $result['verificationReset'],
                 'payout_account_id' => $payoutAccount->id,
                 'verification_status' => $payoutAccount->reviewStatus(),
+                'deduplicated_count' => $result['deduplicatedCount'],
             ]
         );
 

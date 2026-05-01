@@ -1832,6 +1832,8 @@ class FunnelController extends Controller
                 $plan->name
             ));
         }
+
+        app(TenantPlanEnforcer::class)->ensureCanUseWorkflow($tenant);
     }
 
     private function builderAssetKindFromPath(string $path): ?string

@@ -21,7 +21,9 @@
     $teamActivityOpen = request()->has('activity_page');
     $usageUsers = (int) data_get($analyticsSummary, 'usage.users.used', 0);
     $usageFunnels = (int) data_get($analyticsSummary, 'usage.funnels.used', 0);
+    $usageWorkflows = (int) data_get($analyticsSummary, 'usage.workflows.used', 0);
     $usageLeads = (int) data_get($analyticsSummary, 'usage.leads.used', 0);
+    $usageMessages = (int) data_get($analyticsSummary, 'usage.messages.used', 0);
     $availableCoupons = (int) (($activeCouponCount ?? 0) + ($platformCouponCount ?? 0));
     $conversionTone = $conversionRate >= 20 ? 'positive' : ($conversionRate >= 10 ? 'warning' : 'danger');
     $subscriptionDeadlineAt = null;
@@ -264,19 +266,19 @@
                 </article>
                 <article class="admin-kpi-card">
                     <div class="admin-kpi-card__topline">
-                        <span class="admin-kpi-card__label">Total Leads</span>
-                        <span class="admin-kpi-card__icon"><i class="fas fa-bullseye" aria-hidden="true"></i></span>
+                        <span class="admin-kpi-card__label">Automation Workflows</span>
+                        <span class="admin-kpi-card__icon"><i class="fas fa-bolt" aria-hidden="true"></i></span>
                     </div>
-                    <div class="admin-kpi-card__value">{{ number_format($usageLeads) }}</div>
-                    <div class="admin-kpi-card__meta">Lead records currently stored in the CRM</div>
+                    <div class="admin-kpi-card__value">{{ number_format($usageWorkflows) }}</div>
+                    <div class="admin-kpi-card__meta">Published funnels currently using shared automation capacity</div>
                 </article>
                 <article class="admin-kpi-card admin-kpi-card--warning">
                     <div class="admin-kpi-card__topline">
-                        <span class="admin-kpi-card__label">Available Coupons</span>
-                        <span class="admin-kpi-card__icon"><i class="fas fa-tags" aria-hidden="true"></i></span>
+                        <span class="admin-kpi-card__label">Outbound Messages</span>
+                        <span class="admin-kpi-card__icon"><i class="fas fa-paper-plane" aria-hidden="true"></i></span>
                     </div>
-                    <div class="admin-kpi-card__value">{{ number_format($availableCoupons) }}</div>
-                    <div class="admin-kpi-card__meta">{{ (int) ($activeCouponCount ?? 0) }} active and {{ (int) ($platformCouponCount ?? 0) }} platform coupons</div>
+                    <div class="admin-kpi-card__value">{{ number_format($usageMessages) }}</div>
+                    <div class="admin-kpi-card__meta">Billable email and SMS sends recorded for the current month</div>
                 </article>
             </div>
         </section>
@@ -329,7 +331,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach(['users' => 'Users', 'leads' => 'Leads', 'funnels' => 'Funnels'] as $usageKey => $usageLabel)
+                    @foreach(['users' => 'Users', 'leads' => 'Leads', 'funnels' => 'Funnels', 'workflows' => 'Workflows', 'messages' => 'Messages'] as $usageKey => $usageLabel)
                         @php
                             $usageRow = data_get($analyticsSummary, "usage.{$usageKey}", []);
                             $limit = $usageRow['limit'] ?? 'Unlimited';
@@ -343,6 +345,14 @@
                     @endforeach
                 </tbody>
             </table>
+            </div>
+        </div>
+        <div class="chart">
+            <h3>Analytics Basis</h3>
+            <div style="color:#475569;font-size:13px;line-height:1.7;">
+                Revenue trend window: {{ (int) data_get($analyticsSummary, 'revenue_trend_breakdown.window_months', 0) }} months.
+                Paid payments included: {{ (int) data_get($analyticsSummary, 'revenue_trend_breakdown.paid_payments_considered', 0) }}.
+                Formula: {{ data_get($analyticsSummary, 'revenue_trend_breakdown.formula', '-') }}.
             </div>
         </div>
     </div>
