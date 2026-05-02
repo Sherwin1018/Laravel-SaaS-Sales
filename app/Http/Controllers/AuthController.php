@@ -52,10 +52,7 @@ class AuthController extends Controller
                 return redirect()->route('login')->with('error', $message);
             }
 
-            if (
-                ! $user->hasRole('super-admin')
-                && $this->requiresActivationSetup($user)
-            ) {
+            if ($this->requiresActivationSetup($user)) {
                 Auth::logout();
                 $request->session()->invalidate();
                 $request->session()->regenerateToken();
