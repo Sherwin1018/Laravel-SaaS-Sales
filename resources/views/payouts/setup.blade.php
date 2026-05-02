@@ -35,7 +35,7 @@
             </div>
         @endif
 
-        <form action="{{ route('profile.payout.update') }}" method="POST" style="margin-top: 18px;">
+        <form action="{{ route('profile.payout.update') }}" method="POST" enctype="multipart/form-data" style="margin-top: 18px;">
             @csrf
             @method('PUT')
             <input type="hidden" name="from_payout_setup" value="1">
@@ -45,7 +45,7 @@
                     <label for="destination_type" style="display:block;margin-bottom:6px;font-weight:800;color:#0F172A;">Destination type</label>
                     <select id="destination_type" name="destination_type"
                         style="width:100%;padding:12px;border:1px solid var(--theme-border, #E6E1EF);border-radius:10px;">
-                        @foreach(['gcash' => 'GCash', 'provider_managed' => 'Provider Managed', 'bank_transfer' => 'Bank Transfer'] as $value => $label)
+                        @foreach(['gcash' => 'GCash', 'bank_transfer' => 'Card / Bank'] as $value => $label)
                             <option value="{{ $value }}" {{ old('destination_type', $payoutAccount?->destination_type ?? 'gcash') === $value ? 'selected' : '' }}>
                                 {{ $label }}
                             </option>
@@ -62,7 +62,7 @@
                 </div>
 
                 <div>
-                    <label for="destination_value" style="display:block;margin-bottom:6px;font-weight:800;color:#0F172A;">GCash / bank identifier</label>
+                    <label for="destination_value" style="display:block;margin-bottom:6px;font-weight:800;color:#0F172A;">GCash number / bank identifier</label>
                     <input type="text" id="destination_value" name="destination_value"
                         value="{{ old('destination_value', '') }}"
                         placeholder="Enter the payout destination you want reviewed"
@@ -79,6 +79,28 @@
                         placeholder="Optional external recipient or provider reference"
                         style="width:100%;padding:12px;border:1px solid var(--theme-border, #E6E1EF);border-radius:10px;">
                 </div>
+            </div>
+
+            <div style="margin-top:14px;">
+                <label for="gcash_qr" style="display:block;margin-bottom:6px;font-weight:800;color:#0F172A;">GCash QR (optional)</label>
+                <input type="file" id="gcash_qr" name="gcash_qr" accept=".jpg,.jpeg,.png"
+                    style="width:100%;padding:12px;border:1px solid var(--theme-border, #E6E1EF);border-radius:10px;background:#fff;">
+                <div style="margin-top:6px;color:var(--theme-muted, #6B7280);font-size:12px;font-weight:600;">
+                    Upload only if you want customers to scan your QR for manual payments.
+                </div>
+                @if(data_get($payoutAccount, 'meta.gcash.qr_path'))
+                    <div style="margin-top:10px;display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;">
+                        <img src="{{ asset('storage/' . data_get($payoutAccount, 'meta.gcash.qr_path')) }}" alt="GCash QR"
+                            style="width:140px;height:140px;object-fit:contain;border-radius:12px;border:1px solid var(--theme-border, #E6E1EF);background:#fff;padding:8px;">
+                        <div style="color:var(--theme-muted, #6B7280);font-size:12px;font-weight:700;line-height:1.5;max-width:520px;">
+                            Current QR is stored and will be shown on the manual payment page.
+                            Upload a new file to replace it.
+                        </div>
+                    </div>
+                @endif
+                @error('gcash_qr')
+                    <span style="color:red; font-size:12px;">{{ $message }}</span>
+                @enderror
             </div>
 
             <div style="margin-top:14px;">

@@ -10,7 +10,10 @@ use App\Models\Lead;
 use App\Models\FunnelStep;
 use App\Models\FunnelStepRevision;
 use App\Models\FunnelTemplate;
+use App\Models\Payment;
+use App\Models\PaymentReceipt;
 use Illuminate\Support\Facades\DB;
+use App\Services\FunnelTemplateService;
 use App\Services\FunnelTrackingService;
 use App\Support\TenantPlanEnforcer;
 use App\Support\TenantPayoutReadiness;
@@ -829,6 +832,69 @@ class FunnelController extends Controller
                 'Cache-Control' => 'max-age=0, no-cache, no-store, must-revalidate',
             ]
         );
+    }
+
+    public function reviewManualReceipt(
+        Request $request,
+        Funnel $funnel,
+        PaymentReceipt $receipt,
+        \App\Services\ReceiptVerificationService $verification
+    ) {
+        $this->ensureTenantFunnelAccess($funnel);
+
+        $user = auth()->user();
+        $validated = $request->validate([
+            'decision' => 'required|in:approve,reject',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        $receipt->loadMissing(['payment:id,tenant_id,funnel_id,payment_type,status,payment_date', 'tenant:id']);
+
+        abort_unless((int) $receipt->tenant_id === (int) $funnel->tenant_id, 403);
+        abort_unless($receipt->provider === 'manual_transfer', 403);
+        abort_unless($receipt->payment && (int) $receipt->payment->funnel_id === (int) $funnel->id, 403);
+
+        // Critical safety: never allow subscription billing side-effects here.
+        abort_unless($receipt->payment->payment_type === Payment::TYPE_FUNNEL_CHECKOUT, 422, 'This receipt is not linked to a funnel checkout payment.');
+
+        $reviewed = $verification->review($receipt, $validated['decision'], $user, $validated['notes'] ?? null);
+
+        app(\App\Services\FinanceAuditService::class)->record(
+            'receipt_reviewed',
+            'Receipt was reviewed from funnel analytics.',
+            $user,
+            $reviewed->tenant,
+            $reviewed->payment,
+            $reviewed,
+            [
+                'decision' => $validated['decision'],
+                'status' => $reviewed->status,
+                'notes' => $validated['notes'] ?? null,
+                'review_scope' => 'funnel_analytics',
+                'funnel_id' => $funnel->id,
+            ]
+        );
+
+        if ($validated['decision'] === 'approve') {
+            $payment = $reviewed->payment()->firstOrFail();
+            if ($payment->status !== 'paid') {
+                $payment->update([
+                    'status' => 'paid',
+                    'payment_date' => $payment->payment_date ?: now()->toDateString(),
+                ]);
+            }
+
+            app(\App\Services\CommissionService::class)->syncPayment($payment->fresh());
+            try {
+                app(\App\Services\FunnelTrackingService::class)->trackPaymentPaid($payment->fresh(), ['source' => 'receipt_review_approved_funnel_analytics']);
+            } catch (\Throwable) {
+                // Best-effort tracking only.
+            }
+        }
+
+        return redirect()
+            ->route('funnels.analytics', $funnel)
+            ->with('success', 'Manual receipt was reviewed.');
     }
 
     private function physicalOrderExcelExportConfig(string $section, array $analytics): ?array

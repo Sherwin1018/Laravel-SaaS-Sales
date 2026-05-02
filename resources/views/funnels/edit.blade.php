@@ -14709,6 +14709,17 @@ if(fbTabHistory)fbTabHistory.onclick=()=>showLeftPanel("history");
 var _canvasLockedWidth=0;
 var _canvasInnerWidth=0;
 var _canvasContentWidth=0;
+function preferredCanvasWidth(){
+    try{
+        var prefs=(state&&state.layout&&state.layout.__editor&&typeof state.layout.__editor==="object")?state.layout.__editor:{};
+        var w=Number(prefs.canvasWidth||0);
+        if(!isFinite(w))w=0;
+        w=Math.round(w);
+        return (w>200)?w:0;
+    }catch(_e){
+        return 0;
+    }
+}
 function lockCanvasWidth(){
     if(!canvas)return;
     if(fbGrid&&fbGrid.classList.contains("components-hidden"))return;
@@ -14720,7 +14731,9 @@ function lockCanvasWidth(){
         canvas.classList.add("fb-canvas--breakpoint");
     }else{
         canvas.classList.remove("fb-canvas--breakpoint");
-        w=canvas.offsetWidth;
+        // Keep a stable desktop canvas width across different monitors.
+        // This preserves "centered" placements when you continue editing on a smaller screen.
+        w=preferredCanvasWidth()||_canvasLockedWidth||canvas.offsetWidth;
     }
     if(w>200){
         _canvasLockedWidth=w;

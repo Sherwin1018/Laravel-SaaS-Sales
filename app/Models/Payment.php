@@ -39,6 +39,7 @@ class Payment extends Model
         'provider_reference',
         'payment_method',
         'session_identifier',
+        'platform_payout_id',
     ];
 
     protected $casts = [

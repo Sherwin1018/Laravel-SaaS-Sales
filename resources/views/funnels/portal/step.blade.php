@@ -1342,7 +1342,8 @@
         }
 
         /* ── REAL VIEWPORT responsive (published mode) ── */
-        @media (max-width: 1024px) {
+        /* Treat narrow laptops (e.g. 1366px wide) as "responsive" too. */
+        @media (max-width: 1400px) {
             body.is-published .builder-product-media .builder-carousel-wrap{
                 min-height: 0 !important;
                 aspect-ratio: 4 / 5 !important;
@@ -1418,6 +1419,47 @@
                 border: 0;
                 object-fit: cover;
             }
+        }
+
+        /* If JS forces published into fluid mode, apply the same narrow-laptop rules regardless of width. */
+        body.is-published.published-fluid .builder-product-media .builder-carousel-wrap{
+            min-height: 0 !important;
+            aspect-ratio: 4 / 5 !important;
+            max-height: min(62vw, 440px) !important;
+        }
+        body.is-published.published-fluid .builder-col-inner{
+            min-width: 0;
+            max-width: 100%;
+        }
+        body.is-published.published-fluid .builder-el[data-element-type="video"]{
+            min-width: 0;
+            width: 100%;
+            max-width: 100%;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+        body.is-published.published-fluid .builder-video-wrap{
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            min-height: 0;
+            padding-top: 0;
+            aspect-ratio: 16 / 9;
+            height: auto;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+        body.is-published.published-fluid .builder-video-wrap iframe,
+        body.is-published.published-fluid .builder-video-wrap video{
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+        }
+        body.is-published.published-fluid .builder-video-wrap video{
+            object-fit: cover;
         }
         @media (max-width: 768px) {
             /* Mobile "best shot": disable display:contents for carrier sections so absolute layouts stack predictably. */
@@ -4740,6 +4782,7 @@
                                                                     @csrf
                                                                     <input type="hidden" name="amount" value="{{ $summaryAmount > 0 ? $summaryAmount : (($resolvedCheckoutAmount ?? 0) > 0 ? $resolvedCheckoutAmount : (float) ($step->price ?? 0)) }}">
                                                                     <input type="hidden" name="website" value="">
+                                                                    <input type="hidden" name="checkout_payment_mode" value="paymongo" data-checkout-payment-mode>
                                                                     <input type="hidden" name="checkout_pricing_id" value="{{ $summaryPricingId }}">
                                                                     <input type="hidden" name="checkout_pricing_source_step" value="{{ $summarySourceStep }}">
                                                                     <input type="hidden" name="checkout_pricing_plan" value="{{ $plan }}">
@@ -4891,12 +4934,16 @@
                                                                                 <div class="coupon-prompt-actions">
                                                                                     <button type="button" class="coupon-prompt-skip" data-coupon-skip>Skip for now</button>
                                                                                     <button type="button" class="builder-pricing-cta" data-coupon-apply style="{{ $ctaStyle }}background: {{ $ctaBg }}; color: {{ $ctaText }};" data-coupon-options='@json($checkoutCouponOptions)'>Apply coupon & continue</button>
+                                                                                    <button type="button" class="builder-pricing-cta" data-checkout-manual style="{{ $ctaStyle }}background: #0F172A; color: #ffffff;">Pay manually</button>
                                                                                 </div>
                                                                             </div>
                                                                         </div>
                                                                         <button type="submit" data-checkout-native-submit formnovalidate tabindex="-1" aria-hidden="true" style="position:fixed;left:-9999px;width:1px;height:1px;opacity:0;overflow:hidden;">Continue to payment</button>
                                                                     @else
-                                                                        <button type="submit" class="builder-pricing-cta" style="{{ $ctaStyle }}background: {{ $ctaBg }}; color: {{ $ctaText }};">{{ $ctaLabel }}</button>
+                                                                        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                                                                            <button type="submit" class="builder-pricing-cta" style="{{ $ctaStyle }}background: {{ $ctaBg }}; color: {{ $ctaText }};">{{ $ctaLabel }}</button>
+                                                                            <button type="button" class="builder-pricing-cta" data-checkout-manual style="{{ $ctaStyle }}background: #0F172A; color: #ffffff;">Pay manually</button>
+                                                                        </div>
                                                                     @endif
                                                                 </form>
                                                             @endif
@@ -7109,8 +7156,14 @@
             var viewportW=document.documentElement?document.documentElement.clientWidth:window.innerWidth;
             /* Shrinking a 1200px-wide canvas to fit a ~390px phone made scale ~0.3 and illegible type.
                Published mode already has @media (max-width: 768px/1024px) rules — zoom was defeating them. */
-            var publishedFluidMaxVp=1024;
+            // Prefer fluid responsive rendering whenever the real viewport is narrower than the canvas.
+            // This avoids zoom/scale on narrow laptops and prevents layouts "messing up" across displays.
+            var baseCanvasGuess=Math.max(parseInt(editorCanvasWidth||0,10)||0, 0);
+            if(baseCanvasGuess<=0) baseCanvasGuess=1200;
+            // Give a small buffer so near-equal widths don't flip-flop due to scrollbars/padding.
+            var publishedFluidMaxVp=Math.max(1024, baseCanvasGuess+(targetPad*2)+80);
             if(viewportW<=publishedFluidMaxVp){
+                document.body.classList.add("published-fluid");
                 content.style.width="100%";
                 content.style.maxWidth="100%";
                 content.style.boxSizing="border-box";
@@ -7124,6 +7177,7 @@
                 content.classList.add("is-scale-ready");
                 return;
             }
+            document.body.classList.remove("published-fluid");
             content.style.width=editorCanvasWidth+"px";
             content.style.maxWidth="none";
             content.style.boxSizing="border-box";
@@ -7712,6 +7766,41 @@
             if(typeof portalShowLoading==="function")portalShowLoading();
             window.__submitCheckoutSummaryForm(form);
         },true);
+
+        // Manual payment fallback: sets checkout_payment_mode then submits the checkout form.
+        document.addEventListener("click", function (e) {
+            var btn = e.target && e.target.closest ? e.target.closest("[data-checkout-manual]") : null;
+            if (!btn) return;
+            var form = btn.closest("form[data-checkout-summary-form]");
+            if (!form) {
+                // Coupon prompt is portaled to <body> while open, so the button is no longer inside the form.
+                // Recover the original form from the portal metadata saved on the prompt backdrop.
+                var prompt = btn.closest("[data-coupon-prompt]");
+                var portalParent = prompt && prompt.__fbPortal ? prompt.__fbPortal.parent : null;
+                form = portalParent && portalParent.closest ? portalParent.closest("form[data-checkout-summary-form]") : null;
+            }
+            if (!form) return;
+            e.preventDefault();
+            var mode = form.querySelector("[data-checkout-payment-mode]") || form.querySelector('input[name="checkout_payment_mode"]');
+            if (!mode) {
+                mode = document.createElement("input");
+                mode.type = "hidden";
+                mode.name = "checkout_payment_mode";
+                mode.setAttribute("data-checkout-payment-mode", "1");
+                form.appendChild(mode);
+            }
+            mode.value = "manual";
+            try {
+                if (typeof window.syncCheckoutPricingForm === "function") {
+                    window.syncCheckoutPricingForm(form);
+                }
+                if (typeof window.syncCheckoutCustomerForm === "function") {
+                    window.syncCheckoutCustomerForm(form);
+                }
+            } catch (_e) {}
+            if (typeof portalShowLoading === "function") portalShowLoading();
+            window.__submitCheckoutSummaryForm(form);
+        }, true);
 
         document.querySelectorAll("[data-checkout-summary-form]").forEach(function(form){
             setCouponCodeOnForm(form,"");

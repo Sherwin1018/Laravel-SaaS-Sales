@@ -475,6 +475,19 @@
         <div class="card" style="margin-top: 20px;">
             <div class="payment-section-header">
                 <h3 class="payment-section-title">Receipt Review</h3>
+                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                    <a href="{{ route('payments.index') }}"
+                        style="display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:10px;border:1px solid var(--theme-border, #E6E1EF);background:#fff;color:#0F172A;text-decoration:none;font-weight:800;">
+                        All receipts
+                    </a>
+                    <a href="{{ route('payments.index', ['receipts_filter' => 'manual_pending']) }}"
+                        style="display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:10px;border:1px solid var(--theme-border, #E6E1EF);background:#0F172A;color:#fff;text-decoration:none;font-weight:900;">
+                        Manual pending
+                        <span style="margin-left:8px;padding:3px 10px;border-radius:999px;background:#fff;color:#0F172A;font-weight:900;">
+                            {{ number_format((int) ($receiptStats['manual_pending'] ?? 0)) }}
+                        </span>
+                    </a>
+                </div>
             </div>
             <div class="team-table-scroll">
                 <table class="sa-table team-table">

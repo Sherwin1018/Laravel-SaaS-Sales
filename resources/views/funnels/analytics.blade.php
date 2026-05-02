@@ -34,6 +34,9 @@
         $physicalOrderTotals = $analytics['physical_order_totals'] ?? [];
         $physicalPendingOrders = collect($analytics['physical_pending_orders'] ?? []);
         $physicalPaidOrders = collect($analytics['physical_paid_orders'] ?? []);
+        $manualReceipts = collect($analytics['manual_receipts'] ?? []);
+        $physicalPendingManualCount = $physicalPendingOrders->where('provider', 'manual')->count();
+        $physicalPendingPaymongoCount = $physicalPendingOrders->where('provider', 'paymongo')->count();
         $physicalProductBreakdown = collect($analytics['physical_product_breakdown'] ?? []);
         $productBreakdownPerPage = 3;
         $productBreakdownTotal = $physicalProductBreakdown->count();
@@ -186,10 +189,23 @@
                         <span>Pending Orders</span>
                         <span class="analytics-help-wrap">
                             <span class="analytics-help-dot" tabindex="0" aria-label="Pending orders help">?</span>
-                            <span class="analytics-help-tip">Orders waiting for payment completion.</span>
+                            <span class="analytics-help-tip">Orders where checkout started but payment is not confirmed yet (Manual or PayMongo).</span>
                         </span>
                     </div>
                     <div class="analytics-kpi-value">{{ number_format((int) ($physicalOrderTotals['pending_orders'] ?? 0)) }}</div>
+                    <div class="analytics-kpi-sub">
+                        Manual: {{ number_format((int) $physicalPendingManualCount) }} · PayMongo: {{ number_format((int) $physicalPendingPaymongoCount) }}
+                    </div>
+                </div>
+                <div class="analytics-kpi">
+                    <div class="analytics-kpi-label analytics-kpi-label-wrap">
+                        <span>Manual Payments</span>
+                        <span class="analytics-help-wrap">
+                            <span class="analytics-help-dot" tabindex="0" aria-label="Manual payments help">?</span>
+                            <span class="analytics-help-tip">Manual transfer submissions (reference numbers / receipts) for this funnel.</span>
+                        </span>
+                    </div>
+                    <div class="analytics-kpi-value">{{ number_format((int) $manualReceipts->count()) }}</div>
                 </div>
                 <div class="analytics-kpi">
                     <div class="analytics-kpi-label analytics-kpi-label-wrap">
@@ -481,6 +497,102 @@
         @if($isPhysicalAnalytics)
             <div class="analytics-card">
                 <div class="analytics-section-actions">
+                    <h3 style="margin:0;">Manual Payments</h3>
+                    <div class="analytics-section-actions__controls">
+                        <button type="button" id="toggleManualPaymentsBtn" class="analytics-toggle-btn ui-show-hide-toggle" aria-expanded="false" aria-controls="manualPaymentsContent"><i class="fas fa-eye" aria-hidden="true"></i><span>Show</span></button>
+                    </div>
+                </div>
+                <div id="manualPaymentsContent" style="display:none;">
+                    <div class="analytics-table-wrap">
+                        <table class="analytics-table">
+                            <thead>
+                                <tr>
+                                    <th>Customer</th>
+                                    <th>Phone</th>
+                                    <th>Order Items</th>
+                                    <th>Qty</th>
+                                    <th>Amount</th>
+                                    <th>Reference #</th>
+                                    <th>Status</th>
+                                    <th>Submitted</th>
+                                    <th>Receipt</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($manualReceipts as $row)
+                                    @php
+                                        $ref = (string) ($row['reference_number'] ?? '');
+                                        $receiptPath = (string) ($row['receipt_path'] ?? '');
+                                        $status = (string) ($row['status'] ?? 'pending');
+                                        $statusLabel = ucwords(str_replace('_', ' ', $status));
+                                        $orderQty = (int) ($row['order_quantity'] ?? 0);
+                                    @endphp
+                                    <tr>
+                                        <td>
+                                            <strong>{{ $row['customer_name'] ?? 'Customer' }}</strong><br>
+                                            <span style="color:var(--theme-muted, #6B7280);font-size:12px;">{{ $row['customer_email'] ?? $emptyDash }}</span>
+                                        </td>
+                                        <td>{{ $row['customer_phone'] ?? $emptyDash }}</td>
+                                        <td>
+                                            @if(!empty($row['order_items']) && is_array($row['order_items']))
+                                                @foreach($row['order_items'] as $item)
+                                                    <div><strong>{{ $item['name'] ?? 'Product' }}</strong> x{{ max(1, (int) ($item['quantity'] ?? 1)) }}</div>
+                                                @endforeach
+                                            @else
+                                                {{ $row['order_items_label'] ?? $emptyDash }}
+                                            @endif
+                                        </td>
+                                        <td>{{ $orderQty > 0 ? $orderQty : $emptyDash }}</td>
+                                        <td>PHP {{ number_format((float) ($row['amount'] ?? 0), 2) }}</td>
+                                        <td style="font-weight:800;">{{ $ref !== '' ? $ref : $emptyDash }}</td>
+                                        <td><span class="analytics-pill">{{ $statusLabel }}</span></td>
+                                        <td>{{ $row['submitted_at_label'] ?? $emptyDash }}</td>
+                                        <td>
+                                            @if($receiptPath !== '')
+                                                <a class="analytics-btn" href="{{ asset('storage/' . $receiptPath) }}" target="_blank" rel="noopener">View</a>
+                                            @else
+                                                {{ $emptyDash }}
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @if($status === 'pending')
+                                                @php
+                                                    $isFunnelPayment = ($row['payment_type'] ?? null) === \App\Models\Payment::TYPE_FUNNEL_CHECKOUT;
+                                                @endphp
+                                                <form
+                                                    method="POST"
+                                                    action="{{ route('funnels.analytics.manual-receipts.review', ['funnel' => $funnel, 'receipt' => (int) ($row['id'] ?? 0)]) }}"
+                                                    class="manual-receipt-review-form"
+                                                    style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                                                    @csrf
+                                                    @method('PATCH')
+                                                    <input type="hidden" name="decision" value="">
+                                                    <input type="hidden" name="notes" value="">
+                                                    <button type="button" class="analytics-btn primary" data-receipt-action="approve" {{ $isFunnelPayment ? '' : 'disabled' }}>Approve</button>
+                                                    <button type="button" class="analytics-btn" style="background:#FEE2E2;color:#991B1B;" data-receipt-action="reject" {{ $isFunnelPayment ? '' : 'disabled' }}>Reject</button>
+                                                    @unless($isFunnelPayment)
+                                                        <span style="color:#991B1B;font-size:12px;font-weight:800;">Not a funnel payment</span>
+                                                    @endunless
+                                                </form>
+                                            @else
+                                                <span style="color:var(--theme-muted, #6B7280);font-size:12px;">Reviewed</span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="10" style="text-align:center;">No manual payment submissions yet.</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="analytics-card">
+                <div class="analytics-section-actions">
                     <h3 style="margin:0;">Pending Orders</h3>
                     <div class="analytics-section-actions__controls">
                         <a
@@ -506,12 +618,19 @@
                                     <th>Order Items</th>
                                     <th>Qty</th>
                                     <th>Amount</th>
+                                    <th>Payment</th>
                                     <th>Delivery Address</th>
                                     <th>Last Activity</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @forelse($physicalPendingOrders as $row)
+                                    @php
+                                        $provider = trim((string) ($row['provider'] ?? ''));
+                                        $providerLabel = $provider === 'manual'
+                                            ? 'Manual'
+                                            : ($provider === 'paymongo' ? 'PayMongo' : ($provider !== '' ? ucwords(str_replace('_', ' ', $provider)) : 'Unknown'));
+                                    @endphp
                                     <tr>
                                         <td><strong>{{ $row['customer'] ?? 'Anonymous visitor' }}</strong><br><span style="color:var(--theme-muted, #6B7280);font-size:12px;">{{ $row['email'] ?? $emptyDash }}</span></td>
                                         <td>{{ $row['phone'] ?? $emptyDash }}</td>
@@ -526,12 +645,13 @@
                                         </td>
                                         <td>{{ (int) ($row['order_quantity'] ?? 0) > 0 ? (int) $row['order_quantity'] : $emptyDash }}</td>
                                         <td>PHP {{ number_format((float) ($row['checkout_amount'] ?? 0), 2) }}</td>
+                                        <td><span class="analytics-pill" style="{{ $provider === 'manual' ? 'background:#0f172a;color:#fff;' : '' }}">{{ $providerLabel }}</span></td>
                                         <td>{{ $row['delivery_address'] ?? $emptyDash }}</td>
                                         <td>{{ $row['last_activity'] ?? $emptyDash }}</td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="7" style="text-align:center;">No pending physical-product orders right now.</td>
+                                        <td colspan="8" style="text-align:center;">No pending physical-product orders right now.</td>
                                     </tr>
                                 @endforelse
                             </tbody>
@@ -988,6 +1108,8 @@
         const offerActivityGroups = @json($offerActivityGroups);
         const toggleOfferActivityBtn = document.getElementById('toggleOfferActivityBtn');
         const offerActivityContent = document.getElementById('offerActivityContent');
+        const toggleManualPaymentsBtn = document.getElementById('toggleManualPaymentsBtn');
+        const manualPaymentsContent = document.getElementById('manualPaymentsContent');
         const togglePendingOrdersBtn = document.getElementById('togglePendingOrdersBtn');
         const pendingOrdersContent = document.getElementById('pendingOrdersContent');
         const togglePaidOrdersBtn = document.getElementById('togglePaidOrdersBtn');
@@ -1058,10 +1180,38 @@
         }
 
         bindCollapsibleSection(toggleOfferActivityBtn, offerActivityContent);
+        bindCollapsibleSection(toggleManualPaymentsBtn, manualPaymentsContent);
         bindCollapsibleSection(togglePendingOrdersBtn, pendingOrdersContent);
         bindCollapsibleSection(togglePaidOrdersBtn, paidOrdersContent);
         bindCollapsibleSection(toggleStepPerformanceBtn, stepPerformanceContent);
         bindCollapsibleSection(toggleRecentEventsBtn, recentEventsContent);
+
+        document.querySelectorAll('.manual-receipt-review-form').forEach((form) => {
+            const setDecisionAndSubmit = function(decision) {
+                if (!form) return;
+                const decisionInput = form.querySelector('input[name="decision"]');
+                const notesInput = form.querySelector('input[name="notes"]');
+                if (!decisionInput || !notesInput) return;
+
+                const ok = window.confirm(decision === 'approve'
+                    ? 'Approve this manual payment receipt and mark payment as PAID?'
+                    : 'Reject this manual payment receipt?');
+                if (!ok) return;
+
+                const notes = window.prompt('Optional notes (visible internally).', '') || '';
+                decisionInput.value = decision;
+                notesInput.value = notes;
+                form.submit();
+            };
+
+            form.querySelectorAll('[data-receipt-action]').forEach((btn) => {
+                btn.addEventListener('click', function() {
+                    const decision = String(btn.getAttribute('data-receipt-action') || '').trim();
+                    if (decision !== 'approve' && decision !== 'reject') return;
+                    setDecisionAndSubmit(decision);
+                });
+            });
+        });
 
         productDetailsToggles.forEach((toggleBtn) => {
             const toggleDetails = function() {

@@ -68,47 +68,13 @@
                 @enderror
             </div>
 
-            <div style="margin-bottom: 16px;">
-                <label style="display:block; margin-bottom:8px; font-weight:700;">Start From</label>
-                <div style="display:grid; gap:10px;" id="templateChoiceList">
-                    <label data-template-card data-purpose="manual" style="display:block; border:1px solid var(--theme-border, #E6E1EF); border-radius:8px; padding:14px; cursor:pointer; background:#fff;">
-                        <input type="radio" name="template_id" value="" {{ old('template_id') ? '' : 'checked' }} style="margin-right:8px;">
-                        <strong>Manual build</strong>
-                        <span style="display:block; margin-top:4px; color:#64748b; font-size:12px;">Create the standard step-by-step pages, then design them in the drag-and-drop builder.</span>
-                    </label>
-
-                    @foreach(($availableTemplates ?? []) as $template)
-                        <label data-template-card data-purpose="{{ $template['funnel_purpose'] }}" style="display:block; border:1px solid var(--theme-border, #E6E1EF); border-radius:8px; padding:14px; cursor:pointer; background:#fff;">
-                            <input type="radio" name="template_id" value="{{ $template['id'] }}" {{ (string) old('template_id') === (string) $template['id'] ? 'checked' : '' }} style="margin-right:8px;">
-                            <strong>{{ $template['name'] }}</strong>
-                            <span style="display:block; margin-top:4px; color:#64748b; font-size:12px;">
-                                {{ $template['description'] ?: 'Super Admin step-by-step template.' }}
-                            </span>
-                            <span style="display:block; margin-top:8px; color:#475569; font-size:12px;">
-                                {{ $template['steps_count'] }} pages
-                                @if(!empty($template['tags']))
-                                    - {{ implode(' - ', $template['tags']) }}
-                                @endif
-                            </span>
-                        </label>
-                    @endforeach
-
-                    @if(empty($availableTemplates))
-                        <div style="padding:14px; border:1px dashed var(--theme-border, #E6E1EF); border-radius:8px; background:#fff; color:#64748b; font-size:13px; line-height:1.55;">
-                            No Super Admin shared templates are available on your current plan right now. You can still start with a manual funnel build.
-                        </div>
-                    @endif
-                </div>
-                @error('template_id')
-                    <span style="color:red; font-size:12px;">{{ $message }}</span>
-                @enderror
-            </div>
+            <input type="hidden" name="template_id" value="">
 
             <div style="margin:18px 0; padding:14px 16px; border-radius:12px; background:#fbf9fd; border:1px solid #ece2f5; color:#475569; font-size:13px; line-height:1.55;">
                 Build setup:
                 <br><strong>Funnel Style</strong>: Step-by-Step Page.
                 <br><strong>Funnel Purpose</strong>: Services or Physical Product.
-                <br><br>Only the Super Admin templates allowed by your current plan are shown here.
+                <br><br>After creation, apply your preferred page templates directly inside the builder.
             </div>
 
             <div style="display:flex; gap:10px; margin-top:18px;">
@@ -117,33 +83,4 @@
             </div>
         </form>
     </div>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const purposeSelect = document.getElementById('funnel_purpose');
-            const cards = Array.from(document.querySelectorAll('[data-template-card]'));
-
-            function syncTemplateCards() {
-                const purpose = purposeSelect ? purposeSelect.value : 'service';
-                cards.forEach(function (card) {
-                    const cardPurpose = card.getAttribute('data-purpose') || '';
-                    const visible = cardPurpose === 'manual' || cardPurpose === purpose;
-                    card.style.display = visible ? 'block' : 'none';
-
-                    const input = card.querySelector('input[type="radio"]');
-                    if (!visible && input && input.checked) {
-                        const manualInput = document.querySelector('[data-purpose="manual"] input[type="radio"]');
-                        if (manualInput) {
-                            manualInput.checked = true;
-                        }
-                    }
-                });
-            }
-
-            if (purposeSelect) {
-                purposeSelect.addEventListener('change', syncTemplateCards);
-            }
-            syncTemplateCards();
-        });
-    </script>
 @endsection

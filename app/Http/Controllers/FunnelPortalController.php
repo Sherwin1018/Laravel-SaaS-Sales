@@ -8,6 +8,7 @@ use App\Models\FunnelReview;
 use App\Models\FunnelStep;
 use App\Models\Lead;
 use App\Models\Payment;
+use App\Models\PaymentReceipt;
 use App\Services\CouponService;
 use App\Services\CommissionService;
 use App\Services\PayMongoCheckoutService;
@@ -15,6 +16,7 @@ use App\Services\FunnelTrackingService;
 use App\Support\TenantPayoutReadiness;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class FunnelPortalController extends Controller
@@ -252,6 +254,7 @@ class FunnelPortalController extends Controller
 
         $validated = $request->validate([
             'amount' => 'nullable|numeric|min:0.01',
+            'checkout_payment_mode' => ['nullable', Rule::in(['paymongo', 'manual'])],
             'checkout_pricing_id' => 'nullable|string|max:120',
             'checkout_pricing_source_step' => 'nullable|string|max:120',
             'checkout_pricing_plan' => 'nullable|string|max:200',
@@ -436,6 +439,48 @@ class FunnelPortalController extends Controller
             }
         }
 
+        $paymentMode = strtolower(trim((string) ($validated['checkout_payment_mode'] ?? 'paymongo')));
+        if ($paymentMode !== 'manual') {
+            $paymentMode = 'paymongo';
+        }
+
+        if ($paymentMode === 'manual') {
+            $payment = Payment::create([
+                'tenant_id' => $funnel->tenant_id,
+                'payment_type' => Payment::TYPE_FUNNEL_CHECKOUT,
+                'funnel_id' => $funnel->id,
+                'funnel_step_id' => $step->id,
+                'lead_id' => $leadId,
+                'coupon_id' => $coupon?->id,
+                'coupon_code' => $coupon?->code,
+                'amount' => $amount,
+                'subtotal_amount' => $subtotalAmount,
+                'discount_amount' => $discountAmount,
+                'status' => 'pending',
+                'payment_date' => now()->toDateString(),
+                'provider' => 'manual',
+                'payment_method' => 'manual_transfer',
+                'session_identifier' => $sessionIdentifier,
+            ]);
+
+            $tracking->trackCheckoutStarted(
+                $funnel,
+                $step,
+                $payment,
+                $request,
+                $selectedPricing,
+                array_merge($checkoutTrackingMeta, ['source' => 'manual_transfer'])
+            );
+
+            $manualUrl = URL::signedRoute('funnels.portal.manual', [
+                'funnelSlug' => $funnel->slug,
+                'stepSlug' => $step->slug,
+                'payment' => $payment->id,
+            ], now()->addHours(48));
+
+            return redirect()->away($manualUrl);
+        }
+
         if ($payMongo->isConfigured()) {
             return $this->checkoutWithPayMongo($payMongo, $tracking, $request, $funnel, $steps, $step, $amount, $selectedPricing, $checkoutTrackingMeta);
         }
@@ -544,6 +589,102 @@ class FunnelPortalController extends Controller
         return redirect()
             ->route('funnels.portal.step', ['funnelSlug' => $funnel->slug, 'stepSlug' => $step->slug])
             ->with('error', 'Payment was not completed. You can try again.');
+    }
+
+    public function manualPayment(Request $request, FunnelTrackingService $tracking, string $funnelSlug, string $stepSlug, int $payment)
+    {
+        [$funnel, $steps, $step] = $this->resolveStepContext($funnelSlug, $stepSlug, null);
+        $record = Payment::query()->findOrFail($payment);
+        abort_unless($record->provider === 'manual', 403);
+        abort_unless((int) $record->tenant_id === (int) $funnel->tenant_id, 403);
+        abort_unless((int) $record->funnel_id === (int) $funnel->id, 403);
+
+        if ($record->status === 'paid') {
+            return $this->completeConfirmedPayment($tracking, $record, $funnel, $steps, $step, 'manual_cached_paid');
+        }
+
+        $tenant = $funnel->tenant->loadMissing('defaultPayoutAccount');
+        $payoutAccount = $tenant->defaultPayoutAccount;
+        abort_unless($payoutAccount && $payoutAccount->isApproved(), 422, 'Manual payment is unavailable until payout destination is approved.');
+
+        $thankYouStep = $steps->firstWhere('type', 'thank_you') ?? $steps->last();
+        $thankYouUrl = $thankYouStep
+            ? route('funnels.portal.step', ['funnelSlug' => $funnel->slug, 'stepSlug' => $thankYouStep->slug])
+            : route('funnels.portal.step', ['funnelSlug' => $funnel->slug, 'stepSlug' => $step->slug]);
+
+        return view('funnels.portal.manual-payment', [
+            'funnel' => $funnel,
+            'step' => $step,
+            'payment' => $record,
+            'payoutAccount' => $payoutAccount,
+            'thankYouUrl' => $thankYouUrl,
+            'receiptActionUrl' => URL::signedRoute('funnels.portal.manual.receipt', [
+                'funnelSlug' => $funnel->slug,
+                'stepSlug' => $step->slug,
+                'payment' => $record->id,
+            ], now()->addHours(48)),
+        ]);
+    }
+
+    public function manualPaymentReceipt(Request $request, FunnelTrackingService $tracking, string $funnelSlug, string $stepSlug, int $payment)
+    {
+        [$funnel, $steps, $step] = $this->resolveStepContext($funnelSlug, $stepSlug, null);
+        $record = Payment::query()->findOrFail($payment);
+        abort_unless($record->provider === 'manual', 403);
+        abort_unless((int) $record->tenant_id === (int) $funnel->tenant_id, 403);
+        abort_unless((int) $record->funnel_id === (int) $funnel->id, 403);
+
+        if ($record->status === 'paid') {
+            return $this->completeConfirmedPayment($tracking, $record, $funnel, $steps, $step, 'manual_receipt_repeat_paid');
+        }
+
+        $validated = $request->validate([
+            'customer_name' => 'nullable|string|max:150',
+            'customer_email' => 'nullable|email|max:150',
+            'customer_phone' => 'nullable|string|max:20',
+            'reference_number' => 'required|string|max:160',
+            'receipt_file' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        $path = null;
+        if ($request->hasFile('receipt_file')) {
+            $path = $request->file('receipt_file')->store('payment-receipts', 'public');
+        }
+
+        PaymentReceipt::create([
+            'tenant_id' => $record->tenant_id,
+            'payment_id' => $record->id,
+            'uploaded_by' => null,
+            'receipt_amount' => (float) $record->amount,
+            'receipt_date' => now()->toDateString(),
+            'provider' => 'manual_transfer',
+            'reference_number' => trim((string) $validated['reference_number']),
+            'receipt_path' => $path,
+            'status' => PaymentReceipt::STATUS_PENDING,
+            'automation_status' => 'pending',
+            'notes' => trim((string) ($validated['notes'] ?? '')) ?: null,
+            'meta' => [
+                'source' => 'funnel_manual_checkout',
+                'customer' => [
+                    'name' => trim((string) ($validated['customer_name'] ?? '')) ?: null,
+                    'email' => trim((string) ($validated['customer_email'] ?? '')) ?: null,
+                    'phone' => trim((string) ($validated['customer_phone'] ?? '')) ?: null,
+                ],
+                'funnel' => [
+                    'slug' => $funnel->slug,
+                    'step_slug' => $step->slug,
+                ],
+            ],
+        ]);
+
+        return redirect()
+            ->to(URL::signedRoute('funnels.portal.manual', [
+                'funnelSlug' => $funnel->slug,
+                'stepSlug' => $step->slug,
+                'payment' => $record->id,
+            ], now()->addHours(48)))
+            ->with('success', 'Receipt submitted. Your payment is pending verification.');
     }
 
     private function checkoutWithPayMongo(

@@ -23,6 +23,7 @@ class PaymentController extends Controller
     public function index(Request $request)
     {
         $user = auth()->user();
+        $receiptFilter = trim((string) $request->query('receipts_filter', ''));
         $tenant = app(SubscriptionLifecycleService::class)->expireGracePeriodIfNeeded($user->tenant);
         app(CommissionService::class)->syncTenant($tenant);
 
@@ -65,16 +66,27 @@ class PaymentController extends Controller
             ->latest('payment_date')
             ->limit(100)
             ->get(['id', 'amount', 'payment_type', 'status', 'payment_date', 'provider_reference']);
-        $receipts = PaymentReceipt::query()
+        $receiptsBase = PaymentReceipt::query()
             ->with(['payment:id,amount,payment_date,payment_type,status', 'uploader:id,name', 'reviewer:id,name'])
             ->where('tenant_id', $user->tenant_id)
+            ->when($receiptFilter === 'manual_pending', function ($query) {
+                $query->where('provider', 'manual_transfer')->where('status', PaymentReceipt::STATUS_PENDING);
+            })
             ->latest('id')
-            ->paginate(10, ['*'], 'receipts_page');
+            ->paginate(10, ['*'], 'receipts_page')
+            ->withQueryString();
+
+        $receipts = $receiptsBase;
         $receiptStats = [
             'pending' => PaymentReceipt::query()->where('tenant_id', $user->tenant_id)->where('status', PaymentReceipt::STATUS_PENDING)->count(),
             'auto_approved' => PaymentReceipt::query()->where('tenant_id', $user->tenant_id)->where('status', PaymentReceipt::STATUS_AUTO_APPROVED)->count(),
             'approved' => PaymentReceipt::query()->where('tenant_id', $user->tenant_id)->where('status', PaymentReceipt::STATUS_APPROVED)->count(),
             'rejected' => PaymentReceipt::query()->where('tenant_id', $user->tenant_id)->where('status', PaymentReceipt::STATUS_REJECTED)->count(),
+            'manual_pending' => PaymentReceipt::query()
+                ->where('tenant_id', $user->tenant_id)
+                ->where('provider', 'manual_transfer')
+                ->where('status', PaymentReceipt::STATUS_PENDING)
+                ->count(),
         ];
         $commissionSummary = [
             'held_total' => (float) $tenant->commissionEntries()->where('status', 'held')->sum('commission_amount'),
@@ -103,7 +115,8 @@ class PaymentController extends Controller
             'receiptStats',
             'commissionSummary',
             'planUsage',
-            'recentAuditLogs'
+            'recentAuditLogs',
+            'receiptFilter'
         ));
     }
 

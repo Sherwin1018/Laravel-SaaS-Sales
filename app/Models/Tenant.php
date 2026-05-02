@@ -108,6 +108,11 @@ class Tenant extends Model
         return $this->hasMany(PaymentReceipt::class);
     }
 
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
+    }
+
     public function commissionPlans(): HasMany
     {
         return $this->hasMany(CommissionPlan::class);

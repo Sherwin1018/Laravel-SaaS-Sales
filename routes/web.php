@@ -94,6 +94,11 @@ Route::middleware(['auth', 'owner.payout.setup'])->group(function () {
 Route::middleware(['auth', 'role:payout-admin'])->group(function () {
     Route::get('/platform/payouts', [PlatformPayoutAdminController::class, 'index'])->name('platform.payouts.index');
     Route::patch('/platform/payouts/{payoutAccount}', [PlatformPayoutAdminController::class, 'review'])->name('platform.payouts.review');
+
+    Route::get('/platform/settlements', [\App\Http\Controllers\PlatformSettlementController::class, 'index'])
+        ->name('platform.settlements.index');
+    Route::post('/platform/settlements/{tenant}', [\App\Http\Controllers\PlatformSettlementController::class, 'store'])
+        ->name('platform.settlements.store');
 });
 
 Route::middleware(['auth', 'owner.payout.setup', 'role:account-owner'])->group(function () {
@@ -218,6 +223,7 @@ Route::middleware(['auth', 'owner.payout.setup', 'tenant.subscription', 'role:sa
         Route::get('/funnels/{funnel}/analytics/export', [FunnelController::class, 'exportAnalytics'])->name('funnels.analytics.export');
         Route::get('/funnels/{funnel}/analytics/orders/export', [FunnelController::class, 'exportPhysicalOrdersExcel'])->name('funnels.analytics.orders.export');
         Route::post('/funnels/{funnel}/analytics/delivery-update', [FunnelController::class, 'sendDeliveryUpdate'])->name('funnels.analytics.delivery-update');
+        Route::patch('/funnels/{funnel}/analytics/manual-receipts/{receipt}', [FunnelController::class, 'reviewManualReceipt'])->name('funnels.analytics.manual-receipts.review');
         Route::get('/funnels/{funnel}/reviews', [FunnelReviewController::class, 'index'])->name('funnels.reviews.index');
         Route::patch('/funnels/{funnel}/reviews/{review}', [FunnelReviewController::class, 'updateStatus'])->name('funnels.reviews.update');
         Route::get('/funnels/{funnel}/events', [FunnelController::class, 'events'])->name('funnels.events');
@@ -255,6 +261,12 @@ Route::get('/f/{funnelSlug}/{stepSlug?}', [FunnelPortalController::class, 'show'
 Route::get('/funnel/{funnelSlug}/{stepSlug?}', [FunnelPortalController::class, 'show'])->middleware('throttle:funnel-public-view')->name('funnels.portal.step.alias');
 Route::post('/f/{funnelSlug}/{stepSlug}/opt-in', [FunnelPortalController::class, 'optIn'])->middleware('throttle:funnel-public-submit')->name('funnels.portal.optin');
 Route::post('/f/{funnelSlug}/{stepSlug}/checkout', [FunnelPortalController::class, 'checkout'])->middleware('throttle:funnel-public-submit')->name('funnels.portal.checkout');
+Route::get('/f/{funnelSlug}/{stepSlug}/manual/{payment}', [FunnelPortalController::class, 'manualPayment'])
+    ->middleware('signed')
+    ->name('funnels.portal.manual');
+Route::post('/f/{funnelSlug}/{stepSlug}/manual/{payment}/receipt', [FunnelPortalController::class, 'manualPaymentReceipt'])
+    ->middleware('signed')
+    ->name('funnels.portal.manual.receipt');
 Route::post('/f/{funnelSlug}/{stepSlug}/review', [FunnelPortalController::class, 'submitReview'])->middleware('throttle:funnel-public-submit')->name('funnels.portal.review');
 Route::get('/f/{funnelSlug}/{stepSlug}/paymongo/return/{payment}', [FunnelPortalController::class, 'paymongoReturn'])
     ->middleware('signed')

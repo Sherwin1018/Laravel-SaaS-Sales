@@ -83,7 +83,21 @@ class User extends Authenticatable
      */
     public function hasRole(string $roleSlug): bool
     {
-        return $this->roles->contains('slug', $roleSlug);
+        $normalize = static fn (?string $value): string => str_replace('_', '-', strtolower(trim((string) $value)));
+
+        $needle = $normalize($roleSlug);
+        if ($needle === '') {
+            return false;
+        }
+
+        $roleColumn = $normalize($this->role ?? '');
+        if ($roleColumn !== '' && $roleColumn === $needle) {
+            return true;
+        }
+
+        return $this->roles->contains(function ($role) use ($normalize, $needle) {
+            return $normalize($role->slug ?? '') === $needle;
+        });
     }
 
     /**

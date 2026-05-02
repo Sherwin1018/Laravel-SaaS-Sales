@@ -1,0 +1,31 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::table('payment_receipts', function (Blueprint $table) {
+            // Allow public/manual funnel checkouts to upload receipts without an authenticated user.
+            $table->dropConstrainedForeignId('uploaded_by');
+            $table->foreignId('uploaded_by')->nullable()->after('payment_id')->constrained('users')->nullOnDelete();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('payment_receipts', function (Blueprint $table) {
+            $table->dropConstrainedForeignId('uploaded_by');
+            $table->foreignId('uploaded_by')->after('payment_id')->constrained('users')->cascadeOnDelete();
+        });
+    }
+};

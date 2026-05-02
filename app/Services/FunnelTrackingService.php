@@ -7,6 +7,7 @@ use App\Models\FunnelEvent;
 use App\Models\FunnelStep;
 use App\Models\Lead;
 use App\Models\Payment;
+use App\Models\PaymentReceipt;
 use Carbon\Carbon;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -324,6 +325,30 @@ class FunnelTrackingService
             ->get();
         $dailySeries = $this->dailySeries($events, $payments);
 
+        $manualReceipts = PaymentReceipt::query()
+            ->where('tenant_id', $funnel->tenant_id)
+            ->where('provider', 'manual_transfer')
+            ->whereHas('payment', fn (Builder $query) => $query->where('funnel_id', $funnel->id))
+            ->with(['payment:id,funnel_id,payment_type,status'])
+            ->when($filters['from'] ?? null, fn (Builder $query, Carbon $from) => $query->where('created_at', '>=', $from))
+            ->when($filters['to'] ?? null, fn (Builder $query, Carbon $to) => $query->where('created_at', '<=', $to))
+            ->latest('id')
+            ->take(200)
+            ->get(['id', 'payment_id', 'receipt_amount', 'provider', 'reference_number', 'receipt_path', 'status', 'verified_at', 'meta', 'created_at']);
+
+        $manualReceiptPaymentIds = $manualReceipts->pluck('payment_id')->filter()->unique()->values()->all();
+        $manualCheckoutMetaByPaymentId = $manualReceiptPaymentIds !== []
+            ? FunnelEvent::query()
+                ->where('funnel_id', $funnel->id)
+                ->where('event_name', self::EVENT_CHECKOUT_STARTED)
+                ->whereIn('payment_id', $manualReceiptPaymentIds)
+                ->latest('id')
+                ->get(['id', 'payment_id', 'meta'])
+                ->groupBy('payment_id')
+                ->map(fn (Collection $eventsForPayment) => (is_array($eventsForPayment->first()?->meta) ? $eventsForPayment->first()->meta : []))
+                ->all()
+            : [];
+
         $stepVisits = $activeSteps->map(function (FunnelStep $step) use ($stepViewEvents) {
             $visits = $this->uniqueVisitCount($stepViewEvents->where('funnel_step_id', $step->id));
 
@@ -414,6 +439,40 @@ class FunnelTrackingService
             'physical_pending_orders' => array_values(array_filter($physicalOrderRows, fn (array $row) => ($row['order_status'] ?? '') === 'pending')),
             'physical_paid_orders' => array_values(array_filter($physicalOrderRows, fn (array $row) => ($row['order_status'] ?? '') === 'paid')),
             'physical_product_breakdown' => $this->physicalProductBreakdown($physicalOrderRows),
+            'manual_receipts' => $manualReceipts
+                ->map(function (PaymentReceipt $receipt) use ($manualCheckoutMetaByPaymentId) {
+                    $customerName = trim((string) data_get($receipt->meta, 'customer.name'));
+                    $customerEmail = trim((string) data_get($receipt->meta, 'customer.email'));
+                    $customerPhone = trim((string) data_get($receipt->meta, 'customer.phone'));
+                    $checkoutMeta = is_array($manualCheckoutMetaByPaymentId[$receipt->payment_id] ?? null)
+                        ? $manualCheckoutMetaByPaymentId[$receipt->payment_id]
+                        : [];
+                    $orderItems = is_array(data_get($checkoutMeta, 'order_items')) ? data_get($checkoutMeta, 'order_items') : null;
+                    $orderItemsLabel = trim((string) data_get($checkoutMeta, 'order_items_label'));
+                    $orderQuantity = (int) data_get($checkoutMeta, 'order_quantity', 0);
+
+                    return [
+                        'id' => $receipt->id,
+                        'payment_id' => $receipt->payment_id,
+                        'payment_type' => $receipt->payment?->payment_type,
+                        'payment_status' => $receipt->payment?->status,
+                        'funnel_id' => $receipt->payment?->funnel_id,
+                        'amount' => (float) ($receipt->receipt_amount ?? 0),
+                        'reference_number' => $receipt->reference_number,
+                        'status' => $receipt->status,
+                        'receipt_path' => $receipt->receipt_path,
+                        'order_items' => $orderItems,
+                        'order_items_label' => $orderItemsLabel !== '' ? $orderItemsLabel : null,
+                        'order_quantity' => $orderQuantity,
+                        'customer_name' => $customerName !== '' ? $customerName : null,
+                        'customer_email' => $customerEmail !== '' ? $customerEmail : null,
+                        'customer_phone' => $customerPhone !== '' ? $customerPhone : null,
+                        'submitted_at' => optional($receipt->created_at)?->toIso8601String(),
+                        'submitted_at_label' => optional($receipt->created_at)?->format('M j, Y g:i A'),
+                    ];
+                })
+                ->values()
+                ->all(),
             'conversion_funnel' => [
                 ['label' => 'Entry Visits', 'count' => $entryVisits],
                 ['label' => 'Opt-ins', 'count' => $optInCount],
@@ -634,6 +693,11 @@ class FunnelTrackingService
                     ?? data_get($paymentCarrier?->meta, 'payment_status')
                     ?? ''
                 )));
+                $paymentModelStatus = strtolower(trim((string) ($paymentModel?->status ?? '')));
+                if ($paymentModelStatus !== '') {
+                    // Prefer the canonical status from the payment record, since event meta may be stale.
+                    $paymentStatus = $paymentModelStatus;
+                }
                 if ($paymentStatus === '') {
                     if ($paymentPaid) {
                         $paymentStatus = 'paid';

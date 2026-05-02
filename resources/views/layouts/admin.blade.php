@@ -264,6 +264,9 @@
                 <a href="{{ route('platform.payouts.index') }}" class="{{ request()->routeIs('platform.payouts.*') ? 'active' : '' }}">
                     <i class="fas fa-scale-balanced"></i> <span>Payout Reviews</span>
                 </a>
+                <a href="{{ route('platform.settlements.index') }}" class="{{ request()->routeIs('platform.settlements.*') ? 'active' : '' }}">
+                    <i class="fas fa-money-bill-transfer"></i> <span>Settlements</span>
+                </a>
             @endif
 
             {{-- TENANT LINKS (Account Owner, Marketing, Sales, Finance, Customer) --}}
