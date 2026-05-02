@@ -99,7 +99,7 @@ class FunnelController extends Controller
     public function store(Request $request, FunnelTemplateService $templateService)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:120',
+            'name' => 'nullable|string|max:120',
             'description' => 'nullable|string|max:2000',
             'template_type' => ['nullable', Rule::in(array_keys(FunnelTemplate::selectableTemplateTypes()))],
             'funnel_purpose' => ['required', Rule::in(array_keys(FunnelTemplate::FUNNEL_PURPOSE_OPTIONS))],
@@ -134,14 +134,22 @@ class FunnelController extends Controller
                     $this->ensureStepHasInitialRevision($step);
                 }
 
-                return redirect()->route('funnels.edit', $funnel)->with('success', 'Added Successfully');
+                return redirect()
+                    ->route('funnels.edit', $funnel)
+                    ->with('success', 'Private draft created from the published template.')
+                    ->with('template_clone_notice', true);
+            }
+
+            $name = trim((string) ($validated['name'] ?? ''));
+            if ($name === '') {
+                return redirect()->back()->withInput()->with('error', 'Funnel name is required when building from scratch.');
             }
 
             $funnel = Funnel::create([
                 'tenant_id' => $user->tenant_id,
                 'created_by' => $user->id,
-                'name' => $validated['name'],
-                'slug' => $this->generateUniqueFunnelSlug($validated['name'], $user->tenant_id),
+                'name' => $name,
+                'slug' => $this->generateUniqueFunnelSlug($name, $user->tenant_id),
                 'description' => $validated['description'] ?? null,
                 'purpose' => $purpose,
                 'status' => 'draft',
@@ -174,6 +182,7 @@ class FunnelController extends Controller
         } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
             return redirect()->back()->withInput()->with('error', $e->getMessage());
         } catch (\Throwable $e) {
+            report($e);
             return redirect()->back()->withInput()->with('error', 'Added Failed');
         }
     }
@@ -570,6 +579,9 @@ class FunnelController extends Controller
     private function createTemplateCardsPayload($user): array
     {
         return $this->publishedTemplatesQueryForUser($user)
+            ->with(['steps' => function ($query) {
+                $query->orderBy('position');
+            }])
             ->withCount('steps')
             ->get()
             ->map(function (FunnelTemplate $template) {
@@ -579,6 +591,14 @@ class FunnelController extends Controller
                     'description' => $template->description,
                     'funnel_purpose' => $template->resolvedFunnelPurpose(),
                     'steps_count' => (int) ($template->steps_count ?? 0),
+                    'preview_image' => $template->preview_image,
+                    'steps' => $template->steps->map(function ($step) {
+                        return [
+                            'title' => $step->title,
+                            'type' => $step->type,
+                            'position' => $step->position,
+                        ];
+                    })->values()->all(),
                     'tags' => collect($template->template_tags ?? [])
                         ->map(fn ($tag) => trim((string) $tag))
                         ->filter(fn ($tag) => $tag !== '' && ! str_starts_with(mb_strtolower($tag), FunnelTemplate::PURPOSE_TAG_PREFIX))

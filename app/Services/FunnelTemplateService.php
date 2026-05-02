@@ -112,6 +112,10 @@ class FunnelTemplateService
             ]);
 
             foreach ($template->steps->sortBy('position')->values() as $index => $step) {
+                $layoutStyle = is_string($step->layout_style) && array_key_exists($step->layout_style, FunnelStep::LAYOUTS)
+                    ? $step->layout_style
+                    : 'centered';
+
                 $funnel->steps()->create([
                     'title' => $step->title,
                     'subtitle' => $step->subtitle,
@@ -123,13 +127,15 @@ class FunnelTemplateService
                     'position' => $index + 1,
                     'is_active' => (bool) $step->is_active,
                     'hero_image_url' => $step->hero_image_url,
-                    'layout_style' => $step->layout_style,
+                    'layout_style' => $layoutStyle,
                     'template' => $step->template ?: 'simple',
                     'template_data' => $step->template_data,
                     'step_tags' => $step->step_tags ?? [],
                     'background_color' => $step->background_color,
                     'button_color' => $step->button_color,
                     'layout_json' => is_array($step->layout_json) ? $step->layout_json : ['root' => [], 'sections' => []],
+                    'layout_json_tablet' => is_array($step->layout_json_tablet) ? $step->layout_json_tablet : null,
+                    'layout_json_mobile' => is_array($step->layout_json_mobile) ? $step->layout_json_mobile : null,
                 ]);
             }
 

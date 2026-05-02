@@ -66,6 +66,79 @@
         </form>
     </div>
 
+    <div class="card" style="margin-bottom: 20px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;">
+            <div>
+                <h3 style="margin:0;">Commission Settings</h3>
+                <p style="margin:8px 0 0;color:var(--theme-muted, #6B7280);line-height:1.6;">
+                    Manage the current 2-role commission model for your workspace. Attribution is currently fixed to assigned sales lead and campaign-linked marketing manager behavior.
+                </p>
+            </div>
+            <div style="padding:10px 12px;border-radius:12px;background:#fbf9fd;border:1px solid var(--theme-border, #E6E1EF);color:#240E35;font-weight:800;">
+                Active plan: {{ data_get($report, 'plan.name', 'Default Commission Plan') }}
+            </div>
+        </div>
+
+        <form method="POST" action="{{ route('reports.owner.commission-plan.update') }}" class="app-form-grid app-form-grid--4" style="gap:12px;margin-top:16px;">
+            @csrf
+            @method('PUT')
+            <div>
+                <label for="gateway_fee_rate" style="display:block;margin-bottom:6px;font-weight:700;">Gateway Fee %</label>
+                <input type="number" step="0.01" min="0" max="100" id="gateway_fee_rate" name="gateway_fee_rate"
+                    value="{{ old('gateway_fee_rate', data_get($report, 'plan.gateway_fee_rate', 0)) }}"
+                    style="width:100%;padding:10px;border:1px solid var(--theme-border, #E6E1EF);border-radius:8px;">
+            </div>
+            <div>
+                <label for="platform_fee_rate" style="display:block;margin-bottom:6px;font-weight:700;">Platform Fee %</label>
+                <input type="number" step="0.01" min="0" max="100" id="platform_fee_rate" name="platform_fee_rate"
+                    value="{{ old('platform_fee_rate', data_get($report, 'plan.platform_fee_rate', 0)) }}"
+                    style="width:100%;padding:10px;border:1px solid var(--theme-border, #E6E1EF);border-radius:8px;">
+            </div>
+            <div>
+                <label for="sales_agent_rate" style="display:block;margin-bottom:6px;font-weight:700;">Sales Agent %</label>
+                <input type="number" step="0.01" min="0" max="100" id="sales_agent_rate" name="sales_agent_rate"
+                    value="{{ old('sales_agent_rate', data_get($report, 'plan.sales_agent_rate', 0)) }}"
+                    style="width:100%;padding:10px;border:1px solid var(--theme-border, #E6E1EF);border-radius:8px;">
+            </div>
+            <div>
+                <label for="marketing_manager_rate" style="display:block;margin-bottom:6px;font-weight:700;">Marketing Manager %</label>
+                <input type="number" step="0.01" min="0" max="100" id="marketing_manager_rate" name="marketing_manager_rate"
+                    value="{{ old('marketing_manager_rate', data_get($report, 'plan.marketing_manager_rate', 0)) }}"
+                    style="width:100%;padding:10px;border:1px solid var(--theme-border, #E6E1EF);border-radius:8px;">
+            </div>
+            <div>
+                <label for="hold_days" style="display:block;margin-bottom:6px;font-weight:700;">Hold Days</label>
+                <input type="number" min="0" max="365" id="hold_days" name="hold_days"
+                    value="{{ old('hold_days', data_get($report, 'plan.hold_days', 0)) }}"
+                    style="width:100%;padding:10px;border:1px solid var(--theme-border, #E6E1EF);border-radius:8px;">
+            </div>
+            <div>
+                <label for="default_marketing_manager_user_id" style="display:block;margin-bottom:6px;font-weight:700;">Default Marketing Manager</label>
+                <select id="default_marketing_manager_user_id" name="default_marketing_manager_user_id"
+                    style="width:100%;padding:10px;border:1px solid var(--theme-border, #E6E1EF);border-radius:8px;">
+                    <option value="">No default marketing manager</option>
+                    @foreach(data_get($report, 'marketing_manager_options', []) as $manager)
+                        <option value="{{ $manager->id }}"
+                            {{ (string) old('default_marketing_manager_user_id', data_get($report, 'plan.default_marketing_manager_user_id', '')) === (string) $manager->id ? 'selected' : '' }}>
+                            {{ $manager->name }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+            <div style="display:flex;align-items:flex-end;">
+                <button type="submit" style="padding:10px 16px;border:none;border-radius:8px;background:var(--theme-primary, #240E35);color:#fff;font-weight:700;cursor:pointer;">
+                    Save Commission Settings
+                </button>
+            </div>
+        </form>
+
+        <div style="margin-top:12px;padding:12px 14px;border-radius:10px;background:#fbf9fd;border:1px solid var(--theme-border, #E6E1EF);color:var(--theme-muted, #6B7280);line-height:1.6;">
+            Current attribution model:
+            Sales agent commissions follow the assigned lead.
+            Marketing manager commissions apply when a source campaign exists and a default marketing manager is configured.
+        </div>
+    </div>
+
     <div class="admin-kpi-board">
         <section class="admin-kpi-group" aria-label="Revenue Overview">
             <div class="admin-kpi-group__header">

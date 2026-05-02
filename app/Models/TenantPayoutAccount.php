@@ -102,4 +102,21 @@ class TenantPayoutAccount extends Model
                 || trim((string) ($this->destination_value ?? '')) !== ''
             );
     }
+
+    public function resolvedDestination(): ?string
+    {
+        $destination = trim((string) ($this->destination_value ?? ''));
+        if ($destination !== '') {
+            return $destination;
+        }
+
+        $reference = trim((string) ($this->provider_destination_reference ?? ''));
+        if ($reference !== '') {
+            return $reference;
+        }
+
+        $masked = trim((string) ($this->masked_destination ?? ''));
+
+        return $masked !== '' ? $masked : null;
+    }
 }

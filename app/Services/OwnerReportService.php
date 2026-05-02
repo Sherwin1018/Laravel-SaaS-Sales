@@ -8,6 +8,7 @@ use App\Models\Funnel;
 use App\Models\Payment;
 use App\Models\PaymentReceipt;
 use App\Models\Tenant;
+use App\Models\User;
 use App\Support\XlsxWorkbookBuilder;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
@@ -133,6 +134,11 @@ class OwnerReportService
             ],
             'funnel_options' => Funnel::query()
                 ->where('tenant_id', $tenant->id)
+                ->orderBy('name')
+                ->get(['id', 'name']),
+            'marketing_manager_options' => User::query()
+                ->where('tenant_id', $tenant->id)
+                ->whereHas('roles', fn (Builder $query) => $query->where('slug', 'marketing-manager'))
                 ->orderBy('name')
                 ->get(['id', 'name']),
         ];

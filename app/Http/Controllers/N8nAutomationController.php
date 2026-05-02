@@ -91,6 +91,12 @@ class N8nAutomationController extends Controller
             'recipient_email' => 'nullable|email',
             'template' => 'required|string|max:160',
             'invoice_id' => 'nullable|string|max:120',
+            'amount' => 'nullable|numeric',
+            'payment_reference' => 'nullable|string|max:160',
+            'destination_type' => 'nullable|string|max:80',
+            'masked_destination' => 'nullable|string|max:160',
+            'paid_at' => 'nullable|string|max:80',
+            'payments_count' => 'nullable|integer|min:0',
         ]);
 
         $tenantId = (int) $validated['tenant_id'];
@@ -184,6 +190,10 @@ class N8nAutomationController extends Controller
             return $this->buildPayoutEmailContent($template, $tenant, $owner, $validated);
         }
 
+        if ($template === 'settlement_payout_recorded') {
+            return $this->buildSettlementPayoutEmailContent($tenant, $owner, $validated);
+        }
+
         if (in_array($template, [
             'subscription_deadline_reminder_7_days_owner',
             'subscription_deadline_reminder_3_days_owner',
@@ -275,6 +285,42 @@ class N8nAutomationController extends Controller
         ]);
 
         $body = implode("\n", $bodyLines);
+
+        return compact('subject', 'body');
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     * @return array{subject: string, body: string}
+     */
+    private function buildSettlementPayoutEmailContent(?Tenant $tenant, ?User $owner, array $validated): array
+    {
+        $tenantName = trim((string) ($tenant?->company_name ?? 'your business'));
+        $ownerName = trim((string) ($owner?->name ?? 'Account Owner'));
+        $amount = (float) ($validated['amount'] ?? 0);
+        $maskedDestination = trim((string) ($validated['masked_destination'] ?? ''));
+        $paymentReference = trim((string) ($validated['payment_reference'] ?? ''));
+        $paymentsCount = (int) ($validated['payments_count'] ?? 0);
+        $paidAt = trim((string) ($validated['paid_at'] ?? ''));
+
+        $subject = 'Payout recorded for ' . $tenantName;
+        $body = implode("\n", array_values(array_filter([
+            'Hello ' . $ownerName . ',',
+            '',
+            'A platform payout has been recorded for your workspace.',
+            '',
+            'Business: ' . $tenantName,
+            $amount > 0 ? 'Payout amount: PHP ' . number_format($amount, 2) : null,
+            $paymentsCount > 0 ? 'Covered payments: ' . number_format($paymentsCount) : null,
+            $maskedDestination !== '' ? 'Destination: ' . $maskedDestination : null,
+            $paymentReference !== '' ? 'Transfer reference: ' . $paymentReference : null,
+            $paidAt !== '' ? 'Recorded at: ' . $paidAt : null,
+            '',
+            'Please review your owner reports or payment history if you need more details.',
+            '',
+            'Thank you,',
+            config('app.name', 'SaaS System') . ' Platform Finance Team',
+        ])));
 
         return compact('subject', 'body');
     }

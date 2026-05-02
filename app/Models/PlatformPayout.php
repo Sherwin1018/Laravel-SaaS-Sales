@@ -13,6 +13,8 @@ class PlatformPayout extends Model
         'amount',
         'destination_type',
         'masked_destination',
+        'destination_value_snapshot',
+        'account_name_snapshot',
         'payment_reference',
         'status',
         'paid_at',
@@ -23,6 +25,7 @@ class PlatformPayout extends Model
     protected $casts = [
         'amount' => 'decimal:2',
         'paid_at' => 'datetime',
+        'destination_value_snapshot' => 'encrypted',
     ];
 
     public function tenant(): BelongsTo
@@ -38,5 +41,17 @@ class PlatformPayout extends Model
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class);
+    }
+
+    public function resolvedDestination(): ?string
+    {
+        $destination = trim((string) ($this->destination_value_snapshot ?? ''));
+        if ($destination !== '') {
+            return $destination;
+        }
+
+        $masked = trim((string) ($this->masked_destination ?? ''));
+
+        return $masked !== '' ? $masked : null;
     }
 }

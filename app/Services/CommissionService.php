@@ -196,13 +196,29 @@ class CommissionService
             ->where('hold_until', '<=', now())
             ->get();
 
+        return $this->markEntriesPayable($entries);
+    }
+
+    public function releaseDueCommissions(): int
+    {
+        $entries = CommissionEntry::query()
+            ->where('status', CommissionEntry::STATUS_HELD)
+            ->whereNotNull('hold_until')
+            ->where('hold_until', '<=', now())
+            ->get();
+
+        return $this->markEntriesPayable($entries);
+    }
+
+    private function markEntriesPayable(Collection $entries): int
+    {
         foreach ($entries as $entry) {
             $entry->update([
                 'status' => CommissionEntry::STATUS_PAYABLE,
             ]);
 
             $this->dispatchAutomationEvent('commission_payable', [
-                'tenant_id' => $tenant->id,
+                'tenant_id' => $entry->tenant_id,
                 'commission_entry_id' => $entry->id,
                 'payment_id' => $entry->payment_id,
                 'user_id' => $entry->user_id,

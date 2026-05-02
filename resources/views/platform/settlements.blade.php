@@ -3,6 +3,41 @@
 @section('title', 'Platform Settlements')
 
 @section('content')
+    <style>
+        .settlement-snapshot__metrics {
+            display: flex;
+            gap: 14px;
+            flex-wrap: nowrap;
+            margin-left: auto;
+        }
+
+        .settlement-snapshot__metric-card {
+            min-width: 220px;
+            max-width: 280px;
+            padding: 14px 16px;
+            border: 1px solid var(--theme-border, #E6E1EF);
+            border-radius: 12px;
+            background: var(--theme-surface, #fff);
+            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
+            flex: 0 1 280px;
+        }
+
+        @media (max-width: 768px) {
+            .settlement-snapshot__metrics {
+                width: 100%;
+                margin-left: 0;
+                flex-wrap: wrap;
+            }
+
+            .settlement-snapshot__metric-card {
+                min-width: 0;
+                max-width: none;
+                width: 100%;
+                flex: 1 1 100%;
+            }
+        }
+    </style>
+
     <div class="top-header">
         <h1>Platform Settlements</h1>
         <p style="margin:6px 0 0;color:var(--theme-muted, #6B7280);font-weight:600;">
@@ -12,8 +47,21 @@
 
     @php
         $m = is_array($metrics ?? null) ? $metrics : [];
-        $money = fn ($value) => '₱ ' . number_format((float) $value, 2);
+        $money = fn ($value) => 'PHP ' . number_format((float) $value, 2);
+        $settlementSchemaReady = (bool) data_get($settlementSchema ?? [], 'ready', false);
     @endphp
+
+    @if(! $settlementSchemaReady)
+        <div class="card" style="margin-bottom:16px; border-color:#fecaca; background:#fff7f7; color:#991b1b;">
+            <strong style="display:block; margin-bottom:6px;">Settlements temporarily unavailable</strong>
+            <span>{{ data_get($settlementSchema ?? [], 'message', 'The settlement database schema is incomplete.') }}</span>
+            @if(!empty(data_get($settlementSchema ?? [], 'issues', [])))
+                <div style="margin-top:8px; font-size:13px;">
+                    {{ implode(' ', data_get($settlementSchema ?? [], 'issues', [])) }}
+                </div>
+            @endif
+        </div>
+    @endif
 
     <div class="app-grid app-grid--4" style="gap:12px;margin: 14px 0 16px;">
         <div class="card">
@@ -62,12 +110,12 @@
                     {{ data_get($m, 'month_label', '') }}
                 </p>
             </div>
-            <div style="display:flex;gap:14px;flex-wrap:wrap;">
-                <div style="min-width:220px;">
+            <div class="settlement-snapshot__metrics">
+                <div class="settlement-snapshot__metric-card">
                     <div style="color:var(--theme-muted, #6B7280);font-weight:800;font-size:12px;">Collected (paid)</div>
                     <div style="font-weight:900;font-size:18px;color:#0F172A;">{{ $money(data_get($m, 'collected_this_month_total', 0)) }}</div>
                 </div>
-                <div style="min-width:220px;">
+                <div class="settlement-snapshot__metric-card">
                     <div style="color:var(--theme-muted, #6B7280);font-weight:800;font-size:12px;">Payouts recorded</div>
                     <div style="font-weight:900;font-size:18px;color:#0F172A;">{{ $money(data_get($m, 'payouts_this_month_total', 0)) }}</div>
                 </div>
@@ -114,7 +162,8 @@
                                 $count = (int) data_get($totals, 'paid_count', 0);
                                 $total = (float) data_get($totals, 'paid_total', 0);
                                 $payoutAccount = $tenant->defaultPayoutAccount;
-                                $destination = $payoutAccount?->masked_destination ?? '-';
+                                $destination = $payoutAccount?->resolvedDestination() ?? '-';
+                                $maskedDestination = $payoutAccount?->masked_destination ?? '-';
                                 $destinationType = $payoutAccount?->destination_type ?? null;
                                 $approved = $payoutAccount?->isApproved();
                             @endphp
@@ -123,15 +172,18 @@
                                     {{ $tenant->company_name ?? ('Tenant #' . $tenant->id) }}
                                 </td>
                                 <td style="padding:12px 10px;font-weight:800;color:#0F172A;">{{ number_format($count) }}</td>
-                                <td style="padding:12px 10px;font-weight:900;color:#0F172A;">₱ {{ number_format($total, 2) }}</td>
+                                <td style="padding:12px 10px;font-weight:900;color:#0F172A;">PHP {{ number_format($total, 2) }}</td>
                                 <td style="padding:12px 10px;">
                                     <div style="font-weight:800;color:#0F172A;">
                                         {{ $destination }}
                                     </div>
                                     <div style="color:var(--theme-muted, #6B7280);font-weight:700;font-size:12px;margin-top:4px;">
+                                        @if($maskedDestination !== '-' && $maskedDestination !== $destination)
+                                            Masked: {{ $maskedDestination }} |
+                                        @endif
                                         {{ $destinationType ? ucwords(str_replace('_', ' ', $destinationType)) : 'No destination' }}
                                         @if($payoutAccount)
-                                            · {{ $payoutAccount->reviewStatusLabel() }}
+                                            | {{ $payoutAccount->reviewStatusLabel() }}
                                         @endif
                                     </div>
                                 </td>
@@ -188,12 +240,15 @@
                                 <td style="padding:12px 10px;font-weight:800;color:#0F172A;">
                                     {{ optional($payout->tenant)->company_name ?? ('Tenant #' . $payout->tenant_id) }}
                                 </td>
-                                <td style="padding:12px 10px;font-weight:900;color:#0F172A;">₱ {{ number_format((float) $payout->amount, 2) }}</td>
+                                <td style="padding:12px 10px;font-weight:900;color:#0F172A;">PHP {{ number_format((float) $payout->amount, 2) }}</td>
                                 <td style="padding:12px 10px;">
-                                    <div style="font-weight:800;color:#0F172A;">{{ $payout->masked_destination ?? '-' }}</div>
+                                    <div style="font-weight:800;color:#0F172A;">{{ $payout->resolvedDestination() ?? '-' }}</div>
                                     <div style="color:var(--theme-muted, #6B7280);font-weight:700;font-size:12px;margin-top:4px;">
+                                        @if(($payout->masked_destination ?? '-') !== '-' && ($payout->resolvedDestination() ?? '-') !== ($payout->masked_destination ?? '-'))
+                                            Masked: {{ $payout->masked_destination }} |
+                                        @endif
                                         {{ $payout->destination_type ? ucwords(str_replace('_', ' ', $payout->destination_type)) : '-' }}
-                                        · {{ strtoupper($payout->status) }}
+                                        | {{ strtoupper($payout->status) }}
                                     </div>
                                 </td>
                                 <td style="padding:12px 10px;font-weight:800;color:#0F172A;">{{ $payout->payment_reference ?? '-' }}</td>
@@ -214,4 +269,3 @@
         </div>
     </div>
 @endsection
-

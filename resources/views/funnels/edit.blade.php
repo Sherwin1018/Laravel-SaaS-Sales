@@ -10,6 +10,9 @@
 @section('content')
 <style>
 .fb-top{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;background:#240E35;color:#fff;padding:12px;border-radius:12px}
+.fb-template-flow-note{margin-bottom:12px;padding:14px 16px;border-radius:14px;border:1px solid #E7D8F0;background:linear-gradient(135deg,#FBF8FE 0%,#FFFFFF 100%);color:#475569;box-shadow:0 10px 26px rgba(36,14,53,.06)}
+.fb-template-flow-note strong{display:block;margin-bottom:6px;color:#240E35;font-size:13px;letter-spacing:.06em;text-transform:uppercase}
+.fb-template-flow-note p{margin:0;font-size:13px;line-height:1.6}
 .fb-actions{display:flex;gap:8px;flex-wrap:wrap}
 .fb-actions form{margin:0}
 .fb-actions .fb-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:42px;padding:0 14px;line-height:1;white-space:nowrap}
@@ -672,6 +675,13 @@
 }
 @media(max-width:1080px){.fb-grid,.fb-grid.components-hidden{grid-template-columns:1fr}.fb-components-col .fb-panel-toggle{display:none!important}.fb-grid.components-hidden .fb-components-col .fb-left-panel{display:block!important}.fb-left-panel.hidden{display:none!important}}
 </style>
+
+@if(session('template_clone_notice') && ($builderMode ?? 'funnel') !== 'template' && (string) ($funnel->status ?? 'draft') === 'draft')
+<div class="fb-template-flow-note">
+    <strong>Private Draft Copy Created</strong>
+    <p>This funnel is now your workspace draft copy of the published Super Admin template. Customize it here, then publish your own funnel to make it live for leads and customers.</p>
+</div>
+@endif
 
 <div class="fb-top">
     <div><strong>{{ $funnel->name }}</strong> <span style="font-size:12px;opacity:.9;">({{ ucfirst($funnel->status) }})</span></div>

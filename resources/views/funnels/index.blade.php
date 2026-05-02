@@ -339,7 +339,7 @@
                     </p>
                     <div class="funnel-summary-note">
                         <strong>Note</strong>
-                        Published Super Admin templates will appear here and on the Create Funnel screen as they become available for your plan.
+                        Published Super Admin templates will appear here and on the Create Funnel screen as they become available for your plan. When you select one, your workspace gets its own private draft copy that you can customize and publish separately.
                     </div>
                 </div>
                 <div class="funnel-summary-stat-grid">

@@ -77,7 +77,7 @@ class InAppNotificationService
         $recipients = collect();
         $this->pushRoleUsers($recipients, 'super-admin');
 
-        if (str_starts_with($eventName, 'payout_account_')) {
+        if (str_starts_with($eventName, 'payout_account_') || $eventName === 'settlement_payout_recorded') {
             $this->pushRoleUsers($recipients, 'payout-admin');
         }
 
@@ -98,6 +98,7 @@ class InAppNotificationService
                 'payment_failed',
                 'payment_recovered',
                 'funnel_order_delivery_updated',
+                'settlement_payout_recorded',
             ], true) => ['account-owner', 'marketing-manager', 'sales-agent', 'finance'],
             in_array($eventName, [
                 'receipt_uploaded',
@@ -198,6 +199,14 @@ class InAppNotificationService
                 'message' => trim($tenantName . ': ' . ($destinationType !== '' ? ucfirst(str_replace('_', ' ', $destinationType)) . ' ' : '') . 'payout account ' . ($maskedDestination !== '' ? '(' . $maskedDestination . ') ' : '') . 'was submitted for review.'),
                 'level' => 'warning',
             ],
+            'settlement_payout_recorded' => [
+                'title' => 'Settlement payout recorded',
+                'message' => trim($tenantName . ': payout of PHP ' . number_format((float) ($payload['payout_amount'] ?? 0), 2) . ' was recorded'
+                    . ($maskedDestination !== '' ? ' to ' . $maskedDestination : '')
+                    . (! empty($payload['payment_reference']) ? ' with reference ' . $payload['payment_reference'] : '')
+                    . '.'),
+                'level' => 'success',
+            ],
             default => [
                 'title' => $this->humanizeEvent($eventName),
                 'message' => $this->buildGenericMessage($tenantName, $eventName, $payload, $reviewNotes),
@@ -265,8 +274,14 @@ class InAppNotificationService
 
     private function resolveActionUrl(User $user, string $eventName): ?string
     {
-        if ($user->hasRole('payout-admin') && str_starts_with($eventName, 'payout_account_')) {
-            return route('platform.payouts.index');
+        if ($user->hasRole('payout-admin')) {
+            if (str_starts_with($eventName, 'payout_account_')) {
+                return route('platform.payouts.index');
+            }
+
+            if ($eventName === 'settlement_payout_recorded') {
+                return route('platform.settlements.index');
+            }
         }
 
         if ($user->hasRole('super-admin')) {
@@ -283,6 +298,10 @@ class InAppNotificationService
         if ($user->hasRole('account-owner')) {
             if (str_starts_with($eventName, 'payout_account_')) {
                 return route('profile.show');
+            }
+
+            if ($eventName === 'settlement_payout_recorded') {
+                return route('reports.owner');
             }
 
             if (str_starts_with($eventName, 'subscription_') || str_starts_with($eventName, 'receipt_') || str_starts_with($eventName, 'commission_') || str_starts_with($eventName, 'payment_')) {

@@ -1,8 +1,10 @@
 <?php
 
+use App\Services\CommissionService;
 use App\Services\PlatformAdminProvisioningService;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
@@ -42,3 +44,12 @@ Artisan::command('platform-admin:setup-link {email? : Platform admin email. Omit
 
     return 0;
 })->purpose('Issue a one-time setup link for the platform super admin and payout admin accounts.');
+
+Artisan::command('commissions:release-held', function (CommissionService $commissions) {
+    $released = $commissions->releaseDueCommissions();
+    $this->info('Released ' . $released . ' commission entr' . ($released === 1 ? 'y' : 'ies') . '.');
+
+    return 0;
+})->purpose('Release held commission entries whose hold date has passed.');
+
+Schedule::command('commissions:release-held')->hourly();

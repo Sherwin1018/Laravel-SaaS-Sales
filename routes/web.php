@@ -243,6 +243,7 @@ Route::middleware(['auth', 'owner.payout.setup', 'tenant.subscription', 'role:sa
         Route::post('/automation/toggle', [AutomationController::class, 'toggle'])->name('automation.toggle');
         Route::get('/reports', [OwnerReportController::class, 'index'])->name('reports.owner');
         Route::get('/reports/export', [OwnerReportController::class, 'export'])->name('reports.owner.export');
+        Route::put('/reports/commission-plan', [OwnerReportController::class, 'updateCommissionPlan'])->name('reports.owner.commission-plan.update');
     });
 
     Route::middleware(['role:account-owner,finance'])->group(function () {
