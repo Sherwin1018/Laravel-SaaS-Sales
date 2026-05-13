@@ -130,6 +130,8 @@ class FunnelTemplateService
                     'background_color' => $step->background_color,
                     'button_color' => $step->button_color,
                     'layout_json' => is_array($step->layout_json) ? $step->layout_json : ['root' => [], 'sections' => []],
+                    'layout_json_tablet' => is_array($step->layout_json_tablet) ? $step->layout_json_tablet : null,
+                    'layout_json_mobile' => is_array($step->layout_json_mobile) ? $step->layout_json_mobile : null,
                 ]);
             }
 
@@ -198,6 +200,8 @@ class FunnelTemplateService
                     'background_color' => $this->nullableString($step['background_color'] ?? null),
                     'button_color' => $this->nullableString($step['button_color'] ?? null),
                     'layout_json' => $this->normalizeImportedLayoutJson($step['layout_json'] ?? ($step['layout'] ?? null)),
+                    'layout_json_tablet' => $this->normalizeOptionalImportedLayoutJson($step['layout_json_tablet'] ?? data_get($step, 'layouts.tablet')),
+                    'layout_json_mobile' => $this->normalizeOptionalImportedLayoutJson($step['layout_json_mobile'] ?? data_get($step, 'layouts.mobile')),
                 ]);
             }
 
@@ -252,6 +256,8 @@ class FunnelTemplateService
                     'background_color' => $this->nullableString($step['background_color'] ?? null),
                     'button_color' => $this->nullableString($step['button_color'] ?? null),
                     'layout_json' => $this->normalizeImportedLayoutJson($step['layout_json'] ?? ($step['layout'] ?? null)),
+                    'layout_json_tablet' => $this->normalizeOptionalImportedLayoutJson($step['layout_json_tablet'] ?? data_get($step, 'layouts.tablet')),
+                    'layout_json_mobile' => $this->normalizeOptionalImportedLayoutJson($step['layout_json_mobile'] ?? data_get($step, 'layouts.mobile')),
                 ]);
             }
 
@@ -345,6 +351,8 @@ class FunnelTemplateService
                 'button_color' => $payload['button_color'] ?? null,
                 'layout_style' => $payload['layout_style'] ?? null,
                 'layout_json' => $payload['layout_json'] ?? $payload['layout'] ?? ['root' => [], 'sections' => []],
+                'layout_json_tablet' => $payload['layout_json_tablet'] ?? data_get($payload, 'layouts.tablet'),
+                'layout_json_mobile' => $payload['layout_json_mobile'] ?? data_get($payload, 'layouts.mobile'),
             ]];
         }
 
@@ -381,6 +389,11 @@ class FunnelTemplateService
     private function normalizeImportedLayoutJson(mixed $value): array
     {
         return is_array($value) ? $value : ['root' => [], 'sections' => []];
+    }
+
+    private function normalizeOptionalImportedLayoutJson(mixed $value): ?array
+    {
+        return is_array($value) ? $value : null;
     }
 
     private function normalizeStringArray(mixed $value): array
