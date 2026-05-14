@@ -27,7 +27,7 @@
                             @if($automationEnabled)
                                 This plan includes the shared n8n automation engine for eligible workflows.
                             @elseif($automationMode === 'limited')
-                                This plan includes limited built-in automations and tracking. Upgrade to Growth or Scale to unlock the shared n8n automation engine.
+                                This plan includes shared n8n email automations plus limited built-in workflow automations.
                             @else
                                 This plan keeps automation in built-in tracking mode only. Upgrade to Growth or Scale to unlock shared n8n automation.
                             @endif

@@ -26,29 +26,37 @@ class TenantPlanEnforcer
     public function usageSummary(Tenant $tenant): array
     {
         $plan = $this->resolvePlan($tenant);
+        $internalUserUsage = $this->currentInternalUserUsage($tenant);
+        $workflowUsage = $this->currentWorkflowUsage($tenant);
+        $messageUsage = $this->currentMessageUsage($tenant);
 
         return [
             'plan' => $plan,
-            'users' => $this->limitEntry($plan, self::LIMIT_USERS, User::where('tenant_id', $tenant->id)->count(), 'users'),
+            'users' => $this->limitEntry($plan, self::LIMIT_USERS, $internalUserUsage, 'users'),
             'leads' => $this->limitEntry($plan, self::LIMIT_LEADS, Lead::where('tenant_id', $tenant->id)->count(), 'leads'),
             'funnels' => $this->limitEntry($plan, self::LIMIT_FUNNELS, Funnel::where('tenant_id', $tenant->id)->count(), 'funnels'),
-            'workflows' => $this->limitEntry($plan, self::LIMIT_WORKFLOWS, $this->currentWorkflowUsage($tenant), 'automation workflows'),
-            'messages' => $this->limitEntry($plan, self::LIMIT_MESSAGES, $this->currentMessageUsage($tenant), 'outbound messages'),
+            'workflows' => $this->limitEntry($plan, self::LIMIT_WORKFLOWS, $workflowUsage, 'automation workflows'),
+            'messages' => $this->limitEntry($plan, self::LIMIT_MESSAGES, $messageUsage, 'outbound messages'),
             'automation_enabled' => $plan?->automation_enabled ?? true,
             'automation_mode' => app(PlanAutomationService::class)->modeForPlan($plan),
             'has_overages' => collect([
-                $this->limitEntry($plan, self::LIMIT_USERS, User::where('tenant_id', $tenant->id)->count(), 'users'),
+                $this->limitEntry($plan, self::LIMIT_USERS, $internalUserUsage, 'users'),
                 $this->limitEntry($plan, self::LIMIT_LEADS, Lead::where('tenant_id', $tenant->id)->count(), 'leads'),
                 $this->limitEntry($plan, self::LIMIT_FUNNELS, Funnel::where('tenant_id', $tenant->id)->count(), 'funnels'),
-                $this->limitEntry($plan, self::LIMIT_WORKFLOWS, $this->currentWorkflowUsage($tenant), 'automation workflows'),
-                $this->limitEntry($plan, self::LIMIT_MESSAGES, $this->currentMessageUsage($tenant), 'outbound messages'),
+                $this->limitEntry($plan, self::LIMIT_WORKFLOWS, $workflowUsage, 'automation workflows'),
+                $this->limitEntry($plan, self::LIMIT_MESSAGES, $messageUsage, 'outbound messages'),
             ])->contains(fn (array $entry) => (bool) ($entry['is_over_limit'] ?? false)),
         ];
     }
 
     public function ensureCanCreateUser(Tenant $tenant): void
     {
-        $this->ensureWithinLimit($tenant, self::LIMIT_USERS, User::where('tenant_id', $tenant->id)->count(), 'team member');
+        $this->ensureWithinLimit($tenant, self::LIMIT_USERS, $this->currentInternalUserUsage($tenant), 'team member');
+    }
+
+    public function ensureCanCreateCustomerPortalUser(Tenant $tenant): void
+    {
+        // Customer portal buyers do not consume internal team-member seats.
     }
 
     public function ensureCanCreateLead(Tenant $tenant): void
@@ -177,5 +185,16 @@ class TenantPlanEnforcer
     private function currentMessageUsage(Tenant $tenant): int
     {
         return app(DeliveryLogService::class)->currentMonthBillableUsage($tenant);
+    }
+
+    private function currentInternalUserUsage(Tenant $tenant): int
+    {
+        return User::query()
+            ->where('tenant_id', $tenant->id)
+            ->where(function ($query) {
+                $query->whereNull('is_customer_portal_user')
+                    ->orWhere('is_customer_portal_user', false);
+            })
+            ->count();
     }
 }

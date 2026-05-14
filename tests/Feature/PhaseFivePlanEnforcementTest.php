@@ -10,6 +10,7 @@ use App\Models\Role;
 use App\Models\Tenant;
 use App\Models\TenantPayoutAccount;
 use App\Models\User;
+use App\Services\FunnelCustomerPortalService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -186,6 +187,90 @@ class PhaseFivePlanEnforcementTest extends TestCase
                 && ($usage['messages']['is_over_limit'] ?? null) === false
                 && ($usage['messages']['status'] ?? null) === 'available';
         });
+    }
+
+    public function test_customer_portal_users_do_not_count_against_team_member_usage_limits(): void
+    {
+        $plan = $this->createPlan([
+            'code' => 'starter',
+            'name' => 'Starter',
+            'max_users' => 1,
+        ]);
+
+        [$tenant, $owner] = $this->createTenantUserWithRole('account-owner', [
+            'subscription_plan' => $plan->code,
+        ]);
+
+        User::query()->create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Portal Buyer',
+            'email' => 'buyer@example.com',
+            'password' => 'Password@123456',
+            'role' => 'customer',
+            'status' => 'inactive',
+            'activation_state' => 'invited',
+            'is_customer_portal_user' => true,
+        ]);
+
+        $response = $this->actingAs($owner)->get(route('users.index'));
+
+        $response->assertOk();
+        $response->assertViewHas('planUsage', function (array $usage) {
+            return ($usage['users']['used'] ?? null) === 1
+                && ($usage['users']['limit'] ?? null) === 1
+                && ($usage['users']['remaining'] ?? null) === 0;
+        });
+    }
+
+    public function test_customer_portal_user_can_be_provisioned_even_when_team_member_limit_is_full(): void
+    {
+        $plan = $this->createPlan([
+            'code' => 'starter',
+            'name' => 'Starter',
+            'max_users' => 1,
+        ]);
+
+        [$tenant] = $this->createTenantUserWithRole('account-owner', [
+            'subscription_plan' => $plan->code,
+        ]);
+
+        $portalAccess = app(FunnelCustomerPortalService::class)->provisionForPaidCustomer(
+            $tenant,
+            'portalbuyer@example.com',
+            'Portal Buyer',
+            '09171234567'
+        );
+
+        $this->assertSame('portalbuyer@example.com', $portalAccess['user']?->email);
+        $this->assertTrue((bool) ($portalAccess['setup_required'] ?? false));
+        $this->assertNotNull($portalAccess['setup_url'] ?? null);
+        $this->assertDatabaseHas('users', [
+            'tenant_id' => $tenant->id,
+            'email' => 'portalbuyer@example.com',
+            'is_customer_portal_user' => true,
+        ]);
+    }
+
+    public function test_owner_dashboard_shows_pending_renewal_state_instead_of_zero_countdown_for_past_due_renewal_date(): void
+    {
+        $plan = $this->createPlan([
+            'code' => 'growth',
+            'name' => 'Growth',
+            'automation_enabled' => true,
+        ]);
+
+        [$tenant, $owner] = $this->createTenantUserWithRole('account-owner', [
+            'subscription_plan' => $plan->code,
+            'billing_status' => 'current',
+            'subscription_renews_at' => now()->subDays(2),
+        ]);
+
+        $response = $this->actingAs($owner)->get(route('dashboard.owner'));
+
+        $response->assertOk();
+        $response->assertSee('Monthly Renewal Pending');
+        $response->assertSee('Renewal Pending');
+        $response->assertDontSee('data-subscription-countdown', false);
     }
 
     private function createPlan(array $overrides = []): Plan

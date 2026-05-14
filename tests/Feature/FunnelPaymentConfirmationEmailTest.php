@@ -145,6 +145,79 @@ class FunnelPaymentConfirmationEmailTest extends TestCase
             ->count());
     }
 
+    public function test_existing_paid_event_still_sends_customer_confirmation_email_when_payment_is_tracked_again(): void
+    {
+        [$funnel, $step, $lead] = $this->createFunnelCheckoutContext();
+
+        $payment = Payment::create([
+            'tenant_id' => $funnel->tenant_id,
+            'payment_type' => Payment::TYPE_FUNNEL_CHECKOUT,
+            'funnel_id' => $funnel->id,
+            'funnel_step_id' => $step->id,
+            'lead_id' => $lead->id,
+            'amount' => 5098,
+            'status' => 'paid',
+            'payment_date' => now()->toDateString(),
+            'provider' => 'paymongo',
+            'provider_reference' => 'cs_checkout_existing_event_001',
+            'payment_method' => 'gcash',
+            'session_identifier' => 'sess-existing-paid-event-001',
+        ]);
+
+        FunnelEvent::create([
+            'tenant_id' => $funnel->tenant_id,
+            'funnel_id' => $funnel->id,
+            'funnel_step_id' => $step->id,
+            'lead_id' => $lead->id,
+            'payment_id' => $payment->id,
+            'event_name' => FunnelTrackingService::EVENT_CHECKOUT_STARTED,
+            'session_identifier' => 'sess-existing-paid-event-001',
+            'meta' => [
+                'customer' => [
+                    'full_name' => 'Existing Event Buyer',
+                    'email' => 'existing@example.com',
+                ],
+                'order_items' => [
+                    ['name' => 'Signature Strap Watch', 'quantity' => 1, 'price' => 'PHP 2,999.00'],
+                    ['name' => 'Everyday White Sneaker', 'quantity' => 1, 'price' => 'PHP 2,099.00'],
+                ],
+            ],
+            'occurred_at' => now()->subMinutes(2),
+        ]);
+
+        $existingPaidEvent = FunnelEvent::create([
+            'tenant_id' => $funnel->tenant_id,
+            'funnel_id' => $funnel->id,
+            'funnel_step_id' => $step->id,
+            'lead_id' => $lead->id,
+            'payment_id' => $payment->id,
+            'event_name' => FunnelTrackingService::EVENT_PAYMENT_PAID,
+            'session_identifier' => 'sess-existing-paid-event-001',
+            'meta' => [
+                'customer' => [
+                    'full_name' => 'Existing Event Buyer',
+                    'email' => 'existing@example.com',
+                ],
+                'source' => 'preexisting_paid_event',
+            ],
+            'occurred_at' => now()->subMinute(),
+        ]);
+
+        app(FunnelTrackingService::class)->trackPaymentPaid($payment, ['source' => 'paymongo_return']);
+
+        $this->assertSame(1, FunnelEvent::query()
+            ->where('payment_id', $payment->id)
+            ->where('event_name', FunnelTrackingService::EVENT_PAYMENT_PAID)
+            ->count());
+
+        $this->assertDatabaseHas('external_delivery_logs', [
+            'channel' => 'email',
+            'event_name' => 'funnel_payment_paid_customer',
+            'recipient' => 'existing@example.com',
+            'idempotency_key' => 'funnel_paid_customer_email:' . $existingPaidEvent->id,
+        ]);
+    }
+
     public function test_paid_event_can_handoff_rich_customer_email_to_n8n_without_local_mailer_dependency(): void
     {
         config([

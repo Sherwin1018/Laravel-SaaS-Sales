@@ -165,7 +165,7 @@ class SignupOnboardingService
                     'Welcome/setup email and payment confirmation included',
                     'One lead capture autoresponse and one abandoned checkout reminder',
                     'Basic funnel analytics, payment monitoring, and status notifications',
-                    'Limited built-in automations without shared n8n workflow access',
+                    'Shared n8n email automations with limited workflow automation coverage',
                 ],
                 'spotlight' => 'Best for New Teams',
                 'max_users' => 5,

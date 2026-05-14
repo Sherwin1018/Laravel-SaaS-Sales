@@ -6,7 +6,6 @@ use App\Models\Tenant;
 use App\Services\N8nEmailOrchestrator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class N8nDispatchReliabilityTest extends TestCase
@@ -107,12 +106,11 @@ class N8nDispatchReliabilityTest extends TestCase
         Http::assertSent(fn ($request) => $request->url() === 'https://n8n.example.test/webhook/laravel-unified-events');
     }
 
-    public function test_starter_plan_uses_limited_local_automation_without_shared_webhook_handoff(): void
+    public function test_starter_plan_uses_shared_n8n_webhook_handoff_for_email_automations(): void
     {
         Http::fake([
             'https://n8n.example.test/*' => Http::response(['ok' => true], 200),
         ]);
-        Mail::fake();
 
         config([
             'services.n8n.webhook_url' => 'https://n8n.example.test/webhook',
@@ -135,18 +133,17 @@ class N8nDispatchReliabilityTest extends TestCase
             'name' => 'Starter Lead',
         ]));
 
-        Http::assertNothingSent();
-        $this->assertDatabaseHas('external_delivery_logs', [
-            'channel' => 'email',
-            'event_name' => 'funnel_checkout_abandoned_customer',
-            'status' => 'processed',
-            'idempotency_key' => 'starter-abandoned-001',
-        ]);
+        Http::assertSent(fn ($request) => $request->url() === 'https://n8n.example.test/webhook/saas-automation-events');
         $this->assertDatabaseHas('external_delivery_logs', [
             'channel' => 'webhook',
             'provider' => 'n8n',
+            'event_name' => 'funnel_checkout_abandoned',
+            'status' => 'sent',
+            'idempotency_key' => 'starter-abandoned-001',
+        ]);
+        $this->assertDatabaseMissing('external_delivery_logs', [
+            'channel' => 'email',
             'event_name' => 'funnel_checkout_abandoned_customer',
-            'status' => 'processed',
             'idempotency_key' => 'starter-abandoned-001',
         ]);
     }

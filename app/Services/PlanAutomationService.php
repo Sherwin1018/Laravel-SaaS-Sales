@@ -14,6 +14,38 @@ class PlanAutomationService
     public const MODE_LIMITED = 'limited';
     public const MODE_SHARED = 'shared';
 
+    private const STARTER_SHARED_EMAIL_EVENTS = [
+        'account_owner_paid_signup_created',
+        'account_owner_google_paid_signup_created',
+        'team_member_invited',
+        'customer_portal_invited',
+        'setup_link_expiring',
+        'setup_link_expired',
+        'payment_successful',
+        'payment_failed',
+        'payment_recovered',
+        'funnel_opt_in_submitted',
+        'funnel_checkout_started',
+        'funnel_payment_paid_customer',
+        'funnel_checkout_abandoned',
+        'funnel_order_delivery_updated',
+        'funnel_upsell_accepted',
+        'funnel_upsell_declined',
+        'funnel_downsell_accepted',
+        'funnel_downsell_declined',
+        'receipt_uploaded',
+        'receipt_auto_approved',
+        'receipt_approved',
+        'receipt_rejected',
+        'commission_created',
+        'commission_payable',
+        'subscription_deadline_reminder_7_days_owner',
+        'subscription_deadline_reminder_3_days_owner',
+        'payout_account_pending_review',
+        'payout_account_approved',
+        'payout_account_rejected',
+    ];
+
     /**
      * @param  array<string, mixed>  $payload
      */
@@ -72,8 +104,12 @@ class PlanAutomationService
     /**
      * @param  array<string, mixed>  $payload
      */
-    private function handleLimitedDispatch(string $eventName, array $payload, ?Tenant $tenant): bool
+    private function handleLimitedDispatch(string $eventName, array $payload, ?Tenant $tenant): ?bool
     {
+        if ($this->starterUsesSharedEmailAutomation($eventName)) {
+            return null;
+        }
+
         if (in_array($eventName, [
             'account_owner_paid_signup_created',
             'team_member_invited',
@@ -285,6 +321,11 @@ class PlanAutomationService
         ]);
 
         return false;
+    }
+
+    private function starterUsesSharedEmailAutomation(string $eventName): bool
+    {
+        return in_array($eventName, self::STARTER_SHARED_EMAIL_EVENTS, true);
     }
 
     /**

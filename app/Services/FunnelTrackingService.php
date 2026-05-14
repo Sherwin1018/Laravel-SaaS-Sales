@@ -173,6 +173,8 @@ class FunnelTrackingService
 
         if ($event->wasRecentlyCreated) {
             $this->dispatchAutomationEvent($event);
+        } else {
+            $this->dispatchPaidCustomerEmail($event);
         }
 
         return $event;
@@ -1119,11 +1121,7 @@ class FunnelTrackingService
             $meta = is_array($event->meta) ? $event->meta : [];
 
             if ($event->event_name === self::EVENT_PAYMENT_PAID) {
-                try {
-                    app(FunnelPaidCustomerEmailService::class)->sendForPaidEvent($event);
-                } catch (\Throwable) {
-                    // Best-effort confirmation email only.
-                }
+                $this->dispatchPaidCustomerEmail($event);
             }
 
             if (array_key_exists('dispatch_via_n8n', $meta)
@@ -1176,6 +1174,15 @@ class FunnelTrackingService
             ));
         } catch (\Throwable) {
             // Best-effort automation dispatch only.
+        }
+    }
+
+    private function dispatchPaidCustomerEmail(FunnelEvent $event): void
+    {
+        try {
+            app(FunnelPaidCustomerEmailService::class)->sendForPaidEvent($event);
+        } catch (\Throwable) {
+            // Best-effort confirmation email only.
         }
     }
 

@@ -42,12 +42,18 @@
         $subscriptionBannerSummary = $trialDaysRemaining . ' day' . ($trialDaysRemaining === 1 ? '' : 's') . ' remaining. Your trial ends on ' . optional($trialEndsAt)->format('F j, Y g:i A') . '.';
         $subscriptionCtaLabel = 'Upgrade with PayMongo';
         $subscriptionCtaRoute = route('trial.billing.show');
-    } elseif ($tenant?->status === 'active' && $tenant?->billing_status === 'current' && $tenant?->subscription_renews_at) {
+    } elseif ($tenant?->status === 'active' && $tenant?->billing_status === 'current' && $tenant?->subscription_renews_at?->isFuture()) {
         $subscriptionDeadlineAt = $tenant->subscription_renews_at;
         $subscriptionDeadlineTag = 'Monthly Renewal';
         $renewalDaysRemaining = $tenant->subscriptionRenewalDaysRemaining();
         $subscriptionBannerTitle = 'Monthly Subscription Active';
         $subscriptionBannerSummary = $renewalDaysRemaining . ' day' . ($renewalDaysRemaining === 1 ? '' : 's') . ' remaining before your next billing deadline on ' . $tenant->subscription_renews_at->format('F j, Y g:i A') . '.';
+        $subscriptionCtaLabel = 'Manage Billing';
+        $subscriptionCtaRoute = route('payments.index');
+    } elseif ($tenant?->status === 'active' && $tenant?->billing_status === 'current' && $tenant?->subscription_renews_at) {
+        $subscriptionDeadlineTag = 'Renewal Pending';
+        $subscriptionBannerTitle = 'Monthly Renewal Pending';
+        $subscriptionBannerSummary = 'Your last billing deadline passed on ' . $tenant->subscription_renews_at->format('F j, Y g:i A') . '. Refresh or update billing so the next renewal schedule can be applied.';
         $subscriptionCtaLabel = 'Manage Billing';
         $subscriptionCtaRoute = route('payments.index');
     } elseif ($tenant?->isOverdue() && $tenant?->billing_grace_ends_at) {

@@ -140,7 +140,7 @@ class AutomationController extends Controller
             $tenantLabel = 'Limited';
             $tenantTone = 'warning';
             $tenantSummary = sprintf(
-                '%s includes limited built-in automations such as setup, payment confirmation, one lead autoresponse, one checkout reminder, and basic status notifications. Upgrade to Growth or Scale to unlock the shared n8n automation engine.',
+                '%s includes shared n8n email automations plus limited built-in workflow automations. Upgrade to Growth or Scale to unlock the full shared n8n automation engine.',
                 $planName
             );
         } elseif (! $automationIncluded) {
@@ -178,7 +178,7 @@ class AutomationController extends Controller
                 'summary' => $automationIncluded
                     ? sprintf('%s includes access to the shared n8n automation engine.', $planName)
                     : ($automationMode === PlanAutomationService::MODE_LIMITED
-                        ? sprintf('%s includes limited built-in automations, but not the shared n8n automation engine.', $planName)
+                        ? sprintf('%s includes shared n8n email automations and limited workflow automations.', $planName)
                         : sprintf('%s does not include advanced shared n8n automation.', $planName)),
             ],
             'platform' => $platformState,

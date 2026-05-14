@@ -40,7 +40,7 @@ class FunnelCustomerPortalService
             ->first();
 
         if (! $user) {
-            app(TenantPlanEnforcer::class)->ensureCanCreateUser($tenant);
+            app(TenantPlanEnforcer::class)->ensureCanCreateCustomerPortalUser($tenant);
 
             $user = User::create([
                 'tenant_id' => $tenant->id,
