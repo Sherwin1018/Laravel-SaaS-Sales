@@ -60,7 +60,11 @@ class AttributionService
             return;
         }
 
-        $lead->source_campaign = $payload['source_campaign'] ?: $lead->source_campaign;
+        $lead->source_campaign = $this->firstNonEmptyString(
+            $payload['source_campaign'] ?? null,
+            $lead->source_campaign,
+            'Direct'
+        );
         $lead->source_platform = $payload['source_platform'] ?: $lead->source_platform;
         $lead->source_medium = $payload['source_medium'] ?: $lead->source_medium;
         $lead->source_content = $payload['source_content'] ?: $lead->source_content;
@@ -184,5 +188,17 @@ class AttributionService
         $string = trim((string) $value);
 
         return $string !== '' ? mb_substr($string, 0, $max) : null;
+    }
+
+    private function firstNonEmptyString(mixed ...$values): ?string
+    {
+        foreach ($values as $value) {
+            $string = trim((string) $value);
+            if ($string !== '') {
+                return $string;
+            }
+        }
+
+        return null;
     }
 }

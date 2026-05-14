@@ -63,6 +63,13 @@ class Lead extends Model
                 $query->where('tenant_id', auth()->user()->tenant_id);
             }
         });
+
+        static::saving(function (Lead $lead): void {
+            $campaign = trim((string) ($lead->source_campaign ?? ''));
+            if ($campaign === '') {
+                $lead->source_campaign = 'Direct';
+            }
+        });
     }
 
     public function tenant(): BelongsTo
