@@ -292,6 +292,8 @@ class AdminFunnelTemplateController extends Controller
                     'button_color' => $step->button_color,
                     'layout_style' => $step->layout_style,
                     'layout_json' => $step->layout_json,
+                    'layout_json_tablet' => $step->layout_json_tablet,
+                    'layout_json_mobile' => $step->layout_json_mobile,
                 ];
             })->all(),
         ];

@@ -430,19 +430,25 @@ class FunnelPortalController extends Controller
                 if ($recentPayment->provider === 'paymongo' && ! empty($recentPayment->provider_reference)) {
                     if ($payMongo->isConfigured()) {
                         $existingSession = $payMongo->retrieveCheckoutSession((string) $recentPayment->provider_reference);
-                        $existingCheckoutUrl = is_array($existingSession['attributes'] ?? null)
-                            ? (string) ($existingSession['attributes']['checkout_url'] ?? '')
-                            : '';
-                        if ($existingCheckoutUrl !== '') {
+                        if ($this->payMongoSessionHasPaidPayment($existingSession)) {
+                            $recentPayment->update([
+                                'status' => 'paid',
+                                'payment_date' => now()->toDateString(),
+                            ]);
+                            $tracking->trackPaymentPaid($recentPayment->fresh(), ['source' => 'checkout_repeat_guard_verified']);
+
+                            return $this->redirectAfterPaidCheckout($funnel, $steps, $step);
+                        }
+
+                        $existingCheckoutUrl = $this->reusablePayMongoCheckoutUrl($existingSession);
+                        if ($existingCheckoutUrl !== null) {
                             return response()->view('funnels.portal.paymongo-redirect', [
                                 'checkoutUrl' => $existingCheckoutUrl,
                             ]);
                         }
                     }
 
-                    return redirect()
-                        ->route('funnels.portal.step', ['funnelSlug' => $funnel->slug, 'stepSlug' => $step->slug])
-                        ->with('error', 'Checkout is already in progress for this session. Please finish the current payment before trying again.');
+                    $recentPayment->update(['status' => 'failed']);
                 }
             }
         }
@@ -806,6 +812,68 @@ class FunnelPortalController extends Controller
         return response()->view('funnels.portal.paymongo-redirect', [
             'checkoutUrl' => $session['checkout_url'],
         ]);
+    }
+
+    private function reusablePayMongoCheckoutUrl(?array $session): ?string
+    {
+        if (! is_array($session) || ! is_array($session['attributes'] ?? null)) {
+            return null;
+        }
+
+        $attributes = $session['attributes'];
+        $checkoutUrl = trim((string) ($attributes['checkout_url'] ?? ''));
+        if ($checkoutUrl === '') {
+            return null;
+        }
+
+        $status = strtolower(trim((string) ($attributes['status'] ?? '')));
+        if (in_array($status, ['paid', 'expired', 'cancelled', 'canceled', 'failed'], true)) {
+            return null;
+        }
+
+        $payments = $attributes['payments'] ?? null;
+        if (is_array($payments) && $payments !== []) {
+            foreach ($payments as $payment) {
+                if (! is_array($payment)) {
+                    continue;
+                }
+
+                $paymentStatus = strtolower(trim((string) data_get($payment, 'attributes.status', '')));
+                if (in_array($paymentStatus, ['failed', 'cancelled', 'canceled'], true)) {
+                    return null;
+                }
+            }
+        }
+
+        return $checkoutUrl;
+    }
+
+    private function payMongoSessionHasPaidPayment(?array $session): bool
+    {
+        if (! is_array($session) || ! is_array($session['attributes'] ?? null)) {
+            return false;
+        }
+
+        if (strtolower(trim((string) data_get($session, 'attributes.status', ''))) === 'paid') {
+            return true;
+        }
+
+        $payments = data_get($session, 'attributes.payments');
+        if (! is_array($payments)) {
+            return false;
+        }
+
+        foreach ($payments as $payment) {
+            if (! is_array($payment)) {
+                continue;
+            }
+
+            if (strtolower(trim((string) data_get($payment, 'attributes.status', ''))) === 'paid') {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function redirectAfterPaidCheckout(Funnel $funnel, $steps, FunnelStep $step): \Illuminate\Http\RedirectResponse
@@ -1224,20 +1292,25 @@ class FunnelPortalController extends Controller
                     $payMongo = app(PayMongoCheckoutService::class);
                     if ($payMongo->isConfigured()) {
                         $existingSession = $payMongo->retrieveCheckoutSession((string) $recentPayment->provider_reference);
-                        $existingCheckoutUrl = is_array($existingSession['attributes'] ?? null)
-                            ? (string) ($existingSession['attributes']['checkout_url'] ?? '')
-                            : '';
-                        if ($existingCheckoutUrl !== '') {
+                        if ($this->payMongoSessionHasPaidPayment($existingSession)) {
+                            $recentPayment->update([
+                                'status' => 'paid',
+                                'payment_date' => now()->toDateString(),
+                            ]);
+
+                            return $this->completeConfirmedPayment($tracking, $recentPayment->fresh(), $funnel, $steps, $step, 'offer_repeat_guard_verified');
+                        }
+
+                        $existingCheckoutUrl = $this->reusablePayMongoCheckoutUrl($existingSession);
+                        if ($existingCheckoutUrl !== null) {
                             return response()->view('funnels.portal.paymongo-redirect', [
                                 'checkoutUrl' => $existingCheckoutUrl,
                             ]);
                         }
                     }
-                }
 
-                return redirect()
-                    ->route('funnels.portal.step', ['funnelSlug' => $funnel->slug, 'stepSlug' => $step->slug])
-                    ->with('error', 'Offer checkout is already in progress for this session. Please finish the current payment before trying again.');
+                    $recentPayment->update(['status' => 'failed']);
+                }
             }
 
             if (app(PayMongoCheckoutService::class)->isConfigured()) {

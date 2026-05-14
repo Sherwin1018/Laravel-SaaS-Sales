@@ -5872,6 +5872,123 @@ function prepareResponsiveBuilderLayout(layout){
     visitSectionList(layout.sections);
     return layout;
 }
+
+/**
+ * Migrate an imported layout to the current canvas width.
+ *
+ * When a JSON was created on (e.g.) 1920px and we open it on 1366px, every
+ * absolute-positioned element keeps its original pixel coordinates and the
+ * layout looks broken (overlaps, things going off-canvas, huge text, etc.).
+ *
+ * Here we proportionally rescale all px-based positions/sizes/typography for
+ * absolute elements (and a few common style values that affect overall layout
+ * size) so the imported template looks natural on the current screen.
+ */
+function migrateLayoutToCurrentCanvas(layout){
+    if(!layout||typeof layout!=="object")return layout;
+    layout.__editor=(layout.__editor&&typeof layout.__editor==="object")?layout.__editor:{};
+    var storedW=Number(layout.__editor.canvasWidth||0);
+    if(!isFinite(storedW)||storedW<=0)storedW=1366;
+
+    var canvasEl=document.getElementById("canvas");
+    var host=(canvasEl&&canvasEl.parentElement)?canvasEl.parentElement:null;
+    var available=host?(host.clientWidth||0):0;
+    if(!(available>320))return layout;
+
+    var lastMigratedFor=Number(layout.__editor._migratedForWidth||0);
+    if(lastMigratedFor===Math.round(available))return layout;
+
+    var ratio=available/storedW;
+    if(!isFinite(ratio)||ratio<=0)ratio=1;
+    if(Math.abs(ratio-1)<0.05){
+        layout.__editor._migratedForWidth=Math.round(available);
+        layout.__editor.canvasWidth=Math.round(available);
+        return layout;
+    }
+
+    function scalePx(value){
+        var raw=String(value==null?"":value).trim();
+        if(!raw)return value;
+        if(!/^-?\d+(\.\d+)?px$/i.test(raw))return raw;
+        var n=parseFloat(raw);
+        if(!isFinite(n))return raw;
+        return Math.round(n*ratio)+"px";
+    }
+    function scaleNum(value){
+        var n=Number(value);
+        if(!isFinite(n))return value;
+        return Math.round(n*ratio);
+    }
+    function scaleSpacingShorthand(value){
+        var raw=String(value==null?"":value).trim();
+        if(!raw)return value;
+        var parts=raw.split(/\s+/);
+        var allPx=parts.every(function(p){return /^-?\d+(\.\d+)?px$/i.test(p);});
+        if(!allPx)return raw;
+        return parts.map(function(p){return Math.round(parseFloat(p)*ratio)+"px";}).join(" ");
+    }
+    function scaleAbsoluteStyle(style){
+        if(!style||typeof style!=="object")return;
+        ["left","top","right","bottom","width","height","minWidth","minHeight","maxWidth","maxHeight"].forEach(function(k){
+            if(Object.prototype.hasOwnProperty.call(style,k)){
+                var v=style[k];
+                if(typeof v==="string"&&v)style[k]=scalePx(v);
+            }
+        });
+        if(style.fontSize)style.fontSize=scalePx(style.fontSize);
+        if(style.lineHeight){
+            var lh=String(style.lineHeight||"").trim();
+            if(/px$/i.test(lh))style.lineHeight=scalePx(lh);
+        }
+        if(style.letterSpacing)style.letterSpacing=scalePx(style.letterSpacing);
+        if(style.padding)style.padding=scaleSpacingShorthand(style.padding);
+        if(style.margin)style.margin=scaleSpacingShorthand(style.margin);
+    }
+    function migrateElement(el){
+        if(!el||typeof el!=="object")return;
+        el.style=(el.style&&typeof el.style==="object")?el.style:{};
+        el.settings=(el.settings&&typeof el.settings==="object")?el.settings:{};
+        var isAbs=(String(el.settings.positionMode||"").toLowerCase()==="absolute")
+            || (String(el.style.position||"").toLowerCase()==="absolute");
+        if(isAbs){
+            if(el.settings.freeX!==undefined)el.settings.freeX=scaleNum(el.settings.freeX);
+            if(el.settings.freeY!==undefined)el.settings.freeY=scaleNum(el.settings.freeY);
+            scaleAbsoluteStyle(el.style);
+        }else{
+            if(el.style.fontSize&&/px$/i.test(String(el.style.fontSize)))el.style.fontSize=scalePx(el.style.fontSize);
+            if(el.style.lineHeight&&/px$/i.test(String(el.style.lineHeight)))el.style.lineHeight=scalePx(el.style.lineHeight);
+        }
+        if(el.settings&&Array.isArray(el.settings.slides)){
+            el.settings.slides.forEach(function(slide){
+                (Array.isArray(slide&&slide.elements)?slide.elements:[]).forEach(migrateElement);
+            });
+        }
+    }
+    function visit(node){
+        if(!node||typeof node!=="object")return;
+        (Array.isArray(node.elements)?node.elements:[]).forEach(migrateElement);
+        (Array.isArray(node.rows)?node.rows:[]).forEach(function(r){
+            (Array.isArray(r.elements)?r.elements:[]).forEach(migrateElement);
+            (Array.isArray(r.columns)?r.columns:[]).forEach(function(c){
+                (Array.isArray(c.elements)?c.elements:[]).forEach(migrateElement);
+            });
+        });
+        if(node.style&&typeof node.style==="object"&&node.style.minHeight&&/px$/i.test(String(node.style.minHeight))){
+            node.style.minHeight=scalePx(node.style.minHeight);
+        }
+    }
+
+    (Array.isArray(layout.root)?layout.root:[]).forEach(visit);
+    (Array.isArray(layout.sections)?layout.sections:[]).forEach(visit);
+
+    layout.__editor.canvasWidth=Math.round(available);
+    layout.__editor._migratedForWidth=Math.round(available);
+    if(Object.prototype.hasOwnProperty.call(layout.__editor,"canvasInnerWidth"))delete layout.__editor.canvasInnerWidth;
+    if(Object.prototype.hasOwnProperty.call(layout.__editor,"canvasContentWidth"))delete layout.__editor.canvasContentWidth;
+
+    return layout;
+}
+
 function loadStep(id){
     var nextId=+id;
     if(state.sid!=null&&state.sid!==nextId){
@@ -5897,6 +6014,7 @@ function loadStep(id){
     state.layout=normalizeTemplateCurrencyLayout(state.layout);
     state.layout=normalizeTemplateLayout(state.layout);
     state.layout=prepareResponsiveBuilderLayout(state.layout);
+    state.layout=migrateLayoutToCurrentCanvas(state.layout);
     state.layout=repairDefaultPricingFlowLayout(state.layout,s,steps);
     if(s&&String(s.template||"").trim()!==""&&String(s.template||"").trim()!=="simple"){
         state.layout=repairTemplateFlowLayout(state.layout,s,steps);
@@ -14883,35 +15001,35 @@ function lockCanvasWidth(){
         w=preferredCanvasWidth()||_canvasLockedWidth||canvas.offsetWidth;
     }
     if(w>200){
-        // Persist the preferred width, but if the current screen is smaller,
-        // keep layout math in the original width and scale down visually.
-        _canvasLockedWidth=w;
+        // After migrateLayoutToCurrentCanvas() the layout is already sized for
+        // the current screen, so the canvas should match the available width
+        // (no visual scaling, no overflow). For mobile breakpoint preview, cap
+        // the canvas width at 390px.
         var availableW=0;
         try{
             var host=(canvas&&canvas.parentElement)?canvas.parentElement:null;
             availableW=host?(host.clientWidth||0):0;
         }catch(_e){availableW=0;}
-        var displayW=(bpCap!=null)?bpCap:((availableW>260)?availableW:w);
-        var scale=1;
-        if(bpCap==null && displayW>260 && w>260 && displayW<w){
-            scale=displayW/w;
-            if(!isFinite(scale) || scale<=0)scale=1;
-            if(scale>1)scale=1;
-            if(scale<0.2)scale=0.2;
+        var displayW;
+        if(bpCap!=null){
+            displayW=bpCap;
+        }else{
+            displayW=(availableW>260)?availableW:w;
         }
-        _canvasScale=scale;
-        var innerW=canvas.clientWidth||0; // includes padding, excludes scrollbar
+        _canvasLockedWidth=displayW;
+        _canvasScale=1;
+        var innerW=canvas.clientWidth||0;
         if(innerW>0)_canvasInnerWidth=innerW;
         var canvasStyle=window.getComputedStyle?window.getComputedStyle(canvas):null;
         var padX=canvasStyle?((parseFloat(canvasStyle.paddingLeft)||0)+(parseFloat(canvasStyle.paddingRight)||0)):0;
         var borderX=canvasStyle?((parseFloat(canvasStyle.borderLeftWidth)||0)+(parseFloat(canvasStyle.borderRightWidth)||0)):0;
-        var contentW=Math.round((w*scale)-padX-borderX);
+        var contentW=Math.round(displayW-padX-borderX);
         if(contentW<=0 && innerW>0)contentW=Math.round(innerW-padX);
         if(contentW>0)_canvasContentWidth=contentW;
-        canvas.style.width=w+"px";
-        canvas.style.maxWidth=w+"px";
+        canvas.style.width=displayW+"px";
+        canvas.style.maxWidth=displayW+"px";
         canvas.style.transformOrigin="top left";
-        canvas.style.transform=(scale!==1)?("scale("+scale+")"):"";
+        canvas.style.transform="";
     }
 }
 function unlockAndRelockCanvas(){

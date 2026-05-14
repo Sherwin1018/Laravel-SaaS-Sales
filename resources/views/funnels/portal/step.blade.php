@@ -559,7 +559,7 @@
         .builder-menu-mobile-close { width: 40px; height: 40px; border: 1px solid #cbd5e1; background: #fff; border-radius: 0; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; color: #0f172a; }
         .builder-menu-mobile-panel { padding: 12px; overflow-y: auto; }
         .builder-menu-mobile-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
-        .builder-menu-mobile-link { display: block; text-decoration: none; color: inherit; font: inherit; padding: 8px 0; }
+        .builder-menu-mobile-link { display: block; text-decoration: none; color: #0f172a !important; font: inherit; padding: 8px 0; }
         .builder-menu-mobile-cta { margin-top: 12px; display: inline-flex; text-decoration: none; }
         .builder-testimonial { display: grid; gap: 10px; }
         .builder-testimonial-quote { font-style: italic; line-height: 1.5; color: #334155; }
@@ -846,9 +846,35 @@
             .portal-cart-fab { right: 14px; bottom: 14px; }
             .checkout-physical-product { grid-template-columns:60px minmax(0,1fr); gap:10px; padding:10px; }
             .checkout-physical-thumb { width:60px; height:60px; border-radius:16px; }
-            .checkout-shipping-modal { padding: 18px; border-radius: 20px; }
-            .checkout-shipping-modal-title { font-size:24px; }
-            .checkout-shipping-modal-grid { grid-template-columns:1fr; }
+            .checkout-shipping-modal-backdrop {
+                align-items: stretch;
+                padding: 10px;
+                overflow: hidden;
+            }
+            .checkout-shipping-modal {
+                width: 100%;
+                max-height: calc(100dvh - 20px);
+                margin: 0;
+                padding: 20px;
+                border-radius: 20px;
+                gap: 16px;
+                overflow-y: auto;
+                overscroll-behavior: contain;
+                -webkit-overflow-scrolling: touch;
+            }
+            .checkout-shipping-modal-title { font-size:26px; }
+            .checkout-shipping-modal-copy { font-size:14px; }
+            .checkout-shipping-modal-close { width:44px; height:44px; }
+            .checkout-shipping-modal-grid { grid-template-columns:1fr; gap:14px; }
+            .checkout-shipping-modal-field { gap:6px; }
+            .checkout-shipping-modal-field label { font-size:12px; }
+            .checkout-shipping-modal-field input {
+                min-height: 52px;
+                padding: 14px 15px;
+                border-radius: 14px;
+                font-size: 16px;
+                line-height: 1.35;
+            }
             .checkout-shipping-modal-actions { flex-direction:column-reverse; }
             .checkout-shipping-modal-cancel,
             .checkout-shipping-modal-submit { width:100%; }
@@ -3186,26 +3212,101 @@
                                                     }
                                                     $absWidth = trim((string) ($rawStyle['width'] ?? ''));
                                                     $absHeight = trim((string) ($rawStyle['height'] ?? ''));
-                                                    // If an absolute element is intended to be centered (builder "Center"),
-                                                    // auto-center it within the section stage width. This prevents drift
-                                                    // between builder canvas vs preview/published scaling.
-                                                    if (
-                                                        $sectionStageWidth > 0
-                                                        && in_array($type, ['heading', 'text', 'button'], true)
-                                                        && ($alignment === 'center' || strtolower(trim((string) ($rawStyle['textAlign'] ?? ''))) === 'center')
-                                                        // Only auto-center when there is no explicit X positioning saved.
-                                                        // Otherwise, multiple absolute elements can collapse onto the same centered X.
-                                                        && $absFreeX === 0
-                                                        && $absLeft === ''
-                                                        && preg_match('/^\s*(\d+)\s*px\s*$/i', $absWidth, $mW)
-                                                    ) {
-                                                        $wPx = (int) $mW[1];
-                                                        if ($wPx > 0 && $wPx < ($sectionStageWidth + 200)) {
-                                                            $absLeft = max(0, (int) round(($sectionStageWidth - $wPx) / 2)) . 'px';
-                                                        }
+
+                                                    // ── Responsive positioning fix ──────────────────────────────────────
+                                                    // The builder uses absolute pixel coordinates inside a fixed-width
+                                                    // canvas. On the public/preview portal, sections are fluid (match
+                                                    // the real viewport), so saved pixel positions DRIFT — text the
+                                                    // user "centered" no longer appears centered, etc.
+                                                    //
+                                                    // Strategy:
+                                                    //  1. If the element is intended to be centered (alignment=center,
+                                                    //     textAlign=center, OR its center-X matches the carrier
+                                                    //     center-X within a small tolerance), render with
+                                                    //     `left:50%; transform:translateX(-50%)` — true responsive
+                                                    //     centering, perfect at any width.
+                                                    //  2. Else, when the element is rendered inside the
+                                                    //     section-level carrier column (parent width = stageWidth),
+                                                    //     convert saved pixel left → percentage of stageWidth so the
+                                                    //     element keeps proportional placement on any viewport.
+                                                    //  3. For elements inside regular columns we don't know the
+                                                    //     column's effective width, so we leave the original pixel
+                                                    //     positioning untouched (it already worked there).
+                                                    //  4. Top/Y stays in pixels (vertical scaling is naturally
+                                                    //     handled by section min-height + content flow).
+                                                    $useResponsiveX = false;
+                                                    $isCenteredWanted = (
+                                                        $alignment === 'center'
+                                                        || strtolower(trim((string) ($rawStyle['textAlign'] ?? ''))) === 'center'
+                                                    );
+                                                    $widthPx = 0;
+                                                    if (preg_match('/^\s*(\d+)\s*px\s*$/i', $absWidth, $_mW)) {
+                                                        $widthPx = (int) $_mW[1];
                                                     }
-                                                    $absPosStyle = 'position:absolute;left:' . ($absLeft !== '' ? $absLeft : '0px') . ';top:' . ($absTop !== '' ? $absTop : '0px') . ';margin:0;box-sizing:border-box;';
-                                                    if ($absWidth !== '') $absPosStyle .= 'width:' . preg_replace('/[^#(),.%\-\sA-Za-z0-9]/', '', $absWidth) . ';';
+                                                    $savedLeftPx = 0;
+                                                    if ($absFreeX > 0) {
+                                                        $savedLeftPx = $absFreeX;
+                                                    } elseif (preg_match('/^\s*(\d+)\s*px\s*$/i', $absLeft, $_mL)) {
+                                                        $savedLeftPx = (int) $_mL[1];
+                                                    }
+
+                                                    // Detect "centered on the original canvas" — only meaningful when
+                                                    // we can compare against the carrier (stage) width.
+                                                    $wasCentered = false;
+                                                    if ($isSectionElementCarrierCol && $sectionStageWidth > 0 && $widthPx > 0) {
+                                                        $elemCenter = $savedLeftPx + ($widthPx / 2);
+                                                        $stageCenter = $sectionStageWidth / 2;
+                                                        $centerTolerance = max(8, (int) round($sectionStageWidth * 0.02));
+                                                        $wasCentered = abs($elemCenter - $stageCenter) <= $centerTolerance;
+                                                    }
+
+                                                    if (
+                                                        in_array($type, ['heading', 'text', 'button', 'image', 'icon', 'video'], true)
+                                                        && ($isCenteredWanted || $wasCentered)
+                                                    ) {
+                                                        // Responsive centering pattern that NEVER overflows the parent:
+                                                        //   position: absolute; left: 0; right: 0; margin: 0 auto;
+                                                        //   width: <savedWidth>; max-width: 100%;
+                                                        // - When parent is wider than the element: margin auto centers it.
+                                                        // - When parent is narrower: max-width:100% makes it shrink to fit
+                                                        //   (text re-wraps cleanly, no horizontal cut-off).
+                                                        // For elements whose inner content can be a block (button, icon,
+                                                        // image, video), we ALSO use flex centering on the wrapper so the
+                                                        // inner element is precisely centered regardless of its own
+                                                        // display mode. text-align:center handles inline-level fallbacks.
+                                                        $absPosStyle = 'position:absolute;left:0;right:0;top:' . ($absTop !== '' ? $absTop : '0px') . ';margin:0 auto;box-sizing:border-box;';
+                                                        if (in_array($type, ['button', 'icon', 'image', 'video'], true)) {
+                                                            $absPosStyle .= 'display:flex;justify-content:center;align-items:center;';
+                                                        } else {
+                                                            $absPosStyle .= 'text-align:center;';
+                                                        }
+                                                        $useResponsiveX = true;
+                                                    }
+
+                                                    if (! $useResponsiveX) {
+                                                        // Convert px → % of stageWidth ONLY when we know the parent
+                                                        // width (i.e. the section-level carrier). For regular
+                                                        // columns, fall back to saved pixel positioning to avoid
+                                                        // wrong denominators.
+                                                        if ($isSectionElementCarrierCol && $sectionStageWidth > 0 && $savedLeftPx > 0) {
+                                                            $pct = ($savedLeftPx / $sectionStageWidth) * 100.0;
+                                                            if ($pct < 0) $pct = 0;
+                                                            if ($pct > 100) $pct = 100;
+                                                            $absLeft = round($pct, 2) . '%';
+                                                        }
+                                                        $absPosStyle = 'position:absolute;left:' . ($absLeft !== '' ? $absLeft : '0px') . ';top:' . ($absTop !== '' ? $absTop : '0px') . ';margin:0;box-sizing:border-box;';
+                                                    }
+
+                                                    if ($absWidth !== '') {
+                                                        $absPosStyle .= 'width:' . preg_replace('/[^#(),.%\-\sA-Za-z0-9]/', '', $absWidth) . ';';
+                                                        if ($useResponsiveX) {
+                                                            // Critical: prevent overflow when the saved width is wider than the actual parent.
+                                                            $absPosStyle .= 'max-width:100%;';
+                                                        }
+                                                    } elseif ($useResponsiveX) {
+                                                        // No saved width — keep responsive centering safe with max-width:100%.
+                                                        $absPosStyle .= 'max-width:100%;';
+                                                    }
                                                     if ($absHeight !== '') $absPosStyle .= 'height:' . preg_replace('/[^#(),.%\-\sA-Za-z0-9]/', '', $absHeight) . ';';
                                                     $hasZIndex = array_key_exists('zIndex', $rawStyle) || array_key_exists('z-index', $rawStyle);
                                                     if ($hasZIndex) {
