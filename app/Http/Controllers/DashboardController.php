@@ -31,6 +31,7 @@ class DashboardController extends Controller
         $tenant?->loadMissing('defaultPayoutAccount');
         $tenantId = auth()->user()->tenant_id;
         $payoutAccount = $tenant?->defaultPayoutAccount;
+        $requiresPayoutSetup = ! ($payoutAccount && $payoutAccount->hasDestinationDetails());
 
         $leadsThisMonth = Lead::where('tenant_id', $tenantId)
             ->whereYear('created_at', now()->year)
@@ -114,6 +115,7 @@ class DashboardController extends Controller
         return view('dashboard.account-owner', compact(
             'tenant',
             'payoutAccount',
+            'requiresPayoutSetup',
             'leadsThisMonth',
             'wonCount',
             'lostCount',

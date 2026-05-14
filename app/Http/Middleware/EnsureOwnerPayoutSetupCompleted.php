@@ -17,6 +17,8 @@ class EnsureOwnerPayoutSetupCompleted
         }
 
         if ($request->routeIs(
+            'dashboard.owner',
+            'auth.google.processing',
             'owner.payout-setup.show',
             'profile.payout.update',
             'logout'
@@ -32,7 +34,7 @@ class EnsureOwnerPayoutSetupCompleted
         }
 
         return redirect()
-            ->route('owner.payout-setup.show')
+            ->route('dashboard.owner')
             ->with('error', 'Complete your payout account setup before continuing.');
     }
 }

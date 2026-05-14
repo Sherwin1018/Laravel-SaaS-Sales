@@ -13,6 +13,28 @@ class PayoutAccountUpdateTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_owner_dashboard_displays_blocking_payout_setup_modal_when_setup_is_missing(): void
+    {
+        [, $owner] = $this->createTenantOwner();
+
+        $response = $this->actingAs($owner)->get(route('dashboard.owner'));
+
+        $response->assertOk();
+        $response->assertSee('Complete Your Payout Setup');
+        $response->assertSee('Account Owner Onboarding');
+        $response->assertSee('Save Payout Setup');
+    }
+
+    public function test_other_owner_pages_redirect_back_to_dashboard_until_payout_setup_is_saved(): void
+    {
+        [, $owner] = $this->createTenantOwner();
+
+        $response = $this->actingAs($owner)->get(route('payments.index'));
+
+        $response->assertRedirect(route('dashboard.owner'));
+        $response->assertSessionHas('error', 'Complete your payout account setup before continuing.');
+    }
+
     public function test_repeated_payout_submissions_reuse_a_single_tenant_record(): void
     {
         [$tenant, $owner] = $this->createTenantOwner();
@@ -95,6 +117,8 @@ class PayoutAccountUpdateTest extends TestCase
         $tenant = Tenant::create([
             'company_name' => 'Payout Workspace',
             'status' => 'active',
+            'subscription_plan' => 'Starter',
+            'billing_status' => 'current',
         ]);
 
         $owner = User::factory()->create([

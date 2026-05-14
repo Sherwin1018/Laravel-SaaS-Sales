@@ -4,6 +4,206 @@
 
 @section('styles')
         <link rel="stylesheet" href="{{ asset('css/extracted/dashboard-account-owner-style1.css') }}">
+        <style>
+            body.owner-payout-setup-locked {
+                overflow: hidden;
+            }
+            .owner-dashboard-shell {
+                transition: filter 0.22s ease, transform 0.22s ease;
+            }
+            .owner-dashboard-shell--locked {
+                filter: blur(10px);
+                transform: scale(0.995);
+                pointer-events: none;
+                user-select: none;
+            }
+            .owner-payout-setup-overlay {
+                position: fixed;
+                inset: 0;
+                z-index: 1300;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 24px;
+                background: rgba(15, 23, 42, 0.32);
+                backdrop-filter: saturate(120%);
+            }
+            .owner-payout-setup-modal {
+                width: min(920px, 100%);
+                max-height: min(90vh, 860px);
+                overflow: auto;
+                border-radius: 24px;
+                border: 1px solid rgba(230, 225, 239, 0.95);
+                background: rgba(255, 255, 255, 0.98);
+                box-shadow: 0 30px 90px rgba(15, 23, 42, 0.28);
+                padding: 28px;
+            }
+            .owner-payout-setup-modal__header {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                gap: 16px;
+                margin-bottom: 18px;
+            }
+            .owner-payout-setup-modal__eyebrow {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                padding: 8px 12px;
+                border-radius: 999px;
+                background: rgba(36, 14, 53, 0.08);
+                color: var(--theme-primary, #240E35);
+                font-size: 12px;
+                font-weight: 800;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+            }
+            .owner-payout-setup-modal h2 {
+                margin: 12px 0 8px;
+                color: #0f172a;
+                font-size: clamp(1.5rem, 2vw, 2rem);
+                line-height: 1.1;
+            }
+            .owner-payout-setup-modal__summary {
+                margin: 0;
+                color: #475569;
+                font-size: 14px;
+                line-height: 1.75;
+                max-width: 620px;
+            }
+            .owner-payout-setup-modal__badge {
+                flex-shrink: 0;
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                padding: 10px 14px;
+                border-radius: 999px;
+                background: #fff7ed;
+                color: #9a3412;
+                font-size: 13px;
+                font-weight: 800;
+            }
+            .owner-payout-setup-modal__panel {
+                border: 1px solid rgba(230, 225, 239, 0.95);
+                border-radius: 20px;
+                background: linear-gradient(180deg, #fcfbff 0%, #ffffff 100%);
+                padding: 22px;
+            }
+            .owner-payout-setup-modal__notice {
+                margin: 0 0 18px;
+                padding: 14px 16px;
+                border-radius: 14px;
+                background: #f8fafc;
+                color: #334155;
+                font-size: 13px;
+                font-weight: 600;
+                line-height: 1.7;
+            }
+            .owner-payout-setup-modal__grid {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 14px;
+            }
+            .owner-payout-setup-modal__field--full {
+                grid-column: 1 / -1;
+            }
+            .owner-payout-setup-modal__field label {
+                display: block;
+                margin-bottom: 6px;
+                color: #0f172a;
+                font-size: 13px;
+                font-weight: 800;
+            }
+            .owner-payout-setup-modal__field input,
+            .owner-payout-setup-modal__field select,
+            .owner-payout-setup-modal__field textarea {
+                width: 100%;
+                padding: 12px 13px;
+                border: 1px solid var(--theme-border, #E6E1EF);
+                border-radius: 12px;
+                background: #fff;
+                color: #111827;
+            }
+            .owner-payout-setup-modal__field textarea {
+                min-height: 110px;
+                resize: vertical;
+            }
+            .owner-payout-setup-modal__hint {
+                margin-top: 6px;
+                color: #64748b;
+                font-size: 12px;
+                font-weight: 600;
+                line-height: 1.6;
+            }
+            .owner-payout-setup-modal__actions {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 14px;
+                flex-wrap: wrap;
+                margin-top: 20px;
+            }
+            .owner-payout-setup-modal__actions p {
+                margin: 0;
+                color: #475569;
+                font-size: 13px;
+                font-weight: 600;
+                line-height: 1.7;
+                max-width: 560px;
+            }
+            .owner-payout-setup-modal__buttons {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                flex-wrap: wrap;
+            }
+            .owner-payout-setup-modal__logout {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                min-height: 42px;
+                padding: 10px 16px;
+                border-radius: 10px;
+                border: 1px solid rgba(148, 163, 184, 0.5);
+                background: #ffffff;
+                color: #334155;
+                font-size: 14px;
+                font-weight: 700;
+                text-decoration: none;
+            }
+            .owner-payout-setup-modal__error {
+                display: block;
+                margin-top: 6px;
+                color: #b91c1c;
+                font-size: 12px;
+                font-weight: 700;
+            }
+            @media (max-width: 768px) {
+                .owner-payout-setup-overlay {
+                    padding: 16px;
+                    align-items: flex-start;
+                }
+                .owner-payout-setup-modal {
+                    max-height: min(92vh, 900px);
+                    padding: 20px;
+                    border-radius: 20px;
+                }
+                .owner-payout-setup-modal__header,
+                .owner-payout-setup-modal__actions {
+                    flex-direction: column;
+                    align-items: stretch;
+                }
+                .owner-payout-setup-modal__grid {
+                    grid-template-columns: minmax(0, 1fr);
+                }
+                .owner-payout-setup-modal__buttons {
+                    width: 100%;
+                }
+                .owner-payout-setup-modal__buttons > * {
+                    flex: 1 1 auto;
+                }
+            }
+        </style>
 @endsection
 
 @php
@@ -85,9 +285,12 @@
         \App\Models\TenantPayoutAccount::STATUS_PENDING_PLATFORM_REVIEW => ['bg' => '#FFEDD5', 'text' => '#C2410C'],
         default => ['bg' => '#E2E8F0', 'text' => '#334155'],
     };
+    $requiresPayoutSetup = (bool) ($requiresPayoutSetup ?? false);
+    $emptyDash = '-';
 @endphp
 
 @section('content')
+    <div class="owner-dashboard-shell{{ $requiresPayoutSetup ? ' owner-dashboard-shell--locked' : '' }}" aria-hidden="{{ $requiresPayoutSetup ? 'true' : 'false' }}">
     <div class="top-header">
         <h1>Welcome, {{ auth()->user()->name }}</h1>
         <div class="company-chip">
@@ -426,6 +629,119 @@
             </div>
         </div>
     </div>
+    </div>
+
+    @if($requiresPayoutSetup)
+        <div class="owner-payout-setup-overlay" id="ownerPayoutSetupOverlay" role="dialog" aria-modal="true" aria-labelledby="ownerPayoutSetupTitle">
+            <div class="owner-payout-setup-modal">
+                <div class="owner-payout-setup-modal__header">
+                    <div>
+                        <span class="owner-payout-setup-modal__eyebrow">
+                            <i class="fas fa-wallet" aria-hidden="true"></i>
+                            Account Owner Onboarding
+                        </span>
+                        <h2 id="ownerPayoutSetupTitle">Complete Your Payout Setup</h2>
+                        <p class="owner-payout-setup-modal__summary">
+                            Add the payout destination where your funnel earnings should settle. Your dashboard stays visible in the background, but live monetization remains locked until you submit this setup.
+                        </p>
+                    </div>
+                    <div class="owner-payout-setup-modal__badge">
+                        <i class="fas fa-shield-alt" aria-hidden="true"></i>
+                        Setup Required
+                    </div>
+                </div>
+
+                <div class="owner-payout-setup-modal__panel">
+                    <p class="owner-payout-setup-modal__notice">
+                        We only show masked payout details in the workspace UI. Once you save, the destination is sent to the platform finance admin for review while you continue setting up the rest of the workspace.
+                    </p>
+
+                    <form action="{{ route('profile.payout.update') }}" method="POST" enctype="multipart/form-data">
+                        @csrf
+                        @method('PUT')
+                        <input type="hidden" name="from_payout_setup" value="1">
+
+                        <div class="owner-payout-setup-modal__grid">
+                            <div class="owner-payout-setup-modal__field">
+                                <label for="modal_destination_type">Destination type</label>
+                                <select id="modal_destination_type" name="destination_type">
+                                    @foreach(['gcash' => 'GCash', 'bank_transfer' => 'Card / Bank'] as $value => $label)
+                                        <option value="{{ $value }}" {{ old('destination_type', $payoutAccount?->destination_type ?? 'gcash') === $value ? 'selected' : '' }}>
+                                            {{ $label }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                @error('destination_type')
+                                    <span class="owner-payout-setup-modal__error">{{ $message }}</span>
+                                @enderror
+                            </div>
+
+                            <div class="owner-payout-setup-modal__field">
+                                <label for="modal_account_name">Account name</label>
+                                <input type="text" id="modal_account_name" name="account_name"
+                                    value="{{ old('account_name', $payoutAccount?->account_name ?? '') }}"
+                                    placeholder="Enter the destination account holder name">
+                                @error('account_name')
+                                    <span class="owner-payout-setup-modal__error">{{ $message }}</span>
+                                @enderror
+                            </div>
+
+                            <div class="owner-payout-setup-modal__field">
+                                <label for="modal_destination_value">GCash number / bank identifier</label>
+                                <input type="text" id="modal_destination_value" name="destination_value"
+                                    value="{{ old('destination_value', '') }}"
+                                    placeholder="Enter the payout destination you want reviewed">
+                                <div class="owner-payout-setup-modal__hint">
+                                    Current masked destination: {{ $payoutAccount?->masked_destination ?? $emptyDash }}
+                                </div>
+                                @error('destination_value')
+                                    <span class="owner-payout-setup-modal__error">{{ $message }}</span>
+                                @enderror
+                            </div>
+
+                            <div class="owner-payout-setup-modal__field">
+                                <label for="modal_provider_destination_reference">Provider-managed reference</label>
+                                <input type="text" id="modal_provider_destination_reference" name="provider_destination_reference"
+                                    value="{{ old('provider_destination_reference', $payoutAccount?->provider_destination_reference ?? '') }}"
+                                    placeholder="Optional external recipient or provider reference">
+                                @error('provider_destination_reference')
+                                    <span class="owner-payout-setup-modal__error">{{ $message }}</span>
+                                @enderror
+                            </div>
+
+                            <div class="owner-payout-setup-modal__field owner-payout-setup-modal__field--full">
+                                <label for="modal_gcash_qr">GCash QR (optional)</label>
+                                <input type="file" id="modal_gcash_qr" name="gcash_qr" accept=".jpg,.jpeg,.png">
+                                <div class="owner-payout-setup-modal__hint">
+                                    Upload only if you want customers to scan your QR for manual payments.
+                                </div>
+                                @error('gcash_qr')
+                                    <span class="owner-payout-setup-modal__error">{{ $message }}</span>
+                                @enderror
+                            </div>
+
+                            <div class="owner-payout-setup-modal__field owner-payout-setup-modal__field--full">
+                                <label for="modal_payout_notes">Operations notes</label>
+                                <textarea id="modal_payout_notes" name="notes" rows="4">{{ old('notes', data_get($payoutAccount, 'meta.notes', '')) }}</textarea>
+                            </div>
+                        </div>
+
+                        <div class="owner-payout-setup-modal__actions">
+                            <p>
+                                Saving this submits your payout destination for platform review. You can keep working in the workspace once the initial setup is saved.
+                            </p>
+                            <div class="owner-payout-setup-modal__buttons">
+                                <a href="{{ route('logout') }}" class="owner-payout-setup-modal__logout">Logout</a>
+                                <button type="submit" style="padding:12px 18px;border:none;border-radius:10px;background:var(--theme-primary, #240E35);color:#fff;cursor:pointer;font-weight:700;">
+                                    Save Payout Setup
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    @endif
 @endsection
 
 @section('scripts')
@@ -549,6 +865,11 @@
         const subscriptionCountdown = document.querySelector('[data-subscription-countdown]');
         const toggleTeamActivityBtn = document.getElementById('toggleTeamActivityBtn');
         const teamActivityContent = document.getElementById('teamActivityContent');
+        const ownerPayoutSetupOverlay = document.getElementById('ownerPayoutSetupOverlay');
+
+        if (ownerPayoutSetupOverlay) {
+            document.body.classList.add('owner-payout-setup-locked');
+        }
 
         if (toggleTeamActivityBtn && teamActivityContent) {
             toggleTeamActivityBtn.addEventListener('click', function() {
