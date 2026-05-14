@@ -45,12 +45,36 @@ class PayMongoWebhookController extends Controller
                     ->first();
 
                 if ($receipt && $receipt->status === 'processed') {
-                    $receipt->increment('attempts');
+                    $receipt->update([
+                        'attempts' => (int) $receipt->attempts + 1,
+                        'last_error' => $receipt->payload_hash !== $payloadHash
+                            ? 'Duplicate event ID received with a different payload hash.'
+                            : null,
+                        'meta' => array_merge(is_array($receipt->meta) ? $receipt->meta : [], [
+                            'latest_payload' => $payload,
+                            'duplicate' => true,
+                            'payload_hash_mismatch' => $receipt->payload_hash !== $payloadHash,
+                        ]),
+                    ]);
 
                     return true;
                 }
 
                 if ($receipt) {
+                    if ($receipt->payload_hash !== $payloadHash) {
+                        $receipt->update([
+                            'status' => 'failed',
+                            'attempts' => (int) $receipt->attempts + 1,
+                            'last_error' => 'Payload hash mismatch for an existing PayMongo event ID.',
+                            'meta' => array_merge(is_array($receipt->meta) ? $receipt->meta : [], [
+                                'latest_payload' => $payload,
+                                'payload_hash_mismatch' => true,
+                            ]),
+                        ]);
+
+                        return true;
+                    }
+
                     $receipt->update([
                         'event_type' => $eventType,
                         'payload_hash' => $payloadHash,

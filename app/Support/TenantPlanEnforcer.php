@@ -8,6 +8,7 @@ use App\Models\Plan;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\DeliveryLogService;
+use App\Services\PlanAutomationService;
 
 class TenantPlanEnforcer
 {
@@ -34,6 +35,14 @@ class TenantPlanEnforcer
             'workflows' => $this->limitEntry($plan, self::LIMIT_WORKFLOWS, $this->currentWorkflowUsage($tenant), 'automation workflows'),
             'messages' => $this->limitEntry($plan, self::LIMIT_MESSAGES, $this->currentMessageUsage($tenant), 'outbound messages'),
             'automation_enabled' => $plan?->automation_enabled ?? true,
+            'automation_mode' => app(PlanAutomationService::class)->modeForPlan($plan),
+            'has_overages' => collect([
+                $this->limitEntry($plan, self::LIMIT_USERS, User::where('tenant_id', $tenant->id)->count(), 'users'),
+                $this->limitEntry($plan, self::LIMIT_LEADS, Lead::where('tenant_id', $tenant->id)->count(), 'leads'),
+                $this->limitEntry($plan, self::LIMIT_FUNNELS, Funnel::where('tenant_id', $tenant->id)->count(), 'funnels'),
+                $this->limitEntry($plan, self::LIMIT_WORKFLOWS, $this->currentWorkflowUsage($tenant), 'automation workflows'),
+                $this->limitEntry($plan, self::LIMIT_MESSAGES, $this->currentMessageUsage($tenant), 'outbound messages'),
+            ])->contains(fn (array $entry) => (bool) ($entry['is_over_limit'] ?? false)),
         ];
     }
 
@@ -85,7 +94,9 @@ class TenantPlanEnforcer
         $currentUsage = $this->currentMessageUsage($tenant);
         if (($currentUsage + max(0, $messageCount)) > (int) $limit) {
             abort(422, sprintf(
-                'You have reached your monthly outbound messages limit for the %s plan. Upgrade your subscription to continue sending messages.',
+                'You have reached your monthly outbound messages limit (%d/%d) for the %s plan. Upgrade your subscription to continue sending messages.',
+                $currentUsage,
+                (int) $limit,
                 $plan->name
             ));
         }
@@ -105,8 +116,10 @@ class TenantPlanEnforcer
 
         if ($currentUsage >= (int) $limit) {
             abort(422, sprintf(
-                'You have reached your %s limit for the %s plan. Upgrade your subscription to add another %s.',
+                'You have reached your %s limit (%d/%d) for the %s plan. Upgrade your subscription to add another %s.',
                 str_replace('max_', '', $attribute),
+                $currentUsage,
+                (int) $limit,
                 $plan->name,
                 $resourceLabel
             ));
@@ -116,6 +129,23 @@ class TenantPlanEnforcer
     private function limitEntry(?Plan $plan, string $attribute, int $used, string $label): array
     {
         $limit = $plan?->{$attribute};
+        $percentUsed = null;
+        $status = 'unlimited';
+
+        if ($limit !== null) {
+            $limitValue = max(0, (int) $limit);
+            $percentUsed = $limitValue > 0
+                ? round(min(100, (($used / $limitValue) * 100)), 2)
+                : null;
+
+            if ($used > $limitValue) {
+                $status = 'over_limit';
+            } elseif ($used === $limitValue) {
+                $status = 'at_limit';
+            } else {
+                $status = 'available';
+            }
+        }
 
         return [
             'label' => $label,
@@ -123,6 +153,11 @@ class TenantPlanEnforcer
             'limit' => $limit,
             'is_unlimited' => $limit === null,
             'remaining' => $limit === null ? null : max(0, (int) $limit - $used),
+            'percent_used' => $percentUsed,
+            'is_at_limit' => $limit !== null && $used === (int) $limit,
+            'is_over_limit' => $limit !== null && $used > (int) $limit,
+            'upgrade_required' => $limit !== null && $used >= (int) $limit,
+            'status' => $status,
         ];
     }
 

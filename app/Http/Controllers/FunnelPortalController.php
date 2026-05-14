@@ -9,6 +9,7 @@ use App\Models\FunnelStep;
 use App\Models\Lead;
 use App\Models\Payment;
 use App\Models\PaymentReceipt;
+use App\Services\AttributionService;
 use App\Services\CouponService;
 use App\Services\CommissionService;
 use App\Services\PayMongoCheckoutService;
@@ -21,7 +22,7 @@ use Illuminate\Validation\Rule;
 
 class FunnelPortalController extends Controller
 {
-    public function show(Request $request, FunnelTrackingService $tracking, string $funnelSlug, ?string $stepSlug = null)
+    public function show(Request $request, FunnelTrackingService $tracking, AttributionService $attribution, string $funnelSlug, ?string $stepSlug = null)
     {
         $funnel = Funnel::with(['tenant', 'steps'])->where('slug', $funnelSlug)->where('status', 'published')->firstOrFail();
         $steps = $funnel->steps->where('is_active', true)->sortBy('position')->values();
@@ -34,6 +35,7 @@ class FunnelPortalController extends Controller
         abort_if(! $step, 404);
 
         $isFirstStep = (int) $steps->first()->id === (int) $step->id;
+        $attribution->captureFunnelRequest($request, $funnel);
         $selectedPricing = $this->syncSelectedPricingFromRequest($request, $funnel, $steps, $step, $isFirstStep);
         $lead = null;
         $leadId = $this->currentLeadId($funnel->id);
@@ -142,6 +144,8 @@ class FunnelPortalController extends Controller
     public function optIn(Request $request, FunnelTrackingService $tracking, string $funnelSlug, string $stepSlug)
     {
         [$funnel, $steps, $step] = $this->resolveStepContext($funnelSlug, $stepSlug, 'opt_in');
+        $attribution = app(AttributionService::class);
+        $attributionPayload = $attribution->captureFunnelRequest($request, $funnel);
 
         $validated = $request->validate([
             'first_name' => 'nullable|string|max:150',
@@ -188,6 +192,7 @@ class FunnelPortalController extends Controller
             $step->step_tags ?? []
         );
         $lead->save();
+        $attribution->applyToLead($lead, $attributionPayload);
 
         $currentLeadId = $this->currentLeadId($funnel->id);
         $currentLead = $currentLeadId ? Lead::query()->find($currentLeadId) : null;
@@ -250,6 +255,8 @@ class FunnelPortalController extends Controller
                 ->with('error', $monetizationDecision['message']);
         }
 
+        $attribution = app(AttributionService::class);
+        $attributionPayload = $attribution->captureFunnelRequest($request, $funnel);
         $sessionIdentifier = $tracking->sessionIdentifier($request);
 
         $validated = $request->validate([
@@ -326,6 +333,7 @@ class FunnelPortalController extends Controller
                     $step->step_tags ?? []
                 );
                 $lead->save();
+                $attribution->applyToLead($lead, $attributionPayload);
                 session()->put($this->leadSessionKey($funnel->id), $lead->id);
             }
         }
@@ -462,6 +470,7 @@ class FunnelPortalController extends Controller
                 'payment_method' => 'manual_transfer',
                 'session_identifier' => $sessionIdentifier,
             ]);
+            $attribution->applyToPayment($payment, $attributionPayload, $funnel, $lead);
 
             $tracking->trackCheckoutStarted(
                 $funnel,
@@ -500,6 +509,7 @@ class FunnelPortalController extends Controller
             'payment_date' => now()->toDateString(),
             'session_identifier' => $sessionIdentifier,
         ]);
+        $attribution->applyToPayment($payment, $attributionPayload, $funnel, $lead);
 
         $tracking->trackCheckoutStarted(
             $funnel,
@@ -720,6 +730,12 @@ class FunnelPortalController extends Controller
             'provider' => 'paymongo',
             'session_identifier' => $tracking->sessionIdentifier($request),
         ]);
+        app(AttributionService::class)->applyToPayment(
+            $payment,
+            app(AttributionService::class)->funnelPayload($request, $funnel),
+            $funnel,
+            $lead
+        );
 
         $tracking->trackCheckoutStarted(
             $funnel,
@@ -798,12 +814,14 @@ class FunnelPortalController extends Controller
         if (! $next) {
             return redirect()
                 ->route('funnels.portal.step', ['funnelSlug' => $funnel->slug, 'stepSlug' => $step->slug])
-                ->with('clear_portal_cart', true);
+                ->with('clear_portal_cart', true)
+                ->with('success', 'Payment received successfully. Your order is now confirmed.');
         }
 
         return redirect()
             ->route('funnels.portal.step', ['funnelSlug' => $funnel->slug, 'stepSlug' => $next->slug])
-            ->with('clear_portal_cart', true);
+            ->with('clear_portal_cart', true)
+            ->with('success', 'Payment received successfully. Your order is now confirmed.');
     }
 
     private function checkoutTrackingMeta(
@@ -1246,6 +1264,13 @@ class FunnelPortalController extends Controller
                 'payment_date' => now()->toDateString(),
                 'session_identifier' => $sessionIdentifier,
             ]);
+            $lead = $this->currentLeadId($funnel->id) ? Lead::query()->find($this->currentLeadId($funnel->id)) : null;
+            app(AttributionService::class)->applyToPayment(
+                $payment,
+                app(AttributionService::class)->funnelPayload($request, $funnel),
+                $funnel,
+                $lead
+            );
             $tracking->trackPaymentPaid($payment, ['source' => 'offer_accept_direct']);
             app(CommissionService::class)->syncPayment($payment);
         }
@@ -1274,6 +1299,12 @@ class FunnelPortalController extends Controller
         FunnelStep $step,
         string $source
     ): \Illuminate\Http\RedirectResponse {
+        app(AttributionService::class)->applyToPayment(
+            $payment,
+            request() instanceof Request ? app(AttributionService::class)->funnelPayload(request(), $funnel) : [],
+            $funnel,
+            $payment->lead_id ? Lead::query()->find($payment->lead_id) : null
+        );
         if ($payment->coupon_id && $payment->status === 'paid') {
             $lead = $payment->lead_id ? Lead::query()->find($payment->lead_id) : null;
             $coupon = $payment->coupon;

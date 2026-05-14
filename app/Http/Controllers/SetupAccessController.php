@@ -98,9 +98,11 @@ class SetupAccessController extends Controller
             ])->save();
 
             if ($user->tenant && $user->hasRole('account-owner') && $user->tenant->status === 'inactive') {
+                $onboarding = app(\App\Services\SignupOnboardingService::class);
                 $user->tenant->update([
                     'status' => 'active',
                     'subscription_activated_at' => $user->tenant->subscription_activated_at ?? now(),
+                    'subscription_renews_at' => $user->tenant->subscription_renews_at ?? $onboarding->initialSubscriptionRenewalAt(),
                 ]);
             }
 

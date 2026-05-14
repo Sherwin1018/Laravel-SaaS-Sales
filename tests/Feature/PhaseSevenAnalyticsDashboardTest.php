@@ -8,6 +8,7 @@ use App\Models\FunnelStep;
 use App\Models\Payment;
 use App\Models\Role;
 use App\Models\Tenant;
+use App\Models\TenantPayoutAccount;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -63,6 +64,7 @@ class PhaseSevenAnalyticsDashboardTest extends TestCase
         ]);
         $owner->roles()->attach($this->role('account-owner', 'Account Owner'));
         $owner->load('roles');
+        $this->createApprovedPayoutAccount($tenant);
 
         Payment::create([
             'tenant_id' => $tenant->id,
@@ -97,6 +99,7 @@ class PhaseSevenAnalyticsDashboardTest extends TestCase
         ]);
         $owner->roles()->attach($this->role('account-owner', 'Account Owner'));
         $owner->load('roles');
+        $this->createApprovedPayoutAccount($tenant);
 
         $funnel = Funnel::create([
             'tenant_id' => $tenant->id,
@@ -122,6 +125,7 @@ class PhaseSevenAnalyticsDashboardTest extends TestCase
             'tenant_id' => $tenant->id,
             'funnel_id' => $funnel->id,
             'funnel_step_id' => $checkoutStep->id,
+            'payment_type' => Payment::TYPE_FUNNEL_CHECKOUT,
             'amount' => 1499,
             'status' => 'paid',
             'payment_date' => now()->toDateString(),
@@ -196,11 +200,145 @@ class PhaseSevenAnalyticsDashboardTest extends TestCase
         });
     }
 
+    public function test_owner_dashboard_uses_payment_date_for_revenue_trend_and_exposes_funnel_performance(): void
+    {
+        $tenant = Tenant::create([
+            'company_name' => 'Analytics Workspace',
+            'status' => 'active',
+            'subscription_plan' => 'Starter',
+            'billing_status' => 'current',
+        ]);
+
+        $owner = User::factory()->create([
+            'tenant_id' => $tenant->id,
+            'status' => 'active',
+        ]);
+        $owner->roles()->attach($this->role('account-owner', 'Account Owner'));
+        $owner->load('roles');
+        $this->createApprovedPayoutAccount($tenant);
+
+        $funnel = Funnel::create([
+            'tenant_id' => $tenant->id,
+            'created_by' => $owner->id,
+            'name' => 'Owner Funnel',
+            'slug' => 'owner-funnel',
+            'purpose' => 'service',
+            'status' => 'published',
+        ]);
+
+        $step = FunnelStep::create([
+            'funnel_id' => $funnel->id,
+            'title' => 'Checkout',
+            'slug' => 'checkout',
+            'type' => 'checkout',
+            'position' => 1,
+            'price' => 1499,
+            'is_active' => true,
+            'layout_json' => ['root' => [], 'sections' => []],
+        ]);
+
+        $payment = Payment::create([
+            'tenant_id' => $tenant->id,
+            'funnel_id' => $funnel->id,
+            'funnel_step_id' => $step->id,
+            'payment_type' => Payment::TYPE_FUNNEL_CHECKOUT,
+            'amount' => 1499,
+            'status' => 'paid',
+            'payment_date' => now()->toDateString(),
+            'session_identifier' => 'session-owner-1',
+        ]);
+
+        $payment->timestamps = false;
+        $payment->forceFill([
+            'created_at' => now()->copy()->subMonth()->startOfMonth(),
+            'updated_at' => now()->copy()->subMonth()->startOfMonth(),
+        ])->save();
+        $payment->timestamps = true;
+
+        FunnelEvent::create([
+            'tenant_id' => $tenant->id,
+            'funnel_id' => $funnel->id,
+            'funnel_step_id' => $step->id,
+            'event_name' => 'funnel_step_viewed',
+            'session_identifier' => 'session-owner-1',
+            'meta' => [
+                'step_slug' => 'checkout',
+                'step_type' => 'checkout',
+            ],
+            'occurred_at' => now()->subMinutes(15),
+        ]);
+
+        FunnelEvent::create([
+            'tenant_id' => $tenant->id,
+            'funnel_id' => $funnel->id,
+            'funnel_step_id' => $step->id,
+            'payment_id' => $payment->id,
+            'event_name' => 'funnel_checkout_started',
+            'session_identifier' => 'session-owner-1',
+            'meta' => [
+                'amount' => 1499,
+                'payment_status' => 'pending',
+                'provider' => 'manual',
+                'order_key' => 'payment:' . $payment->id,
+            ],
+            'occurred_at' => now()->subMinutes(10),
+        ]);
+
+        FunnelEvent::create([
+            'tenant_id' => $tenant->id,
+            'funnel_id' => $funnel->id,
+            'funnel_step_id' => $step->id,
+            'payment_id' => $payment->id,
+            'event_name' => 'funnel_payment_paid',
+            'session_identifier' => 'session-owner-1',
+            'meta' => [
+                'amount' => 1499,
+                'payment_status' => 'paid',
+                'provider' => 'manual',
+                'order_key' => 'payment:' . $payment->id,
+            ],
+            'occurred_at' => now()->subMinutes(5),
+        ]);
+
+        $response = $this->actingAs($owner)->get(route('dashboard.owner'));
+
+        $response->assertOk();
+        $response->assertViewHas('analyticsSummary', function (array $summary) {
+            $trendValues = data_get($summary, 'revenue_trend_values', []);
+
+            return (float) data_get($summary, 'funnel_performance.totals.revenue', 0) === 1499.0
+                && (int) data_get($summary, 'funnel_performance.funnel_count', 0) === 1
+                && (int) data_get($summary, 'funnel_performance.totals.paid_count', 0) === 1
+                && data_get($summary, 'funnel_performance.top_funnels.0.slug') === 'owner-funnel'
+                && (float) end($trendValues) === 1499.0;
+        });
+    }
+
     private function role(string $slug, string $name): Role
     {
         return Role::query()->firstOrCreate(
             ['slug' => $slug],
             ['name' => $name]
+        );
+    }
+
+    private function createApprovedPayoutAccount(Tenant $tenant): TenantPayoutAccount
+    {
+        return TenantPayoutAccount::query()->updateOrCreate(
+            [
+                'tenant_id' => $tenant->id,
+                'is_default' => true,
+            ],
+            [
+                'destination_type' => 'gcash',
+                'account_name' => 'Analytics Owner',
+                'destination_value' => '09171234567',
+                'masked_destination' => '0917****567',
+                'provider_destination_reference' => 'gcash-ref-'.$tenant->id,
+                'is_verified' => true,
+                'verification_status' => TenantPayoutAccount::STATUS_APPROVED,
+                'verified_at' => now(),
+            ]
         );
     }
 }

@@ -38,6 +38,11 @@ class Lead extends Model
         'email',
         'phone',
         'source_campaign',
+        'source_platform',
+        'source_medium',
+        'source_content',
+        'referrer_user_id',
+        'referral_code_snapshot',
         'tags',
         'status',
         'score',
@@ -68,6 +73,11 @@ class Lead extends Model
     public function assignedAgent(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    public function referrer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'referrer_user_id');
     }
 
     public function activities(): HasMany

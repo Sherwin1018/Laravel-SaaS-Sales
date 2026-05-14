@@ -2,11 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Models\ExternalDeliveryLog;
 use App\Models\Funnel;
 use App\Models\Lead;
 use App\Models\Plan;
 use App\Models\Role;
 use App\Models\Tenant;
+use App\Models\TenantPayoutAccount;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -54,6 +56,7 @@ class PhaseFivePlanEnforcementTest extends TestCase
         [$tenant, $owner] = $this->createTenantUserWithRole('account-owner', [
             'subscription_plan' => $plan->code,
         ]);
+        $this->role('sales-agent');
 
         $response = $this->actingAs($owner)->from(route('users.index'))->post(route('users.store'), [
             'name' => 'Blocked User',
@@ -131,6 +134,7 @@ class PhaseFivePlanEnforcementTest extends TestCase
         $response = $this->actingAs($owner)->from(route('funnels.index'))->post(route('funnels.store'), [
             'name' => 'Blocked Funnel',
             'description' => 'Should not be created.',
+            'funnel_purpose' => 'service',
             'default_tags' => '',
         ]);
 
@@ -139,9 +143,54 @@ class PhaseFivePlanEnforcementTest extends TestCase
         $this->assertDatabaseMissing('funnels', ['slug' => 'blocked-funnel']);
     }
 
+    public function test_message_usage_summary_deduplicates_billable_logs_by_idempotency_key(): void
+    {
+        $plan = $this->createPlan([
+            'code' => 'starter',
+            'name' => 'Starter',
+            'max_monthly_messages' => 5,
+        ]);
+
+        [$tenant, $owner] = $this->createTenantUserWithRole('account-owner', [
+            'subscription_plan' => $plan->code,
+        ]);
+
+        ExternalDeliveryLog::create([
+            'tenant_id' => $tenant->id,
+            'channel' => 'email',
+            'event_name' => 'owner_digest',
+            'provider' => 'smtp',
+            'status' => 'sent',
+            'idempotency_key' => 'msg-001',
+            'is_billable' => true,
+            'sent_at' => now(),
+        ]);
+
+        ExternalDeliveryLog::create([
+            'tenant_id' => $tenant->id,
+            'channel' => 'email',
+            'event_name' => 'owner_digest_retry',
+            'provider' => 'smtp',
+            'status' => 'sent',
+            'idempotency_key' => 'msg-001',
+            'is_billable' => true,
+            'sent_at' => now(),
+        ]);
+
+        $response = $this->actingAs($owner)->get(route('users.index'));
+
+        $response->assertOk();
+        $response->assertViewHas('planUsage', function (array $usage) {
+            return ($usage['messages']['used'] ?? null) === 1
+                && ($usage['messages']['remaining'] ?? null) === 4
+                && ($usage['messages']['is_over_limit'] ?? null) === false
+                && ($usage['messages']['status'] ?? null) === 'available';
+        });
+    }
+
     private function createPlan(array $overrides = []): Plan
     {
-        return Plan::create(array_merge([
+        $payload = array_merge([
             'code' => 'starter',
             'name' => 'Starter',
             'price' => 499,
@@ -157,7 +206,12 @@ class PhaseFivePlanEnforcementTest extends TestCase
             'max_workflows' => null,
             'max_monthly_messages' => null,
             'automation_enabled' => true,
-        ], $overrides));
+        ], $overrides);
+
+        return Plan::query()->updateOrCreate(
+            ['code' => $payload['code']],
+            $payload
+        );
     }
 
     private function createTenantUserWithRole(string $roleSlug, array $tenantOverrides = [], ?Tenant $tenant = null): array
@@ -176,6 +230,7 @@ class PhaseFivePlanEnforcementTest extends TestCase
 
         $user->roles()->attach($this->role($roleSlug));
         $user->load('roles');
+        $this->createApprovedPayoutAccount($tenant);
 
         return [$tenant, $user];
     }
@@ -185,6 +240,26 @@ class PhaseFivePlanEnforcementTest extends TestCase
         return Role::query()->firstOrCreate(
             ['slug' => $roleSlug],
             ['name' => ucwords(str_replace('-', ' ', $roleSlug))]
+        );
+    }
+
+    private function createApprovedPayoutAccount(Tenant $tenant): TenantPayoutAccount
+    {
+        return TenantPayoutAccount::query()->updateOrCreate(
+            [
+                'tenant_id' => $tenant->id,
+                'is_default' => true,
+            ],
+            [
+                'destination_type' => 'gcash',
+                'account_name' => 'Plan Owner',
+                'destination_value' => '09171234567',
+                'masked_destination' => '0917****567',
+                'provider_destination_reference' => 'gcash-ref-'.$tenant->id,
+                'is_verified' => true,
+                'verification_status' => TenantPayoutAccount::STATUS_APPROVED,
+                'verified_at' => now(),
+            ]
         );
     }
 }

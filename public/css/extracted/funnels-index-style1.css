@@ -9,7 +9,7 @@
         }
         .funnels-table th:last-child,
         .funnels-table td:last-child {
-            min-width: 270px;
+            min-width: 0;
             white-space: nowrap;
             vertical-align: middle;
         }
@@ -18,23 +18,106 @@
             white-space: nowrap;
             min-width: 120px;
         }
+        .funnels-table th:nth-child(5),
+        .funnels-table td:nth-child(5) {
+            min-width: 180px;
+        }
+        .funnels-table td:nth-child(5) a {
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
         .funnels-actions {
             display: flex;
             align-items: center;
-            gap: 14px;
+            gap: 8px;
             flex-wrap: nowrap;
             white-space: nowrap;
         }
-        .funnels-action {
+        .funnels-action,
+        .funnels-action-btn {
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            justify-content: center;
             text-decoration: none;
-            font-weight: 700;
             line-height: 1;
+            width: 42px;
+            height: 42px;
+            padding: 0;
+            border-radius: 12px;
+            border: 1px solid #D8DCE8;
+            background: #fff;
+            font-weight: 700;
+            color: #240E35;
+            cursor: pointer;
+            position: relative;
+            transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease, color .16s ease;
         }
-        .funnels-action i {
-            font-size: 14px;
+        .funnels-action:hover,
+        .funnels-action-btn:hover,
+        .funnels-action:focus-visible,
+        .funnels-action-btn:focus-visible {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
+            border-color: #BFC9D8;
+            outline: none;
+        }
+        .funnels-action i,
+        .funnels-action-btn i {
+            font-size: 16px;
+        }
+        .funnels-action::after,
+        .funnels-action-btn::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            left: 50%;
+            bottom: calc(100% + 10px);
+            transform: translateX(-50%) translateY(4px);
+            padding: 6px 9px;
+            border-radius: 8px;
+            background: #240E35;
+            color: #fff;
+            font-size: 12px;
+            font-weight: 800;
+            line-height: 1;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .14s ease, transform .14s ease;
+            z-index: 5;
+        }
+        .funnels-action::before,
+        .funnels-action-btn::before {
+            content: "";
+            position: absolute;
+            left: 50%;
+            bottom: calc(100% + 4px);
+            transform: translateX(-50%);
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 6px solid #240E35;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .14s ease;
+            z-index: 5;
+        }
+        .funnels-action:hover::after,
+        .funnels-action:hover::before,
+        .funnels-action:focus-visible::after,
+        .funnels-action:focus-visible::before,
+        .funnels-action-btn:hover::after,
+        .funnels-action-btn:hover::before,
+        .funnels-action-btn:focus-visible::after,
+        .funnels-action-btn:focus-visible::before {
+            opacity: 1;
+        }
+        .funnels-action:hover::after,
+        .funnels-action:focus-visible::after,
+        .funnels-action-btn:hover::after,
+        .funnels-action-btn:focus-visible::after {
+            transform: translateX(-50%) translateY(0);
+        }
+        .funnels-action--rename {
+            color: #4338CA;
         }
         .funnels-action--builder {
             color: var(--theme-primary, #240E35);
@@ -42,16 +125,8 @@
         .funnels-action--analytics {
             color: #0F766E;
         }
-        .funnels-action-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            background: none;
-            border: none;
-            cursor: pointer;
-            font-weight: 700;
-            line-height: 1;
-            padding: 0;
+        .funnels-action--reviews {
+            color: #B45309;
         }
         .funnels-action-btn--delete {
             color: #DC2626;

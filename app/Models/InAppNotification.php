@@ -42,4 +42,49 @@ class InAppNotification extends Model
     {
         return $this->read_at === null;
     }
+
+    public function getActionUrlAttribute($value): ?string
+    {
+        $url = trim((string) $value);
+        if ($url === '') {
+            return null;
+        }
+
+        $parsedUrl = parse_url($url);
+        $appUrl = trim((string) config('app.url'));
+        $parsedAppUrl = $appUrl !== '' ? parse_url($appUrl) : false;
+
+        if (! is_array($parsedUrl) || ! is_array($parsedAppUrl)) {
+            return $url;
+        }
+
+        $host = strtolower((string) ($parsedUrl['host'] ?? ''));
+        $port = isset($parsedUrl['port']) ? (int) $parsedUrl['port'] : null;
+        if ($host !== 'localhost' || ! in_array($port, [null, 80, 443], true)) {
+            return $url;
+        }
+
+        $scheme = (string) ($parsedAppUrl['scheme'] ?? 'http');
+        $appHost = trim((string) ($parsedAppUrl['host'] ?? ''));
+        if ($appHost === '') {
+            return $url;
+        }
+
+        $normalized = $scheme . '://' . $appHost;
+        if (isset($parsedAppUrl['port'])) {
+            $normalized .= ':' . (int) $parsedAppUrl['port'];
+        }
+
+        $normalized .= (string) ($parsedUrl['path'] ?? '');
+
+        if (isset($parsedUrl['query']) && $parsedUrl['query'] !== '') {
+            $normalized .= '?' . $parsedUrl['query'];
+        }
+
+        if (isset($parsedUrl['fragment']) && $parsedUrl['fragment'] !== '') {
+            $normalized .= '#' . $parsedUrl['fragment'];
+        }
+
+        return $normalized;
+    }
 }

@@ -35,6 +35,11 @@
         .fb-modal-actions{display:flex;justify-content:flex-end;gap:8px}
         .fb-btn{padding:8px 12px;border-radius:8px;border:1px solid #E6E1EF;background:#fff;color:#240E35;font-weight:700;cursor:pointer}
         .fb-btn.danger{background:#dc2626;color:#fff;border-color:#b91c1c}
+        .fb-rename-form{display:grid;gap:14px}
+        .fb-rename-field{display:grid;gap:8px}
+        .fb-rename-label{font-size:13px;font-weight:800;color:#240E35}
+        .fb-rename-input{width:100%;padding:12px 14px;border:1px solid #D8DCE8;border-radius:12px;background:#fff;color:#0f172a;font-size:14px}
+        .fb-rename-note{margin:0;padding:12px 14px;border-radius:12px;background:#F8FAFC;border:1px solid #E6E1EF;color:#475569;font-size:13px;line-height:1.55}
         .fb-reviews-modal{position:fixed;inset:0;background:rgba(15,23,42,.56);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;z-index:1510;padding:18px}
         .fb-reviews-modal.open{display:flex}
         .fb-reviews-card{width:min(1120px,96vw);height:min(86vh,840px);background:#fff;border-radius:18px;border:1px solid #E6E1EF;box-shadow:0 28px 70px rgba(15,23,42,.24);display:grid;grid-template-rows:auto 1fr;overflow:hidden}
@@ -406,6 +411,24 @@
             </div>
         </div>
     </div>
+    <div class="fb-modal" id="fbRenameModal" aria-hidden="true">
+        <div class="fb-modal-card" role="dialog" aria-modal="true" aria-labelledby="fbRenameModalTitle">
+            <div class="fb-modal-title" id="fbRenameModalTitle">Rename funnel</div>
+            <form method="POST" id="fbRenameForm" class="fb-rename-form">
+                @csrf
+                @method('PUT')
+                <input type="hidden" name="status" id="fbRenameStatus">
+                <div class="fb-rename-field">
+                    <label for="fbRenameName" class="fb-rename-label">Funnel name</label>
+                    <input type="text" name="name" id="fbRenameName" class="fb-rename-input" maxlength="120" required>
+                </div>
+                <div class="fb-modal-actions">
+                    <button type="button" class="fb-btn" id="fbRenameCancel">Cancel</button>
+                    <button type="submit" class="fb-btn danger" style="background:var(--theme-primary, #240E35);border-color:var(--theme-primary, #240E35);">Save name</button>
+                </div>
+            </form>
+        </div>
+    </div>
     <div class="fb-reviews-modal" id="fbReviewsModal" aria-hidden="true">
         <div class="fb-reviews-card" role="dialog" aria-modal="true" aria-labelledby="fbReviewsModalTitle">
             <div class="fb-reviews-head">
@@ -431,6 +454,11 @@
     var reviewsModalTitle=document.getElementById("fbReviewsModalTitle");
     var reviewsModalBody=document.getElementById("fbReviewsModalBody");
     var reviewsModalClose=document.getElementById("fbReviewsModalClose");
+    var renameModal=document.getElementById("fbRenameModal");
+    var renameForm=document.getElementById("fbRenameForm");
+    var renameNameInput=document.getElementById("fbRenameName");
+    var renameStatusInput=document.getElementById("fbRenameStatus");
+    var renameCancel=document.getElementById("fbRenameCancel");
     var reviewsModalUrl="";
     var timeout=null;
     var modal=document.getElementById("fbDeleteConfirm");
@@ -469,6 +497,39 @@
         toggleFunnelsListBtn.addEventListener("click",function(){
             var isHidden=funnelsListContent.style.display==="none";
             setFunnelsListVisibility(isHidden);
+        });
+    }
+    if(renameForm){
+        renameForm.addEventListener("submit",function(){
+            window.sessionStorage.setItem("funnelsListOpen","1");
+        });
+    }
+    if(window.sessionStorage.getItem("funnelsListOpen")==="1"){
+        setFunnelsListVisibility(true);
+        window.sessionStorage.removeItem("funnelsListOpen");
+    }
+    function closeRenameModal(){
+        if(!renameModal)return;
+        renameModal.classList.remove("open");
+        renameModal.setAttribute("aria-hidden","true");
+        if(renameForm)renameForm.setAttribute("action","");
+    }
+    function openRenameModal(url,name,status){
+        if(!renameModal||!renameForm||!renameNameInput||!renameStatusInput)return;
+        renameForm.setAttribute("action",url||"");
+        renameNameInput.value=name||"";
+        renameStatusInput.value=status||"draft";
+        renameModal.classList.add("open");
+        renameModal.setAttribute("aria-hidden","false");
+        window.setTimeout(function(){
+            renameNameInput.focus();
+            renameNameInput.select();
+        },0);
+    }
+    if(renameCancel)renameCancel.addEventListener("click",closeRenameModal);
+    if(renameModal){
+        renameModal.addEventListener("click",function(e){
+            if(e.target===renameModal)closeRenameModal();
         });
     }
     if(!modal)return;
@@ -584,6 +645,16 @@
         });
     });
     document.addEventListener("click",function(e){
+        var renameBtn=e.target&&e.target.closest?e.target.closest("[data-funnel-rename]"):null;
+        if(renameBtn){
+            e.preventDefault();
+            openRenameModal(
+                renameBtn.getAttribute("data-funnel-rename-url")||"",
+                renameBtn.getAttribute("data-funnel-name")||"",
+                renameBtn.getAttribute("data-funnel-status")||"draft"
+            );
+            return;
+        }
         var btn=e.target&&e.target.closest?e.target.closest("[data-reviews-modal-url]"):null;
         if(!btn)return;
         e.preventDefault();
@@ -593,6 +664,13 @@
         );
     });
     document.addEventListener("keydown",function(e){
+        if(renameModal&&renameModal.classList.contains("open")){
+            var renameKey=String(e.key||"").toLowerCase();
+            if(renameKey==="escape"){
+                closeRenameModal();
+                return;
+            }
+        }
         if(!reviewsModal||!reviewsModal.classList.contains("open"))return;
         var k=String(e.key||"").toLowerCase();
         if(k==="escape")closeReviewsModal();

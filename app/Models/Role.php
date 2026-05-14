@@ -10,6 +10,11 @@ class Role extends Model
 {
     use HasFactory;
 
+    protected $fillable = [
+        'name',
+        'slug',
+    ];
+
     /**
      * Role has many users
      */

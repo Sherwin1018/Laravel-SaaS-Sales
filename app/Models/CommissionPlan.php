@@ -17,6 +17,8 @@ class CommissionPlan extends Model
         'platform_fee_rate',
         'sales_agent_rate',
         'marketing_manager_rate',
+        'affiliate_sale_rate',
+        'platform_referral_rate',
         'hold_days',
         'sales_attribution_model',
         'marketing_attribution_model',
@@ -31,6 +33,8 @@ class CommissionPlan extends Model
         'platform_fee_rate' => 'decimal:2',
         'sales_agent_rate' => 'decimal:2',
         'marketing_manager_rate' => 'decimal:2',
+        'affiliate_sale_rate' => 'decimal:2',
+        'platform_referral_rate' => 'decimal:2',
         'hold_days' => 'integer',
         'config' => 'array',
     ];

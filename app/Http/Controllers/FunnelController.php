@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Mail\FunnelOrderDeliveryUpdateMail;
 use App\Models\Funnel;
 use App\Models\FunnelBuilderAsset;
 use App\Models\FunnelEvent;
@@ -19,7 +18,6 @@ use App\Support\TenantPlanEnforcer;
 use App\Support\TenantPayoutReadiness;
 use App\Support\XlsxWorkbookBuilder;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -1099,25 +1097,43 @@ class FunnelController extends Controller
             $courierName = 'LBC';
         }
 
-        try {
-            $trackingRaw = trim((string) ($validated['tracking_number'] ?? ''));
-            // Treat full URLs as links, otherwise store as tracking number.
-            $trackingValue = $trackingRaw !== '' ? $trackingRaw : null;
-            Mail::to($recipientEmail)->send(new FunnelOrderDeliveryUpdateMail(
-                (string) $funnel->name,
-                (string) ($order['customer'] ?? 'Customer'),
-                (string) $validated['delivery_status'],
-                $trackingValue,
-                $courierName,
-                is_array($order['order_items'] ?? null) ? $order['order_items'] : [],
-                (int) ($order['order_quantity'] ?? 0),
-                trim((string) ($validated['custom_message'] ?? '')) ?: null
-            ));
-        } catch (\Throwable $e) {
+        app(TenantPlanEnforcer::class)->ensureCanSendOutboundMessages(auth()->user()->tenant);
+
+        $trackingRaw = trim((string) ($validated['tracking_number'] ?? ''));
+        $deliveryStatus = (string) $validated['delivery_status'];
+        $customMessage = trim((string) ($validated['custom_message'] ?? '')) ?: null;
+
+        $sendResult = app(\App\Services\TransactionalEmailService::class)->sendDeliveryUpdateEmail(
+            $recipientEmail,
+            [
+                'funnel_name' => (string) $funnel->name,
+                'customer_name' => (string) ($order['customer'] ?? 'Customer'),
+                'delivery_status' => $deliveryStatus,
+                'tracking_value' => $trackingRaw !== '' ? $trackingRaw : null,
+                'courier_name' => $courierName,
+                'order_items' => is_array($order['order_items'] ?? null) ? $order['order_items'] : [],
+                'order_quantity' => (int) ($order['order_quantity'] ?? 0),
+                'custom_message' => $customMessage,
+            ],
+            [
+                'tenant_id' => $funnel->tenant_id,
+                'lead_id' => (int) ($order['lead_id'] ?? 0) ?: null,
+                'event_name' => 'funnel_order_delivery_updated_customer',
+                'is_billable' => true,
+                'idempotency_key' => implode(':', array_filter([
+                    'delivery-update',
+                    $funnel->id,
+                    (string) $validated['order_key'],
+                    $deliveryStatus,
+                    sha1($recipientEmail . '|' . $trackingRaw . '|' . ($customMessage ?? '')),
+                ])),
+            ]
+        );
+
+        if (! ($sendResult['sent'] ?? false)) {
             return redirect()->back()->with('error', 'Delivery update email failed to send.');
         }
 
-        $trackingRaw = trim((string) ($validated['tracking_number'] ?? ''));
         $trackingIsUrl = $trackingRaw !== '' && preg_match('/^https?:\\/\\//i', $trackingRaw) === 1;
         $tracking->trackOrderDeliveryUpdate($funnel, $order, [
             'recipient_email' => $recipientEmail,
@@ -1126,6 +1142,7 @@ class FunnelController extends Controller
             'tracking_number' => $trackingIsUrl ? '' : $trackingRaw,
             'courier_name' => $courierName,
             'custom_message' => trim((string) ($validated['custom_message'] ?? '')),
+            'dispatch_via_n8n' => false,
         ]);
 
         $leadId = (int) ($order['lead_id'] ?? 0);

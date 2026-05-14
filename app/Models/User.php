@@ -8,6 +8,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Models\InAppNotification;
+use Illuminate\Support\Str;
 
 class User extends Authenticatable
 {
@@ -71,6 +72,16 @@ class User extends Authenticatable
     public function commissionEntries(): HasMany
     {
         return $this->hasMany(CommissionEntry::class);
+    }
+
+    public function referredLeads(): HasMany
+    {
+        return $this->hasMany(Lead::class, 'referrer_user_id');
+    }
+
+    public function referredPayments(): HasMany
+    {
+        return $this->hasMany(Payment::class, 'referrer_user_id');
     }
 
     public function inAppNotifications(): HasMany
@@ -140,6 +151,7 @@ class User extends Authenticatable
         'google_id',
         'must_change_password',
         'is_customer_portal_user',
+        'referral_code',
     ];
 
     /**
@@ -166,4 +178,26 @@ class User extends Authenticatable
         'must_change_password' => 'boolean',
         'is_customer_portal_user' => 'boolean',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (self $user): void {
+            if (trim((string) $user->referral_code) === '') {
+                $user->referral_code = self::generateUniqueReferralCode((string) ($user->name ?? 'User'));
+            }
+        });
+    }
+
+    public static function generateUniqueReferralCode(string $seed = 'User'): string
+    {
+        $base = Str::upper(Str::slug($seed, ''));
+        $base = $base !== '' ? Str::substr($base, 0, 10) : 'USER';
+        $code = $base . '-' . strtoupper(Str::random(6));
+
+        while (self::query()->where('referral_code', $code)->exists()) {
+            $code = $base . '-' . strtoupper(Str::random(6));
+        }
+
+        return $code;
+    }
 }

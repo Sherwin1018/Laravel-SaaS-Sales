@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Funnel;
 use App\Models\FunnelTemplate;
+use App\Models\Payment;
 use App\Models\Plan;
 use App\Models\Role;
 use App\Models\Tenant;
@@ -276,6 +277,98 @@ class FunnelTemplateManagementTest extends TestCase
             'price' => 299.00,
         ]);
         $this->assertSame(3, $template->steps()->count());
+    }
+
+    public function test_template_row_analytics_icon_links_to_filtered_template_analytics(): void
+    {
+        $admin = $this->createUserWithRole('super-admin', null);
+
+        $template = FunnelTemplate::create([
+            'created_by' => $admin->id,
+            'name' => 'Analytics Ready Template',
+            'slug' => 'analytics-ready-template',
+            'template_type' => FunnelTemplate::TEMPLATE_TYPE_STEP_BY_STEP,
+            'template_tags' => [FunnelTemplate::PURPOSE_TAG_PREFIX . 'service'],
+            'status' => 'draft',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.funnel-templates.index'))
+            ->assertOk()
+            ->assertSee(route('admin.funnel-templates.analytics', ['template' => $template->id]), false);
+    }
+
+    public function test_super_admin_can_open_template_filtered_analytics_page(): void
+    {
+        $admin = $this->createUserWithRole('super-admin', null);
+
+        $selectedTemplate = FunnelTemplate::create([
+            'created_by' => $admin->id,
+            'name' => 'Selected Template',
+            'slug' => 'selected-template',
+            'template_type' => FunnelTemplate::TEMPLATE_TYPE_STEP_BY_STEP,
+            'template_tags' => [FunnelTemplate::PURPOSE_TAG_PREFIX . 'service'],
+            'status' => 'published',
+            'published_at' => now(),
+            'royalty_rate' => 12.5,
+        ]);
+
+        $otherTemplate = FunnelTemplate::create([
+            'created_by' => $admin->id,
+            'name' => 'Other Template',
+            'slug' => 'other-template',
+            'template_type' => FunnelTemplate::TEMPLATE_TYPE_STEP_BY_STEP,
+            'template_tags' => [FunnelTemplate::PURPOSE_TAG_PREFIX . 'service'],
+            'status' => 'published',
+            'published_at' => now(),
+        ]);
+
+        Payment::query()->create([
+            'payment_type' => Payment::TYPE_FUNNEL_CHECKOUT,
+            'source_funnel_template_id' => $selectedTemplate->id,
+            'amount' => 1499,
+            'template_royalty_amount' => 187.38,
+            'affiliate_commission_amount' => 50,
+            'status' => 'paid',
+            'payment_date' => now()->toDateString(),
+        ]);
+
+        Payment::query()->create([
+            'payment_type' => Payment::TYPE_FUNNEL_CHECKOUT,
+            'source_funnel_template_id' => $otherTemplate->id,
+            'amount' => 999,
+            'status' => 'paid',
+            'payment_date' => now()->toDateString(),
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.funnel-templates.analytics', ['template' => $selectedTemplate->id]))
+            ->assertOk()
+            ->assertSee('Filtered View')
+            ->assertSee('Selected Template')
+            ->assertDontSee('Other Template');
+    }
+
+    public function test_super_admin_can_download_template_performance_excel(): void
+    {
+        $admin = $this->createUserWithRole('super-admin', null);
+
+        $template = FunnelTemplate::create([
+            'created_by' => $admin->id,
+            'name' => 'Excel Ready Template',
+            'slug' => 'excel-ready-template',
+            'template_type' => FunnelTemplate::TEMPLATE_TYPE_STEP_BY_STEP,
+            'template_tags' => [FunnelTemplate::PURPOSE_TAG_PREFIX . 'service'],
+            'status' => 'published',
+            'published_at' => now(),
+        ]);
+
+        $response = $this->actingAs($admin)
+            ->get(route('admin.funnel-templates.analytics.export', ['template' => $template->id]));
+
+        $response->assertOk();
+        $response->assertHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        $response->assertHeader('Content-Disposition');
     }
 
     private function createUserWithRole(string $roleSlug, ?Tenant $tenant): User

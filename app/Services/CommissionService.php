@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use App\Models\AppSetting;
 use App\Models\CommissionEntry;
 use App\Models\CommissionPlan;
+use App\Models\FunnelTemplate;
 use App\Models\Payment;
 use App\Models\Tenant;
 use App\Models\User;
@@ -39,6 +41,8 @@ class CommissionService
             'platform_fee_rate' => 2.00,
             'sales_agent_rate' => 7.00,
             'marketing_manager_rate' => 3.00,
+            'affiliate_sale_rate' => 5.00,
+            'platform_referral_rate' => 10.00,
             'hold_days' => 7,
             'sales_attribution_model' => 'assigned_lead',
             'marketing_attribution_model' => 'last_touch_campaign',
@@ -51,9 +55,8 @@ class CommissionService
         $plan = $this->resolvePlanForTenant($tenant);
 
         Payment::query()
-            ->with(['lead.assignedAgent.roles', 'lead', 'tenant'])
+            ->with(['lead.assignedAgent.roles', 'lead', 'tenant', 'funnel.sourceTemplate.creator.roles', 'sourceTemplate.creator.roles', 'referrer.roles'])
             ->where('tenant_id', $tenant->id)
-            ->where('payment_type', Payment::TYPE_FUNNEL_CHECKOUT)
             ->where('status', 'paid')
             ->chunkById(100, function (Collection $payments) use ($plan) {
                 foreach ($payments as $payment) {
@@ -63,7 +66,6 @@ class CommissionService
 
         Payment::query()
             ->where('tenant_id', $tenant->id)
-            ->where('payment_type', Payment::TYPE_FUNNEL_CHECKOUT)
             ->where('status', 'failed')
             ->chunkById(100, function (Collection $payments) {
                 foreach ($payments as $payment) {
@@ -76,7 +78,7 @@ class CommissionService
 
     public function syncPayment(Payment $payment, ?CommissionPlan $plan = null): void
     {
-        if (! $payment->isFunnelSale()) {
+        if (! $payment->isFunnelSale() && ! $payment->isPlatformSubscription()) {
             return;
         }
 
@@ -86,23 +88,51 @@ class CommissionService
             return;
         }
 
-        $payment->loadMissing(['tenant', 'lead.assignedAgent.roles', 'commissionEntries']);
+        $payment->loadMissing([
+            'tenant',
+            'lead.assignedAgent.roles',
+            'commissionEntries',
+            'funnel.sourceTemplate.creator.roles',
+            'sourceTemplate.creator.roles',
+            'referrer.roles',
+        ]);
         $tenant = $payment->tenant;
         if (! $tenant) {
             return;
         }
 
         $plan ??= $this->resolvePlanForTenant($tenant);
-        $grossAmount = round((float) $payment->amount, 2);
-        $basisAmount = $this->calculateNetEligibleAmount($payment, $plan);
-        if ($basisAmount <= 0) {
-            $this->reverseForPayment($payment, 'basis_amount_below_zero');
+
+        if ($payment->isPlatformSubscription()) {
+            $this->syncPlatformReferralPayment($payment, $plan);
 
             return;
         }
 
+        $grossAmount = round((float) $payment->amount, 2);
+        $gatewayFee = $this->estimateGatewayFee($grossAmount, $plan);
+        $platformFee = $this->estimatePlatformFee($grossAmount, $plan);
+        $basisAmount = $this->calculateNetEligibleAmount($payment, $plan);
+        if ($basisAmount <= 0) {
+            $this->reverseForPayment($payment, 'basis_amount_below_zero');
+
+            $payment->update([
+                'gateway_fee_amount' => $gatewayFee,
+                'platform_share_amount' => $platformFee,
+                'commissionable_amount' => 0,
+                'template_royalty_amount' => 0,
+                'affiliate_commission_amount' => 0,
+                'sales_commission_amount' => 0,
+                'marketing_commission_amount' => 0,
+                'tenant_net_income_amount' => 0,
+            ]);
+
+            return;
+        }
+
+        $definitions = $this->commissionRecipients($payment, $plan, $basisAmount, $grossAmount);
         $entriesToKeep = [];
-        foreach ($this->commissionRecipients($payment, $plan, $basisAmount, $grossAmount) as $definition) {
+        foreach ($definitions as $definition) {
             /** @var User $user */
             $user = $definition['user'];
             $type = (string) $definition['commission_type'];
@@ -167,6 +197,22 @@ class CommissionService
                     'notes' => 'Cancelled because the current attribution rules no longer assign this commission.',
                 ]);
             });
+
+        $templateRoyaltyAmount = $this->sumDefinitionAmount($definitions, 'template_royalty');
+        $affiliateAmount = $this->sumDefinitionAmount($definitions, 'affiliate_sale');
+        $salesAmount = $this->sumDefinitionAmount($definitions, 'sales_agent');
+        $marketingAmount = $this->sumDefinitionAmount($definitions, 'marketing_manager');
+
+        $payment->update([
+            'gateway_fee_amount' => $gatewayFee,
+            'platform_share_amount' => $platformFee,
+            'commissionable_amount' => $basisAmount,
+            'template_royalty_amount' => $templateRoyaltyAmount,
+            'affiliate_commission_amount' => $affiliateAmount,
+            'sales_commission_amount' => $salesAmount,
+            'marketing_commission_amount' => $marketingAmount,
+            'tenant_net_income_amount' => round(max(0, $basisAmount - $templateRoyaltyAmount - $affiliateAmount - $salesAmount - $marketingAmount), 2),
+        ]);
     }
 
     public function reverseForPayment(Payment $payment, string $reason = 'payment_reversed'): int
@@ -231,7 +277,6 @@ class CommissionService
     public function summaryForUser(User $user): array
     {
         $entries = CommissionEntry::query()
-            ->where('tenant_id', $user->tenant_id)
             ->where('user_id', $user->id)
             ->get(['commission_amount', 'status']);
 
@@ -260,10 +305,12 @@ class CommissionService
     public function calculateNetEligibleAmount(Payment $payment, CommissionPlan $plan): float
     {
         $grossAmount = round((float) $payment->amount, 2);
+        $refundAmount = round((float) ($payment->refund_amount ?? 0), 2);
+        $nonCommissionableAmount = round((float) ($payment->non_commissionable_amount ?? 0), 2);
         $gatewayFee = $this->estimateGatewayFee($grossAmount, $plan);
         $platformFee = $this->estimatePlatformFee($grossAmount, $plan);
 
-        return round(max(0, $grossAmount - $gatewayFee - $platformFee), 2);
+        return round(max(0, $grossAmount - $refundAmount - $nonCommissionableAmount - $gatewayFee - $platformFee), 2);
     }
 
     /**
@@ -273,6 +320,45 @@ class CommissionService
     {
         $definitions = [];
         $lead = $payment->lead;
+        $sourceTemplate = $payment->sourceTemplate ?: $payment->funnel?->sourceTemplate;
+        $referrer = $payment->referrer;
+
+        if ($sourceTemplate && $sourceTemplate->creator) {
+            $royaltyRate = $this->resolveTemplateRoyaltyRate($sourceTemplate);
+            if ($royaltyRate > 0) {
+                $definitions[] = [
+                    'user' => $sourceTemplate->creator,
+                    'commission_role' => 'super-admin',
+                    'commission_type' => 'template_royalty',
+                    'rate_percentage' => $royaltyRate,
+                    'commission_amount' => round($basisAmount * ($royaltyRate / 100), 2),
+                    'meta' => [
+                        'source_template_id' => $sourceTemplate->id,
+                        'source_template_name' => $sourceTemplate->name,
+                        'gross_amount' => $grossAmount,
+                    ],
+                ];
+            }
+        }
+
+        if ($referrer && $payment->referrer_user_id !== (int) ($lead?->assigned_to ?? 0)) {
+            $affiliateRate = round((float) $plan->affiliate_sale_rate, 2);
+            if ($affiliateRate > 0) {
+                $definitions[] = [
+                    'user' => $referrer,
+                    'commission_role' => 'affiliate',
+                    'commission_type' => 'affiliate_sale',
+                    'rate_percentage' => $affiliateRate,
+                    'commission_amount' => round($basisAmount * ($affiliateRate / 100), 2),
+                    'meta' => [
+                        'referral_code' => $payment->referral_code_snapshot,
+                        'source_platform' => $payment->source_platform,
+                        'source_campaign' => $payment->source_campaign,
+                        'gross_amount' => $grossAmount,
+                    ],
+                ];
+            }
+        }
 
         if ($lead?->assignedAgent && $lead->assignedAgent->hasRole('sales-agent')) {
             $salesRate = round((float) $plan->sales_agent_rate, 2);
@@ -312,6 +398,87 @@ class CommissionService
         }
 
         return array_values(array_filter($definitions, fn (array $definition) => ($definition['commission_amount'] ?? 0) > 0));
+    }
+
+    private function syncPlatformReferralPayment(Payment $payment, CommissionPlan $plan): void
+    {
+        $grossAmount = round((float) $payment->amount, 2);
+        $basisAmount = round(max(0, $grossAmount - (float) ($payment->refund_amount ?? 0) - (float) ($payment->non_commissionable_amount ?? 0)), 2);
+
+        if ($basisAmount <= 0 || ! $payment->referrer) {
+            $this->reverseForPayment($payment, 'platform_referral_not_applicable');
+            $payment->update([
+                'commissionable_amount' => $basisAmount,
+                'platform_share_amount' => $basisAmount,
+                'affiliate_commission_amount' => 0,
+                'tenant_net_income_amount' => 0,
+            ]);
+
+            return;
+        }
+
+        $rate = round((float) $plan->platform_referral_rate, 2);
+        $commissionAmount = round($basisAmount * ($rate / 100), 2);
+        $holdUntil = $plan->hold_days > 0 ? now()->addDays($plan->hold_days) : null;
+
+        $entry = CommissionEntry::query()->firstOrNew([
+            'payment_id' => $payment->id,
+            'user_id' => $payment->referrer_user_id,
+            'commission_type' => 'platform_referral',
+        ]);
+
+        $attributes = [
+            'tenant_id' => $payment->tenant_id,
+            'commission_plan_id' => $plan->id,
+            'lead_id' => null,
+            'commission_role' => 'affiliate',
+            'gross_amount' => $grossAmount,
+            'basis_amount' => $basisAmount,
+            'rate_percentage' => $rate,
+            'commission_amount' => $commissionAmount,
+            'status' => $holdUntil ? CommissionEntry::STATUS_HELD : CommissionEntry::STATUS_PAYABLE,
+            'hold_until' => $holdUntil,
+            'notes' => 'Generated automatically from platform subscription payment #' . $payment->id . '.',
+            'meta' => [
+                'program' => 'platform_referral',
+                'referral_code' => $payment->referral_code_snapshot,
+                'source_platform' => $payment->source_platform,
+                'source_campaign' => $payment->source_campaign,
+            ],
+        ];
+
+        if ($entry->exists && in_array($entry->status, [CommissionEntry::STATUS_PAID, CommissionEntry::STATUS_APPROVED], true)) {
+            unset($attributes['status'], $attributes['hold_until']);
+        }
+
+        $entry->fill($attributes);
+        $entry->save();
+
+        $payment->update([
+            'commissionable_amount' => $basisAmount,
+            'platform_share_amount' => $basisAmount,
+            'affiliate_commission_amount' => $commissionAmount,
+            'tenant_net_income_amount' => 0,
+        ]);
+    }
+
+    private function resolveTemplateRoyaltyRate(FunnelTemplate $template): float
+    {
+        if ($template->royalty_rate !== null) {
+            return round((float) $template->royalty_rate, 2);
+        }
+
+        return round((float) AppSetting::getValue('template_default_royalty_rate', '5'), 2);
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $definitions
+     */
+    private function sumDefinitionAmount(array $definitions, string $commissionType): float
+    {
+        return round(collect($definitions)
+            ->where('commission_type', $commissionType)
+            ->sum(fn (array $definition) => (float) ($definition['commission_amount'] ?? 0)), 2);
     }
 
     /**

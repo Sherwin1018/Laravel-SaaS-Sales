@@ -127,4 +127,31 @@ class N8nAutomationEndpointsTest extends TestCase
         ]);
         $digestResponse->assertOk()->assertJson(['ok' => true]);
     }
+
+    public function test_starter_plan_blocks_shared_n8n_callback_actions(): void
+    {
+        $tenant = Tenant::query()->create([
+            'company_name' => 'Starter Tenant',
+            'status' => 'active',
+            'billing_status' => 'current',
+            'subscription_plan' => 'Starter',
+        ]);
+
+        $lead = Lead::withoutGlobalScope('tenant')->create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Lead Starter',
+            'email' => 'starter.lead@example.com',
+            'status' => 'new',
+            'score' => 0,
+        ]);
+
+        $scoreResponse = $this->withHeaders($this->headers)->postJson('/api/n8n/lead-score', [
+            'tenant_id' => $tenant->id,
+            'lead_id' => $lead->id,
+            'event' => 'lead_captured',
+            'points' => 10,
+        ]);
+
+        $scoreResponse->assertForbidden();
+    }
 }

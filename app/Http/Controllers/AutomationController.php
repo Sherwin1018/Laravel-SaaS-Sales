@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\OnboardingAuditLog;
 use App\Services\N8nWorkflowControlService;
+use App\Services\PlanAutomationService;
 use App\Support\TenantPlanEnforcer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -127,6 +128,7 @@ class AutomationController extends Controller
         $plan = $tenant ? app(TenantPlanEnforcer::class)->resolvePlan($tenant) : null;
         $planName = $plan?->name ?: ($tenant?->subscription_plan ?: 'No Plan');
         $automationIncluded = (bool) ($plan?->automation_enabled ?? false);
+        $automationMode = app(PlanAutomationService::class)->modeForPlan($plan);
         $platformState = $this->platformStateSummary($status, $automationIncluded);
         $billingState = $this->billingStateSummary($tenant);
 
@@ -134,7 +136,14 @@ class AutomationController extends Controller
         $tenantTone = 'neutral';
         $tenantSummary = 'Your tenant automation eligibility could not be confirmed yet.';
 
-        if (! $automationIncluded) {
+        if ($automationMode === PlanAutomationService::MODE_LIMITED) {
+            $tenantLabel = 'Limited';
+            $tenantTone = 'warning';
+            $tenantSummary = sprintf(
+                '%s includes limited built-in automations such as setup, payment confirmation, one lead autoresponse, one checkout reminder, and basic status notifications. Upgrade to Growth or Scale to unlock the shared n8n automation engine.',
+                $planName
+            );
+        } elseif (! $automationIncluded) {
             $tenantLabel = 'Not Included';
             $tenantTone = 'warning';
             $tenantSummary = sprintf(
@@ -164,11 +173,13 @@ class AutomationController extends Controller
 
         return [
             'plan_access' => [
-                'label' => $automationIncluded ? 'Included' : 'Not Included',
+                'label' => $automationIncluded ? 'Included' : ($automationMode === PlanAutomationService::MODE_LIMITED ? 'Limited' : 'Not Included'),
                 'tone' => $automationIncluded ? 'positive' : 'warning',
                 'summary' => $automationIncluded
                     ? sprintf('%s includes access to the shared n8n automation engine.', $planName)
-                    : sprintf('%s does not include advanced shared n8n automation.', $planName),
+                    : ($automationMode === PlanAutomationService::MODE_LIMITED
+                        ? sprintf('%s includes limited built-in automations, but not the shared n8n automation engine.', $planName)
+                        : sprintf('%s does not include advanced shared n8n automation.', $planName)),
             ],
             'platform' => $platformState,
             'billing' => $billingState,

@@ -9,17 +9,34 @@
 
 @section('content')
 <style>
-.fb-top{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;background:#240E35;color:#fff;padding:12px;border-radius:12px}
+.fb-top{display:grid;grid-template-columns:minmax(180px,220px) minmax(0,1fr);align-items:center;gap:16px 22px;background:#240E35;color:#fff;padding:20px 22px;border-radius:18px;box-shadow:0 18px 34px rgba(36,14,53,.14)}
+.fb-top__meta{display:grid;gap:10px;min-width:0;align-content:center}
+.fb-top__title{font-size:1.95rem;font-weight:800;line-height:1.02;word-break:break-word}
+.fb-top__status{display:inline-flex;align-items:center;justify-content:center;width:max-content;max-width:100%;padding:6px 12px;border-radius:999px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.16);font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
 .fb-template-flow-note{margin-bottom:12px;padding:14px 16px;border-radius:14px;border:1px solid #E7D8F0;background:linear-gradient(135deg,#FBF8FE 0%,#FFFFFF 100%);color:#475569;box-shadow:0 10px 26px rgba(36,14,53,.06)}
 .fb-template-flow-note strong{display:block;margin-bottom:6px;color:#240E35;font-size:13px;letter-spacing:.06em;text-transform:uppercase}
 .fb-template-flow-note p{margin:0;font-size:13px;line-height:1.6}
-.fb-actions{display:flex;gap:8px;flex-wrap:wrap}
+.fb-actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px;min-width:0}
+.fb-top-form{display:grid;grid-template-columns:minmax(160px,200px) minmax(120px,.8fr) minmax(200px,1fr) auto;gap:10px;align-items:center;flex:1 1 620px;min-width:0;max-width:100%}
 .fb-actions form{margin:0}
-.fb-actions .fb-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:42px;padding:0 14px;line-height:1;white-space:nowrap}
-.fb-btn{padding:8px 12px;border-radius:8px;border:1px solid #E6E1EF;background:#fff;color:#240E35;font-weight:700;text-decoration:none;cursor:pointer}
+.fb-actions form:not(.fb-top-form){display:inline-flex;flex:0 0 auto}
+.fb-actions > .fb-btn,.fb-actions > a.fb-btn,.fb-actions > form:not(.fb-top-form){flex:0 0 auto;min-width:0}
+.fb-actions > .fb-btn,
+.fb-actions > a.fb-btn,
+.fb-actions > form:not(.fb-top-form){width:auto}
+.fb-actions .fb-btn,.fb-actions form:not(.fb-top-form) .fb-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 18px;line-height:1.1;white-space:nowrap;width:100%;min-width:0}
+.fb-action-cluster{display:grid;grid-template-columns:repeat(3,minmax(148px,1fr));gap:10px;align-items:center;min-width:0;flex:0 1 560px}
+.fb-action-cluster .fb-btn{width:100%}
+.fb-top-form .fb-btn{min-width:170px}
+.fb-action-exit{margin-left:auto}
+.fb-top-field{width:100%;min-width:0;max-width:100%;height:48px;padding:0 16px;border:1px solid #E6E1EF;border-radius:14px;font-size:14px;background:#fff;color:#240E35;font-weight:700;box-sizing:border-box}
+.fb-top-field::placeholder{color:#8a7f98;font-weight:500}
+.fb-btn{padding:8px 12px;border-radius:14px;border:1px solid #E6E1EF;background:#fff;color:#240E35;font-weight:700;text-decoration:none;cursor:pointer;box-sizing:border-box;transition:transform .14s ease,box-shadow .18s ease,border-color .18s ease,background .18s ease}
+.fb-btn:hover{transform:translateY(-1px);box-shadow:0 10px 22px rgba(36,14,53,.14);border-color:#d6cae5}
 .fb-btn.primary{background:#240E35;color:#fff;border-color:#2E1244}.fb-btn.success{background:#16a34a;color:#fff;border-color:#15803d}.fb-btn.danger{background:#dc2626;color:#fff;border-color:#b91c1c}
 #saveBtn.fb-btn{background:#16a34a;border-color:#15803d}
 #saveBtn.fb-btn:hover{background:#15803d;border-color:#15803d}
+.fb-top-note{max-width:320px;padding:10px 12px;border:1px solid #FCD7AA;border-radius:12px;background:#FFF7ED;color:#9A3412;font-size:12px;font-weight:700;line-height:1.45}
 .fb-grid{margin-top:12px;display:grid;grid-template-columns:260px 1fr;gap:12px;transition:grid-template-columns .2s ease}
 .fb-grid.components-hidden{grid-template-columns:0 1fr}
 .fb-grid > .fb-canvas-col{min-width:0;overflow-x:auto}
@@ -674,6 +691,23 @@
     100%{border-radius:999px}
 }
 @media(max-width:1080px){.fb-grid,.fb-grid.components-hidden{grid-template-columns:1fr}.fb-components-col .fb-panel-toggle{display:none!important}.fb-grid.components-hidden .fb-components-col .fb-left-panel{display:block!important}.fb-left-panel.hidden{display:none!important}}
+@media (max-width:1440px){
+    .fb-top{grid-template-columns:1fr}
+    .fb-top-form{flex-basis:100%;grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:980px){
+    .fb-top{padding:16px}
+    .fb-top__title{font-size:1.6rem}
+    .fb-top-form{grid-template-columns:1fr}
+    .fb-actions > .fb-btn,.fb-actions > a.fb-btn,.fb-actions > form:not(.fb-top-form){min-width:0;flex:1 1 calc(50% - 5px);width:auto}
+    .fb-actions .fb-btn,.fb-actions form:not(.fb-top-form) .fb-btn{width:100%}
+    .fb-action-cluster{grid-template-columns:repeat(2,minmax(0,1fr));width:100%}
+    .fb-action-exit{margin-left:0}
+}
+@media (max-width:640px){
+    .fb-actions > .fb-btn,.fb-actions > a.fb-btn,.fb-actions > form:not(.fb-top-form){flex-basis:100%}
+    .fb-action-cluster{grid-template-columns:1fr}
+}
 </style>
 
 @if(session('template_clone_notice') && ($builderMode ?? 'funnel') !== 'template' && (string) ($funnel->status ?? 'draft') === 'draft')
@@ -684,14 +718,17 @@
 @endif
 
 <div class="fb-top">
-    <div><strong>{{ $funnel->name }}</strong> <span style="font-size:12px;opacity:.9;">({{ ucfirst($funnel->status) }})</span></div>
+    <div class="fb-top__meta">
+        <div class="fb-top__title">{{ $funnel->name }}</div>
+        <div class="fb-top__status">{{ ucfirst($funnel->status) }}</div>
+    </div>
     <div class="fb-actions">
-        <form method="POST" action="{{ $builderUpdateUrl ?? route('funnels.update', $funnel) }}" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+        <form method="POST" action="{{ $builderUpdateUrl ?? route('funnels.update', $funnel) }}" class="fb-top-form">
             @csrf
             @method('PUT')
             <select
                 id="fbPurposeTopBar"
-                style="min-width:190px;padding:6px 8px;border:1px solid #E6E1EF;border-radius:8px;font-size:12px;background:#fff;font-weight:700;"
+                class="fb-top-field"
                 title="Funnel Purpose"
             >
                 @php $resolvedPurpose = $builderPurpose ?? $funnel->purpose ?? 'service'; @endphp
@@ -704,7 +741,7 @@
                     name="name"
                     value="{{ old('name', $funnel->name) }}"
                     placeholder="Template name"
-                    style="min-width:260px;padding:6px 8px;border:1px solid #E6E1EF;border-radius:8px;font-size:12px;"
+                    class="fb-top-field"
                 >
             @else
                 <input type="hidden" name="name" value="{{ $funnel->name }}">
@@ -717,18 +754,22 @@
                 value="{{ old('default_tags', $builderTagValue ?? implode(', ', $funnel->default_tags ?? [])) }}"
                 placeholder="{{ $builderTagPlaceholder ?? 'Funnel tags: e.g. webinar, q1-campaign' }}"
                 @if($builderTagInputDisabled ?? false) disabled @endif
-                style="min-width:280px;padding:6px 8px;border:1px solid #E6E1EF;border-radius:8px;font-size:12px;"
+                class="fb-top-field"
             >
             <button class="fb-btn" type="submit"><i class="fas fa-tags"></i> {{ ($builderMode ?? 'funnel') === 'template' ? 'Save Template' : 'Save Tags' }}</button>
         </form>
-        <button id="saveBtn" class="fb-btn primary" type="button"><i class="fas fa-save"></i> Save</button>
-        <button id="previewBtn" class="fb-btn" type="button"><i class="fas fa-eye"></i> Preview</button>
         @if(($builderMode ?? 'funnel') !== 'template')
             <a href="{{ route('funnels.reviews.index', $funnel) }}" class="fb-btn"><i class="fas fa-star-half-alt"></i> Reviews</a>
         @endif
-        @if(($builderMode ?? 'funnel') === 'template')
-            <button id="testFlowBtn" class="fb-btn" type="button"><i class="fas fa-vial"></i> Test Flow</button>
-        @endif
+        <div class="fb-action-cluster">
+            <button id="saveBtn" class="fb-btn primary" type="button"><i class="fas fa-save"></i> Save</button>
+            <button id="previewBtn" class="fb-btn" type="button"><i class="fas fa-eye"></i> Preview</button>
+            @if(($builderMode ?? 'funnel') === 'template')
+                <button id="testFlowBtn" class="fb-btn" type="button"><i class="fas fa-vial"></i> Test Flow</button>
+            @else
+                <span></span>
+            @endif
+        </div>
         @if($funnel->status === 'published')
             <form method="POST" action="{{ $builderUnpublishUrl ?? route('funnels.unpublish', $funnel) }}" id="builderUnpublishForm">@csrf<button class="fb-btn danger" type="submit"><i class="fas fa-ban"></i> Unpublish</button></form>
         @else
@@ -745,12 +786,12 @@
                 </button>
             </form>
             @if(!($builderPublishDecision['allowed'] ?? true))
-                <div style="max-width:320px;padding:10px 12px;border:1px solid #FCD7AA;border-radius:12px;background:#FFF7ED;color:#9A3412;font-size:12px;font-weight:700;line-height:1.45;">
+                <div class="fb-top-note">
                     {{ $builderPublishDecision['message'] ?? 'Publishing is temporarily unavailable.' }}
                 </div>
             @endif
         @endif
-        <a href="{{ $builderExitUrl ?? route('funnels.index') }}" class="fb-btn"><i class="fas fa-door-open"></i> Exit Builder</a>
+        <a href="{{ $builderExitUrl ?? route('funnels.index') }}" class="fb-btn fb-action-exit"><i class="fas fa-door-open"></i> Exit Builder</a>
     </div>
 </div>
 

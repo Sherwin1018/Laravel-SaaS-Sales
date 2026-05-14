@@ -8,6 +8,8 @@ use App\Models\FunnelTemplateAsset;
 use App\Models\FunnelTemplateStep;
 use App\Models\FunnelTemplateStepRevision;
 use App\Services\FunnelTemplateService;
+use App\Services\TemplateMarketplaceAnalyticsService;
+use App\Support\XlsxWorkbookBuilder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
@@ -41,6 +43,69 @@ class AdminFunnelTemplateController extends Controller
         }
 
         return view('admin.funnel-templates.index', compact('templates', 'search'));
+    }
+
+    public function analytics(Request $request, TemplateMarketplaceAnalyticsService $analytics)
+    {
+        $selectedTemplate = $this->selectedTemplateFromRequest($request);
+
+        return view('admin.funnel-templates.analytics', [
+            'report' => $analytics->overview($selectedTemplate?->id),
+            'selectedTemplate' => $selectedTemplate,
+        ]);
+    }
+
+    public function exportAnalyticsExcel(Request $request, TemplateMarketplaceAnalyticsService $analytics)
+    {
+        $selectedTemplate = $this->selectedTemplateFromRequest($request);
+        $report = $analytics->overview($selectedTemplate?->id);
+        $templateRows = collect(data_get($report, 'template_rows', []));
+
+        $title = $selectedTemplate
+            ? 'Template Performance - ' . $selectedTemplate->name
+            : 'Template Performance';
+
+        $filenameBase = $selectedTemplate?->slug
+            ? 'template-performance-' . $selectedTemplate->slug
+            : 'template-performance';
+
+        $rows = $templateRows
+            ->map(fn ($row) => [
+                $this->excelTextCell((string) ($row->name ?? '-')),
+                $this->excelTextCell((string) ($row->slug ?? '-')),
+                $this->excelNumberCell((float) ($row->royalty_rate ?? 0), 'currency'),
+                $this->excelNumberCell((int) ($row->tenant_count ?? 0), 'center'),
+                $this->excelNumberCell((int) ($row->cloned_funnels_count ?? 0), 'center'),
+                $this->excelNumberCell((int) ($row->paid_orders_count ?? 0), 'center'),
+                $this->excelNumberCell((float) ($row->gross_revenue ?? 0), 'currency'),
+                $this->excelNumberCell((float) ($row->net_revenue ?? 0), 'currency'),
+                $this->excelNumberCell((float) ($row->template_royalty_total ?? 0), 'currency'),
+                $this->excelNumberCell((float) ($row->affiliate_commission_total ?? 0), 'currency'),
+                $this->excelNumberCell((float) ($row->average_order_value ?? 0), 'currency'),
+            ])
+            ->all();
+
+        $filename = Str::slug($filenameBase)
+            . '-'
+            . now()->format('Ymd_His')
+            . '.xlsx';
+
+        return response(
+            (new XlsxWorkbookBuilder(
+                'Template Performance',
+                $title,
+                $this->templateAnalyticsExcelSummaryLine($selectedTemplate, count($rows)),
+                ['Template', 'Slug', 'Royalty Rate (%)', 'Tenants', 'Cloned Funnels', 'Paid Orders', 'Gross Revenue (PHP)', 'Net Revenue (PHP)', 'Royalty Total (PHP)', 'Affiliate Total (PHP)', 'Avg Order (PHP)'],
+                [180, 150, 105, 80, 110, 95, 125, 125, 125, 125, 110],
+                $rows
+            ))->build(),
+            200,
+            [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+                'Cache-Control' => 'max-age=0, no-cache, no-store, must-revalidate',
+            ]
+        );
     }
 
     public function create()
@@ -294,6 +359,52 @@ class AdminFunnelTemplateController extends Controller
         }
 
         return FunnelTemplate::normalizeTemplateType($template->template_type) === 'single_page';
+    }
+
+    private function selectedTemplateFromRequest(Request $request): ?FunnelTemplate
+    {
+        $selectedTemplateId = (int) $request->query('template', 0);
+
+        if ($selectedTemplateId <= 0) {
+            return null;
+        }
+
+        return FunnelTemplate::query()
+            ->whereKey($selectedTemplateId)
+            ->where('template_type', FunnelTemplate::TEMPLATE_TYPE_STEP_BY_STEP)
+            ->first();
+    }
+
+    private function templateAnalyticsExcelSummaryLine(?FunnelTemplate $selectedTemplate, int $rowCount): string
+    {
+        $scope = $selectedTemplate
+            ? 'Filtered Template: ' . $selectedTemplate->name
+            : 'All published templates';
+
+        return $scope
+            . ' | Export: Template Performance'
+            . ' | Rows: '
+            . number_format($rowCount)
+            . ' | Generated: '
+            . now()->format('Y-m-d h:i A');
+    }
+
+    private function excelTextCell(mixed $value, string $style = 'text'): array
+    {
+        return [
+            'type' => 'String',
+            'style' => $style,
+            'value' => trim((string) $value) !== '' ? (string) $value : '-',
+        ];
+    }
+
+    private function excelNumberCell(int|float $value, string $style = 'number'): array
+    {
+        return [
+            'type' => 'Number',
+            'style' => $style,
+            'value' => $value,
+        ];
     }
 
     private function builderSharedTemplatesPayload(): array

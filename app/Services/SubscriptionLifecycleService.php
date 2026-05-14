@@ -2,8 +2,11 @@
 
 namespace App\Services;
 
+use App\Models\FinanceAuditLog;
 use App\Models\Payment;
+use App\Models\Plan;
 use App\Models\Tenant;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class SubscriptionLifecycleService
@@ -24,6 +27,10 @@ class SubscriptionLifecycleService
                 throw new \RuntimeException('Only platform subscription payments can activate tenant subscriptions.');
             }
 
+            if ($this->paymentLifecycleAlreadyRecorded($payment->id, 'subscription_paid')) {
+                return $tenant->fresh();
+            }
+
             if ($payment->status !== 'paid') {
                 $payment->update([
                     'status' => 'paid',
@@ -32,21 +39,26 @@ class SubscriptionLifecycleService
                 ]);
             }
 
+            $planName = (string) ($plan['name'] ?? $tenant->subscription_plan);
+            $renewalAt = $this->nextRenewalDate($tenant);
+            $planChangeType = $this->planChangeType($tenant, $plan);
+
             $tenant->update([
-                'subscription_plan' => $plan['name'],
+                'subscription_plan' => $planName,
                 'status' => 'active',
                 'billing_status' => self::BILLING_CURRENT,
                 'billing_grace_ends_at' => null,
                 'last_payment_failed_at' => null,
-                'subscription_activated_at' => now(),
-                'subscription_renews_at' => now()->addMonthNoOverflow(),
+                'subscription_activated_at' => $this->activationTimestamp($tenant),
+                'subscription_renews_at' => $renewalAt,
                 'trial_ends_at' => null,
             ]);
 
             $tenant = $tenant->fresh();
             $this->dispatchAutomationEvent('subscription_paid', $this->subscriptionPayload($tenant, $payment, [
                 'plan_code' => (string) ($plan['code'] ?? ''),
-                'plan_name' => (string) ($plan['name'] ?? $tenant->subscription_plan),
+                'plan_name' => $planName,
+                'plan_change_type' => $planChangeType,
                 'payment_method' => $paymentMethod ?? $payment->payment_method,
             ]));
             app(FinanceAuditService::class)->record(
@@ -58,8 +70,10 @@ class SubscriptionLifecycleService
                 null,
                 [
                     'plan_code' => (string) ($plan['code'] ?? ''),
-                    'plan_name' => (string) ($plan['name'] ?? $tenant->subscription_plan),
+                    'plan_name' => $planName,
+                    'plan_change_type' => $planChangeType,
                     'payment_method' => $paymentMethod ?? $payment->payment_method,
+                    'subscription_renews_at' => optional($tenant->subscription_renews_at)->toIso8601String(),
                 ]
             );
 
@@ -88,10 +102,15 @@ class SubscriptionLifecycleService
                 return $tenant->fresh();
             }
 
+            if ($this->paymentLifecycleAlreadyRecorded($payment->id, 'subscription_overdue')) {
+                return $tenant->fresh();
+            }
+
             if ($tenant->status === 'active') {
+                $graceEndsAt = $this->nextGraceEndAt($tenant);
                 $tenant->update([
                     'billing_status' => self::BILLING_OVERDUE,
-                    'billing_grace_ends_at' => now()->addDays(self::GRACE_DAYS),
+                    'billing_grace_ends_at' => $graceEndsAt,
                     'last_payment_failed_at' => now(),
                 ]);
 
@@ -113,6 +132,7 @@ class SubscriptionLifecycleService
                     null,
                     [
                         'invoice_id' => (string) ($payment->provider_reference ?: $payment->id),
+                        'billing_grace_ends_at' => optional($tenant->billing_grace_ends_at)->toIso8601String(),
                     ]
                 );
             }
@@ -140,13 +160,17 @@ class SubscriptionLifecycleService
 
     public function restoreTenantBilling(Tenant $tenant, ?Payment $payment = null): Tenant
     {
+        if ($payment && $this->paymentLifecycleAlreadyRecorded($payment->id, 'subscription_paid')) {
+            return $tenant->fresh();
+        }
+
         $tenant->update([
             'status' => 'active',
             'billing_status' => self::BILLING_CURRENT,
             'billing_grace_ends_at' => null,
             'last_payment_failed_at' => null,
-            'subscription_activated_at' => now(),
-            'subscription_renews_at' => now()->addMonthNoOverflow(),
+            'subscription_activated_at' => $this->activationTimestamp($tenant),
+            'subscription_renews_at' => $payment ? $this->nextRenewalDate($tenant) : $this->restoredRenewalDate($tenant),
         ]);
 
         $tenant = $tenant->fresh();
@@ -231,5 +255,89 @@ class SubscriptionLifecycleService
             'subscription_activated_at' => optional($tenant->subscription_activated_at)->toIso8601String(),
             'subscription_renews_at' => optional($tenant->subscription_renews_at)->toIso8601String(),
         ], $extra);
+    }
+
+    private function paymentLifecycleAlreadyRecorded(int $paymentId, string $eventType): bool
+    {
+        return FinanceAuditLog::query()
+            ->where('payment_id', $paymentId)
+            ->where('event_type', $eventType)
+            ->exists();
+    }
+
+    private function nextGraceEndAt(Tenant $tenant): Carbon
+    {
+        $candidate = now()->addDays(self::GRACE_DAYS);
+
+        if ($tenant->billing_grace_ends_at instanceof Carbon && $tenant->billing_grace_ends_at->greaterThan($candidate)) {
+            return $tenant->billing_grace_ends_at->copy();
+        }
+
+        return $candidate;
+    }
+
+    private function nextRenewalDate(Tenant $tenant): Carbon
+    {
+        $anchor = $tenant->subscription_renews_at instanceof Carbon && $tenant->subscription_renews_at->isFuture()
+            ? $tenant->subscription_renews_at->copy()
+            : now()->copy();
+
+        return $anchor->addMonthNoOverflow();
+    }
+
+    private function restoredRenewalDate(Tenant $tenant): Carbon
+    {
+        if ($tenant->subscription_renews_at instanceof Carbon && $tenant->subscription_renews_at->isFuture()) {
+            return $tenant->subscription_renews_at->copy();
+        }
+
+        return now()->addMonthNoOverflow();
+    }
+
+    private function activationTimestamp(Tenant $tenant): Carbon
+    {
+        if ($tenant->subscription_activated_at instanceof Carbon) {
+            return $tenant->subscription_activated_at->copy();
+        }
+
+        return now();
+    }
+
+    private function planChangeType(Tenant $tenant, array $plan): string
+    {
+        $targetCode = mb_strtolower(trim((string) ($plan['code'] ?? '')));
+        $targetName = mb_strtolower(trim((string) ($plan['name'] ?? '')));
+        $currentPlan = Plan::resolveForSubscription($tenant->subscription_plan);
+
+        if ($tenant->status !== 'active' || $tenant->billing_status !== self::BILLING_CURRENT) {
+            return 'reactivation';
+        }
+
+        if (! $currentPlan) {
+            return 'activation';
+        }
+
+        $currentCode = mb_strtolower(trim((string) $currentPlan->code));
+        $currentName = mb_strtolower(trim((string) $currentPlan->name));
+
+        if (
+            ($targetCode !== '' && $targetCode === $currentCode)
+            || ($targetName !== '' && $targetName === $currentName)
+        ) {
+            return 'renewal';
+        }
+
+        $targetPrice = (float) ($plan['price'] ?? 0);
+        $currentPrice = (float) $currentPlan->price;
+
+        if ($targetPrice > $currentPrice) {
+            return 'upgrade';
+        }
+
+        if ($targetPrice < $currentPrice) {
+            return 'downgrade';
+        }
+
+        return 'plan_change';
     }
 }

@@ -101,7 +101,7 @@ class AnalyticsDashboardService
         $revenueTrendRaw = Payment::query()
             ->where('tenant_id', $tenant->id)
             ->where('status', 'paid')
-            ->where('payment_date', '>=', now()->copy()->subMonths(5)->startOfMonth())
+            ->where('payment_date', '>=', now()->copy()->subMonths(5)->startOfMonth()->toDateString())
             ->selectRaw($monthKeyExpression . " as month_key, SUM(amount) as total")
             ->groupBy('month_key')
             ->pluck('total', 'month_key');
@@ -124,11 +124,12 @@ class AnalyticsDashboardService
                 'paid_payments_considered' => Payment::query()
                     ->where('tenant_id', $tenant->id)
                     ->where('status', 'paid')
-                    ->where('payment_date', '>=', now()->copy()->subMonths(5)->startOfMonth())
+                    ->where('payment_date', '>=', now()->copy()->subMonths(5)->startOfMonth()->toDateString())
                     ->count(),
-                'formula' => 'sum of paid payments grouped by payment month',
+                'formula' => 'sum of paid payments grouped by payment_date month',
             ],
             'physical_sales' => $this->tenantPhysicalSalesSummary($tenant),
+            'funnel_performance' => $this->tenantFunnelPerformance($tenant),
         ];
     }
 
@@ -175,7 +176,7 @@ class AnalyticsDashboardService
         $funnels = Funnel::query()
             ->where('tenant_id', $tenant->id)
             ->whereIn('purpose', ['physical_product', 'hybrid'])
-            ->get(['id', 'name', 'slug', 'purpose']);
+            ->get(['id', 'tenant_id', 'name', 'slug', 'purpose']);
 
         if ($funnels->isEmpty()) {
             return [
@@ -304,5 +305,92 @@ class AnalyticsDashboardService
             ->all();
 
         return $summary;
+    }
+
+    private function tenantFunnelPerformance(Tenant $tenant): array
+    {
+        $funnels = Funnel::query()
+            ->where('tenant_id', $tenant->id)
+            ->orderBy('name')
+            ->get(['id', 'tenant_id', 'name', 'slug', 'status', 'purpose']);
+
+        if ($funnels->isEmpty()) {
+            return [
+                'funnel_count' => 0,
+                'totals' => [
+                    'entry_visits' => 0,
+                    'checkout_start_count' => 0,
+                    'paid_count' => 0,
+                    'abandoned_checkout_count' => 0,
+                    'revenue' => 0.0,
+                ],
+                'rates' => [
+                    'paid_conversion_rate' => 0.0,
+                    'abandoned_checkout_rate' => 0.0,
+                ],
+                'top_funnels' => [],
+                'formulas' => [
+                    'paid_conversion_rate' => 'paid_count / entry_visits * 100',
+                    'abandoned_checkout_rate' => 'abandoned_checkout_count / checkout_start_count * 100',
+                ],
+            ];
+        }
+
+        /** @var FunnelTrackingService $tracking */
+        $tracking = app(FunnelTrackingService::class);
+
+        $rows = $funnels->map(function (Funnel $funnel) use ($tracking): array {
+            $analytics = $tracking->analyticsForFunnel($funnel);
+            $totals = $analytics['totals'] ?? [];
+            $rates = $analytics['rates'] ?? [];
+
+            return [
+                'funnel_id' => $funnel->id,
+                'name' => $funnel->name,
+                'slug' => $funnel->slug,
+                'status' => $funnel->status,
+                'purpose' => $funnel->purposeLabel(),
+                'entry_visits' => (int) ($totals['entry_visits'] ?? 0),
+                'checkout_start_count' => (int) ($totals['checkout_start_count'] ?? 0),
+                'paid_count' => (int) ($totals['paid_count'] ?? 0),
+                'abandoned_checkout_count' => (int) ($totals['abandoned_checkout_count'] ?? 0),
+                'revenue' => round((float) ($totals['revenue'] ?? 0), 2),
+                'average_order_value' => round((float) ($totals['average_order_value'] ?? 0), 2),
+                'revenue_per_visit' => round((float) ($totals['revenue_per_visit'] ?? 0), 2),
+                'paid_conversion_rate' => round((float) ($rates['paid_conversion_rate'] ?? 0), 2),
+                'abandoned_checkout_rate' => round((float) ($rates['abandoned_checkout_rate'] ?? 0), 2),
+            ];
+        });
+
+        $entryVisits = (int) $rows->sum('entry_visits');
+        $checkoutStarts = (int) $rows->sum('checkout_start_count');
+        $paidCount = (int) $rows->sum('paid_count');
+        $abandonedCount = (int) $rows->sum('abandoned_checkout_count');
+        $revenue = round((float) $rows->sum('revenue'), 2);
+
+        return [
+            'funnel_count' => $rows->count(),
+            'totals' => [
+                'entry_visits' => $entryVisits,
+                'checkout_start_count' => $checkoutStarts,
+                'paid_count' => $paidCount,
+                'abandoned_checkout_count' => $abandonedCount,
+                'revenue' => $revenue,
+            ],
+            'rates' => [
+                'paid_conversion_rate' => $entryVisits > 0 ? round(($paidCount / $entryVisits) * 100, 2) : 0.0,
+                'abandoned_checkout_rate' => $checkoutStarts > 0 ? round(($abandonedCount / $checkoutStarts) * 100, 2) : 0.0,
+            ],
+            'top_funnels' => $rows
+                ->sortByDesc(fn (array $row) => [$row['revenue'], $row['paid_count'], $row['entry_visits']])
+                ->take(5)
+                ->values()
+                ->all(),
+            'formulas' => [
+                'paid_conversion_rate' => 'paid_count / entry_visits * 100',
+                'abandoned_checkout_rate' => 'abandoned_checkout_count / checkout_start_count * 100',
+                'revenue_per_visit' => 'revenue / entry_visits',
+            ],
+        ];
     }
 }

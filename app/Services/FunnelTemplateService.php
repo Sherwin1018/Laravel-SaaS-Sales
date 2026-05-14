@@ -103,6 +103,7 @@ class FunnelTemplateService
             $funnel = Funnel::create([
                 'tenant_id' => $user->tenant_id,
                 'created_by' => $user->id,
+                'source_template_id' => $template->id,
                 'name' => $name !== '' ? $name : $template->name,
                 'slug' => $this->generateUniqueFunnelSlug($name !== '' ? $name : $template->name, (int) $user->tenant_id),
                 'description' => $description,

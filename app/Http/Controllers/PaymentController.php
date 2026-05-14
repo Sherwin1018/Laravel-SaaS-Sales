@@ -197,7 +197,7 @@ class PaymentController extends Controller
         $user = auth()->user();
 
         $validated = $request->validate([
-            'payment_type' => ['required', Rule::in(array_keys(Payment::TYPES))],
+            'payment_type' => ['nullable', Rule::in(array_keys(Payment::TYPES))],
             'lead_id' => 'nullable|integer|exists:leads,id',
             'funnel_id' => 'nullable|integer|exists:funnels,id',
             'funnel_step_id' => 'nullable|integer|exists:funnel_steps,id',
@@ -219,7 +219,7 @@ class PaymentController extends Controller
             }
         }
 
-        $paymentType = Payment::normalizeType($validated['payment_type']);
+        $paymentType = Payment::normalizeType($validated['payment_type'] ?? Payment::TYPE_PLATFORM_SUBSCRIPTION);
         $funnelId = null;
         $funnelStepId = null;
 

@@ -11,6 +11,7 @@
         $toggleLabel = $isActive ? 'Pause' : 'Play';
         $toggleIcon = $isActive ? 'fa-pause' : 'fa-play';
         $toggleBg = $isActive ? '#991b1b' : '#166534';
+        $toggleDisabled = !($status['configured'] ?? false);
         $statusPalette = static function (string $tone): array {
             return match ($tone) {
                 'positive' => ['bg' => 'rgba(22, 163, 74, 0.08)', 'border' => 'rgba(22, 163, 74, 0.18)', 'text' => '#166534'],
@@ -36,6 +37,11 @@
         @if(!empty($statusError))
             <div style="padding: 12px 14px; border-radius: 10px; background: rgba(153, 27, 27, 0.08); color: #991B1B; border: 1px solid rgba(153, 27, 27, 0.18); margin-bottom: 18px;">
                 Automation status could not be refreshed: {{ $statusError }}
+                @if($isSuperAdmin && ($status['configured'] ?? false))
+                    <div style="margin-top:6px;font-size:12px;line-height:1.5;color:#7F1D1D;">
+                        The Play/Pause control is still available below if n8n is configured, but status will stay unavailable until the API access is fixed.
+                    </div>
+                @endif
             </div>
         @endif
 
@@ -95,7 +101,7 @@
                     <input type="hidden" name="active" value="{{ $nextActive }}">
                     <button type="submit"
                         style="padding: 10px 18px; background: {{ $toggleBg }}; color: #fff; border: 0; border-radius: 8px; font-weight: 700; cursor: pointer;"
-                        {{ !($status['configured'] ?? false) || ($status['active'] ?? null) === null ? 'disabled' : '' }}>
+                        {{ $toggleDisabled ? 'disabled' : '' }}>
                         <i class="fas {{ $toggleIcon }}" style="margin-right: 6px;"></i> {{ $toggleLabel }}
                     </button>
                 </form>

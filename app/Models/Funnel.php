@@ -24,6 +24,7 @@ class Funnel extends Model
     protected $fillable = [
         'tenant_id',
         'created_by',
+        'source_template_id',
         'name',
         'slug',
         'description',
@@ -73,6 +74,11 @@ class Funnel extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function sourceTemplate(): BelongsTo
+    {
+        return $this->belongsTo(FunnelTemplate::class, 'source_template_id');
     }
 
     public function steps(): HasMany

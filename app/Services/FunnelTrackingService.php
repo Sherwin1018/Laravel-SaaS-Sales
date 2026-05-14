@@ -297,6 +297,7 @@ class FunnelTrackingService
         $funnel->loadMissing('steps');
         $events = $this->baseFunnelQuery($funnel, $filters)
             ->with([
+                'funnel:id,tenant_id,name,slug,purpose',
                 'step:id,funnel_id,title,slug,type',
                 'lead:id,name,email,phone',
                 'payment:id,amount,status,payment_date,coupon_code,subtotal_amount,discount_amount',
@@ -733,8 +734,15 @@ class FunnelTrackingService
                 $couponCode = trim((string) ($paymentModel?->coupon_code ?? ''));
                 $subtotalAmount = is_numeric($paymentModel?->subtotal_amount) ? (float) $paymentModel->subtotal_amount : null;
                 $discountAmount = is_numeric($paymentModel?->discount_amount) ? (float) $paymentModel->discount_amount : null;
+                $orderedAt = $paymentPaid?->occurred_at
+                    ?? $paymentModel?->created_at
+                    ?? $checkoutStarted?->occurred_at
+                    ?? $latest?->occurred_at;
 
                 return [
+                    'funnel_id' => $latest?->funnel_id ?? $checkoutStarted?->funnel_id,
+                    'funnel_name' => trim((string) ($latest?->funnel?->name ?? $checkoutStarted?->funnel?->name ?? '')) ?: null,
+                    'funnel_slug' => trim((string) ($latest?->funnel?->slug ?? $checkoutStarted?->funnel?->slug ?? '')) ?: null,
                     'order_key' => $orderKey,
                     'session_identifier' => trim((string) ($latest?->session_identifier ?? $checkoutStarted?->session_identifier ?? '')) ?: null,
                     'lead_id' => $leadEvent?->lead?->id ?? $checkoutStarted?->lead_id ?? $latest?->lead_id,
@@ -774,6 +782,8 @@ class FunnelTrackingService
                     'delivery_message' => $deliveryMessage !== '' ? $deliveryMessage : null,
                     'delivery_updated_at' => $deliveryUpdatedAt,
                     'delivery_updated_label' => $deliveryUpdatedLabel ?: null,
+                    'ordered_at' => optional($orderedAt)?->toIso8601String(),
+                    'ordered_at_label' => optional($orderedAt)?->format('M j, Y g:i A'),
                     'upsell_status' => $this->offerStatusLabel($upsellAccepted, $upsellDeclined),
                     'downsell_status' => $this->offerStatusLabel($downsellAccepted, $downsellDeclined),
                     'last_activity' => optional($latest?->occurred_at)?->format('M j, Y g:i A') ?? '-',
@@ -1107,6 +1117,19 @@ class FunnelTrackingService
         try {
             $event->loadMissing(['funnel:id,tenant_id,name,slug', 'step:id,title,slug,type', 'lead:id,name,email,phone', 'payment:id,tenant_id,amount,status,payment_method,provider,provider_reference']);
             $meta = is_array($event->meta) ? $event->meta : [];
+
+            if ($event->event_name === self::EVENT_PAYMENT_PAID) {
+                try {
+                    app(FunnelPaidCustomerEmailService::class)->sendForPaidEvent($event);
+                } catch (\Throwable) {
+                    // Best-effort confirmation email only.
+                }
+            }
+
+            if (array_key_exists('dispatch_via_n8n', $meta)
+                && ! filter_var($meta['dispatch_via_n8n'], FILTER_VALIDATE_BOOLEAN)) {
+                return;
+            }
 
             $recipientEmail = trim((string) (
                 data_get($meta, 'customer.email')

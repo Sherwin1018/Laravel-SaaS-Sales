@@ -25,6 +25,11 @@
             vertical-align: middle;
         }
 
+        .template-table th:last-child,
+        .template-table td:last-child {
+            min-width: 0;
+        }
+
         .template-table th:nth-child(1),
         .template-table td:nth-child(1) {
             min-width: 130px;
@@ -38,6 +43,140 @@
         .template-table th:nth-child(5),
         .template-table td:nth-child(5) {
             min-width: 170px;
+        }
+
+        .template-table td:nth-child(5) {
+            white-space: normal;
+            word-break: break-word;
+        }
+
+        .template-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: nowrap;
+            white-space: nowrap;
+        }
+
+        .template-action,
+        .template-action-btn,
+        .template-action-static {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 42px;
+            height: 42px;
+            padding: 0;
+            border-radius: 12px;
+            border: 1px solid #D8DCE8;
+            background: #fff;
+            color: var(--theme-primary, #240E35);
+            position: relative;
+            text-decoration: none;
+            cursor: pointer;
+            transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease, color .16s ease;
+        }
+
+        .template-action:hover,
+        .template-action-btn:hover,
+        .template-action:focus-visible,
+        .template-action-btn:focus-visible {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
+            border-color: #BFC9D8;
+            outline: none;
+        }
+
+        .template-action i,
+        .template-action-btn i,
+        .template-action-static i {
+            font-size: 16px;
+        }
+
+        .template-action::after,
+        .template-action-btn::after,
+        .template-action-static::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            left: 50%;
+            bottom: calc(100% + 10px);
+            transform: translateX(-50%) translateY(4px);
+            padding: 6px 9px;
+            border-radius: 8px;
+            background: #240E35;
+            color: #fff;
+            font-size: 12px;
+            font-weight: 800;
+            line-height: 1;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .14s ease, transform .14s ease;
+            z-index: 5;
+        }
+
+        .template-action::before,
+        .template-action-btn::before,
+        .template-action-static::before {
+            content: "";
+            position: absolute;
+            left: 50%;
+            bottom: calc(100% + 4px);
+            transform: translateX(-50%);
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 6px solid #240E35;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .14s ease;
+            z-index: 5;
+        }
+
+        .template-action:hover::after,
+        .template-action:hover::before,
+        .template-action:focus-visible::after,
+        .template-action:focus-visible::before,
+        .template-action-btn:hover::after,
+        .template-action-btn:hover::before,
+        .template-action-btn:focus-visible::after,
+        .template-action-btn:focus-visible::before,
+        .template-action-static:hover::after,
+        .template-action-static:hover::before {
+            opacity: 1;
+        }
+
+        .template-action:hover::after,
+        .template-action:focus-visible::after,
+        .template-action-btn:hover::after,
+        .template-action-btn:focus-visible::after,
+        .template-action-static:hover::after {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .template-action--edit {
+            color: var(--theme-primary, #240E35);
+        }
+
+        .template-action--replace {
+            color: #0F766E;
+        }
+
+        .template-action--analytics {
+            color: #2563EB;
+        }
+
+        .template-action--delete {
+            color: #DC2626;
+        }
+
+        .template-action-static {
+            cursor: default;
+        }
+
+        .template-action-static:hover {
+            transform: none;
+            box-shadow: none;
+            border-color: #D8DCE8;
         }
 
         .template-pagination {
@@ -103,6 +242,7 @@
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
             <a href="{{ route('admin.funnel-templates.create') }}" class="btn-create btn-create--icon-expand" aria-label="New Template"><i class="fas fa-plus"></i><span class="btn-create__label">New Template</span></a>
             <a href="{{ route('admin.funnel-templates.import') }}" class="btn-create btn-create--icon-expand" style="background:#fff; color:var(--theme-primary, #240E35); border:1px solid var(--theme-border, #E6E1EF);" aria-label="Import JSON Template"><i class="fas fa-file-import"></i><span class="btn-create__label">Import JSON Template</span></a>
+            <a href="{{ route('admin.funnel-templates.analytics') }}" class="btn-create btn-create--icon-expand" style="background:#EFF6FF; color:#1D4ED8; border:1px solid #BFDBFE;" aria-label="Template Analytics"><i class="fas fa-chart-line"></i><span class="btn-create__label">Template Analytics</span></a>
         </div>
         <form method="GET" action="{{ route('admin.funnel-templates.index') }}">
             <input

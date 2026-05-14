@@ -1823,6 +1823,62 @@
             pointer-events: none;
         }
         .preview-device-switcher{ pointer-events:auto; }
+        .portal-status-toast-stack{
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: grid;
+            gap: 12px;
+            z-index: 999999;
+            width: min(360px, calc(100vw - 24px));
+        }
+        .portal-status-toast{
+            border-radius: 16px;
+            padding: 16px 18px;
+            box-shadow: 0 24px 55px rgba(15,23,42,.18);
+            border: 1px solid transparent;
+            background: #fff;
+            color: #0f172a;
+        }
+        .portal-status-toast--success{
+            background: #ecfdf5;
+            border-color: #a7f3d0;
+            color: #166534;
+        }
+        .portal-status-toast--error{
+            background: #fef2f2;
+            border-color: #fecaca;
+            color: #991b1b;
+        }
+        .portal-status-toast__eyebrow{
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            opacity: .8;
+        }
+        .portal-status-toast__message{
+            margin-top: 6px;
+            font-size: 14px;
+            line-height: 1.6;
+            font-weight: 700;
+        }
+        .portal-status-toast__close{
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 30px;
+            height: 30px;
+            border: none;
+            border-radius: 999px;
+            background: rgba(255,255,255,.72);
+            color: currentColor;
+            cursor: pointer;
+            font-weight: 900;
+        }
+        .portal-status-toast-shell{
+            position: relative;
+        }
     </style>
 </head>
 <body class="{{ ($isPreview ?? false) ? 'is-preview' : 'is-published' }}{{ ($portalHasFreeformCanvas ?? false) ? ' portal-has-freeform-canvas' : '' }}{{ ($previewIframeMode ?? false) ? ' preview-iframe-doc' : '' }}" data-funnel-slug="{{ $funnel->slug }}">
@@ -2465,11 +2521,26 @@
         </div>
         @endif
 
-        @if(session('error'))
-            <div class="wrap" style="padding: 12px 2rem 0;">
-                <div style="padding: 12px 16px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; color: #991b1b; font-size: 14px;">
-                    {{ session('error') }}
-                </div>
+        @if(session('success') || session('error'))
+            <div class="portal-status-toast-stack" aria-live="polite" aria-atomic="true">
+                @if(session('success'))
+                    <div class="portal-status-toast-shell" data-portal-status-toast>
+                        <div class="portal-status-toast portal-status-toast--success">
+                            <div class="portal-status-toast__eyebrow">Success</div>
+                            <div class="portal-status-toast__message">{{ session('success') }}</div>
+                            <button type="button" class="portal-status-toast__close" aria-label="Close notification" data-portal-status-close>&times;</button>
+                        </div>
+                    </div>
+                @endif
+                @if(session('error'))
+                    <div class="portal-status-toast-shell" data-portal-status-toast>
+                        <div class="portal-status-toast portal-status-toast--error">
+                            <div class="portal-status-toast__eyebrow">Payment Update</div>
+                            <div class="portal-status-toast__message">{{ session('error') }}</div>
+                            <button type="button" class="portal-status-toast__close" aria-label="Close notification" data-portal-status-close>&times;</button>
+                        </div>
+                    </div>
+                @endif
             </div>
         @endif
 
@@ -7772,10 +7843,11 @@
             var btn = e.target && e.target.closest ? e.target.closest("[data-checkout-manual]") : null;
             if (!btn) return;
             var form = btn.closest("form[data-checkout-summary-form]");
+            var prompt = null;
             if (!form) {
                 // Coupon prompt is portaled to <body> while open, so the button is no longer inside the form.
                 // Recover the original form from the portal metadata saved on the prompt backdrop.
-                var prompt = btn.closest("[data-coupon-prompt]");
+                prompt = btn.closest("[data-coupon-prompt]");
                 var portalParent = prompt && prompt.__fbPortal ? prompt.__fbPortal.parent : null;
                 form = portalParent && portalParent.closest ? portalParent.closest("form[data-checkout-summary-form]") : null;
             }
@@ -7795,7 +7867,18 @@
                     window.syncCheckoutPricingForm(form);
                 }
                 if (typeof window.syncCheckoutCustomerForm === "function") {
-                    window.syncCheckoutCustomerForm(form);
+                    var syncedCustomer = window.syncCheckoutCustomerForm(form);
+                    if (!syncedCustomer || syncedCustomer.ok === false) {
+                        if (typeof portalHideLoading === "function") portalHideLoading();
+                        var shippingModal = form.querySelector("[data-shipping-modal]");
+                        if (prompt && typeof setPromptOpen === "function") {
+                            setPromptOpen(prompt, false);
+                        }
+                        if (shippingModal && typeof window.setShippingModalOpen === "function") {
+                            window.setShippingModalOpen(shippingModal, true);
+                        }
+                        return;
+                    }
                 }
             } catch (_e) {}
             if (typeof portalShowLoading === "function") portalShowLoading();
@@ -8403,5 +8486,32 @@
             })();
         </script>
     @endif
+    <script>
+        (function () {
+            var toasts = document.querySelectorAll('[data-portal-status-toast]');
+            if (!toasts.length) {
+                return;
+            }
+
+            var dismiss = function (toast) {
+                if (toast && toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            };
+
+            toasts.forEach(function (toast) {
+                var closeButton = toast.querySelector('[data-portal-status-close]');
+                if (closeButton) {
+                    closeButton.addEventListener('click', function () {
+                        dismiss(toast);
+                    });
+                }
+
+                window.setTimeout(function () {
+                    dismiss(toast);
+                }, 5000);
+            });
+        })();
+    </script>
 </body>
 </html>

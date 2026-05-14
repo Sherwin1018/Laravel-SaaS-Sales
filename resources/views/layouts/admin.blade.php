@@ -216,6 +216,37 @@
         $userInitials = $userInitials !== '' ? $userInitials : 'U';
         $userHue = abs(crc32($userNameSource ?: 'user')) % 360;
         $userAvatarBg = "hsl({$userHue}, 65%, 45%)";
+        $notificationRoleAllowed = auth()->user()->hasRole('super-admin')
+            || auth()->user()->hasRole('payout-admin')
+            || auth()->user()->hasRole('account-owner')
+            || auth()->user()->hasRole('marketing-manager')
+            || auth()->user()->hasRole('sales-agent')
+            || auth()->user()->hasRole('finance');
+        $notificationVisiblePatterns = [
+            'admin.dashboard',
+            'admin.tenants.*',
+            'admin.plans.*',
+            'admin.coupons.*',
+            'admin.automation.*',
+            'admin.receipts.*',
+            'admin.funnel-templates.*',
+            'platform.payouts.*',
+            'platform.settlements.*',
+            'dashboard.owner',
+            'dashboard.marketing',
+            'dashboard.sales',
+            'dashboard.finance',
+            'leads.*',
+            'users.*',
+            'coupons.*',
+            'funnels.*',
+            'automation.*',
+            'payments.*',
+            'reports.*',
+            'notifications.*',
+        ];
+        $showNotificationBell = $notificationRoleAllowed
+            && collect($notificationVisiblePatterns)->contains(fn (string $pattern): bool => request()->routeIs($pattern));
     @endphp
 
     <!-- Sidebar (hidden in funnel builder; use Exit Builder to leave) -->
@@ -300,6 +331,9 @@
                 <a href="{{ route('dashboard.customer') }}" class="{{ request()->routeIs('dashboard.customer') ? 'active' : '' }}">
                     <i class="fas fa-tachometer-alt"></i> <span>Dashboard</span>
                 </a>
+                <a href="{{ route('customer.orders.index') }}" class="{{ request()->routeIs('customer.orders.*') ? 'active' : '' }}">
+                    <i class="fas fa-bag-shopping"></i> <span>Orders</span>
+                </a>
             @endif
             
             {{-- Leads (Accessible by Owner, Marketing, Sales) --}}
@@ -349,9 +383,11 @@
                 </a>
             @endif
 
-            <a href="{{ route('notifications.index') }}" class="{{ request()->routeIs('notifications.*') ? 'active' : '' }}">
-                <i class="fas fa-bell"></i> <span>Notifications</span>
-            </a>
+            @if($notificationRoleAllowed)
+                <a href="{{ route('notifications.index') }}" class="{{ request()->routeIs('notifications.*') ? 'active' : '' }}">
+                    <i class="fas fa-bell"></i> <span>Notifications</span>
+                </a>
+            @endif
         </div>
 
         <div class="account-info-wrapper">
@@ -402,51 +438,53 @@
 
     <!-- Main Content -->
     <div class="main-content">
-        <div class="global-utility-bar">
-            <div class="notification-shell" data-notification-feed-url="{{ route('notifications.feed') }}" data-notification-index-url="{{ route('notifications.index') }}" data-initial-unread="{{ (int) ($layoutNotificationUnreadCount ?? 0) }}" data-initial-latest-id="{{ (int) ($layoutLatestNotificationId ?? 0) }}">
-                <button type="button" id="notificationBellButton" class="notification-bell-btn {{ ($layoutNotificationUnreadCount ?? 0) > 0 ? 'has-unread' : '' }}" aria-label="Open notifications">
-                    <i class="fas fa-bell"></i>
-                    <span class="notification-bell-badge" {{ ($layoutNotificationUnreadCount ?? 0) > 0 ? '' : 'hidden' }}>{{ min((int) ($layoutNotificationUnreadCount ?? 0), 99) }}</span>
-                </button>
+        @if($showNotificationBell)
+            <div class="global-utility-bar">
+                <div class="notification-shell" data-notification-feed-url="{{ route('notifications.feed') }}" data-notification-index-url="{{ route('notifications.index') }}" data-initial-unread="{{ (int) ($layoutNotificationUnreadCount ?? 0) }}" data-initial-latest-id="{{ (int) ($layoutLatestNotificationId ?? 0) }}">
+                    <button type="button" id="notificationBellButton" class="notification-bell-btn {{ ($layoutNotificationUnreadCount ?? 0) > 0 ? 'has-unread' : '' }}" aria-label="Open notifications">
+                        <i class="fas fa-bell"></i>
+                        <span class="notification-bell-badge" {{ ($layoutNotificationUnreadCount ?? 0) > 0 ? '' : 'hidden' }}>{{ min((int) ($layoutNotificationUnreadCount ?? 0), 99) }}</span>
+                    </button>
 
-                <div id="notificationDropdown" class="notification-dropdown">
-                    <div class="notification-dropdown__header">
-                        <div>
-                            <strong>Notifications</strong>
-                            <p><span id="notificationUnreadText">{{ (int) ($layoutNotificationUnreadCount ?? 0) }}</span> unread</p>
-                        </div>
-                        <button type="button" id="notificationBrowserAlertsButton" class="notification-dropdown__action" hidden>Enable alerts</button>
-                        <form method="POST" action="{{ route('notifications.mark-all-read') }}">
-                            @csrf
-                            <button type="submit" class="notification-dropdown__action">Mark all read</button>
-                        </form>
-                    </div>
-
-                    <div id="notificationDropdownList" class="notification-dropdown__list">
-                        @forelse(($layoutRecentNotifications ?? collect()) as $notification)
-                            <a href="{{ $notification->action_url ?: route('notifications.index') }}"
-                                class="notification-dropdown__item {{ $notification->read_at ? '' : 'is-unread' }}"
-                                data-notification-id="{{ $notification->id }}"
-                                data-notification-read-url="{{ route('notifications.read', $notification) }}">
-                                <div class="notification-dropdown__item-top">
-                                    <span class="notification-dropdown__title">{{ $notification->title }}</span>
-                                    <span class="notification-dropdown__time">{{ optional($notification->occurred_at)->diffForHumans() }}</span>
-                                </div>
-                                <div class="notification-dropdown__message">{{ $notification->message }}</div>
-                            </a>
-                        @empty
-                            <div class="notification-dropdown__empty">
-                                No notifications yet.
+                    <div id="notificationDropdown" class="notification-dropdown">
+                        <div class="notification-dropdown__header">
+                            <div>
+                                <strong>Notifications</strong>
+                                <p><span id="notificationUnreadText">{{ (int) ($layoutNotificationUnreadCount ?? 0) }}</span> unread</p>
                             </div>
-                        @endforelse
-                    </div>
+                            <button type="button" id="notificationBrowserAlertsButton" class="notification-dropdown__action" hidden>Enable alerts</button>
+                            <form method="POST" action="{{ route('notifications.mark-all-read') }}">
+                                @csrf
+                                <button type="submit" class="notification-dropdown__action">Mark all read</button>
+                            </form>
+                        </div>
 
-                    <a href="{{ route('notifications.index') }}" class="notification-dropdown__footer">
-                        View full notification log
-                    </a>
+                        <div id="notificationDropdownList" class="notification-dropdown__list">
+                            @forelse(($layoutRecentNotifications ?? collect()) as $notification)
+                                <a href="{{ $notification->action_url ?: route('notifications.index') }}"
+                                    class="notification-dropdown__item {{ $notification->read_at ? '' : 'is-unread' }}"
+                                    data-notification-id="{{ $notification->id }}"
+                                    data-notification-read-url="{{ route('notifications.read', $notification) }}">
+                                    <div class="notification-dropdown__item-top">
+                                        <span class="notification-dropdown__title">{{ $notification->title }}</span>
+                                        <span class="notification-dropdown__time">{{ optional($notification->occurred_at)->diffForHumans() }}</span>
+                                    </div>
+                                    <div class="notification-dropdown__message">{{ $notification->message }}</div>
+                                </a>
+                            @empty
+                                <div class="notification-dropdown__empty">
+                                    No notifications yet.
+                                </div>
+                            @endforelse
+                        </div>
+
+                        <a href="{{ route('notifications.index') }}" class="notification-dropdown__footer">
+                            View full notification log
+                        </a>
+                    </div>
                 </div>
             </div>
-        </div>
+        @endif
 
         @yield('content')
     </div>
@@ -886,7 +924,7 @@
 
                 const timeoutMs = notification.level === 'error'
                     ? 0
-                    : (notification.level === 'warning' ? 12000 : 7000);
+                    : (notification.level === 'warning' ? 1800 : 1500);
 
                 if (timeoutMs > 0) {
                     window.setTimeout(function () {
@@ -1189,13 +1227,23 @@
         })();
     </script>
 
+    @php
+        $statusToastMessage = trim((string) (session('success') ?? session('error') ?? ''));
+        $statusToastType = session('success') ? 'success' : 'error';
+        $statusToastTimeoutMs = $statusToastType === 'error' ? 4200 : 2600;
+        if ($statusToastType === 'success' && str_contains(strtolower($statusToastMessage), 'marked as read')) {
+            $statusToastTimeoutMs = 1800;
+        } elseif ($statusToastType === 'success' && mb_strlen($statusToastMessage) > 110) {
+            $statusToastTimeoutMs = 3400;
+        }
+    @endphp
     @if(session('success') || session('error'))
         <div id="statusToastContainer" class="status-toast-container">
             <div class="status-toast {{ session('success') ? 'success' : 'error' }}">
                 <i class="status-icon fas {{ session('success') ? 'fa-check' : 'fa-times' }}"></i>
                 <div>
                     <h4>{{ session('success') ? 'Success!' : 'Error!' }}</h4>
-                    <p>{{ session('success') ?? session('error') }}</p>
+                    <p>{{ $statusToastMessage }}</p>
                 </div>
                 <button type="button" class="status-toast-close" onclick="closeStatusToast()" aria-label="Close notification">
                     <i class="fas fa-times-circle"></i>
@@ -1210,7 +1258,7 @@
                 }
             }
 
-            setTimeout(closeStatusToast, 3000);
+            setTimeout(closeStatusToast, {{ $statusToastTimeoutMs }});
         </script>
     @endif
     @yield('scripts')

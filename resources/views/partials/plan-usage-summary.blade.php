@@ -2,6 +2,7 @@
     $resourceUsage = data_get($planUsage ?? [], $resourceKey ?? '');
     $planName = data_get($planUsage ?? [], 'plan.name', 'Current Plan');
     $automationEnabled = (bool) data_get($planUsage ?? [], 'automation_enabled', true);
+    $automationMode = (string) data_get($planUsage ?? [], 'automation_mode', $automationEnabled ? 'shared' : 'none');
     $compact = (bool) ($compact ?? false);
 @endphp
 
@@ -23,7 +24,13 @@
                     <div class="plan-usage-callout{{ $compact ? ' plan-usage-callout--compact' : '' }} {{ $automationEnabled ? 'is-positive' : 'is-warning' }}">
                         <strong class="plan-usage-callout-title">Shared automation access</strong>
                         <span class="plan-usage-callout-copy">
-                            {{ $automationEnabled ? 'This plan includes the shared n8n automation engine for eligible workflows.' : 'This plan keeps automation in built-in tracking mode only. Upgrade to Growth or Scale to unlock shared n8n automation.' }}
+                            @if($automationEnabled)
+                                This plan includes the shared n8n automation engine for eligible workflows.
+                            @elseif($automationMode === 'limited')
+                                This plan includes limited built-in automations and tracking. Upgrade to Growth or Scale to unlock the shared n8n automation engine.
+                            @else
+                                This plan keeps automation in built-in tracking mode only. Upgrade to Growth or Scale to unlock shared n8n automation.
+                            @endif
                         </span>
                     </div>
                 @endif

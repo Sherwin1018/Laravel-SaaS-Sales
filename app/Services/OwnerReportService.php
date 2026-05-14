@@ -38,12 +38,25 @@ class OwnerReportService
             'payments.amount',
             'payments.payment_date',
             'payments.payment_type',
+            'payments.source_platform',
+            'payments.source_campaign',
+            'payments.referral_code_snapshot',
+            'payments.gateway_fee_amount',
+            'payments.platform_share_amount',
+            'payments.commissionable_amount',
+            'payments.template_royalty_amount',
+            'payments.affiliate_commission_amount',
+            'payments.sales_commission_amount',
+            'payments.marketing_commission_amount',
+            'payments.tenant_net_income_amount',
         ]);
 
         $grossPaidRevenue = round((float) $paidPayments->sum('amount'), 2);
-        $gatewayFees = round($paidPayments->sum(fn (Payment $payment) => $this->commissions->estimateGatewayFee((float) $payment->amount, $plan)), 2);
-        $platformFees = round($paidPayments->sum(fn (Payment $payment) => $this->commissions->estimatePlatformFee((float) $payment->amount, $plan)), 2);
-        $netEligibleRevenue = round(max(0, $grossPaidRevenue - $gatewayFees - $platformFees), 2);
+        $gatewayFees = round((float) $paidPayments->sum('gateway_fee_amount'), 2);
+        $platformFees = round((float) $paidPayments->sum('platform_share_amount'), 2);
+        $netEligibleRevenue = round((float) $paidPayments->sum('commissionable_amount'), 2);
+        $templateRoyaltyTotal = round((float) $paidPayments->sum('template_royalty_amount'), 2);
+        $affiliateCommissionTotal = round((float) $paidPayments->sum('affiliate_commission_amount'), 2);
 
         $commissionEntries = $this->baseCommissionQuery($tenant, $filters)->get([
             'commission_entries.id',
@@ -61,7 +74,8 @@ class OwnerReportService
 
         $salesCommissionTotal = round((float) $activeCommissionEntries->where('commission_type', 'sales_agent')->sum('commission_amount'), 2);
         $marketingCommissionTotal = round((float) $activeCommissionEntries->where('commission_type', 'marketing_manager')->sum('commission_amount'), 2);
-        $ownerResidualTotal = round(max(0, $netEligibleRevenue - $salesCommissionTotal - $marketingCommissionTotal), 2);
+        $platformReferralTotal = round((float) $activeCommissionEntries->where('commission_type', 'platform_referral')->sum('commission_amount'), 2);
+        $ownerResidualTotal = round((float) $paidPayments->sum('tenant_net_income_amount'), 2);
 
         $receiptsQuery = $this->baseReceiptQuery($tenant, $filters);
         $pendingReceiptCount = (clone $receiptsQuery)
@@ -74,6 +88,7 @@ class OwnerReportService
         $trend = $this->monthlyRevenueTrend($tenant, $filters);
         $topFunnels = $this->topFunnels($tenant, $filters);
         $topCampaigns = $this->topCampaigns($tenant, $filters);
+        $topSources = $this->topSources($tenant, $filters);
         $recentReceipts = (clone $receiptsQuery)
             ->with(['payment:id,amount,payment_date,status,payment_type', 'uploader:id,name', 'reviewer:id,name'])
             ->latest('payment_receipts.id')
@@ -85,7 +100,7 @@ class OwnerReportService
             ->limit(10)
             ->get();
         $recentPayments = (clone $paymentsQuery)
-            ->with(['funnel:id,name', 'lead:id,name,source_campaign'])
+            ->with(['funnel:id,name', 'lead:id,name,source_campaign', 'sourceTemplate:id,name'])
             ->latest('payments.payment_date')
             ->latest('payments.id')
             ->limit(10)
@@ -109,8 +124,11 @@ class OwnerReportService
                 'gateway_fees' => $gatewayFees,
                 'platform_fees' => $platformFees,
                 'net_eligible_revenue' => $netEligibleRevenue,
+                'template_royalty_total' => $templateRoyaltyTotal,
+                'affiliate_commission_total' => $affiliateCommissionTotal,
                 'sales_commission_total' => $salesCommissionTotal,
                 'marketing_commission_total' => $marketingCommissionTotal,
+                'platform_referral_total' => $platformReferralTotal,
                 'owner_residual_total' => $ownerResidualTotal,
                 'payable_commissions_total' => round((float) $activeCommissionEntries->where('status', CommissionEntry::STATUS_PAYABLE)->sum('commission_amount'), 2),
                 'held_commissions_total' => round((float) $activeCommissionEntries->where('status', CommissionEntry::STATUS_HELD)->sum('commission_amount'), 2),
@@ -121,6 +139,7 @@ class OwnerReportService
             'trend' => $trend,
             'top_funnels' => $topFunnels,
             'top_campaigns' => $topCampaigns,
+            'top_sources' => $topSources,
             'recent_receipts' => $recentReceipts,
             'recent_commissions' => $recentCommissions,
             'recent_payments' => $recentPayments,
@@ -159,27 +178,28 @@ class OwnerReportService
             ->get();
 
         foreach ($payments as $payment) {
-            $basisAmount = $this->commissions->calculateNetEligibleAmount($payment, $summary['plan']);
-            $salesCommission = (float) $payment->commissionEntries()
-                ->whereNotIn('status', [CommissionEntry::STATUS_REVERSED, CommissionEntry::STATUS_CANCELLED])
-                ->where('commission_type', 'sales_agent')
-                ->sum('commission_amount');
-            $marketingCommission = (float) $payment->commissionEntries()
-                ->whereNotIn('status', [CommissionEntry::STATUS_REVERSED, CommissionEntry::STATUS_CANCELLED])
-                ->where('commission_type', 'marketing_manager')
-                ->sum('commission_amount');
+            $basisAmount = (float) ($payment->commissionable_amount ?? 0);
+            $templateRoyalty = (float) ($payment->template_royalty_amount ?? 0);
+            $affiliateCommission = (float) ($payment->affiliate_commission_amount ?? 0);
+            $salesCommission = (float) ($payment->sales_commission_amount ?? 0);
+            $marketingCommission = (float) ($payment->marketing_commission_amount ?? 0);
+            $tenantNetIncome = (float) ($payment->tenant_net_income_amount ?? 0);
 
             $rows[] = [
                 ['type' => 'String', 'value' => optional($payment->payment_date)->format('Y-m-d') ?? '-'],
                 ['type' => 'String', 'value' => ucfirst(str_replace('_', ' ', $payment->payment_type))],
                 ['type' => 'String', 'value' => $payment->funnel->name ?? '-'],
                 ['type' => 'String', 'value' => $payment->lead->name ?? '-'],
-                ['type' => 'String', 'value' => $payment->lead->source_campaign ?? '-'],
+                ['type' => 'String', 'value' => $payment->source_platform ?? '-'],
+                ['type' => 'String', 'value' => $payment->source_campaign ?? ($payment->lead->source_campaign ?? '-')],
+                ['type' => 'String', 'value' => $payment->referral_code_snapshot ?? '-'],
                 ['type' => 'Number', 'style' => 'currency', 'value' => (float) $payment->amount],
                 ['type' => 'Number', 'style' => 'currency', 'value' => $basisAmount],
+                ['type' => 'Number', 'style' => 'currency', 'value' => $templateRoyalty],
+                ['type' => 'Number', 'style' => 'currency', 'value' => $affiliateCommission],
                 ['type' => 'Number', 'style' => 'currency', 'value' => $salesCommission],
                 ['type' => 'Number', 'style' => 'currency', 'value' => $marketingCommission],
-                ['type' => 'Number', 'style' => 'currency', 'value' => max(0, $basisAmount - $salesCommission - $marketingCommission)],
+                ['type' => 'Number', 'style' => 'currency', 'value' => $tenantNetIncome],
                 ['type' => 'String', 'value' => ucfirst($payment->status)],
             ];
         }
@@ -190,8 +210,8 @@ class OwnerReportService
             'Gross paid: PHP ' . number_format((float) data_get($summary, 'totals.gross_paid_revenue', 0), 2)
                 . ' | Net eligible: PHP ' . number_format((float) data_get($summary, 'totals.net_eligible_revenue', 0), 2)
                 . ' | Owner residual: PHP ' . number_format((float) data_get($summary, 'totals.owner_residual_total', 0), 2),
-            ['Payment Date', 'Payment Type', 'Funnel', 'Lead', 'Campaign', 'Gross Paid', 'Net Eligible', 'Sales Commission', 'Marketing Commission', 'Owner Residual', 'Status'],
-            [18, 18, 22, 22, 20, 16, 16, 18, 18, 18, 12],
+            ['Payment Date', 'Payment Type', 'Funnel', 'Lead', 'Source Platform', 'Campaign', 'Referral Code', 'Gross Paid', 'Net Eligible', 'Template Royalty', 'Affiliate Commission', 'Sales Commission', 'Marketing Commission', 'Tenant Net Income', 'Status'],
+            [18, 18, 22, 22, 18, 20, 18, 16, 16, 18, 18, 18, 18, 18, 12],
             $rows
         ))->build();
 
@@ -293,12 +313,26 @@ class OwnerReportService
     private function topCampaigns(Tenant $tenant, array $filters)
     {
         return $this->basePaymentQuery($tenant, $filters)
-            ->leftJoin('leads', 'leads.id', '=', 'payments.lead_id')
             ->where('payments.status', 'paid')
-            ->whereNotNull('leads.source_campaign')
-            ->where('leads.source_campaign', '!=', '')
-            ->groupBy('leads.source_campaign')
-            ->selectRaw('leads.source_campaign as source_campaign, COUNT(payments.id) as paid_orders, SUM(payments.amount) as paid_revenue')
+            ->whereNotNull('payments.source_campaign')
+            ->where('payments.source_campaign', '!=', '')
+            ->groupBy('payments.source_campaign')
+            ->selectRaw('payments.source_campaign as source_campaign, COUNT(payments.id) as paid_orders, SUM(payments.amount) as paid_revenue')
+            ->orderByDesc('paid_revenue')
+            ->limit(5)
+            ->get();
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters
+     * @return \Illuminate\Support\Collection<int, object>
+     */
+    private function topSources(Tenant $tenant, array $filters)
+    {
+        return $this->basePaymentQuery($tenant, $filters)
+            ->where('payments.status', 'paid')
+            ->selectRaw("COALESCE(NULLIF(payments.source_platform, ''), 'Unspecified') as source_platform, COUNT(payments.id) as paid_orders, SUM(payments.amount) as paid_revenue")
+            ->groupBy('source_platform')
             ->orderByDesc('paid_revenue')
             ->limit(5)
             ->get();

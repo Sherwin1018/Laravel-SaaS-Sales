@@ -3,6 +3,7 @@
 @section('title', 'Owner Reports')
 
 @php
+    $emptyDash = $emptyDash ?? '—';
     $companyName = optional(auth()->user()->tenant)->company_name ?? 'No Company';
     $companyInitials = collect(preg_split('/\s+/', trim($companyName)))
         ->filter()
@@ -71,7 +72,7 @@
             <div>
                 <h3 style="margin:0;">Commission Settings</h3>
                 <p style="margin:8px 0 0;color:var(--theme-muted, #6B7280);line-height:1.6;">
-                    Manage the current 2-role commission model for your workspace. Attribution is currently fixed to assigned sales lead and campaign-linked marketing manager behavior.
+                    Manage your workspace-side deduction rates for affiliate referrals, sales attribution, and campaign-attributed marketing support.
                 </p>
             </div>
             <div style="padding:10px 12px;border-radius:12px;background:#fbf9fd;border:1px solid var(--theme-border, #E6E1EF);color:#240E35;font-weight:800;">
@@ -92,6 +93,12 @@
                 <label for="platform_fee_rate" style="display:block;margin-bottom:6px;font-weight:700;">Platform Fee %</label>
                 <input type="number" step="0.01" min="0" max="100" id="platform_fee_rate" name="platform_fee_rate"
                     value="{{ old('platform_fee_rate', data_get($report, 'plan.platform_fee_rate', 0)) }}"
+                    style="width:100%;padding:10px;border:1px solid var(--theme-border, #E6E1EF);border-radius:8px;">
+            </div>
+            <div>
+                <label for="affiliate_sale_rate" style="display:block;margin-bottom:6px;font-weight:700;">Affiliate Sale %</label>
+                <input type="number" step="0.01" min="0" max="100" id="affiliate_sale_rate" name="affiliate_sale_rate"
+                    value="{{ old('affiliate_sale_rate', data_get($report, 'plan.affiliate_sale_rate', 0)) }}"
                     style="width:100%;padding:10px;border:1px solid var(--theme-border, #E6E1EF);border-radius:8px;">
             </div>
             <div>
@@ -134,6 +141,7 @@
 
         <div style="margin-top:12px;padding:12px 14px;border-radius:10px;background:#fbf9fd;border:1px solid var(--theme-border, #E6E1EF);color:var(--theme-muted, #6B7280);line-height:1.6;">
             Current attribution model:
+            Affiliate sale commissions apply when a tracked referral code is attached to the paid funnel order.
             Sales agent commissions follow the assigned lead.
             Marketing manager commissions apply when a source campaign exists and a default marketing manager is configured.
         </div>
@@ -161,6 +169,22 @@
                     <div class="admin-kpi-card__value"><span class="admin-kpi-card__unit">PHP</span>{{ number_format((float) data_get($report, 'totals.net_eligible_revenue', 0), 2) }}</div>
                     <div class="admin-kpi-card__meta">After estimated gateway and platform fees</div>
                 </article>
+                <article class="admin-kpi-card">
+                    <div class="admin-kpi-card__topline">
+                        <span class="admin-kpi-card__label">Template Royalty</span>
+                        <span class="admin-kpi-card__icon"><i class="fas fa-layer-group" aria-hidden="true"></i></span>
+                    </div>
+                    <div class="admin-kpi-card__value"><span class="admin-kpi-card__unit">PHP</span>{{ number_format((float) data_get($report, 'totals.template_royalty_total', 0), 2) }}</div>
+                    <div class="admin-kpi-card__meta">Published-template royalties deducted from paid orders</div>
+                </article>
+                <article class="admin-kpi-card">
+                    <div class="admin-kpi-card__topline">
+                        <span class="admin-kpi-card__label">Affiliate Deductions</span>
+                        <span class="admin-kpi-card__icon"><i class="fas fa-link" aria-hidden="true"></i></span>
+                    </div>
+                    <div class="admin-kpi-card__value"><span class="admin-kpi-card__unit">PHP</span>{{ number_format((float) data_get($report, 'totals.affiliate_commission_total', 0), 2) }}</div>
+                    <div class="admin-kpi-card__meta">Tracked referral payouts tied to paid funnel orders</div>
+                </article>
                 <article class="admin-kpi-card admin-kpi-card--warning">
                     <div class="admin-kpi-card__topline">
                         <span class="admin-kpi-card__label">Payable Commissions</span>
@@ -175,7 +199,7 @@
                         <span class="admin-kpi-card__icon"><i class="fas fa-piggy-bank" aria-hidden="true"></i></span>
                     </div>
                     <div class="admin-kpi-card__value"><span class="admin-kpi-card__unit">PHP</span>{{ number_format((float) data_get($report, 'totals.owner_residual_total', 0), 2) }}</div>
-                    <div class="admin-kpi-card__meta">Estimated residual earnings after commissions</div>
+                    <div class="admin-kpi-card__meta">Tenant net income after royalties and workspace commissions</div>
                 </article>
             </div>
         </section>
@@ -283,6 +307,25 @@
                 </table>
             </div>
         </div>
+        <div class="chart">
+            <h3>Top Source Platforms</h3>
+            <div class="app-table-scroll app-table-scroll--wide">
+                <table>
+                    <thead><tr><th>Platform</th><th>Paid Orders</th><th>Paid Revenue</th></tr></thead>
+                    <tbody>
+                        @forelse(data_get($report, 'top_sources', []) as $row)
+                            <tr>
+                                <td>{{ $row->source_platform ?? $emptyDash }}</td>
+                                <td>{{ number_format((int) ($row->paid_orders ?? 0)) }}</td>
+                                <td>PHP {{ number_format((float) ($row->paid_revenue ?? 0), 2) }}</td>
+                            </tr>
+                        @empty
+                            <tr><td colspan="3">No source-platform attribution found for the selected filters.</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
     <div class="card" style="margin-top: 20px;">
@@ -333,19 +376,23 @@
         <h3>Recent Payments</h3>
         <div class="app-table-scroll app-table-scroll--wide">
         <table>
-            <thead><tr><th>Date</th><th>Funnel</th><th>Lead</th><th>Campaign</th><th>Amount</th><th>Status</th></tr></thead>
+            <thead><tr><th>Date</th><th>Funnel</th><th>Template</th><th>Lead</th><th>Platform</th><th>Campaign</th><th>Referral</th><th>Amount</th><th>Tenant Net</th><th>Status</th></tr></thead>
             <tbody>
                 @forelse(data_get($report, 'recent_payments', []) as $payment)
                     <tr>
                         <td>{{ optional($payment->payment_date)->format('Y-m-d') ?? $emptyDash }}</td>
                         <td>{{ $payment->funnel->name ?? $emptyDash }}</td>
+                        <td>{{ $payment->sourceTemplate->name ?? $emptyDash }}</td>
                         <td>{{ $payment->lead->name ?? $emptyDash }}</td>
-                        <td>{{ $payment->lead->source_campaign ?? $emptyDash }}</td>
+                        <td>{{ $payment->source_platform ?? $emptyDash }}</td>
+                        <td>{{ $payment->source_campaign ?? ($payment->lead->source_campaign ?? $emptyDash) }}</td>
+                        <td>{{ $payment->referral_code_snapshot ?? $emptyDash }}</td>
                         <td>PHP {{ number_format((float) $payment->amount, 2) }}</td>
+                        <td>PHP {{ number_format((float) ($payment->tenant_net_income_amount ?? 0), 2) }}</td>
                         <td>{{ ucfirst($payment->status) }}</td>
                     </tr>
                 @empty
-                    <tr><td colspan="6">No payments found for the selected filters.</td></tr>
+                    <tr><td colspan="10">No payments found for the selected filters.</td></tr>
                 @endforelse
             </tbody>
         </table>

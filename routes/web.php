@@ -114,6 +114,8 @@ Route::middleware(['auth', 'owner.payout.setup', 'tenant.subscription', 'role:su
     Route::post('/admin/landing-hero-video', [AdminController::class, 'updateLandingHeroVideo'])->name('admin.landing-video.update');
     Route::delete('/admin/landing-hero-video', [AdminController::class, 'deleteLandingHeroVideo'])->name('admin.landing-video.delete');
     Route::get('/admin/funnel-templates', [AdminFunnelTemplateController::class, 'index'])->name('admin.funnel-templates.index');
+    Route::get('/admin/funnel-templates/analytics', [AdminFunnelTemplateController::class, 'analytics'])->name('admin.funnel-templates.analytics');
+    Route::get('/admin/funnel-templates/analytics/export', [AdminFunnelTemplateController::class, 'exportAnalyticsExcel'])->name('admin.funnel-templates.analytics.export');
     Route::get('/admin/funnel-templates/create', [AdminFunnelTemplateController::class, 'create'])->name('admin.funnel-templates.create');
     Route::get('/admin/funnel-templates/import', [AdminFunnelTemplateController::class, 'import'])->name('admin.funnel-templates.import');
     Route::post('/admin/funnel-templates/import-file', [AdminFunnelTemplateController::class, 'importFromFile'])->name('admin.funnel-templates.import-file');
@@ -256,6 +258,7 @@ Route::middleware(['auth', 'owner.payout.setup', 'tenant.subscription', 'role:sa
 
 Route::middleware(['auth', 'role:customer'])->group(function () {
     Route::get('/dashboard/customer', [DashboardController::class, 'customer'])->name('dashboard.customer');
+    Route::get('/customer/orders', [DashboardController::class, 'customerOrders'])->name('customer.orders.index');
 });
 
 Route::get('/f/{funnelSlug}/{stepSlug?}', [FunnelPortalController::class, 'show'])->middleware('throttle:funnel-public-view')->name('funnels.portal.step');

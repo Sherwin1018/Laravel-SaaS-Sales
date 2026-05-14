@@ -25,7 +25,7 @@ class OnboardingLifecycleE2ETest extends TestCase
     public function test_account_owner_onboarding_e2e_plan_payment_email_setup_login(): void
     {
         config()->set('services.paymongo.secret', null);
-        config()->set('services.n8n.webhook_url', 'http://n8n.test/webhook/laravel-events');
+        config()->set('services.n8n.webhook_url', 'http://n8n.test/webhook/laravel-unified-events');
         Http::fake([
             'http://n8n.test/*' => Http::response(['ok' => true], 200),
         ]);
@@ -69,7 +69,7 @@ class OnboardingLifecycleE2ETest extends TestCase
 
     public function test_team_invite_e2e_invite_email_setup_login(): void
     {
-        config()->set('services.n8n.webhook_url', 'http://n8n.test/webhook/laravel-events');
+        config()->set('services.n8n.webhook_url', 'http://n8n.test/webhook/laravel-unified-events');
         Http::fake([
             'http://n8n.test/*' => Http::response(['ok' => true], 200),
         ]);
@@ -101,7 +101,7 @@ class OnboardingLifecycleE2ETest extends TestCase
 
     public function test_customer_optional_portal_invite_e2e(): void
     {
-        config()->set('services.n8n.webhook_url', 'http://n8n.test/webhook/laravel-events');
+        config()->set('services.n8n.webhook_url', 'http://n8n.test/webhook/laravel-unified-events');
         Http::fake([
             'http://n8n.test/*' => Http::response(['ok' => true], 200),
         ]);
@@ -133,7 +133,7 @@ class OnboardingLifecycleE2ETest extends TestCase
 
     public function test_expired_token_and_resend_e2e(): void
     {
-        config()->set('services.n8n.webhook_url', 'http://n8n.test/webhook/laravel-events');
+        config()->set('services.n8n.webhook_url', 'http://n8n.test/webhook/laravel-unified-events');
         Http::fake([
             'http://n8n.test/*' => Http::response(['ok' => true], 200),
         ]);

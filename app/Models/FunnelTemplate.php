@@ -84,11 +84,13 @@ class FunnelTemplate extends Model
         'status',
         'preview_image',
         'published_at',
+        'royalty_rate',
     ];
 
     protected $casts = [
         'template_tags' => 'array',
         'published_at' => 'datetime',
+        'royalty_rate' => 'decimal:2',
     ];
 
     public function setStatusAttribute($value): void
@@ -133,5 +135,10 @@ class FunnelTemplate extends Model
     public function assets(): HasMany
     {
         return $this->hasMany(FunnelTemplateAsset::class)->orderByDesc('created_at');
+    }
+
+    public function funnels(): HasMany
+    {
+        return $this->hasMany(Funnel::class, 'source_template_id');
     }
 }

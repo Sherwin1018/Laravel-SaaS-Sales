@@ -26,11 +26,29 @@ class Payment extends Model
         'tenant_id',
         'payment_type',
         'funnel_id',
+        'source_funnel_template_id',
         'funnel_step_id',
         'lead_id',
         'coupon_id',
         'coupon_code',
+        'source_platform',
+        'source_medium',
+        'source_campaign',
+        'source_content',
+        'referrer_user_id',
+        'referral_code_snapshot',
+        'assigned_sales_user_id',
         'amount',
+        'refund_amount',
+        'non_commissionable_amount',
+        'commissionable_amount',
+        'gateway_fee_amount',
+        'platform_share_amount',
+        'template_royalty_amount',
+        'affiliate_commission_amount',
+        'sales_commission_amount',
+        'marketing_commission_amount',
+        'tenant_net_income_amount',
         'subtotal_amount',
         'discount_amount',
         'status',
@@ -44,6 +62,16 @@ class Payment extends Model
 
     protected $casts = [
         'amount' => 'decimal:2',
+        'refund_amount' => 'decimal:2',
+        'non_commissionable_amount' => 'decimal:2',
+        'commissionable_amount' => 'decimal:2',
+        'gateway_fee_amount' => 'decimal:2',
+        'platform_share_amount' => 'decimal:2',
+        'template_royalty_amount' => 'decimal:2',
+        'affiliate_commission_amount' => 'decimal:2',
+        'sales_commission_amount' => 'decimal:2',
+        'marketing_commission_amount' => 'decimal:2',
+        'tenant_net_income_amount' => 'decimal:2',
         'subtotal_amount' => 'decimal:2',
         'discount_amount' => 'decimal:2',
         'payment_date' => 'date',
@@ -110,9 +138,24 @@ class Payment extends Model
         return $this->belongsTo(FunnelStep::class, 'funnel_step_id');
     }
 
+    public function sourceTemplate(): BelongsTo
+    {
+        return $this->belongsTo(FunnelTemplate::class, 'source_funnel_template_id');
+    }
+
     public function lead(): BelongsTo
     {
         return $this->belongsTo(Lead::class);
+    }
+
+    public function referrer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'referrer_user_id');
+    }
+
+    public function assignedSalesUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assigned_sales_user_id');
     }
 
     public function coupon(): BelongsTo

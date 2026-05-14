@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\ExternalDeliveryLog;
 use App\Models\Tenant;
+use Illuminate\Support\Collection;
 
 class DeliveryLogService
 {
@@ -32,12 +33,43 @@ class DeliveryLogService
 
     public function currentMonthBillableUsage(Tenant $tenant): int
     {
-        return ExternalDeliveryLog::query()
+        $logs = ExternalDeliveryLog::query()
             ->where('tenant_id', $tenant->id)
             ->where('is_billable', true)
             ->whereIn('channel', ['email', 'sms'])
-            ->where('status', 'sent')
+            ->whereIn('status', ['sent', 'processed'])
             ->where('sent_at', '>=', now()->copy()->startOfMonth())
+            ->get(['id', 'idempotency_key']);
+
+        return $this->uniqueUsageCount($logs);
+    }
+
+    public function successfulDispatchExists(string $channel, string $provider, ?string $idempotencyKey): bool
+    {
+        $normalizedKey = $this->normalizeIdempotencyKey($idempotencyKey);
+        if ($normalizedKey === null) {
+            return false;
+        }
+
+        return ExternalDeliveryLog::query()
+            ->where('channel', $channel)
+            ->where('provider', $provider)
+            ->where('idempotency_key', $normalizedKey)
+            ->whereIn('status', ['sent', 'processed'])
+            ->exists();
+    }
+
+    public function attemptCount(string $channel, string $provider, ?string $idempotencyKey): int
+    {
+        $normalizedKey = $this->normalizeIdempotencyKey($idempotencyKey);
+        if ($normalizedKey === null) {
+            return 0;
+        }
+
+        return ExternalDeliveryLog::query()
+            ->where('channel', $channel)
+            ->where('provider', $provider)
+            ->where('idempotency_key', $normalizedKey)
             ->count();
     }
 
@@ -51,5 +83,27 @@ class DeliveryLogService
         $string = trim((string) $value);
 
         return $string !== '' ? $string : null;
+    }
+
+    /**
+     * @param  Collection<int, ExternalDeliveryLog>  $logs
+     */
+    private function uniqueUsageCount(Collection $logs): int
+    {
+        return $logs
+            ->map(function (ExternalDeliveryLog $log): string {
+                $idempotencyKey = $this->normalizeIdempotencyKey($log->idempotency_key);
+
+                return $idempotencyKey ?? ('log:'.$log->id);
+            })
+            ->unique()
+            ->count();
+    }
+
+    private function normalizeIdempotencyKey(?string $idempotencyKey): ?string
+    {
+        $normalized = trim((string) $idempotencyKey);
+
+        return $normalized !== '' ? $normalized : null;
     }
 }

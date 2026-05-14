@@ -48,11 +48,16 @@ return [
         'base_url' => env('N8N_BASE_URL'),
         'api_key' => env('N8N_API_KEY'),
         'workflow_id' => env('N8N_WORKFLOW_ID'),
+        'workflow_name' => env('N8N_WORKFLOW_NAME'),
         'webhook_retry_times' => (int) env('N8N_WEBHOOK_RETRY_TIMES', 1),
         'webhook_retry_delay_ms' => (int) env('N8N_WEBHOOK_RETRY_DELAY_MS', 200),
         'webhook_connect_timeout_seconds' => (int) env('N8N_WEBHOOK_CONNECT_TIMEOUT_SECONDS', 2),
         'webhook_timeout_seconds' => (int) env('N8N_WEBHOOK_TIMEOUT_SECONDS', 4),
         'send_payment_success_event' => (bool) env('N8N_SEND_PAYMENT_SUCCESS_EVENT', false),
+    ],
+
+    'billing' => [
+        'initial_signup_renewal_days' => max(1, (int) env('SIGNUP_INITIAL_SUBSCRIPTION_RENEWAL_DAYS', 30)),
     ],
 
     'brevo' => [

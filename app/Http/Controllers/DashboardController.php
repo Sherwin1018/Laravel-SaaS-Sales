@@ -4,12 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Models\Lead;
 use App\Models\LeadActivity;
+use App\Models\Funnel;
 use App\Models\Payment;
 use App\Models\PaymentReceipt;
 use App\Models\CommissionEntry;
 use App\Services\CouponService;
 use App\Services\AnalyticsDashboardService;
 use App\Services\CommissionService;
+use App\Services\FunnelTrackingService;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
@@ -289,22 +293,84 @@ class DashboardController extends Controller
         ));
     }
 
-    public function customer()
+    protected function customerPortalData(FunnelTrackingService $tracking): array
     {
         $user = auth()->user();
-        $tenant = $user->tenant;
+        $funnelSearch = trim((string) request('funnel'));
 
-        $subscriptionStatus = $tenant ? ucfirst($tenant->status) : '-';
-        $subscriptionPlan = $tenant->subscription_plan ?? '-';
+        $normalizedEmail = mb_strtolower(trim((string) $user->email));
+        $orderRows = Funnel::query()
+            ->where('tenant_id', $user->tenant_id)
+            ->get(['id', 'tenant_id', 'name', 'slug', 'purpose'])
+            ->flatMap(function (Funnel $funnel) use ($tracking, $normalizedEmail): Collection {
+                $analytics = $tracking->analyticsForFunnel($funnel);
 
-        $recentPayments = Payment::where('tenant_id', $user->tenant_id)
-            ->latest('payment_date')
-            ->paginate(10, ['id', 'amount', 'status', 'payment_date'], 'payments_page');
+                return collect($analytics['offer_customer_summary'] ?? [])
+                    ->filter(function (array $row) use ($normalizedEmail): bool {
+                        $rowEmail = mb_strtolower(trim((string) ($row['email'] ?? '')));
 
-        return view('dashboard.customer', compact(
-            'subscriptionStatus',
-            'subscriptionPlan',
-            'recentPayments'
-        ));
+                        return $rowEmail !== '' && $rowEmail === $normalizedEmail && ($row['order_status'] ?? '') === 'paid';
+                    })
+                    ->map(function (array $row) use ($funnel): array {
+                        $row['funnel_name'] = $row['funnel_name'] ?? $funnel->name;
+                        $row['funnel_slug'] = $row['funnel_slug'] ?? $funnel->slug;
+
+                        return $row;
+                    });
+            })
+            ->sortByDesc(fn (array $row) => (string) ($row['ordered_at'] ?? $row['last_activity_at'] ?? ''))
+            ->values();
+
+        if ($funnelSearch !== '') {
+            $needle = mb_strtolower($funnelSearch);
+            $orderRows = $orderRows
+                ->filter(function (array $row) use ($needle): bool {
+                    $funnelName = mb_strtolower(trim((string) ($row['funnel_name'] ?? '')));
+                    $funnelSlug = mb_strtolower(trim((string) ($row['funnel_slug'] ?? '')));
+
+                    return str_contains($funnelName, $needle) || str_contains($funnelSlug, $needle);
+                })
+                ->values();
+        }
+
+        $pageName = 'orders_page';
+        $page = LengthAwarePaginator::resolveCurrentPage($pageName);
+        $perPage = 10;
+        $orders = new LengthAwarePaginator(
+            $orderRows->forPage($page, $perPage)->values(),
+            $orderRows->count(),
+            $perPage,
+            $page,
+            [
+                'path' => request()->url(),
+                'pageName' => $pageName,
+            ]
+        );
+        $orders->appends(request()->except($pageName));
+
+        $orderSummary = [
+            'total_orders' => $orderRows->count(),
+            'total_spent' => round((float) $orderRows->sum(fn (array $row) => (float) ($row['checkout_amount'] ?? 0)), 2),
+            'active_shipments' => $orderRows->filter(function (array $row): bool {
+                return in_array((string) ($row['delivery_status'] ?? ''), ['processing', 'shipped', 'out_for_delivery'], true);
+            })->count(),
+            'last_ordered_at' => $orderRows->first()['ordered_at_label'] ?? null,
+        ];
+
+        return compact(
+            'orders',
+            'orderSummary',
+            'funnelSearch'
+        );
+    }
+
+    public function customer(FunnelTrackingService $tracking)
+    {
+        return view('dashboard.customer-overview', $this->customerPortalData($tracking));
+    }
+
+    public function customerOrders(FunnelTrackingService $tracking)
+    {
+        return view('dashboard.customer', $this->customerPortalData($tracking));
     }
 }

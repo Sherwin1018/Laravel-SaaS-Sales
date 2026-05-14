@@ -38,12 +38,29 @@
         $physicalPendingManualCount = $physicalPendingOrders->where('provider', 'manual')->count();
         $physicalPendingPaymongoCount = $physicalPendingOrders->where('provider', 'paymongo')->count();
         $physicalProductBreakdown = collect($analytics['physical_product_breakdown'] ?? []);
+        $paginateCollection = function (\Illuminate\Support\Collection $collection, int $perPage, string $pageKey): array {
+            $total = $collection->count();
+            $lastPage = max(1, (int) ceil(max(1, $total) / $perPage));
+            $page = max(1, (int) request()->query($pageKey, 1));
+            $page = min($page, $lastPage);
+
+            return [
+                'total' => $total,
+                'perPage' => $perPage,
+                'lastPage' => $lastPage,
+                'page' => $page,
+                'rows' => $collection->forPage($page, $perPage)->values(),
+            ];
+        };
         $productBreakdownPerPage = 3;
         $productBreakdownTotal = $physicalProductBreakdown->count();
         $productBreakdownLastPage = max(1, (int) ceil(max(1, $productBreakdownTotal) / $productBreakdownPerPage));
         $productBreakdownPage = max(1, (int) request()->query('product_page', 1));
         $productBreakdownPage = min($productBreakdownPage, $productBreakdownLastPage);
         $productBreakdownRows = $physicalProductBreakdown->forPage($productBreakdownPage, $productBreakdownPerPage)->values();
+        $manualPaymentsPagination = $paginateCollection($manualReceipts, 5, 'manual_page');
+        $pendingOrdersPagination = $paginateCollection($physicalPendingOrders, 5, 'pending_orders_page');
+        $paidOrdersPagination = $paginateCollection($physicalPaidOrders, 5, 'paid_orders_page');
         $checkoutToPaidRate = (int) ($totals['checkout_start_count'] ?? 0) > 0
             ? round((((int) ($physicalOrderTotals['paid_orders'] ?? 0)) / max(1, (int) ($totals['checkout_start_count'] ?? 0))) * 100, 2)
             : 0;
@@ -97,6 +114,12 @@
             (float) ($rates['abandoned_checkout_rate'] ?? 0),
         ];
         $summaryRows = $isPhysicalAnalytics ? $physicalOrders : $offerCustomerSummary;
+        $orderDirectoryPagination = $isPhysicalAnalytics
+            ? $paginateCollection($summaryRows, 3, 'directory_page')
+            : null;
+        $summaryRowsDisplay = $isPhysicalAnalytics
+            ? $orderDirectoryPagination['rows']
+            : $summaryRows;
         $hasOfferData = ((int) ($offerCounts['upsell_accepted'] ?? 0) > 0)
             || ((int) ($offerCounts['upsell_declined'] ?? 0) > 0)
             || ((int) ($offerCounts['downsell_accepted'] ?? 0) > 0)
@@ -495,7 +518,7 @@
         @endunless
 
         @if($isPhysicalAnalytics)
-            <div class="analytics-card">
+            <div class="analytics-card" id="manualPaymentsSection">
                 <div class="analytics-section-actions">
                     <h3 style="margin:0;">Manual Payments</h3>
                     <div class="analytics-section-actions__controls">
@@ -520,7 +543,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @forelse($manualReceipts as $row)
+                                @forelse($manualPaymentsPagination['rows'] as $row)
                                     @php
                                         $ref = (string) ($row['reference_number'] ?? '');
                                         $receiptPath = (string) ($row['receipt_path'] ?? '');
@@ -588,10 +611,35 @@
                             </tbody>
                         </table>
                     </div>
+                    @if($manualPaymentsPagination['total'] > $manualPaymentsPagination['perPage'])
+                        <div class="analytics-product-pagination">
+                            <span class="analytics-product-page-note">
+                                Showing {{ ($manualPaymentsPagination['page'] - 1) * $manualPaymentsPagination['perPage'] + 1 }}-{{ min($manualPaymentsPagination['total'], $manualPaymentsPagination['page'] * $manualPaymentsPagination['perPage']) }} of {{ $manualPaymentsPagination['total'] }}
+                            </span>
+                            @if($manualPaymentsPagination['page'] > 1)
+                                <a
+                                    href="{{ route('funnels.analytics', array_merge(['funnel' => $funnel], request()->except('manual_page', 'open_section'), ['manual_page' => $manualPaymentsPagination['page'] - 1, 'open_section' => 'manual'])) }}#manualPaymentsSection"
+                                    class="analytics-btn"
+                                    data-reopen-section="manualPaymentsContent"
+                                >
+                                    <i class="fas fa-chevron-left" aria-hidden="true"></i> Prev
+                                </a>
+                            @endif
+                            @if($manualPaymentsPagination['page'] < $manualPaymentsPagination['lastPage'])
+                                <a
+                                    href="{{ route('funnels.analytics', array_merge(['funnel' => $funnel], request()->except('manual_page', 'open_section'), ['manual_page' => $manualPaymentsPagination['page'] + 1, 'open_section' => 'manual'])) }}#manualPaymentsSection"
+                                    class="analytics-btn"
+                                    data-reopen-section="manualPaymentsContent"
+                                >
+                                    Next <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                                </a>
+                            @endif
+                        </div>
+                    @endif
                 </div>
             </div>
 
-            <div class="analytics-card">
+            <div class="analytics-card" id="pendingOrdersSection">
                 <div class="analytics-section-actions">
                     <h3 style="margin:0;">Pending Orders</h3>
                     <div class="analytics-section-actions__controls">
@@ -624,7 +672,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @forelse($physicalPendingOrders as $row)
+                                @forelse($pendingOrdersPagination['rows'] as $row)
                                     @php
                                         $provider = trim((string) ($row['provider'] ?? ''));
                                         $providerLabel = $provider === 'manual'
@@ -657,10 +705,35 @@
                             </tbody>
                         </table>
                     </div>
+                    @if($pendingOrdersPagination['total'] > $pendingOrdersPagination['perPage'])
+                        <div class="analytics-product-pagination">
+                            <span class="analytics-product-page-note">
+                                Showing {{ ($pendingOrdersPagination['page'] - 1) * $pendingOrdersPagination['perPage'] + 1 }}-{{ min($pendingOrdersPagination['total'], $pendingOrdersPagination['page'] * $pendingOrdersPagination['perPage']) }} of {{ $pendingOrdersPagination['total'] }}
+                            </span>
+                            @if($pendingOrdersPagination['page'] > 1)
+                                <a
+                                    href="{{ route('funnels.analytics', array_merge(['funnel' => $funnel], request()->except('pending_orders_page', 'open_section'), ['pending_orders_page' => $pendingOrdersPagination['page'] - 1, 'open_section' => 'pending'])) }}#pendingOrdersSection"
+                                    class="analytics-btn"
+                                    data-reopen-section="pendingOrdersContent"
+                                >
+                                    <i class="fas fa-chevron-left" aria-hidden="true"></i> Prev
+                                </a>
+                            @endif
+                            @if($pendingOrdersPagination['page'] < $pendingOrdersPagination['lastPage'])
+                                <a
+                                    href="{{ route('funnels.analytics', array_merge(['funnel' => $funnel], request()->except('pending_orders_page', 'open_section'), ['pending_orders_page' => $pendingOrdersPagination['page'] + 1, 'open_section' => 'pending'])) }}#pendingOrdersSection"
+                                    class="analytics-btn"
+                                    data-reopen-section="pendingOrdersContent"
+                                >
+                                    Next <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                                </a>
+                            @endif
+                        </div>
+                    @endif
                 </div>
             </div>
 
-            <div class="analytics-card">
+            <div class="analytics-card" id="paidOrdersSection">
                 <div class="analytics-section-actions">
                     <h3 style="margin:0;">Paid Orders</h3>
                     <div class="analytics-section-actions__controls">
@@ -678,6 +751,15 @@
                     </div>
                 </div>
                 <div id="paidOrdersContent" style="display:none;">
+                    @php
+                        $deliveryStatusStyles = [
+                            'paid' => 'background:#dcfce7;color:#166534;',
+                            'processing' => 'background:#dbeafe;color:#1d4ed8;',
+                            'shipped' => 'background:#ede9fe;color:#6d28d9;',
+                            'out_for_delivery' => 'background:#fef3c7;color:#b45309;',
+                            'delivered' => 'background:#ecfccb;color:#3f6212;',
+                        ];
+                    @endphp
                     <div class="analytics-table-wrap">
                         <table class="analytics-table">
                             <thead>
@@ -689,7 +771,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @forelse($physicalPaidOrders as $row)
+                                @forelse($paidOrdersPagination['rows'] as $row)
                                     <tr>
                                         <td>
                                             <strong>{{ $row['customer'] ?? 'Anonymous visitor' }}</strong><br>
@@ -704,8 +786,15 @@
                                             @else
                                                 {{ $row['order_items_label'] ?? ($row['selected_offer'] ?? $emptyDash) }}
                                             @endif
-                                            <div style="margin-top:8px;font-size:12px;color:var(--theme-muted, #6B7280);">
-                                                Qty: {{ (int) ($row['order_quantity'] ?? 0) > 0 ? (int) $row['order_quantity'] : $emptyDash }}
+                                            <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;">
+                                                <span class="analytics-pill" style="background:#eef4ff;color:#31537f;">
+                                                    Qty: {{ (int) ($row['order_quantity'] ?? 0) > 0 ? (int) $row['order_quantity'] : $emptyDash }}
+                                                </span>
+                                                @if(!empty($row['ordered_at_label']))
+                                                    <span class="analytics-pill" style="background:#f8fafc;color:#475569;border:1px solid #dbe4f0;">
+                                                        Ordered: {{ $row['ordered_at_label'] }}
+                                                    </span>
+                                                @endif
                                             </div>
                                             <div style="margin-top:6px;font-size:12px;color:var(--theme-muted, #6B7280);">
                                                 {{ $row['delivery_address'] ?? 'No delivery address recorded' }}
@@ -732,7 +821,11 @@
                                                     <span class="analytics-pill" style="background:#f1f5f9;color:#0f172a;">{{ $couponLabel }}</span>
                                                 </div>
                                             @endif
-                                            <span class="analytics-pill" style="margin-top:8px;">{{ ucwords(str_replace('_', ' ', (string) ($row['delivery_status'] ?? 'processing'))) }}</span>
+                                            @php
+                                                $deliveryStatus = (string) ($row['delivery_status'] ?? 'processing');
+                                                $deliveryStatusStyle = $deliveryStatusStyles[$deliveryStatus] ?? 'background:#f1f5f9;color:#0f172a;';
+                                            @endphp
+                                            <span class="analytics-pill" style="margin-top:8px;{{ $deliveryStatusStyle }}">{{ ucwords(str_replace('_', ' ', $deliveryStatus)) }}</span>
                                             @if(!empty($row['delivery_updated_label']))
                                                 <div style="margin-top:8px;font-size:12px;color:var(--theme-muted, #6B7280);">Last email: {{ $row['delivery_updated_label'] }}</div>
                                             @endif
@@ -777,11 +870,36 @@
                             </tbody>
                         </table>
                     </div>
+                    @if($paidOrdersPagination['total'] > $paidOrdersPagination['perPage'])
+                        <div class="analytics-product-pagination">
+                            <span class="analytics-product-page-note">
+                                Showing {{ ($paidOrdersPagination['page'] - 1) * $paidOrdersPagination['perPage'] + 1 }}-{{ min($paidOrdersPagination['total'], $paidOrdersPagination['page'] * $paidOrdersPagination['perPage']) }} of {{ $paidOrdersPagination['total'] }}
+                            </span>
+                            @if($paidOrdersPagination['page'] > 1)
+                                <a
+                                    href="{{ route('funnels.analytics', array_merge(['funnel' => $funnel], request()->except('paid_orders_page', 'open_section'), ['paid_orders_page' => $paidOrdersPagination['page'] - 1, 'open_section' => 'paid'])) }}#paidOrdersSection"
+                                    class="analytics-btn"
+                                    data-reopen-section="paidOrdersContent"
+                                >
+                                    <i class="fas fa-chevron-left" aria-hidden="true"></i> Prev
+                                </a>
+                            @endif
+                            @if($paidOrdersPagination['page'] < $paidOrdersPagination['lastPage'])
+                                <a
+                                    href="{{ route('funnels.analytics', array_merge(['funnel' => $funnel], request()->except('paid_orders_page', 'open_section'), ['paid_orders_page' => $paidOrdersPagination['page'] + 1, 'open_section' => 'paid'])) }}#paidOrdersSection"
+                                    class="analytics-btn"
+                                    data-reopen-section="paidOrdersContent"
+                                >
+                                    Next <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                                </a>
+                            @endif
+                        </div>
+                    @endif
                 </div>
             </div>
         @endif
 
-        <div class="analytics-card">
+        <div class="analytics-card" id="orderDirectorySection">
             <div class="analytics-section-actions">
                 <h3 style="margin:0;">{{ $summarySectionTitle }}</h3>
                 <div class="analytics-section-actions__controls">
@@ -848,7 +966,7 @@
                             </tr>
                         </thead>
                         <tbody id="offerActivityTableBody">
-                            @forelse($summaryRows as $row)
+                            @forelse($summaryRowsDisplay as $row)
                                 @if($isPhysicalAnalytics)
                                     <tr>
                                         <td><strong>{{ $row['customer'] ?? 'Anonymous visitor' }}</strong></td>
@@ -916,6 +1034,31 @@
                         </tbody>
                     </table>
                 </div>
+                @if($isPhysicalAnalytics && $orderDirectoryPagination && $orderDirectoryPagination['total'] > $orderDirectoryPagination['perPage'])
+                    <div class="analytics-product-pagination">
+                        <span class="analytics-product-page-note">
+                            Showing {{ ($orderDirectoryPagination['page'] - 1) * $orderDirectoryPagination['perPage'] + 1 }}-{{ min($orderDirectoryPagination['total'], $orderDirectoryPagination['page'] * $orderDirectoryPagination['perPage']) }} of {{ $orderDirectoryPagination['total'] }}
+                        </span>
+                        @if($orderDirectoryPagination['page'] > 1)
+                            <a
+                                href="{{ route('funnels.analytics', array_merge(['funnel' => $funnel], request()->except('directory_page', 'open_section'), ['directory_page' => $orderDirectoryPagination['page'] - 1, 'open_section' => 'directory'])) }}#orderDirectorySection"
+                                class="analytics-btn"
+                                data-reopen-section="offerActivityContent"
+                            >
+                                <i class="fas fa-chevron-left" aria-hidden="true"></i> Prev
+                            </a>
+                        @endif
+                        @if($orderDirectoryPagination['page'] < $orderDirectoryPagination['lastPage'])
+                            <a
+                                href="{{ route('funnels.analytics', array_merge(['funnel' => $funnel], request()->except('directory_page', 'open_section'), ['directory_page' => $orderDirectoryPagination['page'] + 1, 'open_section' => 'directory'])) }}#orderDirectorySection"
+                                class="analytics-btn"
+                                data-reopen-section="offerActivityContent"
+                            >
+                                Next <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                            </a>
+                        @endif
+                    </div>
+                @endif
             </div>
         </div>
 
@@ -1170,7 +1313,8 @@
                 return;
             }
 
-            setToggleButtonState(button, false);
+            const initiallyExpanded = content.style.display !== 'none';
+            setToggleButtonState(button, initiallyExpanded);
 
             button.addEventListener('click', function() {
                 const isHidden = content.style.display === 'none';
@@ -1179,12 +1323,36 @@
             });
         }
 
+        document.querySelectorAll('[data-reopen-section]').forEach((link) => {
+            link.addEventListener('click', function() {
+                const sectionId = link.getAttribute('data-reopen-section');
+                if (!sectionId) {
+                    return;
+                }
+
+                window.sessionStorage.setItem('analyticsOpenSection', sectionId);
+            });
+        });
+
         bindCollapsibleSection(toggleOfferActivityBtn, offerActivityContent);
         bindCollapsibleSection(toggleManualPaymentsBtn, manualPaymentsContent);
         bindCollapsibleSection(togglePendingOrdersBtn, pendingOrdersContent);
         bindCollapsibleSection(togglePaidOrdersBtn, paidOrdersContent);
         bindCollapsibleSection(toggleStepPerformanceBtn, stepPerformanceContent);
         bindCollapsibleSection(toggleRecentEventsBtn, recentEventsContent);
+
+        const storedAnalyticsOpenSection = window.sessionStorage.getItem('analyticsOpenSection');
+        if (storedAnalyticsOpenSection) {
+            const storedContent = document.getElementById(storedAnalyticsOpenSection);
+            const storedButton = document.querySelector('[aria-controls="' + storedAnalyticsOpenSection + '"]');
+
+            if (storedContent) {
+                storedContent.style.display = 'block';
+                setToggleButtonState(storedButton, true);
+            }
+
+            window.sessionStorage.removeItem('analyticsOpenSection');
+        }
 
         document.querySelectorAll('.manual-receipt-review-form').forEach((form) => {
             const setDecisionAndSubmit = function(decision) {

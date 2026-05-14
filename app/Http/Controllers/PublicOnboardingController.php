@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AppSetting;
 use App\Models\SignupIntent;
 use App\Models\User;
+use App\Services\AttributionService;
 use App\Services\PayMongoCheckoutService;
 use App\Services\SignupOnboardingService;
 use Illuminate\Http\Request;
@@ -13,11 +14,13 @@ use Illuminate\Support\Facades\Storage;
 
 class PublicOnboardingController extends Controller
 {
-    public function landing(SignupOnboardingService $onboarding)
+    public function landing(Request $request, SignupOnboardingService $onboarding, AttributionService $attribution)
     {
         if (Auth::check()) {
             return $this->redirectByRole(Auth::user());
         }
+
+        $attribution->captureSignupRequest($request);
 
         $landingHeroVideoPath = AppSetting::getValue('landing_hero_video_path');
         $landingHeroVideoWidth = (int) (AppSetting::getValue('landing_hero_video_width', '1280') ?? 1280);
@@ -37,11 +40,13 @@ class PublicOnboardingController extends Controller
         ]);
     }
 
-    public function showRegister(Request $request, SignupOnboardingService $onboarding)
+    public function showRegister(Request $request, SignupOnboardingService $onboarding, AttributionService $attribution)
     {
         if (Auth::check()) {
             return $this->redirectByRole(Auth::user());
         }
+
+        $attribution->captureSignupRequest($request);
 
         $trialMode = $request->boolean('trial');
 
@@ -63,8 +68,10 @@ class PublicOnboardingController extends Controller
         Request $request,
         SignupOnboardingService $onboarding,
         PayMongoCheckoutService $payMongo,
+        AttributionService $attribution,
     ) {
         $trialMode = $request->boolean('trial_mode');
+        $signupAttribution = $attribution->captureSignupRequest($request);
 
         $validated = $request->validate([
             'full_name' => 'required|string|max:255',
@@ -92,7 +99,9 @@ class PublicOnboardingController extends Controller
 
         try {
             if ($trialMode) {
-                $user = $onboarding->createTrialAccount($validated);
+                $user = $onboarding->createTrialAccount(array_merge($validated, [
+                    '_attribution' => $signupAttribution,
+                ]));
 
                 Auth::login($user, true);
                 $request->session()->regenerate();
@@ -119,7 +128,9 @@ class PublicOnboardingController extends Controller
                 $validated['full_name'] = $verifiedName;
             }
 
-            $intent = $onboarding->upsertIntent($validated);
+            $intent = $onboarding->upsertIntent(array_merge($validated, [
+                '_attribution' => $signupAttribution,
+            ]));
 
             if ($payMongo->isConfigured()) {
                 $checkoutOptions = [];

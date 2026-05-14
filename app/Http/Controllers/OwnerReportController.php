@@ -42,6 +42,7 @@ class OwnerReportController extends Controller
         $validated = $request->validate([
             'gateway_fee_rate' => 'required|numeric|min:0|max:100',
             'platform_fee_rate' => 'required|numeric|min:0|max:100',
+            'affiliate_sale_rate' => 'required|numeric|min:0|max:100',
             'sales_agent_rate' => 'required|numeric|min:0|max:100',
             'marketing_manager_rate' => 'required|numeric|min:0|max:100',
             'hold_days' => 'required|integer|min:0|max:365',
@@ -53,7 +54,9 @@ class OwnerReportController extends Controller
         ]);
 
         $gatewayPlusPlatform = (float) $validated['gateway_fee_rate'] + (float) $validated['platform_fee_rate'];
-        $salesPlusMarketing = (float) $validated['sales_agent_rate'] + (float) $validated['marketing_manager_rate'];
+        $commissionPool = (float) $validated['affiliate_sale_rate']
+            + (float) $validated['sales_agent_rate']
+            + (float) $validated['marketing_manager_rate'];
 
         if ($gatewayPlusPlatform >= 100) {
             return redirect()
@@ -62,17 +65,18 @@ class OwnerReportController extends Controller
                 ->with('error', 'Gateway and platform fees combined must stay below 100%.');
         }
 
-        if ($salesPlusMarketing > 100) {
+        if ($commissionPool > 100) {
             return redirect()
                 ->back()
                 ->withInput()
-                ->with('error', 'Sales and marketing commissions combined cannot exceed 100% of the eligible basis.');
+                ->with('error', 'Affiliate, sales, and marketing commissions combined cannot exceed 100% of the eligible basis.');
         }
 
         $plan = $commissions->resolvePlanForTenant($tenant);
         $plan->update([
             'gateway_fee_rate' => round((float) $validated['gateway_fee_rate'], 2),
             'platform_fee_rate' => round((float) $validated['platform_fee_rate'], 2),
+            'affiliate_sale_rate' => round((float) $validated['affiliate_sale_rate'], 2),
             'sales_agent_rate' => round((float) $validated['sales_agent_rate'], 2),
             'marketing_manager_rate' => round((float) $validated['marketing_manager_rate'], 2),
             'hold_days' => (int) $validated['hold_days'],

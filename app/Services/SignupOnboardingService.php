@@ -159,12 +159,13 @@ class SignupOnboardingService
                 'name' => 'Starter',
                 'price' => 1499.00,
                 'period' => 'per month',
-                'summary' => 'For teams launching their first lead capture and conversion funnels with simple built-in operations.',
+                'summary' => 'For teams launching their first lead capture and conversion funnels with essential built-in automations.',
                 'features' => [
                     '1 workspace with Account Owner dashboard access',
-                    'Lead capture funnels and conversion tracking',
-                    'Basic funnel analytics and payment monitoring',
-                    'Basic funnel operations with built-in tracking and status updates',
+                    'Welcome/setup email and payment confirmation included',
+                    'One lead capture autoresponse and one abandoned checkout reminder',
+                    'Basic funnel analytics, payment monitoring, and status notifications',
+                    'Limited built-in automations without shared n8n workflow access',
                 ],
                 'spotlight' => 'Best for New Teams',
                 'max_users' => 5,
@@ -252,6 +253,7 @@ class SignupOnboardingService
     public function upsertIntent(array $validated): SignupIntent
     {
         $plan = $this->findPlan($validated['plan']);
+        $attribution = is_array($validated['_attribution'] ?? null) ? $validated['_attribution'] : [];
 
         $intent = SignupIntent::query()->where('email', $validated['email'])->first();
         if ($intent && in_array($intent->lifecycle_state, [
@@ -277,6 +279,12 @@ class SignupOnboardingService
             'full_name' => $validated['full_name'],
             'company_name' => $validated['company_name'],
             'mobile' => (string) ($validated['mobile'] ?? ''),
+            'source_platform' => $attribution['source_platform'] ?? null,
+            'source_medium' => $attribution['source_medium'] ?? null,
+            'source_campaign' => $attribution['source_campaign'] ?? null,
+            'source_content' => $attribution['source_content'] ?? null,
+            'referrer_user_id' => $attribution['referrer_user_id'] ?? null,
+            'referral_code_snapshot' => $attribution['referral_code_snapshot'] ?? null,
             // Password is created via setup link after payment.
             'password_encrypted' => Crypt::encryptString(Str::random(40)),
             'plan_code' => $plan['code'],
@@ -483,11 +491,19 @@ class SignupOnboardingService
             'billing_grace_ends_at' => null,
             'last_payment_failed_at' => null,
             'subscription_activated_at' => now(),
-            'subscription_renews_at' => now()->addMonthNoOverflow(),
+            'subscription_renews_at' => $this->initialSubscriptionRenewalAt(),
             'trial_ends_at' => null,
         ]);
 
         return $tenant->fresh();
+    }
+
+    public function initialSubscriptionRenewalAt(?Carbon $anchor = null): Carbon
+    {
+        $base = ($anchor instanceof Carbon ? $anchor->copy() : now()->copy())->startOfSecond();
+        $days = max(1, (int) config('services.billing.initial_signup_renewal_days', 30));
+
+        return $base->addDays($days);
     }
 
     public function activateTenantSubscriptionFromPayment(Payment $payment, array $plan, ?string $paymentMethod = null): Tenant
@@ -526,6 +542,7 @@ class SignupOnboardingService
                 'status' => 'inactive',
                 'billing_status' => 'current',
                 'subscription_activated_at' => now(),
+                'subscription_renews_at' => $this->initialSubscriptionRenewalAt(),
             ]);
 
             $userAttributes = [
@@ -557,7 +574,7 @@ class SignupOnboardingService
             }
 
             if ($intent->provider_reference) {
-                Payment::firstOrCreate(
+                $payment = Payment::firstOrCreate(
                     [
                         'provider' => $intent->provider,
                         'provider_reference' => $intent->provider_reference,
@@ -570,10 +587,17 @@ class SignupOnboardingService
                         'status' => 'paid',
                         'payment_date' => Carbon::parse($intent->paid_at ?? now())->toDateString(),
                         'payment_method' => $intent->payment_method,
+                        'source_platform' => $intent->source_platform,
+                        'source_medium' => $intent->source_medium,
+                        'source_campaign' => $intent->source_campaign,
+                        'source_content' => $intent->source_content,
+                        'referrer_user_id' => $intent->referrer_user_id,
+                        'referral_code_snapshot' => $intent->referral_code_snapshot,
                     ]
                 );
+                app(CommissionService::class)->syncPayment($payment->fresh());
             } else {
-                Payment::create([
+                $payment = Payment::create([
                     'tenant_id' => $tenant->id,
                     'payment_type' => Payment::TYPE_PLATFORM_SUBSCRIPTION,
                     'lead_id' => null,
@@ -583,7 +607,14 @@ class SignupOnboardingService
                     'provider' => $intent->provider,
                     'provider_reference' => $intent->provider_reference,
                     'payment_method' => $intent->payment_method,
+                    'source_platform' => $intent->source_platform,
+                    'source_medium' => $intent->source_medium,
+                    'source_campaign' => $intent->source_campaign,
+                    'source_content' => $intent->source_content,
+                    'referrer_user_id' => $intent->referrer_user_id,
+                    'referral_code_snapshot' => $intent->referral_code_snapshot,
                 ]);
+                app(CommissionService::class)->syncPayment($payment->fresh());
             }
 
             $intent->update([
@@ -601,6 +632,7 @@ class SignupOnboardingService
                     $tenant->update([
                         'status' => 'active',
                         'subscription_activated_at' => $tenant->subscription_activated_at ?? now(),
+                        'subscription_renews_at' => $tenant->subscription_renews_at ?? $this->initialSubscriptionRenewalAt(),
                     ]);
                 }
                 $this->transitionIntentOrFail($intent, SignupIntent::STATE_EMAIL_SENT);
@@ -702,12 +734,36 @@ class SignupOnboardingService
             'email' => $user->email,
         ]);
 
+        $targetRecipient = trim((string) ($meta['recipient_email'] ?? $user->email));
+        if ($targetRecipient === '') {
+            $targetRecipient = $user->email;
+        }
+
+        if ($this->shouldDispatchSetupEmailViaN8n($eventName)) {
+            $dispatched = app(N8nEmailOrchestrator::class)->dispatch($eventName, [
+                'tenant_id' => $user->tenant_id,
+                'user_id' => $user->id,
+                'event_name' => $eventName,
+                'email' => $targetRecipient,
+                'recipient_email' => $targetRecipient,
+                'name' => $user->name,
+                'setup_url' => $setupUrl,
+                'expires_at' => optional($expiresAt)->toIso8601String(),
+                'login_url' => route('login'),
+            ]);
+
+            if ($dispatched) {
+                return true;
+            }
+        }
+
         $subject = $this->setupEmailSubject($eventName);
         $body = $this->setupEmailBody($user, $setupUrl, $expiresAt, $eventName);
-        $delivery = app(TransactionalEmailService::class)->sendPlainText($user->email, $subject, $body, [
+        $delivery = app(TransactionalEmailService::class)->sendPlainText($targetRecipient, $subject, $body, [
             'event_name' => $eventName,
             'tenant_id' => $user->tenant_id,
             'user_id' => $user->id,
+            'requested_recipient_email' => $targetRecipient,
         ]);
         $sent = (bool) $delivery['sent'];
 
@@ -770,6 +826,18 @@ class SignupOnboardingService
         }
 
         return $sent;
+    }
+
+    private function shouldDispatchSetupEmailViaN8n(string $eventName): bool
+    {
+        return in_array($eventName, [
+            'account_owner_paid_signup_created',
+            'account_owner_google_paid_signup_created',
+            'team_member_invited',
+            'customer_portal_invited',
+            'setup_link_expiring',
+            'setup_link_expired',
+        ], true);
     }
 
     private function transitionIntentOrFail(SignupIntent $intent, string $nextState): void

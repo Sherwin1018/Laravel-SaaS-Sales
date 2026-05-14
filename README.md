@@ -1,238 +1,700 @@
-﻿# SaaS Sales and Marketing Funnel System
+# SaaS Sales and Marketing Funnel System
 
-## Project Brief
-This project builds a multi-tenant SaaS Sales and Marketing Funnel System where multiple client businesses operate independently in one platform.
+Last updated: May 6, 2026
 
-The platform combines funnel creation, CRM, automation, payments, and analytics to support end-to-end digital sales operations.
+This file is the single source of truth for the current project status, preserved findings, major gaps, rollout priorities, architecture rules, and the path from the current build to approval-ready completion.
 
-Primary goal: deliver a scalable, secure, and commercially viable SaaS product with clear monetization and role-based operations.
+## 1. Project Summary
 
-## Project Objective
-Deliver a platform that:
+This project is a multi-tenant SaaS Sales and Marketing Funnel System where multiple client businesses operate independently on one platform.
 
-- Supports secure multi-tenant architecture.
-- Enables sales funnel creation and management.
-- Captures, tracks, and scores leads in CRM.
-- Automates follow-up flows (email, SMS, workflows).
-- Processes one-time and subscription payments.
-- Provides client + super-admin analytics.
-- Supports billing tiers, limits, and subscription controls.
+The intended end-to-end flow is:
 
-## Current Progress Checklist
+- funnel -> CRM -> automation -> payment -> analytics
 
-### Step 1 (Weeks 1-2): Foundation + Business Functionality
-- [x] Multi-tenant architecture (tenant isolation in core entities)
-- [x] Role-based access (Super Admin, Account Owner, Marketing Manager, Sales Agent, Finance)
-- [x] Basic CRM lead management (create, edit, list, delete)
-- [x] Lead activity logging
-- [x] Lead assignment (`assigned_to`) to sales agents
-- [x] Sales-agent restricted lead visibility (assigned leads only)
-- [x] Pipeline statuses (`new`, `contacted`, `proposal_sent`, `closed_won`, `closed_lost`)
-- [x] Pipeline section on leads page
-- [x] Lead scoring support (`+5`, `+10`, `+20` event actions)
-- [x] Basic email activity logging in lead activities
-- [x] Account Owner analytics (total leads, leads this month, conversion rate, leads by status)
-- [x] Super Admin analytics expansion (total tenants, active tenants, users, leads)
-- [x] Payment tracking module (payments table, billing page, owner/finance access)
+The target product includes:
 
-### Step 2 (Week 3): Funnel Builder MVP
-- [x] Drag-and-drop funnel/page builder
-- [x] Landing pages and opt-in forms
-- [x] Sales pages
-- [x] Checkout page builder integration
-- [x] Lead form capture and tagging
+- secure multi-tenant architecture
+- role-based operations
+- CRM lead management
+- funnel creation and publishing
+- one-time and subscription payments
+- analytics and reporting
+- SaaS billing controls
+- automation through n8n
 
-### Step 3 (Week 4): Automation Engine
-- [ ] Email sequences
-- [ ] SMS integration
-- [ ] Time-delay actions
-- [ ] Conditional workflows
-- [ ] Event-based automation triggers
+## 2. Current Executive Assessment
 
-### Step 4 (Week 5): Checkout + Subscriptions
-- [ ] One-time payments flow
-- [ ] Subscription products
-- [ ] Coupon/discount handling
-- [ ] Failed payment recovery
-- [ ] Payment gateway integration
+As of May 6, 2026, the codebase is well beyond a rough prototype, but it is not yet a confident 85% to 100% complete in approval-ready terms.
 
-### Step 5 (Week 6): Advanced Analytics + SaaS Controls
-- [ ] Client analytics (conversion, revenue per funnel, abandoned cart)
-- [ ] SaaS owner analytics (MRR, churn, ARPU, usage metrics)
-- [ ] Tiered pricing plans
-- [ ] Usage limits
-- [ ] Trial management
-- [ ] Subscription billing controls
+Practical overall assessment:
 
-## Completed Today (2026-02-18)
-- [x] Updated role dashboards (`account-owner`, `marketing-manager`, `sales-agent`, `finance`) to show company badge/name right-aligned beside the welcome header.
-- [x] Standardized reusable header company chip styles in `public/css/admin-dashboard.css` for consistent desktop/mobile alignment.
-- [x] Verified Super Admin `Active Tenants` KPI logic: it counts `tenants.status = active` (not active account-owner users).
+- System build completeness: about 75%
+- Demo or approval readiness: about 65% to 70%
 
-## Detailed Updates (2026-02-18)
+Why:
 
-### Profile and Account UX
-- [x] Replaced Account Owner text with company badge in `resources/views/dashboard/account-owner.blade.php`:
-  company logo if uploaded, otherwise auto-colored initials fallback.
-- [x] Added full Manage Profile page for all roles in `resources/views/profile/show.blade.php`:
-  editable name/phone/secondary phone, read-only email/role, password change section, profile picture upload/delete, static notification toggle, last login, account created date, and company block (with Account Owner company-logo upload/delete).
-- [x] Updated sidebar Manage Profile link in `resources/views/layouts/admin.blade.php` to `route('profile.show')`.
-- [x] Added sidebar avatar behavior in `resources/views/layouts/admin.blade.php` + `public/css/admin-dashboard.css`:
-  uploaded photo or initials with auto-generated color fallback.
-- [x] Improved sidebar account spacing in `public/css/admin-dashboard.css`:
-  changed `.account-info` to `justify-content: flex-start`, made `.account-details` flexible, and pushed three-dot menu right via `margin-left: auto`.
+- major foundations are already implemented
+- the remaining work is concentrated in the hardest layers
+- the main gaps are integration depth, analytics correctness, automation maturity, billing edge cases, SaaS rule enforcement, and reliable verification
 
-### Backend and Routing
-- [x] Added `ProfileController.php` and profile routes in `routes/web.php`.
-- [x] Updated login flow in `app/Http/Controllers/AuthController.php` to store `last_login_at`.
-- [x] Updated model fields in `app/Models/User.php` and `app/Models/Tenant.php`.
-- [x] Added migrations:
-  `2026_02_18_000002_add_profile_fields_to_users_table.php`
-  `2026_02_18_000003_add_logo_path_to_tenants_table.php`
-  `2026_02_18_000001_add_suspension_reason_to_users_table.php`
+Repository maturity signals observed in the workspace:
 
-### Notifications and Feedback UI
-- [x] Switched notifications to toast-style cards with heading/icon/close button and 4-second auto-close.
-- [x] Updated:
-  `resources/views/layouts/admin.blade.php`
-  `resources/views/auth/login.blade.php`
-  `public/css/admin-dashboard.css`
+- around 80 Laravel migrations
+- 18 feature test files
+- a large route surface already present
+- implemented models, controllers, services, dashboards, billing, funnel, and payout-related modules
 
-### Forms, Validation, and Data Rules
-- [x] Removed underline in Add actions by replacing nested `<a><button>` patterns with styled `.btn-create` links/buttons in index pages and `public/css/admin-dashboard.css`.
-- [x] Fixed Account Owner team role search by adding role name/slug filtering in `app/Http/Controllers/UserController.php`.
-- [x] Standardized bold data emphasis in table/body rows and role/status badges across `_rows.blade.php` partials and `public/css/admin-dashboard.css`.
-- [x] Standardized password policy for account creation (Super Admin + Account Owner) in:
-  `app/Http/Controllers/TenantController.php`
-  `app/Http/Controllers/UserController.php`
-  with confirm-password fields in create forms.
-- [x] Enforced required lead/account form fields and stricter lead creation/edit validation in:
-  `app/Http/Controllers/LeadController.php`
-  `resources/views/leads/create.blade.php`
-  `resources/views/leads/edit.blade.php`
-- [x] Enforced Philippine phone format (`^09\d{9}$`, exactly 11 digits) in lead and profile flows.
+## 3. Module-by-Module Completion Estimate
 
-### Pipeline, Role Controls, and Dashboard Logic
-- [x] Enhanced lead pipeline UX:
-  scrollable columns, lead-name search/filter, latest-12 card limit per status, plus View Lead Pipeline and Assign Lead toggles.
-- [x] Added Super Admin Account Owner activate/deactivate controls with suspension reason and blocked-login messaging:
-  route `admin.users.status`, controller action `UserController@toggleOwnerStatus`, admin users UI updates, and login blocking in `AuthController.php`.
-- [x] Hardened Account Owner conversion-rate logic in `app/Http/Controllers/DashboardController.php` to handle status variants (`closed_won`, `Closed Won`, etc.).
-- [x] Standardized success/failure messages across key controllers:
-  `AuthController.php`, `UserController.php`, `TenantController.php`, `LeadController.php`, `PaymentController.php`.
+| Module | Estimated Completion | Status |
+|---|---:|---|
+| Multi-tenant + Roles + Access | 85% | Strong foundation, but still needs approval-grade verification and consistency hardening |
+| CRM / Lead Management | 80% | Core CRUD, assignment, scoring, pipeline, and activities exist; custom-field maturity and deeper reporting are still finishing |
+| Funnel Builder | 78% | Builder, portal steps, publishing, reviews, and analytics screens exist; end-to-end tracking and public hardening are still incomplete |
+| Automation / n8n Integration | 60% | Good webhook foundation and inbound endpoints exist, but real-time event coverage and workflow maturity are still incomplete |
+| Billing / Payments / Subscriptions | 72% | Plans, billing views, PayMongo foundation, payouts, commissions, and lifecycle pieces exist; production-grade lifecycle confidence is not there yet |
+| Analytics / Reporting | 68% | Dashboard and reporting services exist, but advanced metrics are still a major blocker |
+| SaaS Controls / Plan Enforcement | 70% | Plan models, middleware, usage summaries, and enforcement pieces exist, but the system still feels partial rather than fully locked down |
+| QA / Feature Coverage / Approval Readiness | 45% | The suite exists, but current environment validation is blocked and confidence is still low |
 
-### Validation and Run Commands
-- [x] PHP syntax validation completed (`php -l`) for modified PHP files.
-- [ ] Required command: `php artisan migrate`
-- [ ] Required command (if not linked): `php artisan storage:link`
+## 4. Strong Areas Already Present
 
-------
+The current system already has meaningful implementation across these areas:
 
-## Modules and Scope
+- multi-tenant foundation
+- role-based dashboards and access structure
+- basic CRM lead management
+- lead assignment and lead activity logging
+- sales pipeline foundation
+- basic lead scoring support
+- funnel builder UI and public funnel routes
+- landing, opt-in, sales, checkout, upsell, downsell, and thank-you step support
+- payment and PayMongo foundation
+- trial and subscription foundation
+- billing and plan pages
+- dashboard foundation for owners and admins
+- payout account and commission-related foundations
+- automation webhook endpoints and some outbound event support
 
-### 1. Multi-Tenant Permission System
-- [x] Super Admin
-- [x] Account Owner
-- [x] Marketing Manager
-- [x] Sales Agent
-- [x] Finance
-- [x] Customer role and portal
+## 5. Biggest Current Gaps
 
-### 2. Funnel Builder System
-- [x] Drag-and-drop builder
-- [x] Landing, opt-in, and sales pages
-- [x] Checkout pages
-- [x] Upsell/downsell logic
+These are the main incomplete areas preserved from the previous planning files and the repo review:
 
-### 3. Lead Flow and CRM
-- [x] Lead database
-- [ ] Tagging and custom fields
-- [x] Lead scoring (basic)
-- [x] Activity tracking
-- [x] Sales pipeline view (basic Kanban-style section)
+### Funnel analytics completion
 
-### 4. Automation Engine
-- [ ] Email sequences
-- [ ] SMS workflows
-- [ ] Conditional logic
-- [ ] Trigger-based automation
+Still needs:
 
-### 5. Checkout and Payment System
-- [x] Basic payment tracking records
-- [ ] One-time checkout workflow
-- [ ] Subscription checkout workflow
-- [ ] Coupons
-- [ ] Failed payment recovery
-- [ ] Payment gateway integration
+- full visit-to-paid event tracking
+- stronger per-step conversion measurement
+- abandoned checkout logic
+- stronger publish-readiness validation
+- public route throttling and anti-spam hardening
 
-### 6. Analytics and Reporting Dashboard
-- [x] Account Owner core lead metrics
-- [x] Super Admin core platform metrics
-- [ ] Funnel conversion analytics
-- [ ] Revenue per funnel
-- [ ] Abandoned cart rate
-- [ ] MRR, churn, ARPU, usage analytics
+### Automation event completeness
 
-### 7. SaaS Business Controls
-- [ ] Tiered pricing
-- [ ] Usage limits
-- [ ] Trial rules
-- [ ] Subscription lifecycle controls
+Still needs:
 
-## Team Roles
+- stronger outbound event contract
+- real-time funnel events sent to n8n
+- reliable idempotency keys
+- email sequence workflows
+- SMS workflows
+- delay and conditional workflow support
+- workflow logs and retry behavior
 
-### Development
-Responsible for architecture, database, module logic, security, and billing integration.
+### Trial, billing, and subscription lifecycle hardening
 
-### UI/UX
-Responsible for builder interface, dashboards, and usability in tenant/admin views.
+Still needs:
 
-### QA and Documentation Support
-Responsible for validation, workflow verification, and project documentation.
+- cleaner tenant billing states
+- upgrade, downgrade, renew, cancel handling
+- failed payment consequence rules
+- recovery flow safety
+- duplicate webhook protection
+- clearer reconciliation behavior
 
-## Collaboration Process
-Build sequence:
+### Advanced analytics formulas
 
-1. Multi-tenant architecture and role permissions.
-2. CRM foundation and user structures.
-3. Funnel builder and lead capture.
-4. Automation and communication integrations.
-5. Checkout/subscriptions/payments.
-6. Analytics and SaaS business controls.
---------
-All modules must remain interconnected: CRM, funnel tracking, automation, and payments should function as one flow.
+Still needs:
 
-### Interconnection Verification (2026-02-19)
-- Status: Partially followed.
-- CRM <-> Funnel: Implemented. Published funnel opt-in creates/updates leads in CRM (`FunnelPortalController@optIn`).
-- Funnel <-> Payments: Implemented (initial). Checkout/offer steps create payment records linked to funnel lead (`FunnelPortalController@checkout`, `@offer`).
-- CRM <-> Payments: Implemented (initial). Payments can be linked to leads (`payments.lead_id`) and viewed in billing.
-- Automation <-> CRM/Funnel/Payments: Not yet implemented as workflow engine. Current automation is limited to manual/basic lead activity logging and score events.
+- conversion per funnel
+- revenue per funnel
+- abandoned cart rate
+- MRR
+- churn
+- ARPU
+- usage metrics
+- role-safe and date-consistent formulas
 
-### Comments and Suggestions
-- Add event-driven automation triggers for key points: `lead_created`, `lead_status_changed`, `payment_paid`, `payment_failed`.
-- Add workflow actions (email sequence, delay, condition) so automation is part of the same end-to-end flow.
-- Add webhook/outbox integration (e.g., n8n) to connect CRM/funnel/payment events reliably.
-- Add integration/feature tests to validate the full flow: funnel opt-in -> lead creation -> checkout payment -> automation trigger.
---------
-## Expected Outcome
-At completion, the platform should provide:
+### Test hardening and environment readiness
 
-- A scalable SaaS funnel system.
-- Structured lead management and automation.
-- Integrated payment and subscription handling.
-- Clear performance reporting for client tenants and platform owners.
+Still needs:
 
-## Quality Standards
-- Clarity: Interfaces are understandable for non-technical users.
-- Accuracy: Workflows match real sales/marketing operations.
-- Consistency: Naming and logic align across all modules.
-- Security: Tenant data remains isolated and protected.
-- Usefulness: Features directly support growth and automation.
+- better feature and integration coverage
+- end-to-end flow protection
+- reliable local test environment support
+- passable database-backed test execution
 
-## Recommended Immediate Next Tasks
-- [ ] Add lead tags and custom fields. (Not done)
-- [x] Start funnel builder MVP (Week 3 scope). (Initial)
-- [ ] Add automated email sequence infrastructure. (Not done)
-- [ ] Integrate payment gateway for real transactions. (Not done)
-- [ ] Add feature tests for assignment, scoring, pipeline, and payments. (Not done)
+Current test environment note:
+
+- `php artisan test` could not provide trustworthy completion confidence in this environment because SQLite driver support was missing
+- the observed issue was effectively missing `pdo_sqlite` / `sqlite3` support for in-memory test execution
+
+## 6. What Must Be Done To Reach 85% To 100%
+
+This section converts the findings into a practical completion path.
+
+### Multi-tenant + Roles + Access
+
+Current: 85%
+
+To reach 90%:
+
+- standardize status naming across modules
+- audit route and controller access rules
+- confirm tenant isolation on cross-record access
+- complete more role and tenant feature tests
+
+To reach 100%:
+
+- full policy coverage
+- no cross-tenant leaks in manual or automated checks
+- passing access regression suite
+
+### CRM / Lead Management
+
+Current: 80%
+
+To reach 85%:
+
+- tenant-scoped custom fields
+- better tag normalization
+- configurable score events
+- stage history and audit trail
+
+To reach 100%:
+
+- lead field mapping from funnel data
+- full scoring configuration
+- stronger pipeline analytics
+- test protection for CRUD, scoring, assignment, stage changes, and tenant scoping
+
+### Funnel Builder
+
+Current: 78%
+
+To reach 85%:
+
+- step view tracking
+- opt-in tracking
+- checkout-start tracking
+- paid conversion tracking
+- stronger publish validation
+
+To reach 100%:
+
+- abandoned checkout metric
+- safer public submission hardening
+- reliable duplicate-submission handling
+- upsell and downsell conversion analytics
+- full funnel-specific feature coverage
+
+### Automation / n8n Integration
+
+Current: 60%
+
+To reach 85%:
+
+- define the final event contract
+- send funnel opt-in, checkout start, payment paid, and abandoned checkout events outbound
+- implement email sequence and reminder workflows
+- add delivery logging and retry logic
+
+To reach 100%:
+
+- SMS workflows
+- time delays
+- conditional branching
+- idempotent replay protection
+- auditable automation history for demo and approval
+
+### Billing / Payments / Subscriptions
+
+Current: 72%
+
+To reach 85%:
+
+- stronger subscription state handling
+- failed payment recovery flow
+- clearer billing state transitions
+- safer webhook and reconciliation logic
+
+To reach 100%:
+
+- mature renew, cancel, upgrade, downgrade logic
+- clearer tenant lifecycle enforcement
+- stable receipt, payout, and commission interactions
+- reliable billing regression tests
+
+### Analytics / Reporting
+
+Current: 68%
+
+To reach 85%:
+
+- finish funnel conversion reporting
+- add revenue-per-funnel reporting
+- add abandoned checkout reporting
+- improve owner and admin metric summaries
+
+To reach 100%:
+
+- documented formulas for MRR, churn, ARPU, and usage metrics
+- consistent date filtering
+- export reliability
+- verified dashboard calculation tests
+
+### SaaS Controls / Plan Enforcement
+
+Current: 70%
+
+To reach 85%:
+
+- enforce user, lead, and funnel limits consistently
+- show current usage versus current limit clearly
+- add upgrade prompts when blocked
+
+To reach 100%:
+
+- reliable backend feature gates
+- tenant-safe usage summaries
+- old over-limit tenant handling rules
+- full enforcement test coverage
+
+### QA / Feature Coverage / Approval Readiness
+
+Current: 45%
+
+To reach 85%:
+
+- repair local test database support
+- run feature tests successfully
+- add missing tests for CRM, funnel, billing, analytics, and plan enforcement
+
+To reach 100%:
+
+- full integration validation from funnel to analytics
+- repeatable environment setup
+- regression confidence for release or presentation
+
+## 7. Recommended Priority Order
+
+The safest order to move the system from the current state toward 85% to 100% is:
+
+1. Status, rule, and access consistency
+2. Funnel event tracking and funnel analytics foundation
+3. Automation event contract and outbound delivery
+4. CRM completion with custom fields and stage history
+5. Advanced analytics formulas and dashboards
+6. Billing and subscription lifecycle hardening
+7. SaaS controls and usage-limit enforcement
+8. Feature, integration, and end-to-end test hardening
+
+## 8. Detailed Module Gap Summary
+
+### 8.1 Funnel Builder
+
+Current state:
+
+- strong partial
+
+Preserved key needs:
+
+- event tracking
+- conversion analytics
+- abandoned checkout logic
+- stronger publish validation
+- public route throttling and anti-spam
+- funnel-specific tests
+
+Definition of done:
+
+- funnel path is measurable from visit to paid
+- public routes are hardened
+- funnel tests exist and pass
+
+### 8.2 CRM / Lead Management
+
+Current state:
+
+- usable but still basic
+
+Preserved key needs:
+
+- custom fields
+- stronger tag structure
+- configurable lead scoring
+- stage history and audit trail
+- stronger pipeline analytics
+
+Definition of done:
+
+- CRM supports different tenant business needs
+- lead movement is measurable and auditable
+- pipeline is analytical, not only visual
+
+### 8.3 Automation Engine
+
+Current state:
+
+- major missing module relative to the brief
+
+Preserved key needs:
+
+- event-based automation
+- email sequences
+- SMS integration
+- delay and condition support
+- workflow logging
+- n8n integration and retries
+
+Definition of done:
+
+- system events are reliably sent to n8n
+- workflows execute actual email and SMS automations
+- automation runs are auditable
+
+### 8.4 Billing / Payments / Subscription Lifecycle
+
+Current state:
+
+- partial
+
+Preserved key needs:
+
+- one-time checkout maturity
+- clearer subscription states
+- failed payment recovery
+- safer reconciliation
+- tenant billing state clarity
+
+Definition of done:
+
+- the billing system behaves like a real SaaS platform
+- transitions are predictable and safe
+- duplicate gateway events do not duplicate effects
+
+### 8.5 Analytics and Reporting
+
+Current state:
+
+- basic dashboards exist
+
+Preserved key needs:
+
+- conversion per funnel
+- revenue per funnel
+- abandoned cart rate
+- MRR
+- churn
+- ARPU
+- usage metrics
+- role-safe reporting
+
+Definition of done:
+
+- dashboards are decision-grade
+- formulas are documented and trusted
+- date handling is consistent
+
+### 8.6 SaaS Business Controls
+
+Current state:
+
+- partial
+
+Preserved key needs:
+
+- usage limits
+- plan enforcement
+- feature gates
+- trial and subscription control rules
+
+Definition of done:
+
+- plans do not only exist in UI
+- plans actually control tenant behavior
+- blocked actions are explained clearly
+
+### 8.7 Testing and Approval Readiness
+
+Current state:
+
+- weak compared to the system scope
+
+Preserved key needs:
+
+- auth and role access tests
+- tenant isolation tests
+- CRM tests
+- funnel tests
+- billing and subscription tests
+- analytics calculation tests
+- integration path tests
+
+Definition of done:
+
+- critical flows are verifiable
+- regressions are easier to detect
+- approval and demo confidence become realistic
+
+## 9. Preserved n8n Gap Findings
+
+The most important automation-specific findings retained from prior notes are:
+
+### Outbound events already supported in some form
+
+- account-owner onboarding and invite-related events
+- payment-related events in partial form
+- lead capture and lead stage change events
+
+### Major outbound gaps
+
+- funnel opt-in events are not fully dispatched in a mature contract
+- checkout-start events are not fully matured for real-time automation
+- funnel payment-paid events need stronger automation readiness
+- abandoned checkout events need first-class support
+- upsell and downsell decision events need cleaner emission
+- trial reminder and trial-expiry outbound events are still incomplete
+
+### Contract gaps
+
+- no strong durable event id everywhere
+- idempotency protection needs improvement
+- retry-safe delivery needs stronger design
+
+### Workflow gaps
+
+- email sequences need full operational workflows
+- SMS workflows need completion
+- condition and delay workflows need completion
+- automation logs need to be evidence-friendly
+
+## 10. Preserved Billing, Payout, and Commission Architecture Rules
+
+These architecture decisions should remain stable while the system is completed.
+
+### Separate the three money domains
+
+Keep these separate:
+
+1. platform subscription billing
+2. tenant funnel earnings
+3. internal tenant commissions
+
+This reduces confusion and makes the system easier to scale and audit.
+
+### Core business rule
+
+- platform subscription payments belong to the SaaS billing domain
+- funnel customer payments belong to the tenant
+- tenant earnings should settle to the tenant account owner's verified payout account
+- super admin should not automatically receive tenant earnings
+
+### Payout account principles
+
+- payout configuration should be tenant-level
+- sensitive destination values should be protected
+- masked values should be shown in UI
+- verification state should be tracked
+
+### Recommended payout fields
+
+- `payout_method`
+- `destination_type`
+- `destination_value`
+- `account_name`
+- `provider_reference`
+- `verification_status`
+- `verified_at`
+- `verified_by`
+- `notes`
+
+### Receipt and proof-of-payment principles
+
+- manual receipt upload may exist where needed
+- exact-match verification can auto-approve safe cases
+- mismatches should go to finance review
+
+Recommended receipt statuses:
+
+- `pending_review`
+- `verified`
+- `rejected`
+- `auto_approved`
+
+### Commission model principles
+
+- commissions should be tenant-configurable
+- platform fee should be modeled separately from role commissions
+- commissions should be based on net eligible amount
+
+Recommended commission lifecycle:
+
+- `pending`
+- `held`
+- `approved`
+- `payable`
+- `paid`
+- `reversed`
+- `cancelled`
+
+### Approval workflow summary
+
+Recommended high-level flow:
+
+1. payment is created
+2. payment becomes paid through webhook, manual approval, or verified receipt
+3. net eligible amount is calculated
+4. commission entries are created where attribution is valid
+5. entries start held
+6. hold period passes without dispute, reversal, or refund
+7. entries become payable
+8. finance reviews payout readiness
+9. payout is processed to the verified tenant payout account
+10. entries become paid
+
+## 11. Rollout Phases
+
+The preserved rollout path is:
+
+### Phase 1: Status, Rule, and Access Consistency
+
+- standardize statuses
+- tighten tenant and role access
+- add baseline access tests
+
+### Phase 2: CRM Structure Completion
+
+- add tenant-scoped custom fields
+- improve tags and scoring
+- add stage history and audit trail
+
+### Phase 3: Pipeline Reporting and Kanban Intelligence
+
+- add stage counts
+- conversion reporting
+- time-in-stage
+- aging and won/lost summaries
+
+### Phase 4: Funnel Analytics Completion
+
+- visits
+- opt-ins
+- checkout starts
+- paid conversions
+- drop-off
+- abandoned checkout
+- revenue per funnel
+
+### Phase 5: SaaS Plan Enforcement and Usage Limits
+
+- enforce tiered pricing
+- apply feature gates
+- show usage versus limits
+- block over-limit creation safely
+
+### Phase 6: Trial, Billing, and Subscription Lifecycle Completion
+
+- improve trial enforcement
+- clarify subscription states
+- harden billing behavior
+- improve recovery and webhook safety
+
+### Phase 7: Advanced Analytics and Platform Metrics
+
+- conversion rate
+- revenue per funnel
+- abandoned cart rate
+- MRR
+- churn
+- ARPU
+- active tenant metrics
+- usage metrics
+
+### Phase 8: Feature and Integration Test Hardening
+
+- expand feature coverage
+- expand integration coverage
+- protect end-to-end workflows
+
+## 12. Shared Dependencies and Coordination Rules
+
+Important cross-module coordination rules preserved from the deleted plans:
+
+- event names must be standardized
+- status names must be standardized
+- payload contracts must be shared
+- done criteria must be aligned before parallel work diverges
+
+Critical dependency chain:
+
+- funnel outputs feed CRM, automation, payment, and analytics
+- analytics quality depends on clean event and status consistency
+- automation reliability depends on stable event contracts
+- billing and SaaS controls affect access, metrics, and user trust
+
+## 13. Approval-Ready Definition of Done
+
+The project should only be called approval-ready when these are true:
+
+- all required modules exist
+- modules are connected end-to-end
+- analytics are visible and accurate
+- automation actually runs
+- billing and SaaS controls are enforceable
+- public flows are safe enough
+- role and tenant rules are verified
+- key workflows are test-covered
+
+Final approval checklist:
+
+- funnel builder is fully usable and measurable
+- CRM supports real lead management needs
+- automation engine executes email and SMS workflows
+- payments and subscriptions behave reliably
+- analytics dashboard matches the brief
+- SaaS controls are enforced by plan and lifecycle state
+- tenant isolation is verified
+- core feature and integration tests are in place
+
+## 14. Immediate Next Actions
+
+If the goal is to move from the current 75% build completeness toward 85% quickly, the highest-value next actions are:
+
+1. finalize shared event names and status names
+2. complete funnel event tracking from visit to paid
+3. emit missing outbound automation events to n8n with idempotency fields
+4. complete custom fields, scoring rules, and stage history in CRM
+5. finish advanced analytics formulas for funnel, tenant, and platform views
+6. harden billing and subscription lifecycle rules
+7. repair the local test database setup and run the feature suite successfully
+
+## 15. Final Position
+
+This Laravel system is already substantial and real.
+
+It is not best described as unfinished from scratch. Instead, it is a strong foundation with a difficult remaining last stretch.
+
+The path to 85% is realistic if the team closes:
+
+- funnel analytics and public hardening
+- outbound automation completeness
+- CRM structure maturity
+- advanced analytics formulas
+- billing lifecycle hardening
+- plan enforcement consistency
+- environment-backed test validation
+
+The path to 100% requires not only more features, but confidence, consistency, verification, and stable end-to-end behavior.

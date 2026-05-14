@@ -10,12 +10,13 @@ use App\Models\User;
 use App\Services\DeliveryLogService;
 use App\Services\InAppNotificationService;
 use App\Services\N8nEmailOrchestrator;
+use App\Services\PlanAutomationService;
+use App\Services\SubscriptionDeadlineReminderService;
 use App\Services\SubscriptionLifecycleService;
 use App\Services\TransactionalEmailService;
 use App\Support\TenantPlanEnforcer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
@@ -36,6 +37,8 @@ class N8nAutomationController extends Controller
             ->where('id', $validated['lead_id'])
             ->where('tenant_id', $validated['tenant_id'])
             ->firstOrFail();
+
+        $this->ensureSharedAutomationTenant((int) $validated['tenant_id']);
 
         $activity = $lead->activities()->create([
             'activity_type' => $validated['activity_type'],
@@ -60,6 +63,8 @@ class N8nAutomationController extends Controller
             ->where('id', $validated['lead_id'])
             ->where('tenant_id', $validated['tenant_id'])
             ->firstOrFail();
+
+        $this->ensureSharedAutomationTenant((int) $validated['tenant_id']);
 
         $points = (int) ($validated['points'] ?? 0);
         if ($points > 0) {
@@ -139,6 +144,7 @@ class N8nAutomationController extends Controller
         }
 
         $tenant = Tenant::query()->findOrFail($tenantId);
+        $this->ensureSharedAutomationTenant($tenantId);
         app(TenantPlanEnforcer::class)->ensureCanSendOutboundMessages($tenant);
 
         $template = (string) $validated['template'];
@@ -638,6 +644,7 @@ class N8nAutomationController extends Controller
 
         $tenantId = (int) $validated['tenant_id'];
         $tenant = Tenant::query()->findOrFail($tenantId);
+        $this->ensureSharedAutomationTenant($tenantId);
         app(TenantPlanEnforcer::class)->ensureCanSendOutboundMessages($tenant);
         $phone = null;
         $lead = null;
@@ -701,6 +708,8 @@ class N8nAutomationController extends Controller
             ->where('id', $validated['lead_id'])
             ->where('tenant_id', $validated['tenant_id'])
             ->firstOrFail();
+
+        $this->ensureSharedAutomationTenant((int) $validated['tenant_id']);
 
         $lead->activities()->create([
             'activity_type' => 'Task',
@@ -864,9 +873,11 @@ class N8nAutomationController extends Controller
             'date' => 'nullable|date',
             'audience' => 'nullable|string|max:80',
             'include_upgrade_nudges' => 'nullable',
+            'recipient_email' => 'nullable|email',
         ]);
 
         $audience = (string) ($validated['audience'] ?? 'all_owners');
+        $forcedRecipient = trim((string) ($validated['recipient_email'] ?? ''));
         $users = User::query()->where('role', 'account-owner');
         if ($audience === 'trial_owners') {
             $users->whereHas('tenant', function ($query) {
@@ -876,12 +887,13 @@ class N8nAutomationController extends Controller
 
         $sent = 0;
         foreach ($users->get(['email', 'tenant_id', 'id']) as $user) {
-            if (! $user->email) {
+            $recipient = $forcedRecipient !== '' ? $forcedRecipient : (string) $user->email;
+            if (! $recipient) {
                 continue;
             }
 
             $sendResult = app(TransactionalEmailService::class)->sendPlainText(
-                $user->email,
+                $recipient,
                 'Owner Digest',
                 'Owner digest generated for ' . ($validated['date'] ?? now()->toDateString()),
                 [
@@ -890,12 +902,13 @@ class N8nAutomationController extends Controller
                     'user_id' => $user->id,
                     'is_billable' => false,
                     'audience' => $audience,
+                    'requested_recipient_email' => $recipient,
                 ]
             );
 
             if (! $sendResult['sent']) {
                 Log::warning('Owner digest email dispatch failed.', [
-                    'email' => $user->email,
+                    'email' => $recipient,
                     'error' => $sendResult['error_message'] ?? 'unknown',
                 ]);
                 continue;
@@ -960,86 +973,9 @@ class N8nAutomationController extends Controller
             ? Carbon::parse((string) $validated['date'])->startOfDay()
             : now()->startOfDay();
 
-        $definitions = [
-            [
-                'days' => 7,
-                'event_name' => 'subscription_deadline_reminder_7_days_owner',
-            ],
-            [
-                'days' => 3,
-                'event_name' => 'subscription_deadline_reminder_3_days_owner',
-            ],
-        ];
-
-        $processed = 0;
-        $dispatched = 0;
-
-        foreach ($definitions as $definition) {
-            $targetDate = $runDate->copy()->addDays((int) $definition['days'])->toDateString();
-
-            $tenants = Tenant::query()
-                ->where('status', 'active')
-                ->where('billing_status', SubscriptionLifecycleService::BILLING_CURRENT)
-                ->whereNotNull('subscription_renews_at')
-                ->whereDate('subscription_renews_at', '=', $targetDate)
-                ->get([
-                    'id',
-                    'company_name',
-                    'subscription_plan',
-                    'status',
-                    'billing_status',
-                    'subscription_renews_at',
-                    'trial_ends_at',
-                    'billing_grace_ends_at',
-                    'subscription_activated_at',
-                ]);
-
-            foreach ($tenants as $tenant) {
-                $processed++;
-                $owner = $this->resolveAccountOwner((int) $tenant->id);
-                if (! $owner?->email) {
-                    continue;
-                }
-
-                $cacheKey = implode(':', [
-                    'subscription_deadline_reminder',
-                    $definition['event_name'],
-                    'tenant',
-                    $tenant->id,
-                    $targetDate,
-                ]);
-
-                if (! Cache::add($cacheKey, true, now()->addHours(36))) {
-                    continue;
-                }
-
-                $this->dispatchAutomationEvent((string) $definition['event_name'], [
-                    'tenant_id' => $tenant->id,
-                    'company_name' => $tenant->company_name,
-                    'account_owner_id' => $owner->id,
-                    'account_owner_name' => $owner->name,
-                    'account_owner_email' => $owner->email,
-                    'subscription_plan' => $tenant->subscription_plan,
-                    'status' => $tenant->status,
-                    'billing_status' => $tenant->billing_status,
-                    'subscription_renews_at' => optional($tenant->subscription_renews_at)->toIso8601String(),
-                    'trial_ends_at' => optional($tenant->trial_ends_at)->toIso8601String(),
-                    'billing_grace_ends_at' => optional($tenant->billing_grace_ends_at)->toIso8601String(),
-                    'subscription_activated_at' => optional($tenant->subscription_activated_at)->toIso8601String(),
-                    'reminder_days' => (int) $definition['days'],
-                    'deadline_kind' => 'subscription_renews_at',
-                ]);
-
-                $dispatched++;
-            }
-        }
-
-        return response()->json([
-            'ok' => true,
-            'processed' => $processed,
-            'dispatched' => $dispatched,
-            'run_date' => $runDate->toDateString(),
-        ]);
+        return response()->json(
+            app(SubscriptionDeadlineReminderService::class)->dispatch($runDate)
+        );
     }
 
     /**
@@ -1067,6 +1003,18 @@ class N8nAutomationController extends Controller
         $received = trim(str_ireplace('Bearer', '', $authorization));
         if (! hash_equals($expected, $received)) {
             abort(401, 'Unauthorized');
+        }
+    }
+
+    private function ensureSharedAutomationTenant(int $tenantId): void
+    {
+        $tenant = Tenant::query()->find($tenantId);
+        if (! $tenant) {
+            return;
+        }
+
+        if (! app(PlanAutomationService::class)->usesSharedAutomation($tenant)) {
+            abort(403, 'Shared automation is not available on this plan.');
         }
     }
 
