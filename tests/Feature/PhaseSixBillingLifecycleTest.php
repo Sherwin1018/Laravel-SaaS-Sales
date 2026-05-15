@@ -102,6 +102,7 @@ class PhaseSixBillingLifecycleTest extends TestCase
     public function test_subscription_renewal_extends_from_existing_future_renewal_date(): void
     {
         $existingRenewal = now()->addDays(5)->startOfMinute();
+        $termDays = (int) config('services.billing.subscription_cycle_days', 30);
         $tenant = Tenant::create([
             'company_name' => 'Renewal Workspace',
             'subscription_plan' => 'Starter',
@@ -129,7 +130,7 @@ class PhaseSixBillingLifecycleTest extends TestCase
 
         $this->assertSame('active', $renewedTenant->status);
         $this->assertSame('current', $renewedTenant->billing_status);
-        $this->assertTrue($renewedTenant->subscription_renews_at->equalTo($existingRenewal->copy()->addMonthNoOverflow()));
+        $this->assertTrue($renewedTenant->subscription_renews_at->equalTo($existingRenewal->copy()->addDays($termDays)));
         $this->assertSame(1, FinanceAuditLog::query()->where('payment_id', $payment->id)->where('event_type', 'subscription_paid')->count());
     }
 

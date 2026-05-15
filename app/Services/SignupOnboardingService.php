@@ -158,7 +158,7 @@ class SignupOnboardingService
                 'code' => 'starter',
                 'name' => 'Starter',
                 'price' => 1499.00,
-                'period' => 'per month',
+                'period' => '30 days',
                 'summary' => 'For teams launching their first lead capture and conversion funnels with essential built-in automations.',
                 'features' => [
                     '1 workspace with Account Owner dashboard access',
@@ -180,7 +180,7 @@ class SignupOnboardingService
                 'code' => 'growth',
                 'name' => 'Growth',
                 'price' => 3499.00,
-                'period' => 'per month',
+                'period' => '30 days',
                 'summary' => 'For growing businesses ready to unlock shared automation across lead, funnel, and billing workflows.',
                 'features' => [
                     'Unlimited active funnels for one brand workspace',
@@ -201,7 +201,7 @@ class SignupOnboardingService
                 'code' => 'scale',
                 'name' => 'Scale',
                 'price' => 6999.00,
-                'period' => 'per month',
+                'period' => '30 days',
                 'summary' => 'For teams that want advanced automation coverage and higher-volume operations on the shared engine.',
                 'features' => [
                     'Everything in Growth plus advanced shared automation coverage',
@@ -501,7 +501,7 @@ class SignupOnboardingService
     public function initialSubscriptionRenewalAt(?Carbon $anchor = null): Carbon
     {
         $base = ($anchor instanceof Carbon ? $anchor->copy() : now()->copy())->startOfSecond();
-        $days = max(1, (int) config('services.billing.initial_signup_renewal_days', 30));
+        $days = max(1, (int) config('services.billing.subscription_cycle_days', 30));
 
         return $base->addDays($days);
     }

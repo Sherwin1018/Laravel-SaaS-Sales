@@ -31,7 +31,9 @@ class PlanController extends Controller
 
     public function create()
     {
-        return view('admin.plans.create');
+        return view('admin.plans.create', [
+            'defaultPeriodLabel' => '30 days',
+        ]);
     }
 
     public function store(Request $request)
@@ -46,7 +48,10 @@ class PlanController extends Controller
 
     public function edit(Plan $plan)
     {
-        return view('admin.plans.edit', compact('plan'));
+        return view('admin.plans.edit', [
+            'plan' => $plan,
+            'defaultPeriodLabel' => '30 days',
+        ]);
     }
 
     public function update(Request $request, Plan $plan)

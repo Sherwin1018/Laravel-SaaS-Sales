@@ -57,7 +57,7 @@ return [
     ],
 
     'billing' => [
-        'initial_signup_renewal_days' => max(1, (int) env('SIGNUP_INITIAL_SUBSCRIPTION_RENEWAL_DAYS', 30)),
+        'subscription_cycle_days' => max(1, (int) env('SUBSCRIPTION_CYCLE_DAYS', env('SIGNUP_INITIAL_SUBSCRIPTION_RENEWAL_DAYS', 30))),
     ],
 
     'brevo' => [

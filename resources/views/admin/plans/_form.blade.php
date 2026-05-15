@@ -31,7 +31,7 @@
         <label for="period" style="display:block;margin-bottom:8px;font-weight:bold;">Period Label</label>
         <input type="text" name="period" id="period" required
             style="width:100%;padding:10px;border:1px solid var(--theme-border, #E6E1EF);border-radius:6px;"
-            value="{{ old('period', $plan->period ?? 'per month') }}">
+            value="{{ old('period', $plan->period ?? ($defaultPeriodLabel ?? '30 days')) }}">
         @error('period')<span style="color:red;font-size:12px;">{{ $message }}</span>@enderror
     </div>
 </div>

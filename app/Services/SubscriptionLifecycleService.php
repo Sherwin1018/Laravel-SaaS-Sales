@@ -282,7 +282,7 @@ class SubscriptionLifecycleService
             ? $tenant->subscription_renews_at->copy()
             : now()->copy();
 
-        return $anchor->addMonthNoOverflow();
+        return $anchor->addDays($this->subscriptionTermDays());
     }
 
     private function restoredRenewalDate(Tenant $tenant): Carbon
@@ -291,7 +291,7 @@ class SubscriptionLifecycleService
             return $tenant->subscription_renews_at->copy();
         }
 
-        return now()->addMonthNoOverflow();
+        return now()->addDays($this->subscriptionTermDays());
     }
 
     private function activationTimestamp(Tenant $tenant): Carbon
@@ -339,5 +339,10 @@ class SubscriptionLifecycleService
         }
 
         return 'plan_change';
+    }
+
+    private function subscriptionTermDays(): int
+    {
+        return max(1, (int) config('services.billing.subscription_cycle_days', 30));
     }
 }
